@@ -92,13 +92,13 @@ Visual regression tests are run with Playwright against stories tagged with `vis
 
 ```bash
 # Run all visual regression tests
-pnpm test:visual
+pnpm test:vrt
 
 # Run with UI mode (interactive)
-pnpm test:visual:ui
+pnpm test:vrt:ui
 
 # Update snapshots (after intentional visual changes)
-pnpm test:visual:update
+pnpm test:vrt:update
 ```
 
 ### How It Works
@@ -112,32 +112,50 @@ pnpm test:visual:update
 
 1. Create stories in `stories/tests/visual-regression-tests.stories.tsx`
 2. Tag the meta with `visual-regression`
-3. Add corresponding Playwright tests in `playwright/components/[component-name].visual.spec.ts`
-4. Use story IDs in the format: `components-[component]-tests-visual-regression-tests--story-name`
+3. **Auto-generate Playwright tests**: Run `pnpm generate:visual-tests`
+   - Scans all `visual-regression-tests.stories.tsx` files
+   - Generates `playwright/components/[component-name].visual.spec.ts` automatically
+   - All story exports become individual Playwright tests
+
+**Important**: The Playwright test files are **auto-generated** - don't edit them manually! They include a warning header:
+
+```typescript
+/**
+ * AUTO-GENERATED - DO NOT EDIT
+ * Generated from: src/components/card/stories/tests/visual-regression-tests.stories.tsx
+ * Run: pnpm generate:visual-tests to regenerate
+ */
+```
 
 ### Playwright Test Organization
 
-Tests are organized by component:
+Component VRT tests are separate from E2E tests:
 
 ```
 playwright/
-└── components/
-    ├── card.visual.spec.ts
-    ├── button.visual.spec.ts      # Future component
-    └── input.visual.spec.ts       # Future component
+├── vrt/                          # Component Visual Regression
+│   ├── vrt.config.ts             # VRT configuration
+│   ├── generate-visual-tests.ts  # Generator script
+│   └── tests/
+│       ├── card.visual.spec.ts       # Auto-generated
+│       ├── button.visual.spec.ts     # Future component
+│       └── input.visual.spec.ts      # Future component
+└── e2e/                          # End-to-End Tests
+    ├── e2e.config.ts             # E2E configuration
+    └── tests/
+        └── homepage.spec.ts          # Manual tests
 ```
 
 Snapshots are automatically organized:
 
 ```
-playwright/
-└── components/
-    ├── card.visual.spec.ts-snapshots/
-    │   └── chromium/
-    │       ├── card-empty.png
-    │       └── card-low-elevation.png
-    ├── button.visual.spec.ts-snapshots/
-    └── input.visual.spec.ts-snapshots/
+playwright/vrt/tests/
+├── card.visual.spec.ts-snapshots/
+│   └── chromium/
+│       ├── card-empty.png
+│       └── card-low-elevation.png
+├── button.visual.spec.ts-snapshots/
+└── input.visual.spec.ts-snapshots/
 ```
 
 ## Interaction Testing

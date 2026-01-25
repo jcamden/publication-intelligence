@@ -9,9 +9,13 @@ dist
 .next
 out
 build
+storybook-static
 
 # Testing
 coverage
+test-results
+playwright-report
+playwright/.cache
 
 # Misc
 .DS_Store
@@ -36,3 +40,6 @@ pnpm-debug.log*
 # TypeScript
 *.tsbuildinfo
 node_modules
+
+*storybook.log
+storybook-static

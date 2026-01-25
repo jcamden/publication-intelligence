@@ -3,8 +3,12 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = process.env.PORT || 6006;
 const STORYBOOK_URL = `http://localhost:${PORT}`;
 
+/**
+ * Playwright config for Component Visual Regression Tests
+ * Runs against Storybook stories
+ */
 export default defineConfig({
-	testDir: "./playwright/components",
+	testDir: "./tests",
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,

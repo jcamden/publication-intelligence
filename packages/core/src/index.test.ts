@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { createDocument } from "./index";
+import { describe, expect, it } from "vitest";
 import type { Document } from "./index";
+import { createDocument } from "./index";
 
 describe("createDocument", () => {
 	it("should create a document with required fields", () => {
