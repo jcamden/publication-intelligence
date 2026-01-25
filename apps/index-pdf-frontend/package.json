@@ -8,20 +8,38 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"clean": "rm -rf .next"
+		"clean": "rm -rf .next",
+		"storybook": "storybook dev -p 6006",
+		"build-storybook": "storybook build",
+		"test:visual": "playwright test",
+		"test:visual:ui": "playwright test --ui",
+		"test:visual:update": "playwright test --update-snapshots"
 	},
 	"dependencies": {
 		"@pubint/core": "workspace:*",
-		"@pubint/pdf": "workspace:*",
 		"@pubint/llm": "workspace:*",
+		"@pubint/pdf": "workspace:*",
 		"next": "^15.1.6",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"
 	},
 	"devDependencies": {
+		"@chromatic-com/storybook": "^5.0.0",
+		"@playwright/test": "^1.58.0",
+		"@storybook/addon-a11y": "^10.2.0",
+		"@storybook/addon-docs": "^10.2.0",
+		"@storybook/addon-vitest": "^10.2.0",
+		"@storybook/nextjs-vite": "^10.2.0",
+		"@storybook/react": "^10.2.0",
+		"@storybook/test": "^8.6.15",
 		"@types/node": "^22.10.5",
 		"@types/react": "^19.0.6",
 		"@types/react-dom": "^19.0.2",
-		"typescript": "^5.7.3"
+		"@vitest/browser-playwright": "^4.0.18",
+		"@vitest/coverage-v8": "^4.0.18",
+		"playwright": "^1.58.0",
+		"storybook": "^10.2.0",
+		"typescript": "^5.7.3",
+		"vite": "^7.3.1"
 	}
 }
