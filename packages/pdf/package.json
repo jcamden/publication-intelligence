@@ -1,0 +1,25 @@
+{
+	"name": "@pubint/pdf",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@pubint/core": "workspace:*",
+		"pdfjs-dist": "^4.10.38"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.5",
+		"typescript": "^5.7.3"
+	}
+}
