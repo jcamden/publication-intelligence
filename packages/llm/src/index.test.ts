@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { generateEmbedding, indexDocument, searchDocuments } from "./index";
 import type { Document } from "@pubint/core";
+import { describe, expect, it } from "vitest";
+import { generateEmbedding, indexDocument, searchDocuments } from "./index";
 
 describe("generateEmbedding", () => {
 	it("should throw not implemented error", async () => {

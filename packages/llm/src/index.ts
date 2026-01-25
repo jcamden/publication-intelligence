@@ -1,7 +1,7 @@
 import type { Document } from "@pubint/core";
 
 export const generateEmbedding = async ({
-	text,
+	text: _text,
 }: {
 	text: string;
 }): Promise<number[]> => {
@@ -9,7 +9,7 @@ export const generateEmbedding = async ({
 };
 
 export const indexDocument = async ({
-	document,
+	document: _document,
 }: {
 	document: Document;
 }): Promise<void> => {
@@ -17,7 +17,7 @@ export const indexDocument = async ({
 };
 
 export const searchDocuments = async ({
-	query,
+	query: _query,
 }: {
 	query: string;
 }): Promise<Document[]> => {

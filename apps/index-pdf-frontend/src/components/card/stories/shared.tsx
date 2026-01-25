@@ -2,24 +2,13 @@ import type { CardProps } from "../index";
 
 export const ExampleCardChildren = () => {
 	return (
-		<div
-			style={{
-				display: "flex",
-				flexDirection: "column",
-				gap: "16px",
-				fontSize: "16px",
-				fontFamily: "system-ui, sans-serif",
-			}}
-		>
-			<h2 style={{ margin: 0, fontSize: "24px" }}>Document Preview</h2>
+		<div className="flex flex-col gap-4 text-base font-sans">
+			<h2 className="m-0 text-2xl">Document Preview</h2>
 			<span>
 				This is an example card component that can be used to display document
 				information, file previews, or other content in a contained layout.
 			</span>
-			<a
-				href="https://example.com"
-				style={{ maxWidth: "max-content", color: "#0066cc" }}
-			>
+			<a href="https://example.com" className="max-w-max text-blue-600">
 				View Document
 			</a>
 		</div>

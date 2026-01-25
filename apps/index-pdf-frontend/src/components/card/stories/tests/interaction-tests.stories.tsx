@@ -29,12 +29,8 @@ export const RendersEmptyByDefault: StoryObj<typeof Card> = {
 
 export const RendersPassedChildren: StoryObj<typeof Card> = {
 	render: (args) => (
-		<Card
-			data-testid="card-content"
-			elevation={args.elevation}
-			style={{ fontFamily: "system-ui, sans-serif" }}
-		>
-			<div style={{ display: "flex", flexDirection: "column" }}>
+		<Card data-testid="card-content" elevation={args.elevation}>
+			<div className="flex flex-col">
 				<h3>Document Title</h3>
 				<p>This is the document body content</p>
 				<p>Footer information</p>
@@ -58,7 +54,7 @@ export const RendersPassedChildren: StoryObj<typeof Card> = {
 
 export const AppliesElevationStyles: StoryObj<typeof Card> = {
 	render: () => (
-		<div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+		<div className="flex gap-6 flex-wrap">
 			<Card data-testid="card-low" elevation="low">
 				<p>Low Elevation</p>
 			</Card>
@@ -90,16 +86,9 @@ export const AppliesElevationStyles: StoryObj<typeof Card> = {
 	},
 };
 
-export const RespondsToCustomStyles: StoryObj<typeof Card> = {
+export const RespondsToCustomClassName: StoryObj<typeof Card> = {
 	render: () => (
-		<Card
-			data-testid="custom-card"
-			style={{
-				backgroundColor: "#f0f0f0",
-				borderRadius: "16px",
-				padding: "32px",
-			}}
-		>
+		<Card data-testid="custom-card" className="bg-gray-100 rounded-2xl p-8">
 			<p>Custom styled card</p>
 		</Card>
 	),
@@ -108,10 +97,8 @@ export const RespondsToCustomStyles: StoryObj<typeof Card> = {
 		const card = canvas.getByTestId("custom-card");
 
 		await expect(card).toBeVisible();
-
-		const style = window.getComputedStyle(card);
-		await expect(style.backgroundColor).toBe("rgb(240, 240, 240)");
-		await expect(style.borderRadius).toBe("16px");
-		await expect(style.padding).toBe("32px");
+		await expect(card).toHaveClass("bg-gray-100");
+		await expect(card).toHaveClass("rounded-2xl");
+		await expect(card).toHaveClass("p-8");
 	},
 };

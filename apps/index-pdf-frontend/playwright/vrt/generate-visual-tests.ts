@@ -4,7 +4,7 @@
  * Playwright test files in playwright/components/
  */
 
-import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 type StoryInfo = {
@@ -59,7 +59,10 @@ const parseStoryFile = ({ filePath }: { filePath: string }): StoryInfo => {
 	for (const match of matches) {
 		const exportName = match[1];
 		// Convert PascalCase to kebab-case for story ID
-		const name = exportName.replace(/([A-Z])/g, "-$1").toLowerCase().slice(1);
+		const name = exportName
+			.replace(/([A-Z])/g, "-$1")
+			.toLowerCase()
+			.slice(1);
 		stories.push({ name, exportName });
 	}
 
@@ -79,7 +82,10 @@ const generateStoryId = ({
 	storyName: string;
 }): string => {
 	// Convert "Components/Card/tests/Visual Regression Tests" to "components-card-tests-visual-regression-tests"
-	const titlePart = title.toLowerCase().replace(/\//g, "-").replace(/\s+/g, "-");
+	const titlePart = title
+		.toLowerCase()
+		.replace(/\//g, "-")
+		.replace(/\s+/g, "-");
 	return `${titlePart}--${storyName}`;
 };
 

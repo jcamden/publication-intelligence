@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { Card } from "../../card";
-import { cardsMap, defaultArgs } from "../shared";
 
 const defaultVrtConfig = {
 	parameters: {
@@ -155,7 +154,7 @@ export const LongContent: StoryObj<typeof Card> = {
 	args: {
 		elevation: "low",
 		children: (
-			<div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+			<div className="flex flex-col gap-4">
 				<h1>Document Analysis Report</h1>
 				<p>
 					This is a detailed analysis of the document content. Lorem ipsum dolor
@@ -168,9 +167,9 @@ export const LongContent: StoryObj<typeof Card> = {
 					reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
 					pariatur.
 				</p>
-				<a href="#" style={{ color: "#0066cc" }}>
+				<button type="button" className="text-blue-600">
 					Read more
-				</a>
+				</button>
 			</div>
 		),
 	},
@@ -178,7 +177,7 @@ export const LongContent: StoryObj<typeof Card> = {
 
 export const MultipleCardsLayout: StoryObj<typeof Card> = {
 	render: () => (
-		<div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "24px", padding: "24px" }}>
+		<div className="grid grid-cols-2 gap-6 p-6">
 			<Card elevation="low">
 				<h3>Document 1</h3>
 				<p>First document preview</p>

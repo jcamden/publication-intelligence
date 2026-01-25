@@ -4,7 +4,7 @@
  * Run: pnpm generate:visual-tests to regenerate
  */
 
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 const getStorybookUrl = ({ storyId }: { storyId: string }) => {
 	return `/iframe.html?id=${storyId}&viewMode=story`;
@@ -23,7 +23,8 @@ test.describe("Card - Visual Regression", () => {
 	test("WithLowElevation", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--with-low-elevation",
+				storyId:
+					"components-card-tests-visual-regression-tests--with-low-elevation",
 			}),
 		);
 		await expect(page).toHaveScreenshot("card-with-low-elevation.png");
@@ -32,7 +33,8 @@ test.describe("Card - Visual Regression", () => {
 	test("WithMediumElevation", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--with-medium-elevation",
+				storyId:
+					"components-card-tests-visual-regression-tests--with-medium-elevation",
 			}),
 		);
 		await expect(page).toHaveScreenshot("card-with-medium-elevation.png");
@@ -41,7 +43,8 @@ test.describe("Card - Visual Regression", () => {
 	test("WithHighElevation", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--with-high-elevation",
+				storyId:
+					"components-card-tests-visual-regression-tests--with-high-elevation",
 			}),
 		);
 		await expect(page).toHaveScreenshot("card-with-high-elevation.png");
@@ -59,34 +62,44 @@ test.describe("Card - Visual Regression", () => {
 	test("WithContentsAndLowElevation", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--with-contents-and-low-elevation",
+				storyId:
+					"components-card-tests-visual-regression-tests--with-contents-and-low-elevation",
 			}),
 		);
-		await expect(page).toHaveScreenshot("card-with-contents-and-low-elevation.png");
+		await expect(page).toHaveScreenshot(
+			"card-with-contents-and-low-elevation.png",
+		);
 	});
 
 	test("WithContentsAndMediumElevation", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--with-contents-and-medium-elevation",
+				storyId:
+					"components-card-tests-visual-regression-tests--with-contents-and-medium-elevation",
 			}),
 		);
-		await expect(page).toHaveScreenshot("card-with-contents-and-medium-elevation.png");
+		await expect(page).toHaveScreenshot(
+			"card-with-contents-and-medium-elevation.png",
+		);
 	});
 
 	test("WithContentsAndHighElevation", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--with-contents-and-high-elevation",
+				storyId:
+					"components-card-tests-visual-regression-tests--with-contents-and-high-elevation",
 			}),
 		);
-		await expect(page).toHaveScreenshot("card-with-contents-and-high-elevation.png");
+		await expect(page).toHaveScreenshot(
+			"card-with-contents-and-high-elevation.png",
+		);
 	});
 
 	test("SmallViewport", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--small-viewport",
+				storyId:
+					"components-card-tests-visual-regression-tests--small-viewport",
 			}),
 		);
 		await expect(page).toHaveScreenshot("card-small-viewport.png");
@@ -104,7 +117,8 @@ test.describe("Card - Visual Regression", () => {
 	test("MultipleCardsLayout", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--multiple-cards-layout",
+				storyId:
+					"components-card-tests-visual-regression-tests--multiple-cards-layout",
 			}),
 		);
 		await expect(page).toHaveScreenshot("card-multiple-cards-layout.png");
@@ -113,7 +127,8 @@ test.describe("Card - Visual Regression", () => {
 	test("DarkBackground", async ({ page }) => {
 		await page.goto(
 			getStorybookUrl({
-				storyId: "components-card-tests-visual-regression-tests--dark-background",
+				storyId:
+					"components-card-tests-visual-regression-tests--dark-background",
 			}),
 		);
 		await expect(page).toHaveScreenshot("card-dark-background.png");

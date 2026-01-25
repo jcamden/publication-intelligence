@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { extractPdfText, extractPdfPages } from "./index";
+import { describe, expect, it } from "vitest";
+import { extractPdfPages, extractPdfText } from "./index";
 
 describe("extractPdfText", () => {
 	it("should throw not implemented error", async () => {

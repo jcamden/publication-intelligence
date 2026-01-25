@@ -1,7 +1,7 @@
-import type { Document, DocumentPage } from "@pubint/core";
+import type { DocumentPage } from "@pubint/core";
 
 export const extractPdfText = async ({
-	buffer,
+	buffer: _buffer,
 }: {
 	buffer: Buffer;
 }): Promise<string> => {
@@ -9,7 +9,7 @@ export const extractPdfText = async ({
 };
 
 export const extractPdfPages = async ({
-	buffer,
+	buffer: _buffer,
 }: {
 	buffer: Buffer;
 }): Promise<DocumentPage[]> => {
