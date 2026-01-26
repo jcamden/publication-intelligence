@@ -246,6 +246,12 @@ module default {
     
     # Access control: only owner and collaborators can access
     # Default behavior: once policies exist, all operations are denied unless explicitly allowed
+    
+    # Explicit deny for anonymous users (defense-in-depth)
+    access policy deny_anonymous
+      deny all
+      using (not exists global current_user);
+    
     access policy owner_full_access
       allow all
       using (.owner.id ?= global current_user_id);
@@ -313,6 +319,12 @@ module default {
     property is_deleted := exists .deleted_at;
     
     # Access control: inherit from project
+    
+    # Explicit deny for anonymous users (defense-in-depth)
+    access policy deny_anonymous
+      deny all
+      using (not exists global current_user);
+    
     access policy project_owner_access
       allow all
       using (.project.owner.id ?= global current_user_id);
@@ -485,6 +497,12 @@ module default {
     };
     
     # Access control: inherit from project
+    
+    # Explicit deny for anonymous users (defense-in-depth)
+    access policy deny_anonymous
+      deny all
+      using (not exists global current_user);
+    
     access policy project_owner_access
       allow all
       using (.project.owner.id ?= global current_user_id);
@@ -549,6 +567,12 @@ module default {
     };
     
     # Access control: inherit from entry's project
+    
+    # Explicit deny for anonymous users (defense-in-depth)
+    access policy deny_anonymous
+      deny all
+      using (not exists global current_user);
+    
     access policy project_members_read
       allow select
       using (
@@ -762,6 +786,12 @@ module default {
     property is_deleted := exists .deleted_at;
     
     # Access control: inherit from document (and transitively from project)
+    
+    # Explicit deny for anonymous users (defense-in-depth)
+    access policy deny_anonymous
+      deny all
+      using (not exists global current_user);
+    
     access policy project_owner_access
       allow all
       using (.document.project.owner.id ?= global current_user_id);
@@ -834,6 +864,12 @@ module default {
     };
     
     # Access control: inherit from project
+    
+    # Explicit deny for anonymous users (defense-in-depth)
+    access policy deny_anonymous
+      deny all
+      using (not exists global current_user);
+    
     access policy project_owner_access
       allow all
       using (.project.owner.id ?= global current_user_id);
@@ -948,6 +984,12 @@ module default {
     
     # Access control: user who created the run can access it
     # Also accessible to project members if linked to a document
+    
+    # Explicit deny for anonymous users (defense-in-depth)
+    access policy deny_anonymous
+      deny all
+      using (not exists global current_user);
+    
     access policy creator_access
       allow all
       using (.user.id ?= global current_user_id);
