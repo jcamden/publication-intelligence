@@ -219,7 +219,35 @@ const authenticatedClient = gel.withGlobals({
 
 ## Common Tasks
 
-### Reset the database
+### Branches
+
+Gel supports multiple branches for isolation:
+
+- **`main`**: Development and production data
+- **`test`**: Automated testing (isolated, disposable)
+
+### Why separate branches?
+
+1. **Isolation**: Tests don't pollute production data
+2. **Safety**: Destructive tests can't break real work
+3. **Parallel testing**: Multiple test runs without conflicts
+4. **Reproducibility**: Clean slate for every test run
+
+### Test branch workflow
+
+```bash
+# Reset test branch before running tests
+cd db/gel
+./reset-test-branch.sh
+
+# Run tests (automatically uses test branch via NODE_ENV=test)
+cd ../../apps/index-pdf-backend
+pnpm test
+```
+
+Tests automatically connect to the `test` branch when `NODE_ENV=test` is set (Vitest does this automatically).
+
+## Reset the database
 
 #### Full Reset (Recommended)
 

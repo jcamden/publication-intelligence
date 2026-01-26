@@ -124,7 +124,7 @@ export const updateProject = async ({
 	gelClient: Client;
 	projectId: string;
 	input: UpdateProjectInput;
-}): Promise<Project> => {
+}): Promise<Project | null> => {
 	// Build dynamic EdgeQL for conditional updates
 	const setFields: string[] = ["updated_at := datetime_current()"];
 	const params: Record<string, unknown> = { projectId };
@@ -182,10 +182,8 @@ export const updateProject = async ({
 		params,
 	);
 
-	if (!project) {
-		throw new Error("Project not found or update failed");
-	}
-
+	// Return null if update failed (access policy violation or doesn't exist)
+	// Service layer will use requireFound() to throw proper NOT_FOUND error
 	return project;
 };
 
@@ -195,7 +193,7 @@ export const softDeleteProject = async ({
 }: {
 	gelClient: Client;
 	projectId: string;
-}): Promise<{ id: string; deleted_at: Date }> => {
+}): Promise<{ id: string; deleted_at: Date } | null> => {
 	const result = await gelClient.querySingle<{
 		id: string;
 		deleted_at: Date;
@@ -215,9 +213,7 @@ export const softDeleteProject = async ({
 		{ projectId },
 	);
 
-	if (!result) {
-		throw new Error("Project not found or already deleted");
-	}
-
+	// Return null if delete failed (access policy violation, doesn't exist, or already deleted)
+	// Service layer will use requireFound() to throw proper NOT_FOUND error
 	return result;
 };
