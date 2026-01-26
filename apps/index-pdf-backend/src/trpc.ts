@@ -13,7 +13,7 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 
 const isAuthenticated = t.middleware(async ({ ctx, next }) => {
-	if (!ctx.user) {
+	if (!ctx.user || !ctx.authToken) {
 		throw new TRPCError({
 			code: "UNAUTHORIZED",
 			message: "Not authenticated",
@@ -22,8 +22,9 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 
 	return next({
 		ctx: {
-			...ctx,
+			authToken: ctx.authToken,
 			user: ctx.user,
+			requestId: ctx.requestId,
 		},
 	});
 });
