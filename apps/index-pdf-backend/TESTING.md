@@ -18,7 +18,7 @@ This backend uses a **three-tier testing strategy**:
 ## Running Tests
 
 ```bash
-# Run all tests
+# Run all tests (automatically resets test branch first)
 pnpm test
 
 # Watch mode (re-run on file changes)
@@ -29,7 +29,20 @@ pnpm test:integration
 
 # Coverage report
 pnpm test:coverage
+
+# Manually reset test branch (if needed)
+cd ../../db/gel && ./reset-test-branch.sh
 ```
+
+## Test Database Isolation
+
+Tests run on a dedicated `test` branch that is **automatically reset before each run**. This provides:
+- Perfect test isolation (no data leaks between runs)
+- Clean slate for every test execution
+- No complex cleanup logic needed
+- Security policies remain pure
+
+See: `db/gel/reset-test-branch.sh`
 
 ## Test Structure
 
@@ -53,9 +66,9 @@ src/
 Test business logic **without HTTP layer**:
 
 ```typescript
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { createAuthenticatedClient } from "../../db/client";
-import { createTestUser, cleanupTestData } from "../../test/setup";
+import { createTestUser } from "../../test/factories";
 import * as projectService from "./project.service";
 
 describe("Project Service", () => {
@@ -66,9 +79,7 @@ describe("Project Service", () => {
     gelClient = createAuthenticatedClient({ authToken: testUser.authToken });
   });
 
-  afterAll(async () => {
-    await cleanupTestData({ userEmails: [testUser.email] });
-  });
+  // Note: Test data automatically cleaned up by branch reset
 
   it("should create project", async () => {
     const project = await projectService.createProject({
@@ -90,7 +101,7 @@ Test **full HTTP flow** including auth, validation, and responses:
 ```typescript
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestServer, closeTestServer, makeAuthenticatedRequest } from "../../test/server-harness";
-import { createTestUser, cleanupTestData } from "../../test/factories";
+import { createTestUser } from "../../test/factories";
 
 describe("Project API", () => {
   let server, testUser, authenticatedRequest;
@@ -105,9 +116,10 @@ describe("Project API", () => {
   });
 
   afterAll(async () => {
-    await cleanupTestData({ userEmails: [testUser.email] });
     await closeTestServer(server);
   });
+
+  // Note: Test data automatically cleaned up by branch reset
 
   it("should create project via HTTP", async () => {
     const response = await authenticatedRequest.inject({
@@ -136,13 +148,15 @@ const project = await createTestProject({ gelClient, title: "My Book" });
 
 ### Cleanup
 
-Always clean up test data:
+**Automatic Branch Reset**: No manual cleanup needed! The test branch is automatically reset before each test run.
 
-```typescript
-afterAll(async () => {
-  await cleanupTestData({ userEmails: [testUser.email] });
-});
-```
+When you run `pnpm test`, the system:
+1. Drops the entire `test` branch
+2. Creates a fresh `test` branch from `main`
+3. Applies all migrations
+4. Runs your tests on a clean slate
+
+This provides perfect test isolation without any cleanup logic.
 
 ### Authenticated Requests
 
@@ -307,17 +321,18 @@ pnpm gel:ui
 Verify GEL_AUTH_URL environment variable:
 
 ```bash
-export GEL_AUTH_URL=http://localhost:10701/db/main/ext/auth
+export GEL_AUTH_URL=http://localhost:10702/db/main/ext/auth
 ```
 
 ## Best Practices
 
 1. **Test behavior, not implementation** - Test what the code does, not how
 2. **Use realistic data** - Avoid `foo`, `bar`, `test123` - use factories
-3. **Clean up after yourself** - Always use afterAll to remove test data
+3. **No cleanup needed** - Branch reset handles all cleanup automatically
 4. **Test error paths** - Don't just test happy paths
-5. **Keep tests fast** - Avoid unnecessary waits, use real DB for speed
+5. **Keep tests fast** - Avoid unnecessary waits, branch reset is ~5 seconds
 6. **Write tests first** - TDD when adding new features
+7. **Debug cleanup failures** - Set `VERBOSE_CLEANUP=true` to see deletion steps
 
 ## Future Enhancements
 

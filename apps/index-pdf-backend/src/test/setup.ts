@@ -34,34 +34,16 @@ export const waitForCondition = async ({
 // ============================================================================
 // Test Data Cleanup
 // ============================================================================
-
-export const cleanupTestData = async ({
-	userEmails,
-}: {
-	userEmails: string[];
-}) => {
-	for (const email of userEmails) {
-		try {
-			// First delete all projects owned by this user (cascade will delete events)
-			await testGelClient.query(
-				`
-				DELETE Project
-				FILTER .owner.email = <str>$email
-			`,
-				{ email },
-			);
-
-			// Then delete the user
-			await testGelClient.query(
-				`
-				DELETE User
-				FILTER .email = <str>$email
-			`,
-				{ email },
-			);
-		} catch (error) {
-			// Ignore cleanup errors in tests
-			console.warn(`Failed to cleanup user ${email}:`, error);
-		}
-	}
-};
+//
+// Test cleanup is handled by dropping and recreating the entire test branch.
+// This runs automatically before each test suite via `pnpm test`.
+//
+// See: db/gel/reset-test-branch.sh
+//
+// Why branch reset (vs per-record cleanup):
+// 1. Perfect test isolation - no shared state between runs
+// 2. No access policy gymnastics - policies remain pure
+// 3. Guaranteed correctness - no cleanup edge cases
+// 4. Fast - ~5 seconds to drop/recreate entire branch
+//
+// Legacy cleanup function removed - no longer needed with branch reset.

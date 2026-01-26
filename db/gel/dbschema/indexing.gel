@@ -256,11 +256,7 @@ module default {
     
     # Access control: only owner and collaborators can access
     # Default behavior: once policies exist, all operations are denied unless explicitly allowed
-    
-    # Explicit deny for anonymous users (defense-in-depth)
-    access policy deny_anonymous
-      deny all
-      using (not exists global current_user);
+    # No explicit deny_anonymous needed - EdgeDB denies by default when no allow policy matches
     
     access policy owner_full_access
       allow all
@@ -329,11 +325,7 @@ module default {
     property is_deleted := exists .deleted_at;
     
     # Access control: inherit from project
-    
-    # Explicit deny for anonymous users (defense-in-depth)
-    access policy deny_anonymous
-      deny all
-      using (not exists global current_user);
+    # No explicit deny_anonymous needed - EdgeDB denies by default
     
     access policy project_access
       allow all
@@ -489,11 +481,7 @@ module default {
     };
     
     # Access control: inherit from project
-    
-    # Explicit deny for anonymous users (defense-in-depth)
-    access policy deny_anonymous
-      deny all
-      using (not exists global current_user);
+    # No explicit deny_anonymous needed - EdgeDB denies by default
     
     access policy project_access
       allow all
@@ -550,11 +538,7 @@ module default {
     };
     
     # Access control: inherit from entry's project
-    
-    # Explicit deny for anonymous users (defense-in-depth)
-    access policy deny_anonymous
-      deny all
-      using (not exists global current_user);
+    # No explicit deny_anonymous needed - EdgeDB denies by default
     
     access policy project_access
       allow all
@@ -737,11 +721,7 @@ module default {
     property is_deleted := exists .deleted_at;
     
     # Access control: inherit from document (and transitively from project)
-    
-    # Explicit deny for anonymous users (defense-in-depth)
-    access policy deny_anonymous
-      deny all
-      using (not exists global current_user);
+    # No explicit deny_anonymous needed - EdgeDB denies by default
     
     access policy project_access
       allow all
@@ -780,8 +760,12 @@ module default {
     };
     
     # Who caused this event
-    # Null = system-generated or LLM-generated
-    actor: User;
+    # Null = system-generated, LLM-generated, or user was deleted
+    # BEST PRACTICE: on target delete allow makes link nullable
+    # This preserves event history while allowing user cleanup
+    actor: User {
+      on target delete allow;
+    };
     
     # Domain object involved (type-safe enum)
     required entity_type: EntityType;
@@ -806,11 +790,7 @@ module default {
     };
     
     # Access control: inherit from project
-    
-    # Explicit deny for anonymous users (defense-in-depth)
-    access policy deny_anonymous
-      deny all
-      using (not exists global current_user);
+    # No explicit deny_anonymous needed - EdgeDB denies by default
     
     access policy project_access
       allow all
@@ -917,11 +897,7 @@ module default {
     
     # Access control: user who created the run can access it
     # Also accessible to project members if linked to a document
-    
-    # Explicit deny for anonymous users (defense-in-depth)
-    access policy deny_anonymous
-      deny all
-      using (not exists global current_user);
+    # No explicit deny_anonymous needed - EdgeDB denies by default
     
     access policy creator_access
       allow all

@@ -5,7 +5,7 @@ import { createHash, randomBytes } from "node:crypto";
 // ============================================================================
 
 const GEL_AUTH_URL =
-	process.env.GEL_AUTH_URL ?? "http://localhost:10701/db/main/ext/auth";
+	process.env.GEL_AUTH_URL ?? "http://localhost:10702/db/main/ext/auth";
 
 // ============================================================================
 // PKCE Helper Functions

@@ -6,7 +6,6 @@ import {
 	createTestServer,
 	makeAuthenticatedRequest,
 } from "../../test/server-harness";
-import { cleanupTestData } from "../../test/setup";
 
 // ============================================================================
 // API / Integration Tests
@@ -27,9 +26,10 @@ describe("Project API (Integration)", () => {
 	});
 
 	afterAll(async () => {
-		await cleanupTestData({ userEmails: [testUser.email] });
 		await closeTestServer(server);
 	});
+
+	// Note: Test data cleanup handled by branch reset (see reset-test-branch.sh)
 
 	describe("POST /trpc/project.create", () => {
 		it("should create project via HTTP", async () => {
@@ -220,8 +220,6 @@ describe("Project API (Integration)", () => {
 			});
 
 			expect(response.statusCode).toBe(404);
-
-			await cleanupTestData({ userEmails: [user1.email, user2.email] });
 		});
 	});
 });

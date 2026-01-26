@@ -7,6 +7,7 @@ set -e
 # ~/Library/Application Support/edgedb/data/instance.backups/
 #
 # There's no CLI command to delete them, so we manually remove the directory.
+# Can be run from project root or db/gel directory.
 # ============================================================================
 
 BACKUP_DIR="$HOME/Library/Application Support/edgedb/data/instance.backups"

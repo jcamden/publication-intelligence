@@ -265,7 +265,7 @@ HOST=0.0.0.0
 NODE_ENV=development
 
 # Database
-GEL_AUTH_URL=http://localhost:10701/db/main/ext/auth
+GEL_AUTH_URL=http://localhost:10702/db/main/ext/auth
 
 # Logging
 LOG_LEVEL=info
@@ -318,7 +318,7 @@ All errors follow tRPC error codes:
 
 ### Tests failing
 - Ensure Gel is running
-- Check auth endpoint: `http://localhost:10701/db/main/ext/auth`
+- Check auth endpoint: `http://localhost:10702/db/main/ext/auth`
 - Clear test data if needed
 
 ### Type errors

@@ -7,7 +7,6 @@ import {
 	createTestServer,
 	makeAuthenticatedRequest,
 } from "../../test/server-harness";
-import { cleanupTestData } from "../../test/setup";
 
 // ============================================================================
 // Security & Authorization Test Suite
@@ -27,7 +26,7 @@ describe("Project Security & Authorization", () => {
 	});
 
 	describe("Basic Access Control", () => {
-		it("✅ owner access - should allow owner to access their project", async () => {
+		it("owner access - should allow owner to access their project", async () => {
 			const owner = await createTestUser();
 			const ownerRequest = makeAuthenticatedRequest({
 				server,
@@ -53,11 +52,9 @@ describe("Project Security & Authorization", () => {
 			expect(getResponse.statusCode).toBe(200);
 			const data = JSON.parse(getResponse.body);
 			expect(data.result.data.title).toBe("Owner's Project");
-
-			await cleanupTestData({ userEmails: [owner.email] });
 		});
 
-		it("✅ collaborator access - should allow collaborator to access project", async () => {
+		it("collaborator access - should allow collaborator to access project", async () => {
 			const owner = await createTestUser();
 			const collaborator = await createTestUser();
 
@@ -110,11 +107,9 @@ describe("Project Security & Authorization", () => {
 			expect(getResponse.statusCode).toBe(200);
 			const data = JSON.parse(getResponse.body);
 			expect(data.result.data.title).toBe("Collaborative Project");
-
-			await cleanupTestData({ userEmails: [owner.email, collaborator.email] });
 		});
 
-		it("❌ random user - should deny random user access to project", async () => {
+		it("random user - should deny random user access to project", async () => {
 			const owner = await createTestUser();
 			const randomUser = await createTestUser();
 
@@ -143,11 +138,9 @@ describe("Project Security & Authorization", () => {
 			});
 
 			expect(getResponse.statusCode).toBe(404);
-
-			await cleanupTestData({ userEmails: [owner.email, randomUser.email] });
 		});
 
-		it("❌ anonymous - should deny anonymous access to project", async () => {
+		it("anonymous - should deny anonymous access to project", async () => {
 			const owner = await createTestUser();
 			const ownerRequest = makeAuthenticatedRequest({
 				server,
@@ -170,13 +163,11 @@ describe("Project Security & Authorization", () => {
 			});
 
 			expect(getResponse.statusCode).toBe(401);
-
-			await cleanupTestData({ userEmails: [owner.email] });
 		});
 	});
 
 	describe("Deleted Projects", () => {
-		it("❌ deleted project - should hide deleted project from owner", async () => {
+		it("deleted project - should hide deleted project from owner", async () => {
 			const owner = await createTestUser();
 			const ownerRequest = makeAuthenticatedRequest({
 				server,
@@ -208,8 +199,6 @@ describe("Project Security & Authorization", () => {
 			});
 
 			expect(getResponse.statusCode).toBe(404);
-
-			await cleanupTestData({ userEmails: [owner.email] });
 		});
 
 		it("should not list deleted projects", async () => {
@@ -256,13 +245,11 @@ describe("Project Security & Authorization", () => {
 			expect(
 				projects.some((p: { title: string }) => p.title === "To Delete"),
 			).toBe(false);
-
-			await cleanupTestData({ userEmails: [owner.email] });
 		});
 	});
 
 	describe("Cross-Project Access", () => {
-		it("❌ cross-project access - should deny update to other user's project", async () => {
+		it("cross-project access - should deny update to other user's project", async () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
@@ -304,11 +291,9 @@ describe("Project Security & Authorization", () => {
 
 			const verify = JSON.parse(verifyResponse.body).result.data;
 			expect(verify.title).toBe("Owner's Project");
-
-			await cleanupTestData({ userEmails: [owner.email, attacker.email] });
 		});
 
-		it("❌ cross-project access - should deny delete to other user's project", async () => {
+		it("cross-project access - should deny delete to other user's project", async () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
@@ -346,13 +331,11 @@ describe("Project Security & Authorization", () => {
 			});
 
 			expect(verifyResponse.statusCode).toBe(200);
-
-			await cleanupTestData({ userEmails: [owner.email, attacker.email] });
 		});
 	});
 
 	describe("Collaborator Permissions", () => {
-		it("✅ collaborator write - should allow collaborator to update project", async () => {
+		it("collaborator write - should allow collaborator to update project", async () => {
 			const owner = await createTestUser();
 			const collaborator = await createTestUser();
 
@@ -416,8 +399,6 @@ describe("Project Security & Authorization", () => {
 
 			const verify = JSON.parse(verifyResponse.body).result.data;
 			expect(verify.description).toBe("Updated by collaborator");
-
-			await cleanupTestData({ userEmails: [owner.email, collaborator.email] });
 		});
 
 		it("should not allow non-collaborator to see project in list", async () => {
@@ -454,8 +435,6 @@ describe("Project Security & Authorization", () => {
 					(p: { title: string }) => p.title === "Owner's Private Project",
 				),
 			).toBe(false);
-
-			await cleanupTestData({ userEmails: [owner.email, randomUser.email] });
 		});
 	});
 
@@ -492,8 +471,6 @@ describe("Project Security & Authorization", () => {
 			// This prevents attackers from enumerating existing projects
 			expect(response.statusCode).toBe(404);
 			expect(response.statusCode).not.toBe(403);
-
-			await cleanupTestData({ userEmails: [owner.email, attacker.email] });
 		});
 
 		it("should return same 404 for non-existent project ID", async () => {
@@ -513,8 +490,6 @@ describe("Project Security & Authorization", () => {
 			// Same 404 response as unauthorized access
 			// Attacker can't tell difference between "doesn't exist" and "forbidden"
 			expect(response.statusCode).toBe(404);
-
-			await cleanupTestData({ userEmails: [user.email] });
 		});
 
 		it("should return same 404 for deleted project", async () => {
@@ -553,8 +528,6 @@ describe("Project Security & Authorization", () => {
 
 			// Same 404 - can't tell if deleted, forbidden, or non-existent
 			expect(response.statusCode).toBe(404);
-
-			await cleanupTestData({ userEmails: [owner.email, attacker.email] });
 		});
 	});
 
@@ -588,8 +561,6 @@ describe("Project Security & Authorization", () => {
 			});
 
 			expect(response.statusCode).toBe(404);
-
-			await cleanupTestData({ userEmails: [owner.email, attacker.email] });
 		});
 
 		it("should not leak project existence through different error codes", async () => {
@@ -630,8 +601,6 @@ describe("Project Security & Authorization", () => {
 			expect(existingResponse.statusCode).toBe(404);
 			expect(nonExistentResponse.statusCode).toBe(404);
 			expect(existingResponse.statusCode).toBe(nonExistentResponse.statusCode);
-
-			await cleanupTestData({ userEmails: [owner.email, attacker.email] });
 		});
 	});
 });

@@ -1,7 +1,6 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createAuthenticatedClient } from "../../db/client";
 import { createTestProject, createTestUser } from "../../test/factories";
-import { cleanupTestData } from "../../test/setup";
 import * as projectService from "./project.service";
 
 // ============================================================================
@@ -17,9 +16,7 @@ describe("Project Service", () => {
 		gelClient = createAuthenticatedClient({ authToken: testUser.authToken });
 	});
 
-	afterAll(async () => {
-		await cleanupTestData({ userEmails: [testUser.email] });
-	});
+	// Note: Cleanup handled by branch reset (see reset-test-branch.sh)
 
 	describe("createProject", () => {
 		it("should create a new project", async () => {

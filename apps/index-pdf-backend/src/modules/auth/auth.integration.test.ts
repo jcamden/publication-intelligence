@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { generateTestEmail, generateTestPassword } from "../../test/factories";
 import { closeTestServer, createTestServer } from "../../test/server-harness";
-import { cleanupTestData } from "../../test/setup";
 
 // ============================================================================
 // Auth Integration Tests
@@ -10,22 +9,21 @@ import { cleanupTestData } from "../../test/setup";
 
 describe("Auth API (Integration)", () => {
 	let server: FastifyInstance;
-	const testEmails: string[] = [];
 
 	beforeAll(async () => {
 		server = await createTestServer();
 	});
 
 	afterAll(async () => {
-		await cleanupTestData({ userEmails: testEmails });
 		await closeTestServer(server);
 	});
+
+	// Note: Test data cleanup handled by branch reset (see reset-test-branch.sh)
 
 	describe("POST /trpc/auth.signUp", () => {
 		it("should create new user", async () => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
-			testEmails.push(email);
 
 			const response = await server.inject({
 				method: "POST",
@@ -81,7 +79,6 @@ describe("Auth API (Integration)", () => {
 		it("should authenticate existing user", async () => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
-			testEmails.push(email);
 
 			await server.inject({
 				method: "POST",
@@ -118,7 +115,6 @@ describe("Auth API (Integration)", () => {
 		it("should return authenticated user", async () => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
-			testEmails.push(email);
 
 			const signUpResponse = await server.inject({
 				method: "POST",
@@ -155,7 +151,6 @@ describe("Auth API (Integration)", () => {
 		it("should emit events for auth actions", async () => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
-			testEmails.push(email);
 
 			const response = await server.inject({
 				method: "POST",

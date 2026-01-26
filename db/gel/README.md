@@ -204,7 +204,7 @@ The backend connects to Gel using:
 import { createClient } from "edgedb";
 
 const gel = createClient({
-  instanceName: "instance",
+  instanceName: "publication_intelligence",
   tlsSecurity: "insecure", // OK for local development
 });
 ```

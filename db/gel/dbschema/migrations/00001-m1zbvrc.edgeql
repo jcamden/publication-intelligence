@@ -1,4 +1,4 @@
-CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
+CREATE MIGRATION m1zbvrcybnwxhqal3mtx5l4gq5lnq6c5pvubzbv65easxac3uf66eq
     ONTO initial
 {
   CREATE EXTENSION pgcrypto VERSION '1.3';
@@ -46,8 +46,6 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
           FILTER
               (.id = GLOBAL default::current_user_id)
           )));
-      CREATE ACCESS POLICY deny_anonymous
-          DENY ALL USING (NOT (EXISTS (GLOBAL default::current_user)));
       CREATE REQUIRED LINK owner: default::User {
           ON TARGET DELETE DELETE SOURCE;
       };
@@ -71,8 +69,6 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
       CREATE LINK user: default::User;
       CREATE ACCESS POLICY creator_access
           ALLOW ALL USING ((.user.id ?= GLOBAL default::current_user_id));
-      CREATE ACCESS POLICY deny_anonymous
-          DENY ALL USING (NOT (EXISTS (GLOBAL default::current_user)));
       CREATE PROPERTY completed_at: std::datetime;
       CREATE PROPERTY cost_usd: std::float32;
       CREATE REQUIRED PROPERTY created_at: std::datetime {
@@ -85,135 +81,6 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
       CREATE REQUIRED PROPERTY status: default::LLMRunStatus {
           SET default := (default::LLMRunStatus.pending);
       };
-  };
-  CREATE TYPE default::Event {
-      CREATE ACCESS POLICY deny_anonymous
-          DENY ALL USING (NOT (EXISTS (GLOBAL default::current_user)));
-      CREATE REQUIRED LINK project: default::Project {
-          ON TARGET DELETE DELETE SOURCE;
-      };
-      CREATE ACCESS POLICY project_access
-          ALLOW ALL USING (.project.can_access);
-      CREATE LINK actor: default::User;
-      CREATE REQUIRED PROPERTY action: std::str;
-      CREATE REQUIRED PROPERTY created_at: std::datetime {
-          SET default := (std::datetime_current());
-      };
-      CREATE PROPERTY entity_id: std::uuid;
-      CREATE REQUIRED PROPERTY entity_type: default::EntityType;
-      CREATE PROPERTY metadata: std::json;
-  };
-  CREATE TYPE default::BoundingBox {
-      CREATE REQUIRED PROPERTY height: std::float32;
-      CREATE PROPERTY rotation: std::float32;
-      CREATE REQUIRED PROPERTY width: std::float32;
-      CREATE REQUIRED PROPERTY x: std::float32;
-      CREATE REQUIRED PROPERTY y: std::float32;
-  };
-  CREATE TYPE default::IndexEntry {
-      CREATE ACCESS POLICY deny_anonymous
-          DENY ALL USING (NOT (EXISTS (GLOBAL default::current_user)));
-      CREATE REQUIRED LINK project: default::Project {
-          ON TARGET DELETE DELETE SOURCE;
-      };
-      CREATE ACCESS POLICY project_access
-          ALLOW ALL USING (.project.can_access);
-      CREATE REQUIRED PROPERTY slug: std::str;
-      CREATE CONSTRAINT std::exclusive ON ((.project, .slug));
-      CREATE LINK parent: default::IndexEntry {
-          ON TARGET DELETE ALLOW;
-      };
-      CREATE MULTI LINK children := (.<parent[IS default::IndexEntry]);
-      CREATE PROPERTY deleted_at: std::datetime;
-      CREATE PROPERTY child_count := (std::count(.children FILTER
-          NOT (EXISTS (.deleted_at))
-      ));
-      CREATE PROPERTY is_top_level := (NOT (EXISTS (.parent)));
-      CREATE REQUIRED PROPERTY created_at: std::datetime {
-          SET default := (std::datetime_current());
-      };
-      CREATE PROPERTY is_deleted := (EXISTS (.deleted_at));
-      CREATE PROPERTY description: std::str;
-      CREATE REQUIRED PROPERTY label: std::str;
-      CREATE REQUIRED PROPERTY revision: std::int32 {
-          SET default := 1;
-      };
-      CREATE REQUIRED PROPERTY status: default::IndexEntryStatus {
-          SET default := (default::IndexEntryStatus.active);
-      };
-      CREATE PROPERTY updated_at: std::datetime;
-  };
-  CREATE TYPE default::IndexMention {
-      CREATE ACCESS POLICY deny_anonymous
-          DENY ALL USING (NOT (EXISTS (GLOBAL default::current_user)));
-      CREATE LINK bbox: default::BoundingBox;
-      CREATE REQUIRED LINK entry: default::IndexEntry {
-          ON TARGET DELETE DELETE SOURCE;
-      };
-      CREATE PROPERTY deleted_at: std::datetime;
-      CREATE PROPERTY end_offset: std::int32;
-      CREATE PROPERTY start_offset: std::int32;
-      CREATE CONSTRAINT std::expression ON (((NOT (EXISTS (.start_offset)) OR NOT (EXISTS (.end_offset))) OR (.end_offset > .start_offset))) {
-          SET errmessage := 'end_offset must be greater than start_offset';
-      };
-      CREATE REQUIRED PROPERTY page_number: std::int32;
-      CREATE PROPERTY page_number_end: std::int32;
-      CREATE CONSTRAINT std::expression ON ((NOT (EXISTS (.page_number_end)) OR (.page_number_end > .page_number))) {
-          SET errmessage := 'page_number_end must be greater than page_number';
-      };
-      CREATE LINK suggested_by_llm: default::LLMRun;
-      CREATE REQUIRED PROPERTY created_at: std::datetime {
-          SET default := (std::datetime_current());
-      };
-      CREATE PROPERTY is_deleted := (EXISTS (.deleted_at));
-      CREATE REQUIRED PROPERTY range_type: default::MentionRangeType {
-          SET default := (default::MentionRangeType.single_page);
-      };
-      CREATE REQUIRED PROPERTY text_span: std::str;
-  };
-  CREATE TYPE default::IndexVariant {
-      CREATE ACCESS POLICY deny_anonymous
-          DENY ALL USING (NOT (EXISTS (GLOBAL default::current_user)));
-      CREATE REQUIRED LINK entry: default::IndexEntry {
-          ON TARGET DELETE DELETE SOURCE;
-      };
-      CREATE ACCESS POLICY project_access
-          ALLOW ALL USING (.entry.project.can_access);
-      CREATE REQUIRED PROPERTY text: std::str;
-      CREATE CONSTRAINT std::exclusive ON ((.entry, .text));
-      CREATE REQUIRED PROPERTY created_at: std::datetime {
-          SET default := (std::datetime_current());
-      };
-      CREATE REQUIRED PROPERTY revision: std::int32 {
-          SET default := 1;
-      };
-      CREATE PROPERTY updated_at: std::datetime;
-      CREATE REQUIRED PROPERTY variant_type: default::VariantType {
-          SET default := (default::VariantType.alias);
-      };
-  };
-  CREATE TYPE default::SourceDocument {
-      CREATE ACCESS POLICY deny_anonymous
-          DENY ALL USING (NOT (EXISTS (GLOBAL default::current_user)));
-      CREATE REQUIRED LINK project: default::Project {
-          ON TARGET DELETE DELETE SOURCE;
-      };
-      CREATE ACCESS POLICY project_access
-          ALLOW ALL USING (.project.can_access);
-      CREATE PROPERTY deleted_at: std::datetime;
-      CREATE PROPERTY content_hash: std::str;
-      CREATE REQUIRED PROPERTY created_at: std::datetime {
-          SET default := (std::datetime_current());
-      };
-      CREATE PROPERTY is_deleted := (EXISTS (.deleted_at));
-      CREATE REQUIRED PROPERTY file_name: std::str;
-      CREATE PROPERTY file_size: std::int64;
-      CREATE PROPERTY page_count: std::int32;
-      CREATE PROPERTY processed_at: std::datetime;
-      CREATE REQUIRED PROPERTY status: default::SourceDocumentStatus {
-          SET default := (default::SourceDocumentStatus.uploaded);
-      };
-      CREATE REQUIRED PROPERTY title: std::str;
   };
   CREATE TYPE default::Document {
       CREATE REQUIRED LINK uploaded_by: default::User;
@@ -241,6 +108,34 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
           SET default := (std::datetime_current());
       };
       CREATE PROPERTY embedding: array<std::float32>;
+  };
+  CREATE TYPE default::BoundingBox {
+      CREATE REQUIRED PROPERTY height: std::float32;
+      CREATE PROPERTY rotation: std::float32;
+      CREATE REQUIRED PROPERTY width: std::float32;
+      CREATE REQUIRED PROPERTY x: std::float32;
+      CREATE REQUIRED PROPERTY y: std::float32;
+  };
+  CREATE TYPE default::SourceDocument {
+      CREATE REQUIRED LINK project: default::Project {
+          ON TARGET DELETE DELETE SOURCE;
+      };
+      CREATE ACCESS POLICY project_access
+          ALLOW ALL USING (.project.can_access);
+      CREATE PROPERTY deleted_at: std::datetime;
+      CREATE PROPERTY content_hash: std::str;
+      CREATE REQUIRED PROPERTY created_at: std::datetime {
+          SET default := (std::datetime_current());
+      };
+      CREATE PROPERTY is_deleted := (EXISTS (.deleted_at));
+      CREATE REQUIRED PROPERTY file_name: std::str;
+      CREATE PROPERTY file_size: std::int64;
+      CREATE PROPERTY page_count: std::int32;
+      CREATE PROPERTY processed_at: std::datetime;
+      CREATE REQUIRED PROPERTY status: default::SourceDocumentStatus {
+          SET default := (default::SourceDocumentStatus.uploaded);
+      };
+      CREATE REQUIRED PROPERTY title: std::str;
   };
   ALTER TYPE default::LLMRun {
       CREATE LINK document: default::SourceDocument;
@@ -283,6 +178,23 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
       CREATE PROPERTY metadata: std::json;
       CREATE PROPERTY text_content: std::str;
   };
+  CREATE TYPE default::Event {
+      CREATE REQUIRED LINK project: default::Project {
+          ON TARGET DELETE DELETE SOURCE;
+      };
+      CREATE ACCESS POLICY project_access
+          ALLOW ALL USING (.project.can_access);
+      CREATE LINK actor: default::User {
+          ON TARGET DELETE ALLOW;
+      };
+      CREATE REQUIRED PROPERTY action: std::str;
+      CREATE REQUIRED PROPERTY created_at: std::datetime {
+          SET default := (std::datetime_current());
+      };
+      CREATE PROPERTY entity_id: std::uuid;
+      CREATE REQUIRED PROPERTY entity_type: default::EntityType;
+      CREATE PROPERTY metadata: std::json;
+  };
   CREATE TYPE default::ExportedIndex {
       CREATE REQUIRED LINK project: default::Project {
           ON TARGET DELETE DELETE SOURCE;
@@ -297,15 +209,70 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
       CREATE REQUIRED PROPERTY format: default::ExportFormat;
       CREATE PROPERTY metadata: std::json;
   };
-  ALTER TYPE default::IndexMention {
+  CREATE TYPE default::IndexEntry {
+      CREATE REQUIRED LINK project: default::Project {
+          ON TARGET DELETE DELETE SOURCE;
+      };
+      CREATE ACCESS POLICY project_access
+          ALLOW ALL USING (.project.can_access);
+      CREATE REQUIRED PROPERTY slug: std::str;
+      CREATE CONSTRAINT std::exclusive ON ((.project, .slug));
+      CREATE LINK parent: default::IndexEntry {
+          ON TARGET DELETE ALLOW;
+      };
+      CREATE MULTI LINK children := (.<parent[IS default::IndexEntry]);
+      CREATE PROPERTY deleted_at: std::datetime;
+      CREATE PROPERTY child_count := (std::count(.children FILTER
+          NOT (EXISTS (.deleted_at))
+      ));
+      CREATE PROPERTY is_top_level := (NOT (EXISTS (.parent)));
+      CREATE REQUIRED PROPERTY created_at: std::datetime {
+          SET default := (std::datetime_current());
+      };
+      CREATE PROPERTY is_deleted := (EXISTS (.deleted_at));
+      CREATE PROPERTY description: std::str;
+      CREATE REQUIRED PROPERTY label: std::str;
+      CREATE REQUIRED PROPERTY revision: std::int32 {
+          SET default := 1;
+      };
+      CREATE REQUIRED PROPERTY status: default::IndexEntryStatus {
+          SET default := (default::IndexEntryStatus.active);
+      };
+      CREATE PROPERTY updated_at: std::datetime;
+  };
+  CREATE TYPE default::IndexMention {
       CREATE REQUIRED LINK document: default::SourceDocument {
           ON TARGET DELETE DELETE SOURCE;
       };
       CREATE ACCESS POLICY project_access
           ALLOW ALL USING (.document.project.can_access);
+      CREATE LINK bbox: default::BoundingBox;
       CREATE LINK page: default::DocumentPage {
           ON TARGET DELETE DELETE SOURCE;
       };
+      CREATE REQUIRED LINK entry: default::IndexEntry {
+          ON TARGET DELETE DELETE SOURCE;
+      };
+      CREATE PROPERTY deleted_at: std::datetime;
+      CREATE PROPERTY end_offset: std::int32;
+      CREATE PROPERTY start_offset: std::int32;
+      CREATE CONSTRAINT std::expression ON (((NOT (EXISTS (.start_offset)) OR NOT (EXISTS (.end_offset))) OR (.end_offset > .start_offset))) {
+          SET errmessage := 'end_offset must be greater than start_offset';
+      };
+      CREATE REQUIRED PROPERTY page_number: std::int32;
+      CREATE PROPERTY page_number_end: std::int32;
+      CREATE CONSTRAINT std::expression ON ((NOT (EXISTS (.page_number_end)) OR (.page_number_end > .page_number))) {
+          SET errmessage := 'page_number_end must be greater than page_number';
+      };
+      CREATE LINK suggested_by_llm: default::LLMRun;
+      CREATE REQUIRED PROPERTY created_at: std::datetime {
+          SET default := (std::datetime_current());
+      };
+      CREATE PROPERTY is_deleted := (EXISTS (.deleted_at));
+      CREATE REQUIRED PROPERTY range_type: default::MentionRangeType {
+          SET default := (default::MentionRangeType.single_page);
+      };
+      CREATE REQUIRED PROPERTY text_span: std::str;
   };
   CREATE TYPE default::IndexRelation {
       CREATE REQUIRED LINK from_entry: default::IndexEntry {
@@ -329,6 +296,25 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
           SET default := 1;
       };
       CREATE PROPERTY updated_at: std::datetime;
+  };
+  CREATE TYPE default::IndexVariant {
+      CREATE REQUIRED LINK entry: default::IndexEntry {
+          ON TARGET DELETE DELETE SOURCE;
+      };
+      CREATE ACCESS POLICY project_access
+          ALLOW ALL USING (.entry.project.can_access);
+      CREATE REQUIRED PROPERTY text: std::str;
+      CREATE CONSTRAINT std::exclusive ON ((.entry, .text));
+      CREATE REQUIRED PROPERTY created_at: std::datetime {
+          SET default := (std::datetime_current());
+      };
+      CREATE REQUIRED PROPERTY revision: std::int32 {
+          SET default := 1;
+      };
+      CREATE PROPERTY updated_at: std::datetime;
+      CREATE REQUIRED PROPERTY variant_type: default::VariantType {
+          SET default := (default::VariantType.alias);
+      };
   };
   ALTER TYPE default::SourceDocument {
       CREATE MULTI LINK pages := (.<document[IS default::DocumentPage]);
@@ -385,4 +371,5 @@ CREATE MIGRATION m1esxgnfhijgnzwhkghqy2nds4vfi54hwi4nddm3amypt566snaqfq
       CREATE MULTI LINK projects := (.<workspace[IS default::Project]);
   };
   CREATE PERMISSION default::app_access;
+  CREATE PERMISSION default::policy_bypass;
 };

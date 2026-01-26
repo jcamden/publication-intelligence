@@ -1,13 +1,12 @@
 import { createClient } from "gel";
 
 export const createGelClient = () => {
-	// TODO: Use test branch for better isolation
-	// Currently using main for all environments due to auth timing issues
-	// See: db/gel/reset-test-branch.sh for test branch setup
-	const branch = "main"; // process.env.NODE_ENV === "test" ? "test" : "main";
+	// Use dedicated test branch for test environment
+	// Provides full isolation from production data
+	const branch = process.env.NODE_ENV === "test" ? "test" : "main";
 
 	return createClient({
-		instanceName: "instance",
+		instanceName: "publication_intelligence",
 		tlsSecurity: "insecure",
 		branch,
 	});

@@ -26,11 +26,9 @@ export const createTestUser = async ({
 	password?: string;
 	name?: string;
 } = {}) => {
-	// TODO: Use test branch for better isolation
-	// Currently using main for all environments due to auth timing issues
-	const branch = "main"; // process.env.NODE_ENV === "test" ? "test" : "main";
+	// Use GEL_AUTH_URL from environment (defaults to main branch)
 	const GEL_AUTH_URL =
-		process.env.GEL_AUTH_URL ?? `http://localhost:10701/db/${branch}/ext/auth`;
+		process.env.GEL_AUTH_URL ?? "http://localhost:10702/db/main/ext/auth";
 
 	const createHash = (await import("node:crypto")).createHash;
 	const randomBytes = (await import("node:crypto")).randomBytes;

@@ -13,7 +13,7 @@ Access policies defined on the `Project` type in our Gel (EdgeDB) database are *
 - **Database**: Gel (EdgeDB) v7.1
 - **Client**: `gel` npm package v2.2.0 (Node.js/TypeScript)
 - **Stack**: Node.js 23.11.0, Fastify, tRPC
-- **Connection**: Local development instance on `localhost:10701`
+- **Connection**: Local development instance on `localhost:10702`
 - **Project Structure**: `apps/index-pdf-backend/gel.toml` links to `db/gel/` (admin credentials)
 
 ---
@@ -100,7 +100,7 @@ $ gel query "SELECT sys::Role { name, is_superuser, permissions } FILTER .name =
 ### Attempt 1: Using `instanceName` with credentials
 ```typescript
 createClient({
-  instanceName: "instance",
+  instanceName: "publication_intelligence",
   tlsSecurity: "insecure",
   user: "app_user",
   password: "dev_password_12345",
@@ -112,7 +112,7 @@ createClient({
 ```typescript
 createClient({
   host: "localhost",
-  port: 10701,
+  port: 10702,
   user: "app_user",
   password: "dev_password_12345",
   database: "main",
@@ -123,7 +123,7 @@ createClient({
 
 ### Attempt 3: Using DSN connection string
 ```typescript
-const dsn = `edgedb://app_user:dev_password_12345@localhost:10701/main`;
+const dsn = `edgedb://app_user:dev_password_12345@localhost:10702/main`;
 createClient({
   dsn,
   tlsSecurity: "insecure",

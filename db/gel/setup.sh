@@ -9,18 +9,20 @@ set -e
 # 3. Regenerates TypeScript client
 #
 # Safe to run multiple times (idempotent).
+# Can be run from project root or db/gel directory.
 # ============================================================================
 
-# Check we're in the right directory
-if [ ! -f "gel.toml" ]; then
-  echo "❌ Error: Must run from db/gel directory"
-  exit 1
-fi
+# Detect script location and navigate to db/gel directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+
+# Change to db/gel directory
+cd "$SCRIPT_DIR"
 
 # Load environment variables from .env (for GEL_AUTO_BACKUP_MODE, etc.)
-if [ -f "../../.env" ]; then
+if [ -f "$PROJECT_ROOT/.env" ]; then
   set -a
-  source ../../.env
+  source "$PROJECT_ROOT/.env"
   set +a
 fi
 
@@ -59,7 +61,50 @@ echo ""
 echo "✅ Roles ready"
 echo ""
 
-echo "📦 Step 3/3: Regenerating TypeScript client..."
+echo "🔐 Step 3/4: Configuring auth extension..."
+echo ""
+
+if [ -z "$EDGEDB_AUTH_SIGNING_KEY" ]; then
+  echo "  ⚠️  Warning: EDGEDB_AUTH_SIGNING_KEY not set in .env"
+  echo "  Skipping auth configuration - tests will fail"
+else
+  # Configure auth settings
+  gel query "
+    CONFIGURE CURRENT BRANCH SET
+      ext::auth::AuthConfig::auth_signing_key := '$EDGEDB_AUTH_SIGNING_KEY';
+    
+    CONFIGURE CURRENT BRANCH SET
+      ext::auth::AuthConfig::token_time_to_live := <duration>'24 hours';
+    
+    CONFIGURE CURRENT BRANCH SET
+      ext::auth::AuthConfig::allowed_redirect_urls := {
+        'http://localhost:3000',
+        'http://localhost:3000/auth',
+        'http://localhost:3001',
+        'http://localhost:3001/auth'
+      };
+    
+    CONFIGURE CURRENT BRANCH SET
+      ext::auth::AuthConfig::app_name := 'Publication Intelligence';
+  " >/dev/null 2>&1 || echo "  (Auth config may already be set)"
+  
+  # Reset and create EmailPasswordProvider (ensures exactly one)
+  gel query "
+    CONFIGURE CURRENT BRANCH RESET ext::auth::EmailPasswordProviderConfig FILTER true;
+    
+    CONFIGURE CURRENT BRANCH INSERT ext::auth::EmailPasswordProviderConfig {
+      require_verification := false,
+    };
+  " >/dev/null 2>&1 || echo "  (Provider config may already be set)"
+  
+  echo "  ✓ Auth extension configured"
+fi
+
+echo ""
+echo "✅ Auth configured"
+echo ""
+
+echo "📦 Step 4/4: Regenerating TypeScript client..."
 npx @edgedb/generate edgeql-js --output-dir ./generated --target ts >/dev/null
 
 echo ""
