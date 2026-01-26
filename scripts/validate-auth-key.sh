@@ -13,8 +13,9 @@ echo ""
 # Auto-load from .env if it exists and key not already set
 if [ -z "${!KEY_VAR}" ] && [ -f ".env" ]; then
   echo "📄 Loading environment from .env file..."
-  # Export only the specific key we need
-  export EDGEDB_AUTH_SIGNING_KEY=$(grep "^EDGEDB_AUTH_SIGNING_KEY=" .env | cut -d '=' -f2- | sed 's/^["'"'"']//' | sed 's/["'"'"']$//')
+  set -a  # Automatically export all variables
+  source .env
+  set +a
   echo ""
 fi
 

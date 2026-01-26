@@ -221,24 +221,56 @@ const authenticatedClient = gel.withGlobals({
 
 ### Reset the database
 
-⚠️ **Important**: After wiping the database, you must recreate roles and authentication configuration.
+#### Full Reset (Recommended)
 
-**Quick method:**
+**Complete reset including roles, schema, and data:**
+
 ```bash
 cd db/gel
-gel database wipe --non-interactive
-gel migrate
-./setup-after-reset.sh
-cd ../../apps/index-pdf-backend
-pnpm gel:generate
+./full-reset.sh
 ```
 
-**Manual method:**
+This runs both `reset.sh` (destructive) and `setup.sh` (constructive).
+
+**Note:** Auth configuration is preserved (managed separately with `auth-config.edgeql`). Backups are disabled during reset/setup.
+
+#### Separated Scripts (More Control)
+
+**1. Reset only (destructive):**
 ```bash
 cd db/gel
+./reset.sh
+```
+- Drops all application roles (instance-level)
+- Wipes database branch (schema + data)
+- **Must be followed by `./setup.sh`**
 
-# 1. Wipe the database
-gel database wipe --non-interactive
+**2. Setup only (constructive):**
+```bash
+cd db/gel
+./setup.sh
+```
+- Applies migrations
+- Creates application roles
+- Regenerates TypeScript client
+- **Idempotent** - Safe to run multiple times
+
+**Note:** Auth configuration (`auth-config.edgeql`) is separate and typically only needs to be run once manually.
+
+**Typical workflow:**
+```bash
+cd db/gel
+./reset.sh   # Destroy everything
+./setup.sh   # Rebuild everything
+```
+
+#### Individual Operations
+
+**Just wipe data (keep roles):**
+```bash
+cd db/gel
+gel branch wipe --non-interactive main
+gel migrate
 
 # 2. Apply migrations (includes schema and roles.gel)
 gel migrate
@@ -307,7 +339,7 @@ gel query "DELETE ext::auth::AuthToken"
 
 ## Roles and Permissions
 
-The database uses two roles:
+The database uses a tiered role system for security and separation of concerns:
 
 ### admin (Superuser)
 - Default role created by Gel
