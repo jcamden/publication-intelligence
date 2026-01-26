@@ -341,17 +341,33 @@ gel query "DELETE ext::auth::AuthToken"
 
 The database uses a tiered role system for security and separation of concerns:
 
-### admin (Superuser)
-- Default role created by Gel
-- Full access to all data and system commands
-- Used for migrations and schema changes
-- **Should NOT be used by the application**
+| Role | Permissions | Use Case |
+|------|-------------|----------|
+| **admin** | Superuser | Database management only - **NEVER in app code** |
+| **app_readonly** | `data_read` | Analytics, BI, monitoring |
+| **app_worker** | `data_modification` | Background jobs, queues |
+| **app_user** | Auth + **policies only** | Normal API access - **Use this** |
+| **app_migration** | DDL + Data + `policy_bypass` | Migrations, seeding (CI only) |
+| **app_admin** | Full + `policy_bypass` | Admin dashboards, debugging |
 
-### app_user (Application Role)
-- Non-superuser role for runtime application access
-- Permissions: `data_modification`, `auth_read`, `auth_write`, `app_access`
-- Access policies are enforced for this role
-- **This is what the application connects as**
+### Key Security Features
+
+1. **Fail-Closed Design**
+   - `app_user` has **NO** `data_modification` permission
+   - All data access is gated by access policies
+   - If policies break → app has **ZERO** data access (safe default)
+
+2. **Explicit Policy Bypass**
+   - `policy_bypass` permission only for trusted roles
+   - `app_migration`: unrestricted access for data migrations/seeding
+   - `app_admin`: unrestricted access for admin dashboards/debugging
+   - **NEVER** assign to `app_user`, `app_worker`, or `app_readonly`
+
+3. **app_user (Application Role)**
+   - Non-superuser role for runtime application access
+   - Permissions: `auth_read`, `auth_write`, `app_access` (NO data_modification)
+   - Access policies are enforced for this role
+   - **This is what the application connects as**
 
 ### Access Policies
 

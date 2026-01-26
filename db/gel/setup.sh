@@ -40,9 +40,9 @@ echo ""
 for role_config in \
   "app_readonly:dev_readonly_12345:sys::perm::data_read" \
   "app_worker:dev_worker_12345:sys::perm::data_modification" \
-  "app_user:dev_password_12345:sys::perm::data_modification,ext::auth::perm::auth_read,ext::auth::perm::auth_write,default::app_access" \
-  "app_migration:dev_migration_12345:sys::perm::ddl_modification" \
-  "app_admin:dev_admin_12345:sys::perm::all"
+  "app_user:dev_password_12345:ext::auth::perm::auth_read,ext::auth::perm::auth_write,default::app_access" \
+  "app_migration:dev_migration_12345:sys::perm::ddl_modification,sys::perm::data_modification,default::policy_bypass" \
+  "app_admin:dev_admin_12345:sys::perm::all,default::policy_bypass"
 do
   IFS=':' read -r role_name password permissions <<< "$role_config"
   

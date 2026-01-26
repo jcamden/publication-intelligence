@@ -41,31 +41,55 @@ CREATE ROLE app_worker {
 # ============================================================================
 # Role: app_user
 # Purpose: Normal API access for authenticated users
-# Permissions: Data modification + Auth read/write
+# Permissions: MINIMAL - Relies on access policies for actual data access
 # Use case: Web/mobile app backend, user-facing API
+# ============================================================================
+#
+# SECURITY PRINCIPLE: Fail-closed
+# - If access policies break, app_user has NO unrestricted data access
+# - Only has auth permissions + custom app_access
+# - All data operations gated by access policies
+#
+# This is significantly safer than data_modification which would allow
+# unrestricted access if policies failed.
 # ============================================================================
 
 CREATE ROLE app_user {
   SET password := 'dev_password_12345';  # Change in production!
   SET permissions := {
-    sys::perm::data_modification,     # Read + write + delete data
+    # Auth permissions (required for token verification and user management)
     ext::auth::perm::auth_read,       # Verify tokens, read user data
     ext::auth::perm::auth_write,      # Create users, issue tokens
-    default::app_access               # Custom application permission
+    
+    # Custom application permission (used by access policies)
+    default::app_access
+    
+    # NOTE: NO data_modification - all data access via policies only
+    # NOTE: NO policy_bypass - app MUST respect access policies
+    # This ensures fail-closed security (if policies break, no data access)
   };
 };
 
 # ============================================================================
 # Role: app_migration
-# Purpose: Schema migrations only
-# Permissions: DDL operations (CREATE TYPE, ALTER TYPE, etc.)
-# Use case: CI/CD migration pipelines, schema updates
+# Purpose: Schema migrations AND data seeding
+# Permissions: Full data + DDL access (bypasses access policies)
+# Use case: CI/CD migration pipelines, schema updates, data seeding
+# ============================================================================
+#
+# DESIGN NOTE: This role can modify data AND schema
+# - Needed for migrations that include data transformations
+# - Needed for seeding initial data
+# - Bypasses access policies (unrestricted)
+# - Should ONLY be used in CI/CD pipelines, never in app code
 # ============================================================================
 
 CREATE ROLE app_migration {
   SET password := 'dev_migration_12345';  # Change in production!
   SET permissions := {
-    sys::perm::ddl_modification  # Schema changes only, no data access
+    sys::perm::ddl_modification,      # Schema changes
+    sys::perm::data_modification,     # Data access (for seeding/transforms)
+    default::policy_bypass            # Bypass policies (needed for migrations)
   };
 };
 
@@ -87,14 +111,23 @@ CREATE ROLE app_admin {
 # Permission Matrix Summary
 # ============================================================================
 #
-# Role            | Data Read | Data Write | Auth | DDL | Use Case
-# ----------------|-----------|------------|------|-----|------------------
-# app_readonly    | ✅        | ❌         | ❌   | ❌  | Analytics/BI
-# app_worker      | ✅        | ✅         | ❌   | ❌  | Background jobs
-# app_user        | ✅        | ✅         | ✅   | ❌  | API access
-# app_migration   | ❌        | ❌         | ❌   | ✅  | Schema updates
-# app_admin       | ✅        | ✅         | ✅   | ✅  | Admin/debugging
-# admin (super)   | ✅        | ✅         | ✅   | ✅  | Full system access
+# Role            | Data Read | Data Write | Auth | DDL | Policies | policy_bypass | Use Case
+# ----------------|-----------|------------|------|-----|----------|---------------|------------------
+# app_readonly    | ✅        | ❌         | ❌   | ❌  | ✅       | ❌            | Analytics/BI
+# app_worker      | ✅        | ✅         | ❌   | ❌  | ✅       | ❌            | Background jobs
+# app_user        | via policy| via policy | ✅   | ❌  | ✅       | ❌            | API access (FAIL-CLOSED)
+# app_migration   | ✅        | ✅         | ❌   | ✅  | bypass   | ✅            | Migrations/seeding
+# app_admin       | ✅        | ✅         | ✅   | ✅  | bypass   | ✅            | Admin/debugging
+# admin (super)   | ✅        | ✅         | ✅   | ✅  | bypass   | ✅            | Full system access
+#
+# KEY INSIGHTS:
+# 1. app_user has NO data_modification and NO policy_bypass
+#    - All data access is gated by access policies
+#    - If policies break → app_user has ZERO data access (fail-closed)
+# 2. policy_bypass only for trusted roles
+#    - app_migration: needs unrestricted access for data migrations
+#    - app_admin: needs unrestricted access for debugging/admin tools
+#    - NEVER for app_user, app_worker, or app_readonly
 #
 # ============================================================================
 # Security Best Practices
