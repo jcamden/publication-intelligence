@@ -1,5 +1,6 @@
 import e from "@gel";
 import { gel } from "../db/client";
+import { logEvent } from "../logger";
 
 type VerifyTokenResult = {
 	valid: boolean;
@@ -15,8 +16,10 @@ type VerifyTokenResult = {
 
 export const verifyGelToken = async ({
 	authToken,
+	requestId,
 }: {
 	authToken: string;
+	requestId?: string;
 }): Promise<VerifyTokenResult> => {
 	try {
 		const query = e.select(e.User, (user) => ({
@@ -26,7 +29,7 @@ export const verifyGelToken = async ({
 			identity: {
 				id: true,
 			},
-			filter: e.op(user.identity, "=", e.ext.auth.ClientTokenIdentity),
+			filter: e.op(user.identity, "=", e.ext.auth.global.ClientTokenIdentity),
 			limit: 1,
 		}));
 
@@ -39,6 +42,13 @@ export const verifyGelToken = async ({
 		const result = results[0];
 
 		if (!result) {
+			logEvent({
+				event: "auth.token_verification_failed",
+				context: {
+					requestId,
+					metadata: { reason: "user_not_found" },
+				},
+			});
 			return { valid: false };
 		}
 
@@ -52,7 +62,13 @@ export const verifyGelToken = async ({
 			},
 		};
 	} catch (error) {
-		console.error("Token verification failed:", error);
+		logEvent({
+			event: "auth.token_verification_error",
+			context: {
+				requestId,
+				error,
+			},
+		});
 		return { valid: false };
 	}
 };

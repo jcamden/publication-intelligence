@@ -4,6 +4,7 @@ import type { verifyGelToken } from "./auth/verify-token";
 type Context = {
 	authToken?: string;
 	user?: Awaited<ReturnType<typeof verifyGelToken>>["user"];
+	requestId: string;
 };
 
 export const t = initTRPC.context<Context>().create();

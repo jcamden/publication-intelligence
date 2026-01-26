@@ -1,0 +1,101 @@
+---
+description: Domain event emission - when to emit, naming, and MVP constraints
+alwaysApply: true
+---
+
+# Event Emission Standards
+
+Events represent meaningful domain facts that have occurred.
+
+## Core Principles
+
+1. **Commands cause events**, not vice versa (in MVP)
+2. Events describe **what happened**, not what should happen
+3. Only emit for **domain-relevant actions**, not low-level technical noise
+4. Events must be **deterministic and idempotent** where possible
+5. **Gel DB is source of truth**, not events
+
+## When to Emit Events
+
+**DO emit for:**
+- User lifecycle: created, updated, deleted, logged in/out
+- Document actions: uploaded, deleted, reprocessed, text extraction
+- Concept changes: created, updated, merged, deleted
+- Index operations: entry created/edited/removed, state changes
+- Collaboration-relevant actions
+
+**DON'T emit for:**
+- Simple reads (GET requests)
+- Internal helper function calls
+- Low-level DB queries
+- UI-only state changes
+- Transient errors without domain meaning
+
+## Event Naming: `<domain>.<entity>.<action>`
+
+```typescript
+// ✅ GOOD
+'auth.user_created'
+'auth.user_logged_in'
+'document.uploaded'
+'document.text_extracted'
+'concept.created'
+'concept.merged'
+'index_entry.updated'
+
+// ❌ BAD
+'success'
+'done'
+'update'
+'event'
+```
+
+## Event Structure
+
+```typescript
+type DomainEvent = {
+  type: string;           // event name
+  timestamp: string;      // ISO 8601
+  requestId?: string;
+  userId?: string;
+  documentId?: string;
+  entityId?: string;
+  metadata?: object;      // NO secrets, tokens, or large payloads
+};
+```
+
+## Emission Rules
+
+1. Emit **only after DB transaction succeeds**
+2. Emit in **backend only**, not frontend
+3. Use **shared event utility**, not ad hoc code
+4. One event = one meaningful domain change
+
+```typescript
+// ❌ BAD - emit for every DB row
+await db.insert(concept);
+emitEvent({ type: 'concept.row_inserted' });
+
+// ✅ GOOD - emit once after complete operation
+await db.insert(concept);
+emitEvent({
+  type: 'concept.created',
+  userId,
+  requestId,
+  entityId: concept.id,
+  metadata: { name: concept.name }
+});
+```
+
+## MVP Constraints
+
+- Synchronous function calls (no Kafka/Redis streams)
+- Events are logged, not queued
+- No event sourcing
+- Simplicity first; async delivery later
+
+## Design Constraint
+
+Ask: **"Would this matter to an indexer, author, or publisher?"**
+
+If no, don't emit the event. Prefer fewer meaningful events over noisy ones.

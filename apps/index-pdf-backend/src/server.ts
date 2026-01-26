@@ -2,6 +2,8 @@ import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import Fastify, { type FastifyRequest } from "fastify";
 import { verifyGelToken } from "./auth/verify-token";
+import { logger } from "./logger";
+import { registerRequestId } from "./middleware/request-id";
 import { appRouter } from "./routers/index";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -9,12 +11,11 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 
 export const createServer = () => {
 	const server = Fastify({
-		logger: {
-			level: process.env.LOG_LEVEL ?? "info",
-		},
+		logger: false,
 		routerOptions: {
 			maxParamLength: 5000,
 		},
+		disableRequestLogging: true,
 	});
 
 	return server;
@@ -22,6 +23,8 @@ export const createServer = () => {
 
 export const startServer = async () => {
 	const server = createServer();
+
+	await registerRequestId(server);
 
 	await server.register(cors, {
 		origin: [
@@ -43,11 +46,15 @@ export const startServer = async () => {
 					: undefined;
 
 				if (authToken) {
-					const verification = await verifyGelToken({ authToken });
+					const verification = await verifyGelToken({
+						authToken,
+						requestId: req.requestId,
+					});
 					if (verification.valid && verification.user) {
 						return {
 							authToken,
 							user: verification.user,
+							requestId: req.requestId,
 						};
 					}
 				}
@@ -55,6 +62,7 @@ export const startServer = async () => {
 				return {
 					authToken: undefined,
 					user: undefined,
+					requestId: req.requestId,
 				};
 			},
 		},
@@ -67,9 +75,14 @@ export const startServer = async () => {
 
 	await server.listen({ port: PORT, host: HOST });
 
-	console.log(`🚀 Fastify + tRPC server listening on http://${HOST}:${PORT}`);
-	console.log(`🗄️  Connected to Gel database`);
-	console.log(`📍 tRPC endpoint: http://${HOST}:${PORT}/trpc`);
+	logger.info({
+		event: "server.started",
+		metadata: {
+			host: HOST,
+			port: PORT,
+			env: process.env.NODE_ENV,
+		},
+	});
 
 	return server;
 };

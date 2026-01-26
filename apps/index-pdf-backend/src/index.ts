@@ -1,8 +1,17 @@
+import { logger } from "./logger";
 import { startServer } from "./server";
 
 const main = async () => {
-	console.log("Publication Intelligence Backend");
 	await startServer();
 };
 
-main().catch(console.error);
+main().catch((error) => {
+	logger.error({
+		event: "server.startup_failed",
+		error: {
+			message: error instanceof Error ? error.message : String(error),
+			stack: error instanceof Error ? error.stack : undefined,
+		},
+	});
+	process.exit(1);
+});

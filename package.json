@@ -24,7 +24,7 @@
 		"gel:generate": "pnpm --filter @pubint/db-gel exec npx @edgedb/generate edgeql-js --output-dir ./generated --target ts",
 		"gel:generate:watch": "pnpm --filter @pubint/db-gel exec npx @edgedb/generate edgeql-js --output-dir ./generated --watch --target ts",
 		"gel:status": "pnpm --filter @pubint/db-gel exec gel migration status",
-		"gel:reset": "pnpm gel:wipe && pnpm gel:migrate:apply",
+		"gel:reset": "pnpm gel:wipe && pnpm gel:migrate:apply && pnpm gel:generate",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "biome check --write .",

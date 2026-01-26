@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { appRouter } from "./index";
 
+const createMockContext = (overrides = {}) => ({
+	requestId: "test-request-id",
+	...overrides,
+});
+
 describe("auth router", () => {
 	describe("signUp", () => {
 		it("should validate email format", async () => {
-			const caller = appRouter.createCaller({});
+			const caller = appRouter.createCaller(createMockContext());
 
 			await expect(
 				caller.auth.signUp({
@@ -15,7 +20,7 @@ describe("auth router", () => {
 		});
 
 		it("should validate password length", async () => {
-			const caller = appRouter.createCaller({});
+			const caller = appRouter.createCaller(createMockContext());
 
 			await expect(
 				caller.auth.signUp({
@@ -28,7 +33,7 @@ describe("auth router", () => {
 
 	describe("signIn", () => {
 		it("should validate email format", async () => {
-			const caller = appRouter.createCaller({});
+			const caller = appRouter.createCaller(createMockContext());
 
 			await expect(
 				caller.auth.signIn({
@@ -41,7 +46,7 @@ describe("auth router", () => {
 
 	describe("me", () => {
 		it("should require authentication", async () => {
-			const caller = appRouter.createCaller({});
+			const caller = appRouter.createCaller(createMockContext());
 
 			await expect(caller.auth.me()).rejects.toThrow("Not authenticated");
 		});
@@ -53,9 +58,11 @@ describe("auth router", () => {
 				name: "Test User",
 			};
 
-			const caller = appRouter.createCaller({
-				user: mockUser,
-			});
+			const caller = appRouter.createCaller(
+				createMockContext({
+					user: mockUser,
+				}),
+			);
 
 			const result = await caller.auth.me();
 			expect(result).toEqual(mockUser);
@@ -64,19 +71,21 @@ describe("auth router", () => {
 
 	describe("signOut", () => {
 		it("should require authentication", async () => {
-			const caller = appRouter.createCaller({});
+			const caller = appRouter.createCaller(createMockContext());
 
 			await expect(caller.auth.signOut()).rejects.toThrow("Not authenticated");
 		});
 
 		it("should succeed when authenticated", async () => {
-			const caller = appRouter.createCaller({
-				user: {
-					id: "test-id",
-					email: "test@example.com",
-					name: "Test User",
-				},
-			});
+			const caller = appRouter.createCaller(
+				createMockContext({
+					user: {
+						id: "test-id",
+						email: "test@example.com",
+						name: "Test User",
+					},
+				}),
+			);
 
 			const result = await caller.auth.signOut();
 			expect(result.message).toBe("Signed out successfully");

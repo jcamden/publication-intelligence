@@ -17,18 +17,19 @@
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage",
-		"gel:generate": "cd ../../db/gel && npx @edgedb/generate edgeql-js --output-dir ./generated",
-		"gel:generate:watch": "cd ../../db/gel && npx @edgedb/generate edgeql-js --output-dir ./generated --watch"
+		"test:coverage": "vitest run --coverage"
 	},
 	"dependencies": {
 		"@fastify/cors": "^11.2.0",
 		"@pubint/core": "workspace:*",
+		"@pubint/events": "workspace:*",
 		"@pubint/llm": "workspace:*",
 		"@pubint/pdf": "workspace:*",
 		"@trpc/server": "^11.8.1",
 		"fastify": "^5.7.1",
 		"gel": "^2.2.0",
+		"pino": "^9.14.0",
+		"pino-pretty": "^13.0.0",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {

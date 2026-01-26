@@ -1,5 +1,5 @@
 {
-	"name": "@pubint/llm",
+	"name": "@pubint/events",
 	"version": "0.0.0",
 	"type": "module",
 	"main": "./src/index.ts",
@@ -8,6 +8,10 @@
 		".": {
 			"types": "./src/index.ts",
 			"import": "./src/index.ts"
+		},
+		"./auth": {
+			"types": "./src/auth.ts",
+			"import": "./src/auth.ts"
 		}
 	},
 	"scripts": {
@@ -17,9 +21,6 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
-	},
-	"dependencies": {
-		"@pubint/core": "workspace:*"
 	},
 	"devDependencies": {
 		"typescript": "^5.7.3"

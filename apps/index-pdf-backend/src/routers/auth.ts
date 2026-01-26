@@ -2,6 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { gel } from "../db/client";
+import { eventEmitter } from "../events/emitter";
+import { logEvent } from "../logger";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 
 // Get Gel Auth URL from environment or use the project instance default
@@ -73,7 +75,7 @@ export const authRouter = router({
 				name: z.string().optional(),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				// Generate PKCE challenge
 				const verifier = generateCodeVerifier();
@@ -103,15 +105,11 @@ export const authRouter = router({
 					provider: string;
 				};
 
-				console.log("Signup result:", JSON.stringify(signupResult));
-
 				// Get auth token - if code is provided, exchange it; otherwise authenticate
 				let authToken: string;
 				if (signupResult.code?.trim()) {
-					console.log("Exchanging code for token");
 					authToken = await exchangeCodeForToken(signupResult.code, verifier);
 				} else {
-					console.log("No code - authenticating directly");
 					// No verification required - authenticate directly
 					authToken = await getAuthToken(input.email, input.password);
 				}
@@ -124,7 +122,11 @@ export const authRouter = router({
 
 				// Create User record linked to the authenticated identity
 				// Use raw EdgeQL since global isn't well-exposed in query builder
-				await authenticatedClient.querySingle(
+				const user = await authenticatedClient.querySingle<{
+					id: string;
+					email: string;
+					name: string | null;
+				}>(
 					`
 					INSERT User {
 						email := <str>$email,
@@ -138,12 +140,44 @@ export const authRouter = router({
 					},
 				);
 
+				if (user) {
+					logEvent({
+						event: "auth.user_created",
+						context: {
+							requestId: ctx.requestId,
+							userId: user.id,
+							metadata: {
+								email: user.email,
+								hasName: !!user.name,
+							},
+						},
+					});
+
+					await eventEmitter.emit({
+						type: "user.created",
+						timestamp: new Date(),
+						userId: user.id,
+						email: user.email,
+						name: user.name ?? undefined,
+					});
+				}
+
 				return {
 					authToken,
 					message: "User created successfully",
 				};
 			} catch (error) {
-				console.error("Sign up error:", error);
+				logEvent({
+					event: "auth.signup_failed",
+					context: {
+						requestId: ctx.requestId,
+						error,
+						metadata: {
+							email: input.email,
+						},
+					},
+				});
+
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: error instanceof Error ? error.message : "Failed to sign up",
@@ -158,16 +192,72 @@ export const authRouter = router({
 				password: z.string(),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
 			try {
 				const authToken = await getAuthToken(input.email, input.password);
+
+				const authenticatedClient = gel.withGlobals({
+					"ext::auth::client_token": authToken,
+				});
+
+				const user = await authenticatedClient.querySingle<{
+					id: string;
+					email: string;
+				}>(
+					`
+					SELECT User {
+						id,
+						email
+					}
+					FILTER .identity = global ext::auth::ClientTokenIdentity
+					LIMIT 1
+				`,
+				);
+
+				if (user) {
+					logEvent({
+						event: "auth.user_logged_in",
+						context: {
+							requestId: ctx.requestId,
+							userId: user.id,
+							metadata: {
+								email: user.email,
+							},
+						},
+					});
+
+					await eventEmitter.emit({
+						type: "user.logged_in",
+						timestamp: new Date(),
+						userId: user.id,
+						email: user.email,
+					});
+				}
 
 				return {
 					authToken,
 					message: "Signed in successfully",
 				};
 			} catch (error) {
-				console.error("Sign in error:", error);
+				logEvent({
+					event: "auth.login_failed",
+					context: {
+						requestId: ctx.requestId,
+						error,
+						metadata: {
+							email: input.email,
+							reason: error instanceof Error ? error.message : "Unknown error",
+						},
+					},
+				});
+
+				await eventEmitter.emit({
+					type: "auth.failed_login_attempt",
+					timestamp: new Date(),
+					email: input.email,
+					reason: error instanceof Error ? error.message : "Unknown error",
+				});
+
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
 					message: "Invalid email or password",
@@ -179,7 +269,25 @@ export const authRouter = router({
 		return ctx.user;
 	}),
 
-	signOut: protectedProcedure.mutation(async () => {
+	signOut: protectedProcedure.mutation(async ({ ctx }) => {
+		logEvent({
+			event: "auth.user_logged_out",
+			context: {
+				requestId: ctx.requestId,
+				userId: ctx.user.id,
+				metadata: {
+					email: ctx.user.email,
+				},
+			},
+		});
+
+		await eventEmitter.emit({
+			type: "user.logged_out",
+			timestamp: new Date(),
+			userId: ctx.user.id,
+			email: ctx.user.email,
+		});
+
 		// Gel Auth uses stateless JWTs - no server-side token deletion needed
 		// Client should remove the token from storage
 		return { message: "Signed out successfully" };
