@@ -1,2 +1,3 @@
 pnpm exec biome ci .
 pnpm -r run typecheck
+pnpm lint:access-policies

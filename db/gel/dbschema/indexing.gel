@@ -956,7 +956,7 @@ module default {
       allow select
       using (
         exists .document and (
-          .document.project.owner ?= global current_user or
+          .document.project.owner.id ?= global current_user_id or
           exists (
             select .document.project.collaborators
             filter .id = global current_user_id

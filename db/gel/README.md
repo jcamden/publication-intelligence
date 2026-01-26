@@ -253,6 +253,14 @@ cd db/gel
 gel query "SELECT User { id, email, name }"
 ```
 
+### Lint access policies
+
+```bash
+pnpm lint:access-policies
+```
+
+This checks for unsafe access policy patterns that can cause data leaks. It runs in CI and should be run before committing schema changes.
+
 ### Inspect auth tokens
 
 ```bash
@@ -291,12 +299,16 @@ All types with sensitive data have access policies:
 
 Access policies use safe patterns:
 ```edgeql
-# ✅ SAFE: ID-based comparison
-.owner.id ?= (select global current_user.id)
+# ✅ SAFE: ID-based comparison with global current_user_id
+.owner.id ?= global current_user_id
 
-# ❌ UNSAFE: Object equality (never use)
+# ❌ UNSAFE: Object equality (never use - causes data leaks)
 .owner ?= global current_user
+.owner = global current_user
 ```
+
+**Safety Enforcement:**
+Run `pnpm lint:access-policies` to check for unsafe patterns. This runs automatically in CI and will fail the build if violations are detected.
 
 ## Production Considerations
 

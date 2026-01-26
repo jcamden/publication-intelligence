@@ -1,6 +1,22 @@
 using extension auth;
 
 module default {
+  # ============================================================================
+  # Authentication Globals
+  # ============================================================================
+  #
+  # CRITICAL: Access Policy Safety Rules
+  #
+  # ✅ ALWAYS use: .owner.id ?= global current_user_id
+  # ❌ NEVER use:  .owner ?= global current_user
+  # ❌ NEVER use:  .owner = global current_user
+  #
+  # Why: Object equality in EdgeDB has subtle set semantics that can leak data.
+  # Only ID-based comparisons are safe and deterministic.
+  #
+  # CI enforces this rule - builds fail if object equality is detected.
+  # ============================================================================
+  
   # Safe global - never throws, never asserts
   # Returns User or {} - policies handle the empty case
   global current_user := (
