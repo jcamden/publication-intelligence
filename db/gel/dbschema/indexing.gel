@@ -244,6 +244,16 @@ module default {
     property entry_count := count(.index_entries filter not exists .deleted_at);
     property is_deleted := exists .deleted_at;
     
+    # Reusable access check for cascading to child types
+    # This pattern is used by SourceDocument, IndexEntry, Event, etc.
+    property can_access := (
+      .owner.id ?= global current_user_id or
+      exists (
+        select .collaborators
+        filter .id = global current_user_id
+      )
+    );
+    
     # Access control: only owner and collaborators can access
     # Default behavior: once policies exist, all operations are denied unless explicitly allowed
     
@@ -325,18 +335,9 @@ module default {
       deny all
       using (not exists global current_user);
     
-    access policy project_owner_access
+    access policy project_access
       allow all
-      using (.project.owner.id ?= global current_user_id);
-    
-    access policy project_collaborator_access
-      allow all
-      using (
-        exists (
-          select .project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+      using (.project.can_access);
   }
   
   
@@ -380,18 +381,9 @@ module default {
     };
     
     # Access control: inherit from document
-    access policy project_owner_access
+    access policy project_access
       allow all
-      using (.document.project.owner.id ?= global current_user_id);
-    
-    access policy project_collaborator_access
-      allow all
-      using (
-        exists (
-          select .document.project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+      using (.document.project.can_access);
   }
   
   
@@ -503,18 +495,9 @@ module default {
       deny all
       using (not exists global current_user);
     
-    access policy project_owner_access
+    access policy project_access
       allow all
-      using (.project.owner.id ?= global current_user_id);
-    
-    access policy project_collaborator_access
-      allow all
-      using (
-        exists (
-          select .project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+      using (.project.can_access);
   }
   
   
@@ -573,25 +556,9 @@ module default {
       deny all
       using (not exists global current_user);
     
-    access policy project_members_read
-      allow select
-      using (
-        .entry.project.owner.id ?= global current_user_id or
-        exists (
-          select .entry.project.collaborators
-          filter .id = global current_user_id
-        )
-      );
-    
-    access policy project_members_write
-      allow insert, update, delete
-      using (
-        .entry.project.owner.id ?= global current_user_id or
-        exists (
-          select .entry.project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+    access policy project_access
+      allow all
+      using (.entry.project.can_access);
   }
   
   
@@ -648,25 +615,9 @@ module default {
     # Example: A → B → C → A (cannot be caught at schema level)
     
     # Access control: inherit from from_entry's project
-    access policy project_members_read
-      allow select
-      using (
-        .from_entry.project.owner.id ?= global current_user_id or
-        exists (
-          select .from_entry.project.collaborators
-          filter .id = global current_user_id
-        )
-      );
-    
-    access policy project_members_write
-      allow insert, update, delete
-      using (
-        .from_entry.project.owner.id ?= global current_user_id or
-        exists (
-          select .from_entry.project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+    access policy project_access
+      allow all
+      using (.from_entry.project.can_access);
   }
   
   
@@ -792,18 +743,9 @@ module default {
       deny all
       using (not exists global current_user);
     
-    access policy project_owner_access
+    access policy project_access
       allow all
-      using (.document.project.owner.id ?= global current_user_id);
-    
-    access policy project_collaborator_access
-      allow all
-      using (
-        exists (
-          select .document.project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+      using (.document.project.can_access);
   }
   
   
@@ -870,18 +812,9 @@ module default {
       deny all
       using (not exists global current_user);
     
-    access policy project_owner_access
+    access policy project_access
       allow all
-      using (.project.owner.id ?= global current_user_id);
-    
-    access policy project_collaborator_access
-      allow all
-      using (
-        exists (
-          select .project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+      using (.project.can_access);
   }
   
   
@@ -997,13 +930,7 @@ module default {
     access policy document_project_access
       allow select
       using (
-        exists .document and (
-          .document.project.owner.id ?= global current_user_id or
-          exists (
-            select .document.project.collaborators
-            filter .id = global current_user_id
-          )
-        )
+        exists .document and .document.project.can_access
       );
   }
   
@@ -1043,17 +970,8 @@ module default {
     created_by: User;
     
     # Access control: inherit from project
-    access policy project_owner_access
+    access policy project_access
       allow all
-      using (.project.owner.id ?= global current_user_id);
-    
-    access policy project_collaborator_access
-      allow all
-      using (
-        exists (
-          select .project.collaborators
-          filter .id = global current_user_id
-        )
-      );
+      using (.project.can_access);
   }
 }
