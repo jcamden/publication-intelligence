@@ -185,16 +185,14 @@ module default {
     # Access control: owner and members have full access
     access policy owner_full_access
       allow all
-      using (
-        .owner.id ?= (select global current_user.id)
-      );
+      using (.owner.id ?= global current_user_id);
     
     access policy member_full_access
       allow all
       using (
         exists (
           select .members
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
     
@@ -250,16 +248,14 @@ module default {
     # Default behavior: once policies exist, all operations are denied unless explicitly allowed
     access policy owner_full_access
       allow all
-      using (
-        .owner.id ?= (select global current_user.id)
-      );
+      using (.owner.id ?= global current_user_id);
     
     access policy collaborator_full_access
       allow all
       using (
         exists (
           select .collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
     
@@ -319,14 +315,14 @@ module default {
     # Access control: inherit from project
     access policy project_owner_access
       allow all
-      using (.project.owner.id ?= (select global current_user.id));
+      using (.project.owner.id ?= global current_user_id);
     
     access policy project_collaborator_access
       allow all
       using (
         exists (
           select .project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }
@@ -374,14 +370,14 @@ module default {
     # Access control: inherit from document
     access policy project_owner_access
       allow all
-      using (.document.project.owner.id ?= (select global current_user.id));
+      using (.document.project.owner.id ?= global current_user_id);
     
     access policy project_collaborator_access
       allow all
       using (
         exists (
           select .document.project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }
@@ -491,14 +487,14 @@ module default {
     # Access control: inherit from project
     access policy project_owner_access
       allow all
-      using (.project.owner.id ?= (select global current_user.id));
+      using (.project.owner.id ?= global current_user_id);
     
     access policy project_collaborator_access
       allow all
       using (
         exists (
           select .project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }
@@ -556,20 +552,20 @@ module default {
     access policy project_members_read
       allow select
       using (
-        .entry.project.owner.id ?= (select global current_user.id) or
+        .entry.project.owner.id ?= global current_user_id or
         exists (
           select .entry.project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
     
     access policy project_members_write
       allow insert, update, delete
       using (
-        .entry.project.owner.id ?= (select global current_user.id) or
+        .entry.project.owner.id ?= global current_user_id or
         exists (
           select .entry.project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }
@@ -631,20 +627,20 @@ module default {
     access policy project_members_read
       allow select
       using (
-        .from_entry.project.owner.id ?= (select global current_user.id) or
+        .from_entry.project.owner.id ?= global current_user_id or
         exists (
           select .from_entry.project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
     
     access policy project_members_write
       allow insert, update, delete
       using (
-        .from_entry.project.owner.id ?= (select global current_user.id) or
+        .from_entry.project.owner.id ?= global current_user_id or
         exists (
           select .from_entry.project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }
@@ -768,14 +764,14 @@ module default {
     # Access control: inherit from document (and transitively from project)
     access policy project_owner_access
       allow all
-      using (.document.project.owner.id ?= (select global current_user.id));
+      using (.document.project.owner.id ?= global current_user_id);
     
     access policy project_collaborator_access
       allow all
       using (
         exists (
           select .document.project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }
@@ -840,14 +836,14 @@ module default {
     # Access control: inherit from project
     access policy project_owner_access
       allow all
-      using (.project.owner.id ?= (select global current_user.id));
+      using (.project.owner.id ?= global current_user_id);
     
     access policy project_collaborator_access
       allow all
       using (
         exists (
           select .project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }
@@ -954,7 +950,7 @@ module default {
     # Also accessible to project members if linked to a document
     access policy creator_access
       allow all
-      using (.user.id ?= (select global current_user.id));
+      using (.user.id ?= global current_user_id);
     
     access policy document_project_access
       allow select
@@ -963,7 +959,7 @@ module default {
           .document.project.owner ?= global current_user or
           exists (
             select .document.project.collaborators
-            filter .id = (select global current_user.id)
+            filter .id = global current_user_id
           )
         )
       );
@@ -1007,14 +1003,14 @@ module default {
     # Access control: inherit from project
     access policy project_owner_access
       allow all
-      using (.project.owner.id ?= (select global current_user.id));
+      using (.project.owner.id ?= global current_user_id);
     
     access policy project_collaborator_access
       allow all
       using (
         exists (
           select .project.collaborators
-          filter .id = (select global current_user.id)
+          filter .id = global current_user_id
         )
       );
   }

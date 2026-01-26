@@ -7,6 +7,12 @@ module default {
     select User
     filter .identity = global ext::auth::ClientTokenIdentity
   );
+  
+  # Safe User ID global for access policies
+  # Returns uuid or {} - eliminates verbose (select global current_user.id) pattern
+  global current_user_id := (
+    select global current_user.id
+  );
 
   type User {
     required email: str {
@@ -36,7 +42,7 @@ module default {
     
     access policy owner_has_full_access
       allow all
-      using (.uploaded_by.id ?= (select global current_user.id));
+      using (.uploaded_by.id ?= global current_user_id);
     
     access policy others_read_only
       allow select;
@@ -53,6 +59,6 @@ module default {
     
     access policy document_owner_access
       allow all
-      using (.document.uploaded_by.id ?= (select global current_user.id));
+      using (.document.uploaded_by.id ?= global current_user_id);
   }
 }
