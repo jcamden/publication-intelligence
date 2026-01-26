@@ -1,5 +1,6 @@
 import type { Client } from "gel";
 import { logEvent } from "../../logger";
+import { insertEvent } from "../event/event.repo";
 import * as projectRepo from "./project.repo";
 import type {
 	CreateProjectInput,
@@ -38,7 +39,7 @@ export const createProject = async ({
 		},
 	});
 
-	await projectRepo.insertEvent({
+	await insertEvent({
 		gelClient,
 		projectId: project.id,
 		entityType: "Project",
@@ -140,7 +141,7 @@ export const updateProject = async ({
 		},
 	});
 
-	await projectRepo.insertEvent({
+	await insertEvent({
 		gelClient,
 		projectId: project.id,
 		entityType: "Project",
@@ -179,7 +180,7 @@ export const deleteProject = async ({
 		},
 	});
 
-	await projectRepo.insertEvent({
+	await insertEvent({
 		gelClient,
 		projectId: result.id,
 		entityType: "Project",

@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import type { verifyGelToken } from "./auth/verify-token";
+import type { verifyGelToken } from "./modules/auth/verify-token";
 
 type Context = {
 	authToken?: string;

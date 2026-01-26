@@ -1,0 +1,5 @@
+module default {
+  # Custom permission for application access
+  # This will be assigned to the app_user role
+  permission app_access;
+}

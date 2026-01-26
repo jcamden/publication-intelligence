@@ -17,7 +17,9 @@
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"test:integration": "vitest run --testNamePattern='Integration'",
+		"test:service": "vitest run --testNamePattern='Service'"
 	},
 	"dependencies": {
 		"@fastify/cors": "^11.2.0",

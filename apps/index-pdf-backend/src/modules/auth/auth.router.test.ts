@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { appRouter } from "./index";
+import { appRouter } from "../../routers/index";
 
 const createMockContext = (overrides = {}) => ({
 	requestId: "test-request-id",
+	authToken: "mock-auth-token",
 	...overrides,
 });
 

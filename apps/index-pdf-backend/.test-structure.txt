@@ -1,0 +1,131 @@
+Backend Testing Framework Structure
+====================================
+
+apps/index-pdf-backend/
+│
+├── 📋 TESTING.md                          [Complete testing guide - 400+ lines]
+├── 📋 README.md                           [Project documentation with testing section]
+├── 📋 TEST-FRAMEWORK-SUMMARY.md          [Implementation summary & achievements]
+├── ⚙️  vitest.config.ts                   [Vitest configuration for backend]
+│
+├── src/
+│   ├── test/                              [Test Infrastructure]
+│   │   ├── 📋 README.md                   [Test utilities documentation]
+│   │   ├── 🔧 setup.ts                    [Test DB client & cleanup utilities]
+│   │   ├── 🏭 factories.ts                [Test data generators]
+│   │   ├── 🌐 server-harness.ts           [HTTP testing utilities]
+│   │   └── 🧪 auth.integration.test.ts    [6 Auth integration tests]
+│   │
+│   └── modules/
+│       └── project/
+│           ├── 🧪 project.service.test.ts      [9 Domain/service tests]
+│           └── 🧪 project.integration.test.ts  [11 API integration tests]
+│
+└── package.json                           [Updated with test scripts]
+
+Legend:
+📋 = Documentation
+⚙️  = Configuration
+🔧 = Test utilities
+🏭 = Test data factories
+🌐 = HTTP test helpers
+🧪 = Test suites
+
+Test Counts:
+═══════════════════════════════════════════════════════
+Domain Tests (Service Layer)                      9 tests
+API Tests (Integration)                          11 tests
+Auth Tests (Integration)                          6 tests
+───────────────────────────────────────────────────────
+TOTAL                                            26 tests
+═══════════════════════════════════════════════════════
+
+Test Scripts:
+═══════════════════════════════════════════════════════
+pnpm test              # Run all tests
+pnpm test:watch        # Watch mode (TDD)
+pnpm test:integration  # Integration tests only
+pnpm test:service      # Service tests only
+pnpm test:coverage     # Coverage report
+═══════════════════════════════════════════════════════
+
+Key Features:
+═══════════════════════════════════════════════════════
+✅ Real Gel database (no mocking)
+✅ Isolated test data (auto-cleanup)
+✅ Full HTTP stack testing
+✅ Auth flow validation
+✅ Authorization testing
+✅ Event emission verification
+✅ Clean architecture enforcement
+✅ Production-ready patterns
+✅ Comprehensive documentation
+✅ Fast feedback loop (<20s)
+═══════════════════════════════════════════════════════
+
+Three-Tier Testing Strategy:
+═══════════════════════════════════════════════════════
+Tier 1: Domain/Service Tests
+        └─> Test business logic directly
+        └─> Real Gel database
+        └─> No HTTP layer
+
+Tier 2: API/Integration Tests
+        └─> Full Fastify server
+        └─> Real authentication
+        └─> Complete HTTP cycle
+
+Tier 3: Contract Tests (future)
+        └─> tRPC schema validation
+        └─> Frontend/backend alignment
+═══════════════════════════════════════════════════════
+
+Test Coverage Areas:
+═══════════════════════════════════════════════════════
+✓ Project CRUD operations
+✓ Authentication flows
+✓ Authorization (access control)
+✓ Event emission & persistence
+✓ Input validation
+✓ Error handling
+✓ Database transactions
+✓ Soft deletion behavior
+✓ Request ID propagation
+═══════════════════════════════════════════════════════
+
+Documentation Highlights:
+═══════════════════════════════════════════════════════
+TESTING.md
+  - Testing philosophy (minimal mocking)
+  - Running tests (all scripts explained)
+  - Writing tests (with examples)
+  - Test utilities reference
+  - Best practices
+  - Troubleshooting guide
+  - Common patterns
+  - Future enhancements
+
+README.md
+  - Architecture overview
+  - API documentation
+  - Testing quick start
+  - Environment setup
+  - Design principles
+
+TEST-FRAMEWORK-SUMMARY.md
+  - What was delivered
+  - File structure
+  - Test coverage breakdown
+  - Key achievements
+  - Production readiness
+═══════════════════════════════════════════════════════
+
+Ready for:
+═══════════════════════════════════════════════════════
+✅ TDD workflow
+✅ CI/CD integration
+✅ New feature development
+✅ Safe refactoring
+✅ Team onboarding
+✅ PDF ingestion module
+═══════════════════════════════════════════════════════

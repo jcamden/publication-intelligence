@@ -1,18 +1,11 @@
 import e from "@gel";
-import { gel } from "../db/client";
-import { logEvent } from "../logger";
+import { gel } from "../../db/client";
+import { logEvent } from "../../logger";
+import type { VerifyTokenResult } from "./auth.types";
 
-type VerifyTokenResult = {
-	valid: boolean;
-	identity?: {
-		id: string;
-	};
-	user?: {
-		id: string;
-		email: string;
-		name: string | null;
-	};
-};
+// ============================================================================
+// Token Verification
+// ============================================================================
 
 export const verifyGelToken = async ({
 	authToken,

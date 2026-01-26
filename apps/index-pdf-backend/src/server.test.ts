@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createServer } from "./server";
+import { createServer, registerPlugins } from "./server";
 
 describe("Fastify server", () => {
-	let server: Awaited<ReturnType<typeof createServer>>;
+	let server: ReturnType<typeof createServer>;
 
 	beforeAll(async () => {
 		server = createServer();
+		await registerPlugins(server);
 		await server.ready();
 	});
 

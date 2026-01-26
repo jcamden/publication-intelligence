@@ -189,11 +189,62 @@ const authenticatedClient = gel.withGlobals({
 
 ### Reset the database
 
+⚠️ **Important**: After wiping the database, you must recreate roles and authentication configuration.
+
+**Quick method:**
 ```bash
 cd db/gel
 gel database wipe --non-interactive
 gel migrate
+./setup-after-reset.sh
+cd ../../apps/index-pdf-backend
+pnpm gel:generate
 ```
+
+**Manual method:**
+```bash
+cd db/gel
+
+# 1. Wipe the database
+gel database wipe --non-interactive
+
+# 2. Apply migrations (includes schema and roles.gel)
+gel migrate
+
+# 3. Create the app_user role
+gel query "
+CREATE ROLE app_user {
+  SET password := 'dev_password_12345';
+  SET permissions := {
+    sys::perm::data_modification,
+    ext::auth::perm::auth_read,
+    ext::auth::perm::auth_write,
+    default::app_access
+  };
+}
+"
+
+# 4. Configure password authentication for app_user
+gel query "
+CONFIGURE INSTANCE INSERT cfg::Auth {
+  priority := 10,
+  method := (INSERT cfg::Password),
+  user := 'app_user'
+}
+"
+
+# 5. Regenerate TypeScript client
+cd ../../apps/index-pdf-backend
+pnpm gel:generate
+```
+
+**Why these steps are needed:**
+
+- **app_user role**: Non-superuser role with specific permissions for application access
+- **Password auth**: Enables the app to connect with explicit credentials
+- **Access policies**: The schema uses access policies that work correctly with any authenticated connection
+
+> **Note**: The access policy fixes ensure authorization works correctly regardless of which role connects. The `app_user` role is optional but provides better security boundaries for development and testing.
 
 ### Query the database
 
@@ -214,6 +265,39 @@ gel query "SELECT ext::auth::AuthToken { identity: { id } }"
 gel query "DELETE ext::auth::AuthToken"
 ```
 
+## Roles and Permissions
+
+The database uses two roles:
+
+### admin (Superuser)
+- Default role created by Gel
+- Full access to all data and system commands
+- Used for migrations and schema changes
+- **Should NOT be used by the application**
+
+### app_user (Application Role)
+- Non-superuser role for runtime application access
+- Permissions: `data_modification`, `auth_read`, `auth_write`, `app_access`
+- Access policies are enforced for this role
+- **This is what the application connects as**
+
+### Access Policies
+
+All types with sensitive data have access policies:
+- **Project**: Only owners and collaborators can access
+- **SourceDocument**: Only project members can access
+- **IndexEntry**: Only project members can access
+- And more...
+
+Access policies use safe patterns:
+```edgeql
+# ✅ SAFE: ID-based comparison
+.owner.id ?= (select global current_user.id)
+
+# ❌ UNSAFE: Object equality (never use)
+.owner ?= global current_user
+```
+
 ## Production Considerations
 
 1. **Auth Signing Key**: Generate a secure key and store in environment variables
@@ -223,6 +307,8 @@ gel query "DELETE ext::auth::AuthToken"
 5. **TLS Security**: Use proper TLS certificates
 6. **Backups**: Set up automated backups
 7. **Monitoring**: Enable query logging and performance monitoring
+8. **Application Role**: Create a production role with minimal required permissions
+9. **Password Security**: Use strong passwords stored in secrets management
 
 ## Resources
 

@@ -1,9 +1,9 @@
 import cors from "@fastify/cors";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
-import Fastify, { type FastifyRequest } from "fastify";
-import { verifyGelToken } from "./auth/verify-token";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { logger } from "./logger";
 import { registerRequestId } from "./middleware/request-id";
+import { verifyGelToken } from "./modules/auth/verify-token";
 import { appRouter } from "./routers/index";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -21,9 +21,7 @@ export const createServer = () => {
 	return server;
 };
 
-export const startServer = async () => {
-	const server = createServer();
-
+export const registerPlugins = async (server: FastifyInstance) => {
 	await registerRequestId(server);
 
 	await server.register(cors, {
@@ -72,6 +70,13 @@ export const startServer = async () => {
 		status: "ok",
 		timestamp: new Date().toISOString(),
 	}));
+
+	return server;
+};
+
+export const startServer = async () => {
+	const server = createServer();
+	await registerPlugins(server);
 
 	await server.listen({ port: PORT, host: HOST });
 

@@ -18,27 +18,45 @@ export const createProject = async ({
 	gelClient: Client;
 	input: CreateProjectInput;
 }): Promise<Project> => {
-	const query = e.insert(e.Project, {
-		title: input.title,
-		description: input.description ?? null,
-		workspace: input.workspace
-			? e.assert_single(
-					e.select(e.Workspace, (w) => ({
-						filter: e.op(w.id, "=", e.uuid(input.workspace as string)),
-					})),
-				)
-			: null,
-		owner: e.global.current_user,
-		collaborators: e.cast(e.User, e.set()),
-	});
-
-	const project = await query.run(gelClient);
+	// Use raw EdgeQL for inserts that need global current_user
+	// edgeql-js doesn't properly support custom globals yet
+	const project = await gelClient.querySingle<Project>(
+		`
+		SELECT (
+			INSERT Project {
+				title := <str>$title,
+				description := <optional str>$description,
+				workspace := (SELECT Workspace FILTER .id = <optional uuid>$workspaceId),
+				owner := global current_user,
+				collaborators := {}
+			}
+		) {
+			id,
+			title,
+			description,
+			workspace: { id },
+			owner: { id, email },
+			collaborators: { id, email },
+			created_at,
+			updated_at,
+			deleted_at,
+			document_count,
+			entry_count,
+			is_deleted
+		}
+	`,
+		{
+			title: input.title,
+			description: input.description ?? null,
+			workspaceId: input.workspace ?? null,
+		},
+	);
 
 	if (!project) {
 		throw new Error("Failed to create project");
 	}
 
-	return project as Project;
+	return project;
 };
 
 export const listProjectsForUser = async ({
@@ -73,29 +91,29 @@ export const getProjectById = async ({
 	gelClient: Client;
 	projectId: string;
 }): Promise<Project | null> => {
-	const query = e.select(e.Project, (project) => ({
-		id: true,
-		title: true,
-		description: true,
-		workspace: { id: true },
-		owner: { id: true, email: true },
-		collaborators: { id: true, email: true },
-		created_at: true,
-		updated_at: true,
-		deleted_at: true,
-		document_count: true,
-		entry_count: true,
-		is_deleted: true,
-		filter: e.op(
-			e.op(project.id, "=", e.uuid(projectId)),
-			"and",
-			e.op("not", e.op("exists", project.deleted_at)),
-		),
-	}));
+	// Use raw EdgeQL to ensure access policies are respected
+	const project = await gelClient.querySingle<Project | null>(
+		`
+		SELECT Project {
+			id,
+			title,
+			description,
+			workspace: { id },
+			owner: { id, email },
+			collaborators: { id, email },
+			created_at,
+			updated_at,
+			deleted_at,
+			document_count,
+			entry_count,
+			is_deleted
+		}
+		FILTER .id = <uuid>$projectId AND NOT EXISTS .deleted_at
+	`,
+		{ projectId },
+	);
 
-	const result = await query.run(gelClient);
-
-	return result[0] ?? null;
+	return project;
 };
 
 export const updateProject = async ({
@@ -107,44 +125,68 @@ export const updateProject = async ({
 	projectId: string;
 	input: UpdateProjectInput;
 }): Promise<Project> => {
-	const updateFields: Record<string, unknown> = {
-		updated_at: e.datetime_current(),
-	};
+	// Build dynamic EdgeQL for conditional updates
+	const setFields: string[] = ["updated_at := datetime_current()"];
+	const params: Record<string, unknown> = { projectId };
 
 	if (input.title !== undefined) {
-		updateFields.title = input.title;
+		setFields.push("title := <str>$title");
+		params.title = input.title;
 	}
 
 	if (input.description !== undefined) {
-		updateFields.description = input.description;
+		setFields.push(
+			input.description === null
+				? "description := <str>{})"
+				: "description := <str>$description",
+		);
+		if (input.description !== null) {
+			params.description = input.description;
+		}
 	}
 
 	if (input.workspace !== undefined) {
-		updateFields.workspace = input.workspace
-			? e.assert_single(
-					e.select(e.Workspace, (w) => ({
-						filter: e.op(w.id, "=", e.uuid(input.workspace as string)),
-					})),
-				)
-			: null;
+		if (input.workspace === null) {
+			setFields.push("workspace := <Workspace>{}");
+		} else {
+			setFields.push(
+				"workspace := (SELECT Workspace FILTER .id = <uuid>$workspaceId)",
+			);
+			params.workspaceId = input.workspace;
+		}
 	}
 
-	const query = e.update(e.Project, (project) => ({
-		filter: e.op(
-			e.op(project.id, "=", e.uuid(projectId)),
-			"and",
-			e.op("not", e.op("exists", project.deleted_at)),
-		),
-		set: updateFields,
-	}));
+	const project = await gelClient.querySingle<Project>(
+		`
+		SELECT (
+			UPDATE Project
+			FILTER .id = <uuid>$projectId AND NOT EXISTS .deleted_at
+			SET {
+				${setFields.join(",\n\t\t\t\t")}
+			}
+		) {
+			id,
+			title,
+			description,
+			workspace: { id },
+			owner: { id, email },
+			collaborators: { id, email },
+			created_at,
+			updated_at,
+			deleted_at,
+			document_count,
+			entry_count,
+			is_deleted
+		}
+	`,
+		params,
+	);
 
-	const result = await query.run(gelClient);
-
-	if (!result || result.length === 0) {
+	if (!project) {
 		throw new Error("Project not found or update failed");
 	}
 
-	return result[0] as Project;
+	return project;
 };
 
 export const softDeleteProject = async ({
@@ -154,53 +196,28 @@ export const softDeleteProject = async ({
 	gelClient: Client;
 	projectId: string;
 }): Promise<{ id: string; deleted_at: Date }> => {
-	const query = e.update(e.Project, (project) => ({
-		filter: e.op(
-			e.op(project.id, "=", e.uuid(projectId)),
-			"and",
-			e.op("not", e.op("exists", project.deleted_at)),
-		),
-		set: {
-			deleted_at: e.datetime_current(),
-		},
-	}));
+	const result = await gelClient.querySingle<{
+		id: string;
+		deleted_at: Date;
+	}>(
+		`
+		SELECT (
+			UPDATE Project
+			FILTER .id = <uuid>$projectId AND NOT EXISTS .deleted_at
+			SET {
+				deleted_at := datetime_current()
+			}
+		) {
+			id,
+			deleted_at
+		}
+	`,
+		{ projectId },
+	);
 
-	const result = await query.run(gelClient);
-
-	if (!result || result.length === 0) {
+	if (!result) {
 		throw new Error("Project not found or already deleted");
 	}
 
-	return result[0] as { id: string; deleted_at: Date };
-};
-
-export const insertEvent = async ({
-	gelClient,
-	projectId,
-	entityType,
-	entityId,
-	action,
-	metadata,
-}: {
-	gelClient: Client;
-	projectId: string;
-	entityType: string;
-	entityId: string;
-	action: string;
-	metadata?: Record<string, unknown>;
-}): Promise<void> => {
-	const query = e.insert(e.Event, {
-		project: e.assert_single(
-			e.select(e.Project, (p) => ({
-				filter: e.op(p.id, "=", e.uuid(projectId)),
-			})),
-		),
-		actor: e.global.current_user,
-		entity_type: e.cast(e.EntityType, entityType),
-		entity_id: e.uuid(entityId),
-		action,
-		metadata: metadata ? e.json(JSON.stringify(metadata)) : null,
-	});
-
-	await query.run(gelClient);
+	return result;
 };

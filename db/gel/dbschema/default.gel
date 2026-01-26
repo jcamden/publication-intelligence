@@ -1,11 +1,11 @@
 using extension auth;
 
 module default {
+  # Safe global - never throws, never asserts
+  # Returns User or {} - policies handle the empty case
   global current_user := (
-    assert_single((
-      select User
-      filter .identity = global ext::auth::ClientTokenIdentity
-    ))
+    select User
+    filter .identity = global ext::auth::ClientTokenIdentity
   );
 
   type User {
@@ -36,7 +36,7 @@ module default {
     
     access policy owner_has_full_access
       allow all
-      using (.uploaded_by ?= global current_user);
+      using (.uploaded_by.id ?= (select global current_user.id));
     
     access policy others_read_only
       allow select;
@@ -53,6 +53,6 @@ module default {
     
     access policy document_owner_access
       allow all
-      using (.document.uploaded_by ?= global current_user);
+      using (.document.uploaded_by.id ?= (select global current_user.id));
   }
 }
