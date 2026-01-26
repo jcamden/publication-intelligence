@@ -1,0 +1,6 @@
+# Local configuration
+gel.local.toml
+
+# Generated query builder (except our index.ts)
+generated/*
+!generated/index.ts

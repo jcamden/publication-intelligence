@@ -113,8 +113,6 @@ This scans all `visual-regression-tests.stories.tsx` files and creates correspon
 2. Run `pnpm generate:visual-tests` to generate Playwright tests
 3. Run `pnpm test:vrt` to execute the tests
 
-See [VISUAL_TEST_GENERATOR.md](./apps/index-pdf-frontend/VISUAL_TEST_GENERATOR.md) for details.
-
 ### Running Component VRT Tests
 
 ```bash
@@ -222,4 +220,3 @@ Coverage directories are git-ignored.
 - [Vitest Documentation](https://vitest.dev/)
 - [Storybook Documentation](https://storybook.js.org/)
 - [Playwright Documentation](https://playwright.dev/)
-- Frontend-specific docs: `apps/index-pdf-frontend/STORYBOOK.md`

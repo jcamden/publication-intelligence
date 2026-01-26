@@ -2,8 +2,12 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"outDir": "./dist",
-		"rootDir": "./src",
-		"noEmit": false
+		"noEmit": false,
+		"baseUrl": ".",
+		"skipLibCheck": true,
+		"paths": {
+			"@gel": ["../../db/gel/generated/index.ts"]
+		}
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist"]

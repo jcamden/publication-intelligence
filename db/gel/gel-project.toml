@@ -1,0 +1,6 @@
+# This file links the backend to the Gel project
+# It allows code generation to work from the backend directory
+
+[edgedb]
+server-version = "7.1"
+project-dir = "."

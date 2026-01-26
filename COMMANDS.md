@@ -5,14 +5,59 @@ All commands can be run from the repository root.
 ## Development
 
 ```bash
-# Start all app dev servers in parallel
+# Start all app dev servers in parallel (backend on :3001, frontend on :3000)
 pnpm dev
 
-# Start Storybook
+# Start backend only (tRPC server on :3001)
+pnpm --filter @pubint/index-pdf-backend dev
+
+# Start frontend only (Next.js on :3000)
+pnpm --filter @pubint/index-pdf-frontend dev
+
+# Start Storybook for component development
 pnpm storybook
 
 # Generate Playwright tests from VRT stories
 pnpm generate:visual-tests
+```
+
+## Database (Gel/EdgeDB)
+
+All Gel commands can now be run from the root:
+
+```bash
+# Open Gel UI (schema browser, queries, auth admin)
+pnpm gel:ui
+
+# Create a migration after schema changes
+pnpm gel:migrate
+pnpm gel:migrate:apply
+
+# Generate TypeScript client (run after schema changes)
+pnpm gel:generate
+
+# Watch mode for TypeScript generation
+pnpm gel:generate:watch
+
+# Check migration status
+pnpm gel:status
+
+# Reset database (DESTRUCTIVE - deletes all data)
+pnpm gel:wipe
+pnpm gel:migrate:apply
+
+# Or manually:
+cd db/gel
+gel branch wipe --non-interactive main
+gel migrate
+
+# Query the database (use gel CLI directly)
+cd db/gel
+gel query "SELECT User { id, email, name }"
+
+# Check instance status
+cd db/gel
+gel instance status
 ```
 
 ## Testing
@@ -78,6 +123,9 @@ pnpm format
 # Check and fix formatting + linting
 pnpm check
 
+# Type check all packages
+pnpm typecheck
+
 # CI check (no auto-fix)
 pnpm ci
 ```
@@ -119,11 +167,14 @@ pnpm outdated -r
 ### Starting Development
 
 ```bash
-# Backend development
+# Full stack development (backend + frontend)
 pnpm dev
+# Backend tRPC server: http://localhost:3001
+# Frontend Next.js app: http://localhost:3000
 
 # Frontend component development
 pnpm storybook
+# Storybook UI: http://localhost:6006
 ```
 
 ### Before Committing
@@ -134,6 +185,9 @@ pnpm test
 
 # Check code quality
 pnpm check
+
+# Type check
+pnpm typecheck
 ```
 
 ### After Visual Changes
@@ -144,4 +198,13 @@ pnpm test:visual:ui
 
 # Update snapshots if intentional
 pnpm test:visual:update
+```
+
+### Database Reset (Development)
+
+```bash
+# Clear all data and start fresh
+pnpm gel:wipe
+pnpm gel:migrate:apply
+pnpm gel:generate
 ```

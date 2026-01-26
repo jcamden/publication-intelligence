@@ -1,0 +1,5 @@
+# This file links the backend to the Gel project in db/gel
+# Code generation will use this to find the schema
+
+[edgedb]
+project-dir = "../../db/gel"

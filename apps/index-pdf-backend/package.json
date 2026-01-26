@@ -3,19 +3,33 @@
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/routers/index.ts",
+			"default": "./src/routers/index.ts"
+		}
+	},
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
 		"build": "tsc",
 		"start": "node dist/index.js",
 		"clean": "rm -rf dist",
+		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"gel:generate": "cd ../../db/gel && npx @edgedb/generate edgeql-js --output-dir ./generated",
+		"gel:generate:watch": "cd ../../db/gel && npx @edgedb/generate edgeql-js --output-dir ./generated --watch"
 	},
 	"dependencies": {
+		"@fastify/cors": "^11.2.0",
 		"@pubint/core": "workspace:*",
+		"@pubint/llm": "workspace:*",
 		"@pubint/pdf": "workspace:*",
-		"@pubint/llm": "workspace:*"
+		"@trpc/server": "^11.8.1",
+		"fastify": "^5.7.1",
+		"gel": "^2.2.0",
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@types/node": "^22.10.5",

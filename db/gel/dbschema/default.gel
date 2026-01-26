@@ -1,0 +1,58 @@
+using extension auth;
+
+module default {
+  global current_user := (
+    assert_single((
+      select User
+      filter .identity = global ext::auth::ClientTokenIdentity
+    ))
+  );
+
+  type User {
+    required email: str {
+      constraint exclusive;
+    };
+    name: str;
+    required identity: ext::auth::Identity {
+      constraint exclusive;
+    };
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    updated_at: datetime;
+  }
+
+  type Document {
+    required filename: str;
+    required original_filename: str;
+    file_size: int64;
+    mime_type: str;
+    required uploaded_by: User;
+    required uploaded_at: datetime {
+      default := datetime_current();
+    };
+    indexed_at: datetime;
+    content_hash: str;
+    
+    access policy owner_has_full_access
+      allow all
+      using (.uploaded_by ?= global current_user);
+    
+    access policy others_read_only
+      allow select;
+  }
+
+  type DocumentChunk {
+    required document: Document;
+    required chunk_index: int32;
+    required content: str;
+    embedding: array<float32>;
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    
+    access policy document_owner_access
+      allow all
+      using (.document.uploaded_by ?= global current_user);
+  }
+}

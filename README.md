@@ -8,13 +8,24 @@ This is a pnpm monorepo with the following structure:
 
 ```
 /apps
-  /index-pdf-frontend    # Next.js frontend application
-  /index-pdf-backend     # API and PDF processing backend
+  /index-pdf-frontend    # Next.js frontend application (tRPC client + React Query)
+  /index-pdf-backend     # tRPC API server and PDF processing backend
 /packages
   /core                  # Shared types and utilities
   /pdf                   # PDF extraction helpers (PDF.js, PyMuPDF)
   /llm                   # LLM prompts and indexing logic
 ```
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, Tailwind CSS 4, Base UI
+- **Backend**: Node.js 23, Fastify, tRPC, Zod
+- **Database**: Gel (EdgeDB) 7.1 with built-in auth
+- **Type Safety**: TypeScript, end-to-end via tRPC + Gel query builder
+- **Authentication**: Gel Auth (JWT-based, email/password)
+- **Data Fetching**: React Query (TanStack Query)
+- **Testing**: Vitest, Playwright, Storybook
+- **Code Quality**: Biome (linting + formatting)
 
 ## Prerequisites
 
@@ -24,28 +35,21 @@ This is a pnpm monorepo with the following structure:
 ## Getting Started
 
 ```bash
-# Switch to Node.js 23
-nvm use 23
-
 # Install dependencies
 pnpm install
 
-# Build all packages
-pnpm build
-
-# Run frontend and backend in dev mode
+# Start development servers (backend + frontend)
 pnpm dev
 
-# Or run Storybook for component development
-pnpm storybook
+# Backend: http://localhost:3001
+# Frontend: http://localhost:3000
 ```
 
 ## Documentation
 
 - **[COMMANDS.md](./COMMANDS.md)** - Quick command reference for all available scripts
-- **[TESTING.md](./TESTING.md)** - Complete testing guide (Vitest + Storybook + Playwright)
-- **[apps/index-pdf-frontend/STORYBOOK.md](./apps/index-pdf-frontend/STORYBOOK.md)** - Storybook patterns and component development
-- **[apps/index-pdf-frontend/VISUAL_TEST_GENERATOR.md](./apps/index-pdf-frontend/VISUAL_TEST_GENERATOR.md)** - Auto-generate Playwright tests from VRT stories
+- **[TESTING.md](./TESTING.md)** - Testing guide (Vitest, Storybook, Playwright)
+- **[db/gel/README.md](./db/gel/README.md)** - Gel database schema and query reference
 
 ## Development
 

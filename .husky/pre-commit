@@ -1,1 +1,2 @@
 pnpm exec biome ci .
+pnpm -r run typecheck

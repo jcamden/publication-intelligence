@@ -43,3 +43,8 @@ node_modules
 
 *storybook.log
 storybook-static
+
+# Gel/EdgeDB
+db/gel/generated/
+db/gel/gel.local.toml
+*.edgedb-lock

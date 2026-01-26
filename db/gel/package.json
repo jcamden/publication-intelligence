@@ -1,0 +1,9 @@
+{
+	"name": "@pubint/db-gel",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"gel": "^2.2.0"
+	}
+}
