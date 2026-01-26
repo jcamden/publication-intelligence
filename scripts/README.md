@@ -1,49 +1,123 @@
 # Development Scripts
 
-## lint-access-policies.sh
+This directory contains utility scripts for development, testing, and security enforcement.
 
-Checks Gel/EdgeDB schema files for unsafe access policy patterns that can cause data leaks.
+## Security Scripts
 
-### What it checks:
+### `lint-access-policies.sh`
 
-1. **Object equality violations**: Prevents using `= global current_user` or `?= global current_user` in access policies
-2. **Global definition**: Ensures `global current_user_id` is defined
+Validates Gel/EdgeDB access policies for security issues.
 
-### Usage:
+**Checks:**
+- Detects unsafe object equality patterns (`= global current_user`)
+- Ensures `global current_user_id` is defined
+
+**Usage:**
+```bash
+pnpm lint:access-policies
+```
+
+**Why it matters:** Object equality in EdgeDB has subtle set semantics that can leak data. Only ID-based comparisons are safe and deterministic. This lint rule prevents accidental data leaks.
+
+**CI Integration:** Runs automatically on pre-commit hook.
+
+---
+
+### `validate-env.ts` (Node/TypeScript)
+
+Validates all environment variables including the EdgeDB/Gel auth signing key.
+
+**Checks:**
+- Key is set in environment (`EDGEDB_AUTH_SIGNING_KEY`)
+- Key is not using placeholder value
+- Key meets minimum length requirement (32+ bytes)
+- Key appears to be properly base64-encoded
+
+**Usage:**
+
+The script automatically loads from `.env` in the project root using dotenv:
 
 ```bash
-# From project root
-pnpm lint:access-policies
-
-# Or run directly
-./scripts/lint-access-policies.sh
+# Simple - just run it (loads from .env automatically)
+pnpm lint:env
 ```
 
-### When it runs:
+**Why Node/TypeScript:**
+- ✅ Consistent with codebase (TypeScript/Node.js)
+- ✅ Uses dotenv (same as the application)
+- ✅ Type-safe validation
+- ✅ Easy to extend with more validation logic
 
-- **Pre-commit hook**: Automatically runs before every commit
-- **CI pipeline**: Should be added to CI to prevent merging unsafe code
-- **Manual**: Run anytime you modify schema files
+---
 
-### Why this matters:
+### `validate-auth-key.sh` (Bash - Legacy)
 
-EdgeDB/Gel has subtle set semantics for object equality that can accidentally allow unauthorized access. ID-based comparisons are deterministic and safe.
+**Deprecated:** Use `validate-env.ts` (Node version) instead.
 
-**Example of caught violation:**
+This bash version is kept for reference but will be removed in the future.
 
-```edgeql
-# ❌ UNSAFE - Will be caught by linter
-access policy owner_access
-  allow all
-  using (.owner ?= global current_user);
-
-# ✅ SAFE - Passes linter
-access policy owner_access
-  allow all
-  using (.owner.id ?= global current_user_id);
+**Generate a secure key:**
+```bash
+openssl rand -base64 32
 ```
 
-### Exit codes:
+**Why it matters:** The auth signing key is used to sign JWT tokens. A weak or leaked key allows attackers to forge authentication tokens and impersonate any user.
 
-- `0`: All checks passed
-- `1`: Violations found - commit will be blocked
+**CI Integration:** Runs automatically on pre-commit hook.
+
+**Implementation:** Uses dotenv to load from `.env` file in monorepo root.
+
+**Security Policy:**
+- ✅ Minimum 32 bytes
+- ✅ Never commit to git (use `.env` file)
+- ✅ Use cryptographically secure random generation
+- ✅ Rotate keys if leaked
+- ✅ Use different keys per environment (dev/staging/prod)
+
+---
+
+## Setup
+
+### First-time setup
+
+1. **Copy environment template:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Generate auth signing key:**
+   ```bash
+   openssl rand -base64 32
+   ```
+
+3. **Update `.env` file:**
+   ```bash
+   EDGEDB_AUTH_SIGNING_KEY=<paste-generated-key>
+   ```
+
+4. **Apply auth configuration:**
+   ```bash
+   source .env && cd db/gel && gel query -f dbschema/auth-config.edgeql
+   ```
+
+5. **Verify setup:**
+   ```bash
+   pnpm lint:auth-key
+   ```
+
+---
+
+## CI/CD Notes
+
+**Pre-commit hooks run:**
+- Code formatting (`biome ci`)
+- TypeScript type checking
+- Access policy linting
+- Auth key validation
+
+**To skip hooks (emergency only):**
+```bash
+git commit --no-verify
+```
+
+⚠️ **Warning:** Only skip hooks if you understand the security implications.

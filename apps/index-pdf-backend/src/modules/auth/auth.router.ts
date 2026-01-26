@@ -53,12 +53,16 @@ export const authRouter = router({
 					name: string | null;
 				}>(
 					`
-				INSERT User {
-					email := <str>$email,
-					name := <optional str>$name,
-					identity := global ext::auth::ClientTokenIdentity
-				}
-			`,
+			INSERT User {
+				email := <str>$email,
+				name := <optional str>$name,
+				identity := global ext::auth::ClientTokenIdentity
+			}
+			UNLESS CONFLICT ON .identity
+			ELSE (
+				SELECT User FILTER .identity = global ext::auth::ClientTokenIdentity
+			)
+		`,
 					{
 						email: input.email,
 						name: input.name ?? null,

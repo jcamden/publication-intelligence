@@ -1,12 +1,20 @@
 # Configure Gel Auth Extension
-# Run this with: gel query -f dbschema/auth-config.edgeql
+# 
+# CRITICAL SECURITY REQUIREMENTS:
+# 1. Set EDGEDB_AUTH_SIGNING_KEY environment variable before running
+# 2. Key must be 32+ bytes (generate with: openssl rand -base64 32)
+# 3. NEVER commit the actual key to git
+# 4. Run validation: ./scripts/validate-auth-key.sh
+#
+# Apply with: 
+#   source .env && gel query -f dbschema/auth-config.edgeql
 
-# Configure auth basics
+# Configure auth signing key from environment
 CONFIGURE CURRENT BRANCH SET
-  ext::auth::AuthConfig::auth_signing_key := 'REPLACE_WITH_SECURE_KEY_IN_PRODUCTION';
+  ext::auth::AuthConfig::auth_signing_key := <str>$EDGEDB_AUTH_SIGNING_KEY;
 
 CONFIGURE CURRENT BRANCH SET
-  ext::auth::AuthConfig::token_time_to_live := <duration>'336 hours';
+  ext::auth::AuthConfig::token_time_to_live := <duration>'24 hours';
 
 # Allow redirects from frontend
 CONFIGURE CURRENT BRANCH SET

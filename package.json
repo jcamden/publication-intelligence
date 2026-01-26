@@ -27,6 +27,8 @@
 		"gel:reset": "pnpm gel:wipe && pnpm gel:migrate:apply && pnpm gel:generate",
 		"lint": "biome lint .",
 		"lint:access-policies": "./scripts/lint-access-policies.sh",
+		"lint:auth-key": "./scripts/validate-auth-key.sh",
+		"lint:env": "tsx scripts/validate-env.ts",
 		"format": "biome format --write .",
 		"check": "biome check --write .",
 		"ci": "biome ci .",
@@ -48,6 +50,7 @@
 	"packageManager": "pnpm@10.28.1+sha512.7d7dbbca9e99447b7c3bf7a73286afaaf6be99251eb9498baefa7d406892f67b879adb3a1d7e687fc4ccc1a388c7175fbaae567a26ab44d1067b54fcb0d6a316",
 	"dependencies": {
 		"@edgedb/generate": "^0.6.1",
+		"dotenv": "^17.2.3",
 		"edgedb": "^2.0.1"
 	}
 }

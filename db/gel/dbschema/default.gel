@@ -42,6 +42,14 @@ module default {
       default := datetime_current();
     };
     updated_at: datetime;
+    
+    # Invariant: User must always have an identity
+    # Prevents orphan User records without auth identity
+    constraint expression on (
+      exists .identity
+    ) {
+      errmessage := "User must have an identity";
+    };
   }
 
   type Document {

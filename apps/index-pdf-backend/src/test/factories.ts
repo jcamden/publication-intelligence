@@ -115,6 +115,10 @@ export const createTestUser = async ({
 			name := <optional str>$name,
 			identity := global ext::auth::ClientTokenIdentity
 		}
+		UNLESS CONFLICT ON .identity
+		ELSE (
+			SELECT User FILTER .identity = global ext::auth::ClientTokenIdentity
+		)
 	`,
 		{
 			email,

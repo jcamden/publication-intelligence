@@ -90,8 +90,39 @@ Gel Auth is enabled and configured with:
 
 - **Provider**: Email/Password
 - **Email verification**: Disabled for development
-- **Token TTL**: 336 hours (14 days)
+- **Token TTL**: 24 hours (hardened for security)
 - **Allowed redirect URLs**: localhost:3000, localhost:3001
+- **Signing key**: Loaded from `EDGEDB_AUTH_SIGNING_KEY` environment variable
+
+**Security notes:**
+- **Token expiry:** 24-hour TTL balances security (short-lived credentials) with usability. Users re-authenticate daily. For production, consider refresh tokens.
+- **Signing key:** MUST be 32+ bytes, cryptographically random, never committed to git. Generate with `openssl rand -base64 32`.
+
+### Initial Auth Setup
+
+1. **Generate signing key:**
+   ```bash
+   openssl rand -base64 32
+   ```
+
+2. **Create `.env` file:**
+   ```bash
+   # In project root
+   cp .env.example .env
+   # Edit .env and set EDGEDB_AUTH_SIGNING_KEY
+   ```
+
+3. **Validate your key:**
+   ```bash
+   # Automatically loads from .env
+   pnpm lint:env
+   ```
+
+4. **Apply auth configuration:**
+   ```bash
+   # Load .env and apply to database
+   source .env && cd db/gel && gel query -f dbschema/auth-config.edgeql
+   ```
 
 ### Auth Flow
 
@@ -102,17 +133,18 @@ Gel Auth is enabled and configured with:
 
 ### Example Queries
 
-**Create a user after signup:**
+**Create a user after signup (idempotent):**
 
 ```edgeql
 INSERT User {
   email := <str>$email,
   name := <optional str>$name,
-  identity := (
-    SELECT ext::auth::Identity 
-    FILTER .id = <uuid>$identity_id
-  )
+  identity := global ext::auth::ClientTokenIdentity
 }
+UNLESS CONFLICT ON .identity
+ELSE (
+  SELECT User FILTER .identity = global ext::auth::ClientTokenIdentity
+)
 ```
 
 **Get current user:**

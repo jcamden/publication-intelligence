@@ -8,6 +8,9 @@ import { appRouter } from "./routers/index";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 const HOST = process.env.HOST ?? "0.0.0.0";
+const CORS_ORIGINS = process.env.CORS_ORIGINS
+	? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
+	: undefined;
 
 export const createServer = () => {
 	const server = Fastify({
@@ -25,11 +28,7 @@ export const registerPlugins = async (server: FastifyInstance) => {
 	await registerRequestId(server);
 
 	await server.register(cors, {
-		origin: [
-			"http://localhost:3000",
-			"http://localhost:3001",
-			"http://localhost:6006", // Storybook
-		],
+		origin: CORS_ORIGINS,
 		credentials: true,
 	});
 
