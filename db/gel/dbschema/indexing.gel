@@ -1,0 +1,960 @@
+# Publication Indexing Schema
+# 
+# =============================================================================
+# CORE INSIGHT
+# =============================================================================
+#
+# A publication index is NOT a list of words.
+# It is a curated set of CONCEPTS (IndexEntry) linked to LOCATIONS (IndexMention).
+#
+# Examples:
+# - Concept: "Neural Networks" (IndexEntry)
+# - Occurrences: page 12 "neural networks", page 47 "NNs" (IndexMentions)
+#
+# CRITICAL: Entry ≠ Mention
+# 
+# Wrong mental model:
+#   "Mention is the concept and Entry is the confirmed thing"
+#
+# Correct mental model:
+#   - IndexEntry = concept in the final index
+#   - IndexMention = textual evidence for that concept
+#
+# LLMs discover mentions first (workflow), but humans curate entries (ontology).
+# Workflow ≠ Ontology.
+#
+# =============================================================================
+# ENTITY STRUCTURE
+# =============================================================================
+#
+# Project (workspace, namespace isolation)
+#   ├── SourceDocument (PDF/book being indexed)
+#   │     └── DocumentPage (atomic text processing unit)
+#   │           └── IndexMention → IndexEntry
+#   │
+#   ├── IndexEntry (concept, project-scoped but document-agnostic)
+#   │     ├── slug (stable ID, never changes)
+#   │     ├── label (display name, mutable)
+#   │     ├── parent (hierarchy: Machine Learning → Neural Networks)
+#   │     ├── IndexVariant (synonyms, abbreviations, aliases)
+#   │     └── IndexRelation (see, see also, broader, narrower)
+#   │
+#   ├── Event (audit trail for debugging, LLM tracking, analytics)
+#   └── ExportedIndex (generated back-of-book index artifact)
+#
+# Orthogonal:
+#   - Prompt (LLM templates)
+#   - LLMRun (execution records for cost/debugging)
+#
+# =============================================================================
+# DESIGN PRINCIPLES
+# =============================================================================
+#
+# 1. IndexEntry is project-scoped but document-agnostic
+#    Concepts transcend documents WITHIN a project, not globally
+#
+# 2. IndexMention anchors concepts to specific page locations
+#    Multiple mentions → one concept (many-to-one)
+#
+# 3. page_number is intentionally denormalized on IndexMention
+#    Performance: fast queries without joining to DocumentPage
+#
+# 4. Soft deletion (deleted_at) preserves history
+#    Application layer must filter deleted entities by default
+#
+# 5. Type safety via enums
+#    Status, entity types, relation types use enums not strings
+#
+# 6. Access control cascades from Project
+#    Owner + collaborators → documents → pages → mentions
+#
+# 7. slug NEVER changes after creation
+#    Label can be edited, slug is stable for LLM/export references
+
+module default {
+  
+  # ============================================================================
+  # Structured Types
+  # ============================================================================
+  
+  type BoundingBox {
+    # PDF.js coordinate system (origin at top-left)
+    # All values in PDF points (1/72 inch)
+    required x: float32;
+    required y: float32;
+    required width: float32;
+    required height: float32;
+    
+    # Optional rotation in degrees (0, 90, 180, 270)
+    # For rotated text or pages
+    # Default: 0° (no rotation) if null
+    rotation: float32;
+  }
+  
+  
+  # ============================================================================
+  # Core Enums
+  # ============================================================================
+  
+  scalar type SourceDocumentStatus extending enum<
+    uploaded,     # Document uploaded but not yet processed
+    processing,   # Text extraction in progress
+    processed,    # Successfully extracted and ready for indexing
+    failed        # Processing failed (extraction error, etc.)
+  >;
+  
+  scalar type IndexEntryStatus extending enum<
+    suggested,    # LLM-generated concept awaiting human review
+    active,       # Verified, production-ready concept
+    deprecated,   # Historical record, excluded from exports
+    merged        # Redirected to another concept (target in metadata)
+  >;
+  
+  scalar type LLMRunStatus extending enum<
+    pending,      # Run queued but not started
+    running,      # Currently executing
+    completed,    # Successfully finished
+    failed        # Execution failed (see error_message)
+  >;
+  
+  scalar type EntityType extending enum<
+    IndexEntry,
+    IndexMention,
+    SourceDocument,
+    DocumentPage,
+    LLMRun,
+    ExportedIndex,
+    Project
+  >;
+  
+  scalar type RelationType extending enum<
+    see,          # Redirect to preferred term
+    see_also,     # Additional related concepts
+    broader,      # More general concept
+    narrower,     # More specific concept
+    related       # Semantically related
+  >;
+  
+  scalar type VariantType extending enum<
+    alias,        # Alternative phrasing
+    synonym,      # Equivalent term
+    abbreviation, # Shortened form
+    deprecated,   # Old term (redirect to canonical)
+    editorial     # Preferred phrasing note
+  >;
+  
+  scalar type MentionRangeType extending enum<
+    single_page,  # Single-page mention (default)
+    page_range,   # Spans multiple pages (use page_number_end)
+    passim        # Scattered throughout, no specific range
+  >;
+  
+  scalar type ExportFormat extending enum<
+    book_index,   # Traditional back-of-book index format
+    json,         # Structured JSON export
+    xml           # XML export (e.g., for InDesign)
+  >;
+  
+  
+  # ============================================================================
+  # Workspace - Optional team/organization container
+  # ============================================================================
+  #
+  # Workspace enables multi-tenancy.
+  # For MVP: Projects can exist without workspaces (set workspace = null).
+  # Future: Team management, publishers, billing per org.
+  
+  type Workspace {
+    required name: str;
+    description: str;
+    
+    # Ownership (could expand to admin/member roles later)
+    required owner: User {
+      on target delete delete source;
+    };
+    multi members: User;
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    updated_at: datetime;
+    
+    # Relationships
+    multi projects := .<workspace[is Project];
+    
+    # Access control: owner and members have full access
+    access policy owner_full_access
+      allow all
+      using (.owner ?= global current_user);
+    
+    access policy member_full_access
+      allow all
+      using (exists (global current_user in .members));
+    
+    access policy others_no_access
+      deny all;
+  }
+  
+  
+  # ============================================================================
+  # Project - A book or publication indexing workspace
+  # ============================================================================
+  #
+  # Project provides namespace isolation.
+  # IndexEntries are scoped to a project (prevents concept collision).
+  
+  type Project {
+    required title: str;
+    description: str;
+    
+    # Optional workspace (for team/org management)
+    # If null, project is user-owned directly
+    workspace: Workspace {
+      on target delete delete source;
+    };
+    
+    # Ownership and collaboration
+    required owner: User {
+      on target delete delete source;
+    };
+    multi collaborators: User;
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    updated_at: datetime;
+    
+    # Soft deletion timestamp
+    # Preserves project history when logically deleted
+    deleted_at: datetime;
+    
+    # Relationships
+    multi source_documents := .<project[is SourceDocument];
+    multi index_entries := .<project[is IndexEntry];
+    multi events := .<project[is Event];
+    multi exported_indices := .<project[is ExportedIndex];
+    
+    # Computed properties
+    property document_count := count(.source_documents filter not exists .deleted_at);
+    property entry_count := count(.index_entries filter not exists .deleted_at);
+    property is_deleted := exists .deleted_at;
+    
+    # Access control: owner and collaborators have full access
+    access policy owner_full_access
+      allow all
+      using (.owner ?= global current_user);
+    
+    access policy collaborator_full_access
+      allow all
+      using (exists (global current_user in .collaborators));
+    
+    # Others cannot see the project at all
+    access policy others_no_access
+      deny all;
+  }
+  
+  
+  # ============================================================================
+  # SourceDocument - A PDF or book being indexed
+  # ============================================================================
+  #
+  # SourceDocument is the logical container for a publication being indexed.
+  # It owns DocumentPages, which are the atomic units of text processing.
+  #
+  # Note: This is distinct from the generic Document type (for file uploads).
+  # SourceDocument is semantically tied to the indexing domain.
+  
+  type SourceDocument {
+    required project: Project {
+      on target delete delete source;
+    };
+    
+    required title: str;
+    required file_name: str;
+    
+    # File metadata
+    file_size: int64;
+    content_hash: str;
+    page_count: int32;
+    
+    # Processing pipeline state
+    required status: SourceDocumentStatus {
+      default := SourceDocumentStatus.uploaded;
+    };
+    
+    # Timestamps
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    processed_at: datetime;
+    
+    # Soft deletion timestamp
+    # Preserves document history when logically deleted
+    deleted_at: datetime;
+    
+    # Relationships
+    multi pages := .<document[is DocumentPage];
+    multi mentions := .<document[is IndexMention];
+    multi llm_runs := .<document[is LLMRun];
+    
+    # Computed properties
+    property is_deleted := exists .deleted_at;
+    
+    # Access control: inherit from project
+    access policy project_owner_access
+      allow all
+      using (.project.owner ?= global current_user);
+    
+    access policy project_collaborator_access
+      allow all
+      using (exists (global current_user in .project.collaborators));
+  }
+  
+  
+  # ============================================================================
+  # DocumentPage - A single page within a source document
+  # ============================================================================
+  #
+  # DocumentPage is the atomic unit of text processing.
+  # - LLM processing happens per page
+  # - PDF.js renders per page
+  # - IndexMentions anchor to pages
+  # - Reprocessing is page-scoped
+  #
+  # The text_content field stores the canonical extracted text for this page.
+  
+  type DocumentPage {
+    required document: SourceDocument {
+      on target delete delete source;
+    };
+    
+    # Page index (1-based or 0-based depending on extraction tool)
+    required page_number: int32;
+    
+    # Canonical extracted text content
+    # Used for LLM processing, search, and context retrieval
+    text_content: str;
+    
+    # Optional metadata (OCR confidence, extraction method, language, etc.)
+    metadata: json;
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    
+    # Relationships
+    multi mentions := .<page[is IndexMention];
+    
+    # Constraints
+    constraint exclusive on ((.document, .page_number)) {
+      # Each page number appears exactly once per document
+    };
+    
+    # Access control: inherit from document
+    access policy project_owner_access
+      allow all
+      using (.document.project.owner ?= global current_user);
+    
+    access policy project_collaborator_access
+      allow all
+      using (exists (global current_user in .document.project.collaborators));
+  }
+  
+  
+  # ============================================================================
+  # IndexEntry - A concept to appear in the index
+  # ============================================================================
+  #
+  # CRITICAL: IndexEntry represents a CONCEPT, not an occurrence.
+  #
+  # Examples:
+  # - "Neural networks" (the concept)
+  # - "Grace" (as a person or concept)
+  # - "Python (programming language)"
+  #
+  # IndexEntry is NOT document-specific.
+  # It exists at the project level and represents a canonical index term.
+  #
+  # IndexMention links this concept to specific locations in documents.
+  #
+  # Workflow:
+  # - LLMs may suggest entries (status = "suggested")
+  # - Humans approve/edit/curate entries (status = "active")
+  # - Entries may be deprecated or merged over time
+  
+  type IndexEntry {
+    required project: Project {
+      on target delete delete source;
+    };
+    
+    # Stable semantic identifier (e.g., "neural_networks", "grace_hopper")
+    # CRITICAL: Slug must NEVER change after creation
+    # LLMs and exports MUST reference slugs, not labels
+    # Naming rules (enforced at application layer):
+    # - lowercase only
+    # - use underscores (not spaces or hyphens)
+    # - descriptive but concise ("neural_networks" not "nn")
+    # - unique per project
+    required slug: str;
+    
+    # Human-facing display name (mutable)
+    # This is what appears in the final exported index
+    required label: str;
+    
+    # Optional disambiguation note
+    # Example: "Python (programming language)" vs "Python (snake)"
+    description: str;
+    
+    # Concept lifecycle state
+    required status: IndexEntryStatus {
+      default := IndexEntryStatus.active;
+    };
+    
+    # Revision counter for versioning
+    # Increment on meaningful changes (label edits, hierarchy moves, etc.)
+    # Enables undo, audit trail, collaborative editing
+    required revision: int32 {
+      default := 1;
+    };
+    
+    # Soft deletion timestamp
+    # When set, entry is logically deleted but preserved for history
+    # Application layer should filter deleted entries by default
+    deleted_at: datetime;
+    
+    # Hierarchy: self-referential parent/child structure
+    # parent = null → top-level entry
+    # Enables nested index structure:
+    #   Machine Learning
+    #     ├── Neural Networks
+    #     └── Reinforcement Learning
+    #
+    # CRITICAL: Application layer MUST prevent cyclical relationships
+    # Example invalid cycle: A → B → C → A
+    # Gel cannot enforce graph cycle constraints at schema level
+    #
+    # Recommended validation approach:
+    # 1. Before setting parent, traverse up ancestors
+    # 2. If target appears in ancestor chain, reject (would create cycle)
+    # 3. Maximum depth limit (e.g., 5 levels) for UI performance
+    parent: IndexEntry {
+      on target delete allow;
+    };
+    multi children := .<parent[is IndexEntry];
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    updated_at: datetime;
+    
+    # Relationships
+    multi mentions := .<entry[is IndexMention];
+    
+    # Computed properties
+    property mention_count := count(.mentions filter not exists .deleted_at);
+    property child_count := count(.children filter not exists .deleted_at);
+    property is_top_level := not exists .parent;
+    property is_deleted := exists .deleted_at;
+    
+    # Constraints
+    constraint exclusive on ((.project, .slug)) {
+      # Slug uniqueness per project
+      # This ensures stable identity across label renames
+    };
+    
+    # Access control: inherit from project
+    access policy project_owner_access
+      allow all
+      using (.project.owner ?= global current_user);
+    
+    access policy project_collaborator_access
+      allow all
+      using (exists (global current_user in .project.collaborators));
+  }
+  
+  
+  # ============================================================================
+  # IndexVariant - Alternative forms of an IndexEntry
+  # ============================================================================
+  #
+  # Represents synonyms, aliases, abbreviations, and alternative phrasings
+  # for a canonical index concept.
+  #
+  # Real indexes need:
+  # - Synonyms: "Machine learning" = "ML"
+  # - Aliases: "Neural networks" = "Artificial neural networks"
+  # - Abbreviations: "NN", "ANN"
+  # - Deprecated terms: "Perceptron" → prefer "Neural network"
+  #
+  # This dramatically improves:
+  # - LLM concept mapping (recognize variants automatically)
+  # - Editorial control (define preferred phrasing)
+  # - Export quality (consistent terminology)
+  
+  type IndexVariant {
+    required entry: IndexEntry {
+      on target delete delete source;
+    };
+    
+    # The variant text
+    # Example: "NN" for entry "Neural Networks"
+    required text: str;
+    
+    # Classification of the variant
+    required variant_type: VariantType {
+      default := VariantType.alias;
+    };
+    
+    # Revision counter for collaborative editing
+    # Enables undo/rollback when variants are edited
+    required revision: int32 {
+      default := 1;
+    };
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    updated_at: datetime;
+    
+    # Constraints
+    constraint exclusive on ((.entry, .text)) {
+      # Prevent duplicate variants for the same entry
+    };
+    
+    # Access control: inherit from entry's project
+    access policy project_members_read
+      allow select
+      using (
+        .entry.project.owner ?= global current_user or
+        exists (global current_user in .entry.project.collaborators)
+      );
+    
+    access policy project_members_write
+      allow insert, update, delete
+      using (
+        .entry.project.owner ?= global current_user or
+        exists (global current_user in .entry.project.collaborators)
+      );
+  }
+  
+  
+  # ============================================================================
+  # IndexRelation - Cross-references between IndexEntries
+  # ============================================================================
+  #
+  # Represents semantic relationships between concepts.
+  # Elevates system from "keyword index" to "semantic index".
+  #
+  # Common indexing relationships:
+  # - see: "Machine learning → see Artificial intelligence"
+  # - see_also: "Neural networks → see also Deep learning"
+  # - broader: "Python (language) → broader: Programming languages"
+  # - narrower: "Programming languages → narrower: Python"
+  # - related: "AI → related: Robotics"
+  
+  type IndexRelation {
+    required from_entry: IndexEntry {
+      on target delete delete source;
+    };
+    
+    required to_entry: IndexEntry {
+      on target delete delete source;
+    };
+    
+    # Relationship type (type-safe enum)
+    required relation_type: RelationType;
+    
+    # Optional editorial note
+    note: str;
+    
+    # Revision counter for collaborative editing
+    # Track changes to relation types or notes
+    required revision: int32 {
+      default := 1;
+    };
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    updated_at: datetime;
+    
+    # Constraints
+    constraint exclusive on ((.from_entry, .to_entry, .relation_type)) {
+      # Prevent duplicate relationships
+    };
+    
+    constraint expression on (.from_entry != .to_entry) {
+      errmessage := "IndexRelation cannot reference itself (from_entry = to_entry)";
+    };
+    
+    # NOTE: Application layer must still prevent transitive cycles in relation graphs
+    # Example: A → B → C → A (cannot be caught at schema level)
+    
+    # Access control: inherit from from_entry's project
+    access policy project_members_read
+      allow select
+      using (
+        .from_entry.project.owner ?= global current_user or
+        exists (global current_user in .from_entry.project.collaborators)
+      );
+    
+    access policy project_members_write
+      allow insert, update, delete
+      using (
+        .from_entry.project.owner ?= global current_user or
+        exists (global current_user in .from_entry.project.collaborators)
+      );
+  }
+  
+  
+  # ============================================================================
+  # IndexMention - An occurrence of a concept in the text
+  # ============================================================================
+  #
+  # CRITICAL: IndexMention represents an OCCURRENCE, not the concept itself.
+  #
+  # Think of it as evidence that a concept appears at a specific location.
+  #
+  # Examples:
+  # | Entry           | Page | Text span         |
+  # |-----------------|------|-------------------|
+  # | Neural Networks | 12   | "neural networks" |
+  # | Neural Networks | 47   | "NNs"             |
+  #
+  # A single IndexEntry may have many IndexMentions.
+  #
+  # Location strategy:
+  # - page: structured link to Page entity (preferred)
+  # - page_number: denormalized for fast queries (intentional redundancy)
+  # - text_span: the actual text that appears
+  # - start_offset/end_offset: character positions for highlighting
+  # - bbox: PDF.js coordinates for visual selection
+  #
+  # Provenance:
+  # - suggested_by_llm = null: human-created or imported
+  # - suggested_by_llm = LLMRun: AI-suggested, needs human review/approval
+  # No confidence score needed—approval is binary (accept/reject)
+  
+  type IndexMention {
+    # The document this mention appears in
+    required document: SourceDocument {
+      on target delete delete source;
+    };
+    
+    # The concept being mentioned (REQUIRED)
+    # This links the occurrence to the canonical index term
+    required entry: IndexEntry {
+      on target delete delete source;
+    };
+    
+    # Structured link to DocumentPage entity (optional but preferred)
+    # Enables page-level operations (reprocessing, context retrieval)
+    #
+    # CONSISTENCY RULE (enforced at application layer):
+    # If page is set, page.page_number MUST equal page_number field
+    # Application must maintain this invariant
+    #
+    # CASCADE WARNING: Deleting a DocumentPage will delete all linked mentions
+    # Verify downstream LLMRun and export artifacts handle this correctly
+    page: DocumentPage {
+      on target delete delete source;
+    };
+    
+    # Page location (denormalized for performance)
+    # Kept even if page link exists for fast filtering
+    # This is intentional redundancy
+    required page_number: int32;
+    
+    # Optional end page for range mentions
+    # Example: pages 12-15, set page_number=12 and page_number_end=15
+    # If null, this is a single-page mention
+    page_number_end: int32;
+    
+    # Range type (type-safe enum)
+    required range_type: MentionRangeType {
+      default := MentionRangeType.single_page;
+    };
+    
+    # LLM provenance: which LLM run suggested this mention (if any)
+    # Null = human-created or imported
+    # Enables debugging, confidence analysis, and rollback
+    suggested_by_llm: LLMRun;
+    
+    # The actual text span that was identified
+    # Example: "neural networks", "NNs", "ML models"
+    required text_span: str;
+    
+    # Character offsets within the page
+    # Enable precise text highlighting and context extraction
+    start_offset: int32;
+    end_offset: int32;
+    
+    # Bounding box for PDF.js visual alignment
+    # Structured type ensures predictable fields for highlighting
+    # Coordinates in PDF points (1/72 inch), origin at top-left
+    # More robust than text offsets for visual highlighting
+    bbox: BoundingBox;
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    
+    # Soft deletion timestamp
+    # Preserves mention history when logically deleted
+    deleted_at: datetime;
+    
+    # Constraints
+    constraint expression on (
+      # If page_number_end is set, it must be greater than page_number
+      not exists .page_number_end or .page_number_end > .page_number
+    ) {
+      errmessage := "page_number_end must be greater than page_number";
+    };
+    
+    constraint expression on (
+      # If both offsets are set, end must be greater than start
+      (not exists .start_offset or not exists .end_offset) or
+      .end_offset > .start_offset
+    ) {
+      errmessage := "end_offset must be greater than start_offset";
+    };
+    
+    # Computed properties
+    property is_deleted := exists .deleted_at;
+    
+    # Access control: inherit from document (and transitively from project)
+    access policy project_owner_access
+      allow all
+      using (.document.project.owner ?= global current_user);
+    
+    access policy project_collaborator_access
+      allow all
+      using (exists (global current_user in .document.project.collaborators));
+  }
+  
+  
+  # ============================================================================
+  # Event - Domain event log for audit, debugging, and history
+  # ============================================================================
+  #
+  # Event provides a lightweight audit trail for important domain actions.
+  #
+  # Benefits:
+  # - Domain history: who decided this concept exists?
+  # - Debugging: why did processing fail?
+  # - LLM audit trail: was this human or AI?
+  # - Analytics: product insights and usage patterns
+  # - Future: realtime streams, webhooks, integrations
+  #
+  # Emit events for important domain actions:
+  # ✅ IndexEntry created / updated / merged / deprecated
+  # ✅ IndexMention created / deleted
+  # ✅ SourceDocument processed / failed
+  # ✅ LLMRun completed / failed
+  # ✅ Export generated
+  # ✅ User invited / joined project
+  #
+  # Do NOT emit events for:
+  # ❌ Trivial reads or UI actions
+  # ❌ Every keystroke or state change
+  
+  type Event {
+    required project: Project {
+      on target delete delete source;
+    };
+    
+    # Who caused this event
+    # Null = system-generated or LLM-generated
+    actor: User;
+    
+    # Domain object involved (type-safe enum)
+    required entity_type: EntityType;
+    
+    # Specific entity that was affected (optional)
+    # Store entity.id for cross-reference
+    # Combined with entity_type enables efficient filtering:
+    #   filter .entity_type = EntityType.IndexEntry and .entity_id = $entry_id
+    entity_id: uuid;
+    
+    # What happened
+    # Examples: "created", "updated", "deleted", "merged", "suggested", "approved"
+    required action: str;
+    
+    # Structured metadata about the event
+    # Keep minimal, avoid duplicating entity data
+    # Example: { "from_status": "suggested", "to_status": "active" }
+    metadata: json;
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    
+    # Access control: inherit from project
+    access policy project_owner_access
+      allow all
+      using (.project.owner ?= global current_user);
+    
+    access policy project_collaborator_access
+      allow all
+      using (exists (global current_user in .project.collaborators));
+  }
+  
+  
+  # ============================================================================
+  # Prompt - LLM template for indexing tasks
+  # ============================================================================
+  #
+  # Versioned templates for LLM-based concept extraction.
+  
+  type Prompt {
+    required name: str {
+      constraint exclusive;
+    };
+    
+    # Mustache-style template: "Extract concepts from: {{text}}"
+    required template: str;
+    
+    # Semantic version: "1.0.0", "1.1.0", etc.
+    required version: str;
+    
+    # Optional metadata about what this prompt does
+    description: str;
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    
+    # Relationships
+    multi llm_runs := .<prompt[is LLMRun];
+    
+    # Constraints
+    constraint exclusive on ((.name, .version));
+    
+    # Access control: prompts are globally readable, admin-writeable
+    # For MVP, allow all users to read prompts
+    access policy all_users_read
+      allow select;
+    
+    # Only allow insert/update/delete for admin users
+    # (In MVP, this might be implicit via application logic)
+    access policy owner_write
+      allow insert, update, delete;
+  }
+  
+  
+  # ============================================================================
+  # LLMRun - An execution of an LLM prompt
+  # ============================================================================
+  #
+  # LLMRun tracks LLM execution for:
+  # - Cost monitoring and budgeting
+  # - Debugging (why did extraction fail?)
+  # - Audit trail (which prompt version was used?)
+  #
+  # LLM workflows typically produce:
+  # - Suggested IndexEntries (status = "suggested")
+  # - Suggested IndexMentions (confidence < 1.0, suggested_by_llm set)
+  #
+  # NOTE: Created entries/mentions can be tracked via:
+  # 1. Query IndexEntry filter .status = "suggested" and created_at matches run
+  # 2. Query IndexMention filter .suggested_by_llm = this run
+  # 3. Event log with entity_type filtering
+  # No need to duplicate links here; events provide better audit trail
+  #
+  # But LLMRun does NOT redefine the indexing ontology.
+  # It is orthogonal to the core domain model.
+  
+  type LLMRun {
+    # Which prompt template was used
+    prompt: Prompt;
+    
+    # Which document was processed (null for non-document runs)
+    document: SourceDocument;
+    
+    # Who initiated this run
+    user: User;
+    
+    # Model identifier (e.g., "gpt-4-turbo", "claude-3-opus")
+    required model_name: str;
+    
+    # Token usage for cost tracking
+    input_tokens: int32;
+    output_tokens: int32;
+    
+    # Computed cost in USD
+    cost_usd: float32;
+    
+    # Execution status (type-safe enum)
+    required status: LLMRunStatus {
+      default := LLMRunStatus.pending;
+    };
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    completed_at: datetime;
+    
+    # Error message if run failed
+    error_message: str;
+    
+    # Access control: user who created the run can access it
+    # Also accessible to project members if linked to a document
+    access policy creator_access
+      allow all
+      using (.user ?= global current_user);
+    
+    access policy document_project_access
+      allow select
+      using (
+        exists .document and (
+          .document.project.owner ?= global current_user or
+          exists (global current_user in .document.project.collaborators)
+        )
+      );
+  }
+  
+  
+  # ============================================================================
+  # ExportedIndex - A generated back-of-book index
+  # ============================================================================
+  #
+  # ExportedIndex represents the final output:
+  # IndexEntries are grouped, formatted, and exported according to a template.
+  #
+  # This is the artifact delivered to publishers or authors.
+  
+  type ExportedIndex {
+    required project: Project {
+      on target delete delete source;
+    };
+    
+    # Export format
+    required format: ExportFormat;
+    
+    # The generated index content
+    # - book_index: traditional back-of-book format (plaintext)
+    # - json: structured JSON export
+    # - xml: XML for InDesign or publishing tools
+    required content: str;
+    
+    # Optional export metadata
+    # Example: { "entry_count": 500, "page_count": 10, "template": "chicago" }
+    metadata: json;
+    
+    required created_at: datetime {
+      default := datetime_current();
+    };
+    
+    # Who generated this export
+    created_by: User;
+    
+    # Access control: inherit from project
+    access policy project_owner_access
+      allow all
+      using (.project.owner ?= global current_user);
+    
+    access policy project_collaborator_access
+      allow all
+      using (exists (global current_user in .project.collaborators));
+  }
+}
