@@ -1,4 +1,5 @@
 import type { Client } from "gel";
+import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
 import * as projectRepo from "./project.repo";
@@ -86,28 +87,20 @@ export const getProjectById = async ({
 }): Promise<Project> => {
 	const project = await projectRepo.getProjectById({ gelClient, projectId });
 
-	if (!project) {
-		logEvent({
-			event: "project.not_found",
-			context: {
-				requestId,
-				userId,
-				metadata: { projectId },
-			},
-		});
-		throw new Error("Project not found");
-	}
+	// Security principle: Don't reveal whether project exists if user can't access it
+	// Both "doesn't exist" and "forbidden" return 404 (via requireFound)
+	const found = requireFound(project);
 
 	logEvent({
 		event: "project.retrieved",
 		context: {
 			requestId,
 			userId,
-			metadata: { projectId: project.id },
+			metadata: { projectId: found.id },
 		},
 	});
 
-	return project;
+	return found;
 };
 
 export const updateProject = async ({
@@ -129,13 +122,16 @@ export const updateProject = async ({
 		input,
 	});
 
+	// Throw NOT_FOUND if project doesn't exist or user lacks access
+	const updated = requireFound(project);
+
 	logEvent({
 		event: "project.updated",
 		context: {
 			requestId,
 			userId,
 			metadata: {
-				projectId: project.id,
+				projectId: updated.id,
 				changes: input,
 			},
 		},
@@ -143,16 +139,16 @@ export const updateProject = async ({
 
 	await insertEvent({
 		gelClient,
-		projectId: project.id,
+		projectId: updated.id,
 		entityType: "Project",
-		entityId: project.id,
+		entityId: updated.id,
 		action: "updated",
 		metadata: {
 			changes: input,
 		},
 	});
 
-	return project;
+	return updated;
 };
 
 export const deleteProject = async ({
@@ -168,23 +164,26 @@ export const deleteProject = async ({
 }): Promise<void> => {
 	const result = await projectRepo.softDeleteProject({ gelClient, projectId });
 
+	// Throw NOT_FOUND if project doesn't exist, already deleted, or user lacks access
+	const deleted = requireFound(result);
+
 	logEvent({
 		event: "project.deleted",
 		context: {
 			requestId,
 			userId,
 			metadata: {
-				projectId: result.id,
-				deleted_at: result.deleted_at,
+				projectId: deleted.id,
+				deleted_at: deleted.deleted_at,
 			},
 		},
 	});
 
 	await insertEvent({
 		gelClient,
-		projectId: result.id,
+		projectId: deleted.id,
 		entityType: "Project",
-		entityId: result.id,
+		entityId: deleted.id,
 		action: "deleted",
 	});
 };

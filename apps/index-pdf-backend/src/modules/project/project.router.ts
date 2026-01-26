@@ -25,6 +25,11 @@ export const projectRouter = router({
 					requestId: ctx.requestId,
 				});
 			} catch (error) {
+				// Re-throw TRPCErrors from service layer (e.g., NOT_FOUND)
+				if (error instanceof TRPCError) {
+					throw error;
+				}
+
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message:
@@ -45,6 +50,11 @@ export const projectRouter = router({
 				requestId: ctx.requestId,
 			});
 		} catch (error) {
+			// Re-throw TRPCErrors from service layer
+			if (error instanceof TRPCError) {
+				throw error;
+			}
+
 			throw new TRPCError({
 				code: "INTERNAL_SERVER_ERROR",
 				message:
@@ -68,11 +78,9 @@ export const projectRouter = router({
 					requestId: ctx.requestId,
 				});
 			} catch (error) {
-				if (error instanceof Error && error.message.includes("not found")) {
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "Project not found",
-					});
+				// Service layer throws TRPCError with NOT_FOUND via requireFound()
+				if (error instanceof TRPCError) {
+					throw error;
 				}
 
 				throw new TRPCError({
@@ -104,11 +112,9 @@ export const projectRouter = router({
 					requestId: ctx.requestId,
 				});
 			} catch (error) {
-				if (error instanceof Error && error.message.includes("not found")) {
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "Project not found",
-					});
+				// Service layer throws TRPCError with NOT_FOUND via requireFound()
+				if (error instanceof TRPCError) {
+					throw error;
 				}
 
 				throw new TRPCError({
@@ -136,15 +142,9 @@ export const projectRouter = router({
 
 				return { success: true };
 			} catch (error) {
-				if (
-					error instanceof Error &&
-					(error.message.includes("not found") ||
-						error.message.includes("already deleted"))
-				) {
-					throw new TRPCError({
-						code: "NOT_FOUND",
-						message: "Project not found or already deleted",
-					});
+				// Service layer throws TRPCError with NOT_FOUND via requireFound()
+				if (error instanceof TRPCError) {
+					throw error;
 				}
 
 				throw new TRPCError({

@@ -147,7 +147,7 @@ describe("Project Service", () => {
 			expect(project.title).toBe("Retrieve Test");
 		});
 
-		it("should throw error for non-existent project", async () => {
+		it("should throw TRPCError NOT_FOUND for non-existent project", async () => {
 			const fakeId = "00000000-0000-0000-0000-000000000000";
 
 			await expect(
@@ -157,7 +157,10 @@ describe("Project Service", () => {
 					userId: "test-user-id",
 					requestId: "test-request",
 				}),
-			).rejects.toThrow("Project not found");
+			).rejects.toMatchObject({
+				code: "NOT_FOUND",
+				message: "Resource not found",
+			});
 		});
 	});
 
