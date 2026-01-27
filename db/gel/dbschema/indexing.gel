@@ -301,6 +301,11 @@ module default {
     content_hash: str;
     page_count: int32;
     
+    # Storage location identifier
+    # For local filesystem: UUID-based filename (e.g., "abc123.pdf")
+    # For cloud storage: S3 key, GCS path, or Azure blob name
+    required storage_key: str;
+    
     # Processing pipeline state
     required status: SourceDocumentStatus {
       default := SourceDocumentStatus.uploaded;

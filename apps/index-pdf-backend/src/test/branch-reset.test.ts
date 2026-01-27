@@ -14,8 +14,10 @@ import { testGelClient } from "./setup";
  * - Avoids access policy gymnastics
  * - Ensures no data leaks between test runs
  * - Keeps security policies clean and pure
+ *
+ * Note: Tests run sequentially to avoid transaction conflicts from parallel user creation
  */
-describe("Branch Reset Test Isolation", () => {
+describe.sequential("Branch Reset Test Isolation", () => {
 	it("should provide clean database for test data", async () => {
 		// Create test user and verify it exists
 		const user = await createTestUser();

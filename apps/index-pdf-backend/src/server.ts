@@ -1,9 +1,11 @@
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { logger } from "./logger";
 import { registerRequestId } from "./middleware/request-id";
 import { verifyGelToken } from "./modules/auth/verify-token";
+import { registerUploadRoutes } from "./modules/source-document/upload.routes";
 import { appRouter } from "./routers/index";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -30,6 +32,12 @@ export const registerPlugins = async (server: FastifyInstance) => {
 	await server.register(cors, {
 		origin: CORS_ORIGINS,
 		credentials: true,
+	});
+
+	await server.register(multipart, {
+		limits: {
+			fileSize: 100 * 1024 * 1024, // 100MB max file size
+		},
 	});
 
 	await server.register(fastifyTRPCPlugin, {
@@ -64,6 +72,8 @@ export const registerPlugins = async (server: FastifyInstance) => {
 			},
 		},
 	});
+
+	await registerUploadRoutes(server);
 
 	server.get("/health", async () => ({
 		status: "ok",

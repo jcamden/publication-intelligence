@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"@fastify/cors": "^11.2.0",
+		"@fastify/multipart": "^9.4.0",
 		"@pubint/core": "workspace:*",
 		"@pubint/events": "workspace:*",
 		"@pubint/llm": "workspace:*",

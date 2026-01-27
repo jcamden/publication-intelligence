@@ -48,3 +48,6 @@ storybook-static
 db/gel/generated/
 db/gel/gel.local.toml
 *.edgedb-lock
+
+# Local file storage
+apps/index-pdf-backend/.data/
