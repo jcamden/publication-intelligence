@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input } from "@pubint/pixel";
+import { Button, Input, Logo } from "@pubint/pixel";
 import { useState } from "react";
 import { useAuthToken } from "../../hooks/use-auth";
 import { trpc } from "../../utils/trpc";
@@ -46,9 +46,12 @@ export const AuthForm = () => {
 
 	return (
 		<div className="max-w-md mx-auto mt-8 p-6 bg-surface rounded-lg shadow-lg">
-			<h2 className="text-2xl font-bold text-text mb-6">
-				{isSignUp ? "Sign Up" : "Sign In"}
-			</h2>
+			<div className="flex flex-col items-center gap-4 mb-6">
+				<Logo variant="gradient" size="lg" />
+				<h2 className="text-xl font-semibold text-text">
+					{isSignUp ? "Sign Up" : "Sign In"}
+				</h2>
+			</div>
 			<form onSubmit={handleSubmit} className="space-y-4">
 				{isSignUp && (
 					<div>
@@ -114,7 +117,7 @@ export const AuthForm = () => {
 			</form>
 			<Button
 				type="button"
-				variant="outline"
+				variant="primary"
 				size="md"
 				onClick={() => setIsSignUp(!isSignUp)}
 				className="w-full mt-4"

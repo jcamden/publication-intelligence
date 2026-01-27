@@ -1,6 +1,7 @@
 export const typography = {
 	fontFamily: {
-		sans: 'ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+		sans: '"Exo 2", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+		display: '"Audiowide", "Exo 2", ui-sans-serif, system-ui, sans-serif',
 		serif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
 		mono: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
 	},

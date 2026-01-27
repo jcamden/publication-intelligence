@@ -1,11 +1,5 @@
 @import "tailwindcss";
 @import "@pubint/pixel/styles";
+
 @source "../";
 @source "../../../packages/pixel/src";
-
-@layer base {
-	body {
-		color: hsl(var(--color-text));
-		background: hsl(var(--color-background));
-	}
-}

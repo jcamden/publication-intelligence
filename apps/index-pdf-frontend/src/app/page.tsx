@@ -12,7 +12,7 @@ export default function Home() {
 	}
 
 	return (
-		<main style={{ padding: "2rem" }}>
+		<main style={{ padding: "2rem" }} className="bg-primary">
 			<h1>Publication Intelligence</h1>
 			<p>PDF indexing and search platform</p>
 
