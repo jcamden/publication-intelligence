@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createAuthenticatedClient } from "../../db/client";
-import { createTestUser } from "../../test/factories";
+import type { createTestUser } from "../../test/factories";
+import { createTestUser as _createTestUser } from "../../test/factories";
 import {
 	closeTestServer,
 	createTestServer,
@@ -14,6 +15,8 @@ import {
 // and security regression testing.
 // ============================================================================
 
+type TestUser = Awaited<ReturnType<typeof createTestUser>>;
+
 describe("Project Security & Authorization", () => {
 	let server: FastifyInstance;
 
@@ -25,28 +28,55 @@ describe("Project Security & Authorization", () => {
 		await closeTestServer(server);
 	});
 
+	// ============================================================================
+	// Policy Test Harness
+	// Helper to run operations as different users for testing access control
+	// ============================================================================
+
+	const asUser = async <T>({
+		user,
+		operation,
+	}: {
+		user: TestUser;
+		operation: (
+			request: ReturnType<typeof makeAuthenticatedRequest>,
+		) => Promise<T>;
+	}): Promise<T> => {
+		const authenticatedRequest = makeAuthenticatedRequest({
+			server,
+			authToken: user.authToken,
+		});
+		return await operation(authenticatedRequest);
+	};
+
+	const createTestUser = () => _createTestUser();
+
 	describe("Basic Access Control", () => {
 		it("owner access - should allow owner to access their project", async () => {
 			const owner = await createTestUser();
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
 
 			// Create project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Owner's Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Owner's Project" },
+					}),
 			});
 
 			expect(createResponse.statusCode).toBe(200);
 			const project = JSON.parse(createResponse.body).result.data;
 
 			// Owner can read
-			const getResponse = await ownerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const getResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			expect(getResponse.statusCode).toBe(200);
@@ -58,20 +88,15 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const collaborator = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const collabRequest = makeAuthenticatedRequest({
-				server,
-				authToken: collaborator.authToken,
-			});
-
 			// Owner creates project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Collaborative Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Collaborative Project" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
@@ -99,9 +124,13 @@ describe("Project Security & Authorization", () => {
 			);
 
 			// Collaborator can read
-			const getResponse = await collabRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const getResponse = await asUser({
+				user: collaborator,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			expect(getResponse.statusCode).toBe(200);
@@ -113,28 +142,27 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const randomUser = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const randomRequest = makeAuthenticatedRequest({
-				server,
-				authToken: randomUser.authToken,
-			});
-
 			// Owner creates project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Private Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Private Project" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
 
 			// Random user tries to access - should return 404 (not 403)
-			const getResponse = await randomRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const getResponse = await asUser({
+				user: randomUser,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			expect(getResponse.statusCode).toBe(404);
@@ -169,33 +197,41 @@ describe("Project Security & Authorization", () => {
 	describe("Deleted Projects", () => {
 		it("deleted project - should hide deleted project from owner", async () => {
 			const owner = await createTestUser();
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
 
 			// Create project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "To Be Deleted" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "To Be Deleted" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
 
 			// Delete project
-			const deleteResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.delete",
-				payload: { id: project.id },
+			const deleteResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.delete",
+						payload: { id: project.id },
+					}),
 			});
 
 			expect(deleteResponse.statusCode).toBe(200);
 
 			// Try to access deleted project - should return 404
-			const getResponse = await ownerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const getResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			expect(getResponse.statusCode).toBe(404);
@@ -203,37 +239,49 @@ describe("Project Security & Authorization", () => {
 
 		it("should not list deleted projects", async () => {
 			const owner = await createTestUser();
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
 
 			// Create two projects
-			await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Active Project" },
+			await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Active Project" },
+					}),
 			});
 
-			const toDeleteResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "To Delete" },
+			const toDeleteResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "To Delete" },
+					}),
 			});
 
 			const toDelete = JSON.parse(toDeleteResponse.body).result.data;
 
 			// Delete one project
-			await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.delete",
-				payload: { id: toDelete.id },
+			await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.delete",
+						payload: { id: toDelete.id },
+					}),
 			});
 
 			// List projects
-			const listResponse = await ownerRequest.inject({
-				method: "GET",
-				url: "/trpc/project.list",
+			const listResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: "/trpc/project.list",
+					}),
 			});
 
 			const projects = JSON.parse(listResponse.body).result.data;
@@ -253,40 +301,43 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const attackerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: attacker.authToken,
-			});
-
 			// Owner creates project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Owner's Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Owner's Project" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
 
 			// Attacker tries to update - should return 404 (not 403)
-			const updateResponse = await attackerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.update",
-				payload: {
-					id: project.id,
-					data: { title: "Hacked!" },
-				},
+			const updateResponse = await asUser({
+				user: attacker,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.update",
+						payload: {
+							id: project.id,
+							data: { title: "Hacked!" },
+						},
+					}),
 			});
 
 			expect(updateResponse.statusCode).toBe(404);
 
 			// Verify project title unchanged
-			const verifyResponse = await ownerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const verifyResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			const verify = JSON.parse(verifyResponse.body).result.data;
@@ -297,37 +348,40 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const attackerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: attacker.authToken,
-			});
-
 			// Owner creates project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Owner's Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Owner's Project" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
 
 			// Attacker tries to delete - should return 404 (not 403)
-			const deleteResponse = await attackerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.delete",
-				payload: { id: project.id },
+			const deleteResponse = await asUser({
+				user: attacker,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.delete",
+						payload: { id: project.id },
+					}),
 			});
 
 			expect(deleteResponse.statusCode).toBe(404);
 
 			// Verify project still exists
-			const verifyResponse = await ownerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const verifyResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			expect(verifyResponse.statusCode).toBe(200);
@@ -339,20 +393,15 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const collaborator = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const collabRequest = makeAuthenticatedRequest({
-				server,
-				authToken: collaborator.authToken,
-			});
-
 			// Create project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Collaborative Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Collaborative Project" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
@@ -380,21 +429,29 @@ describe("Project Security & Authorization", () => {
 			);
 
 			// Collaborator updates the project
-			const updateResponse = await collabRequest.inject({
-				method: "POST",
-				url: "/trpc/project.update",
-				payload: {
-					id: project.id,
-					data: { description: "Updated by collaborator" },
-				},
+			const updateResponse = await asUser({
+				user: collaborator,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.update",
+						payload: {
+							id: project.id,
+							data: { description: "Updated by collaborator" },
+						},
+					}),
 			});
 
 			expect(updateResponse.statusCode).toBe(200);
 
 			// Verify update
-			const verifyResponse = await ownerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const verifyResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			const verify = JSON.parse(verifyResponse.body).result.data;
@@ -405,26 +462,25 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const randomUser = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const randomRequest = makeAuthenticatedRequest({
-				server,
-				authToken: randomUser.authToken,
-			});
-
 			// Owner creates project
-			await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Owner's Private Project" },
+			await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Owner's Private Project" },
+					}),
 			});
 
 			// Random user lists their projects
-			const listResponse = await randomRequest.inject({
-				method: "GET",
-				url: "/trpc/project.list",
+			const listResponse = await asUser({
+				user: randomUser,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: "/trpc/project.list",
+					}),
 			});
 
 			const projects = JSON.parse(listResponse.body).result.data;
@@ -443,28 +499,27 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const attackerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: attacker.authToken,
-			});
-
 			// Create project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Secret Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Secret Project" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
 
 			// Attacker tries to access
-			const response = await attackerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const response = await asUser({
+				user: attacker,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			// Critical: Must return 404, NOT 403
@@ -475,16 +530,16 @@ describe("Project Security & Authorization", () => {
 
 		it("should return same 404 for non-existent project ID", async () => {
 			const user = await createTestUser();
-			const userRequest = makeAuthenticatedRequest({
-				server,
-				authToken: user.authToken,
-			});
 
 			const fakeId = "00000000-0000-0000-0000-000000000000";
 
-			const response = await userRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: fakeId }))}`,
+			const response = await asUser({
+				user,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: fakeId }))}`,
+					}),
 			});
 
 			// Same 404 response as unauthorized access
@@ -496,34 +551,37 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const attackerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: attacker.authToken,
-			});
-
 			// Create and delete project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "To Delete" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "To Delete" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
 
-			await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.delete",
-				payload: { id: project.id },
+			await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.delete",
+						payload: { id: project.id },
+					}),
 			});
 
 			// Attacker tries to access deleted project
-			const response = await attackerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const response = await asUser({
+				user: attacker,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			// Same 404 - can't tell if deleted, forbidden, or non-existent
@@ -536,28 +594,27 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const attackerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: attacker.authToken,
-			});
-
 			// Create project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Protected Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Protected Project" },
+					}),
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
 
 			// Attacker knows the valid UUID but should still be blocked
-			const response = await attackerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+			const response = await asUser({
+				user: attacker,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
+					}),
 			});
 
 			expect(response.statusCode).toBe(404);
@@ -567,34 +624,37 @@ describe("Project Security & Authorization", () => {
 			const owner = await createTestUser();
 			const attacker = await createTestUser();
 
-			const ownerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: owner.authToken,
-			});
-			const attackerRequest = makeAuthenticatedRequest({
-				server,
-				authToken: attacker.authToken,
-			});
-
 			// Create project
-			const createResponse = await ownerRequest.inject({
-				method: "POST",
-				url: "/trpc/project.create",
-				payload: { title: "Secret Project" },
+			const createResponse = await asUser({
+				user: owner,
+				operation: async (request) =>
+					request.inject({
+						method: "POST",
+						url: "/trpc/project.create",
+						payload: { title: "Secret Project" },
+					}),
 			});
 
 			const existingId = JSON.parse(createResponse.body).result.data.id;
 			const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
 			// Get status codes for both
-			const existingResponse = await attackerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: existingId }))}`,
+			const existingResponse = await asUser({
+				user: attacker,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: existingId }))}`,
+					}),
 			});
 
-			const nonExistentResponse = await attackerRequest.inject({
-				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: nonExistentId }))}`,
+			const nonExistentResponse = await asUser({
+				user: attacker,
+				operation: async (request) =>
+					request.inject({
+						method: "GET",
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: nonExistentId }))}`,
+					}),
 			});
 
 			// Both should return 404 - same error code
