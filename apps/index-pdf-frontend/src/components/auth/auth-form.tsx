@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Input } from "@pubint/pixel";
 import { useState } from "react";
 import { useAuthToken } from "../../hooks/use-auth";
 import { trpc } from "../../utils/trpc";
@@ -41,86 +42,87 @@ export const AuthForm = () => {
 		}
 	};
 
+	const isLoading = signUpMutation.isPending || signInMutation.isPending;
+
 	return (
-		<div style={{ maxWidth: "400px", margin: "2rem auto" }}>
-			<h2>{isSignUp ? "Sign Up" : "Sign In"}</h2>
-			<form onSubmit={handleSubmit}>
+		<div className="max-w-md mx-auto mt-8 p-6 bg-surface rounded-lg shadow-lg">
+			<h2 className="text-2xl font-bold text-text mb-6">
+				{isSignUp ? "Sign Up" : "Sign In"}
+			</h2>
+			<form onSubmit={handleSubmit} className="space-y-4">
 				{isSignUp && (
-					<div style={{ marginBottom: "1rem" }}>
-						<label htmlFor="name">Name (optional)</label>
-						<input
+					<div>
+						<label
+							htmlFor="name"
+							className="block text-sm font-medium text-text mb-1"
+						>
+							Name (optional)
+						</label>
+						<Input
 							id="name"
 							type="text"
 							value={name}
-							onChange={(e) => setName(e.target.value)}
-							style={{
-								width: "100%",
-								padding: "0.5rem",
-								marginTop: "0.25rem",
-							}}
+							onChange={setName}
+							placeholder="Enter your name"
+							size="md"
 						/>
 					</div>
 				)}
-				<div style={{ marginBottom: "1rem" }}>
-					<label htmlFor="email">Email</label>
-					<input
+				<div>
+					<label
+						htmlFor="email"
+						className="block text-sm font-medium text-text mb-1"
+					>
+						Email
+					</label>
+					<Input
 						id="email"
 						type="email"
 						value={email}
-						onChange={(e) => setEmail(e.target.value)}
+						onChange={setEmail}
+						placeholder="you@example.com"
 						required
-						style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+						size="md"
 					/>
 				</div>
-				<div style={{ marginBottom: "1rem" }}>
-					<label htmlFor="password">Password</label>
-					<input
+				<div>
+					<label
+						htmlFor="password"
+						className="block text-sm font-medium text-text mb-1"
+					>
+						Password
+					</label>
+					<Input
 						id="password"
 						type="password"
 						value={password}
-						onChange={(e) => setPassword(e.target.value)}
+						onChange={setPassword}
+						placeholder="Min 8 characters"
 						required
-						minLength={8}
-						style={{ width: "100%", padding: "0.5rem", marginTop: "0.25rem" }}
+						size="md"
 					/>
 				</div>
-				<button
+				<Button
 					type="submit"
-					disabled={signUpMutation.isPending || signInMutation.isPending}
-					style={{
-						width: "100%",
-						padding: "0.75rem",
-						backgroundColor: "#0070f3",
-						color: "white",
-						border: "none",
-						borderRadius: "4px",
-						cursor: "pointer",
-					}}
+					variant="primary"
+					size="lg"
+					disabled={isLoading}
+					className="w-full"
 				>
-					{signUpMutation.isPending || signInMutation.isPending
-						? "Loading..."
-						: isSignUp
-							? "Sign Up"
-							: "Sign In"}
-				</button>
+					{isLoading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
+				</Button>
 			</form>
-			<button
+			<Button
 				type="button"
+				variant="outline"
+				size="md"
 				onClick={() => setIsSignUp(!isSignUp)}
-				style={{
-					marginTop: "1rem",
-					width: "100%",
-					padding: "0.5rem",
-					background: "none",
-					border: "1px solid #ccc",
-					borderRadius: "4px",
-					cursor: "pointer",
-				}}
+				className="w-full mt-4"
 			>
 				{isSignUp
 					? "Already have an account? Sign In"
 					: "Need an account? Sign Up"}
-			</button>
+			</Button>
 		</div>
 	);
 };

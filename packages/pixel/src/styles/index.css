@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@layer reset, base, tokens, components, utilities, overrides;
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer tokens {
+	:root,
+	[data-theme="light"] {
+		/* Colors */
+		--color-primary: 220 90% 56%;
+		--color-primary-light: 220 90% 66%;
+		--color-primary-dark: 220 90% 46%;
+
+		--color-secondary: 280 60% 50%;
+		--color-secondary-light: 280 60% 60%;
+		--color-secondary-dark: 280 60% 40%;
+
+		--color-accent: 340 80% 55%;
+		--color-accent-light: 340 80% 65%;
+		--color-accent-dark: 340 80% 45%;
+
+		/* Semantic colors */
+		--color-success: 142 71% 35%;
+		--color-success-light: 142 71% 45%;
+		--color-success-dark: 142 71% 25%;
+
+		--color-warning: 38 92% 45%;
+		--color-warning-light: 38 92% 50%;
+		--color-warning-dark: 38 92% 40%;
+
+		--color-error: 0 84% 50%;
+		--color-error-light: 0 84% 60%;
+		--color-error-dark: 0 84% 40%;
+
+		--color-info: 199 89% 38%;
+		--color-info-light: 199 89% 48%;
+		--color-info-dark: 199 89% 28%;
+
+		/* Neutral colors */
+		--color-neutral-50: 0 0% 98%;
+		--color-neutral-100: 0 0% 96%;
+		--color-neutral-200: 0 0% 90%;
+		--color-neutral-300: 0 0% 83%;
+		--color-neutral-400: 0 0% 64%;
+		--color-neutral-500: 0 0% 45%;
+		--color-neutral-600: 0 0% 32%;
+		--color-neutral-700: 0 0% 25%;
+		--color-neutral-800: 0 0% 15%;
+		--color-neutral-900: 0 0% 9%;
+		--color-neutral-950: 0 0% 4%;
+
+		/* Surface colors */
+		--color-background: 0 0% 100%;
+		--color-surface: 0 0% 98%;
+		--color-surface-hover: 0 0% 96%;
+		--color-border: 0 0% 90%;
+		--color-text: 0 0% 9%;
+		--color-text-secondary: 0 0% 45%;
+
+		/* Spacing */
+		--spacing-0: 0;
+		--spacing-1: 0.25rem;
+		--spacing-2: 0.5rem;
+		--spacing-3: 0.75rem;
+		--spacing-4: 1rem;
+		--spacing-5: 1.25rem;
+		--spacing-6: 1.5rem;
+		--spacing-8: 2rem;
+		--spacing-10: 2.5rem;
+		--spacing-12: 3rem;
+		--spacing-16: 4rem;
+		--spacing-20: 5rem;
+		--spacing-24: 6rem;
+		--spacing-32: 8rem;
+
+		/* Border radius */
+		--radius-none: 0;
+		--radius-sm: 0.25rem;
+		--radius-md: 0.5rem;
+		--radius-lg: 0.75rem;
+		--radius-xl: 1rem;
+		--radius-2xl: 1.5rem;
+		--radius-full: 9999px;
+
+		/* Shadows */
+		--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		--shadow-md:
+			0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+		--shadow-lg:
+			0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+		--shadow-xl:
+			0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+	}
+
+	[data-theme="dark"] {
+		/* Colors (same brand colors work in dark mode) */
+		--color-primary: 220 90% 56%;
+		--color-primary-light: 220 90% 66%;
+		--color-primary-dark: 220 90% 46%;
+
+		--color-secondary: 280 60% 50%;
+		--color-secondary-light: 280 60% 60%;
+		--color-secondary-dark: 280 60% 40%;
+
+		--color-accent: 340 80% 55%;
+		--color-accent-light: 340 80% 65%;
+		--color-accent-dark: 340 80% 45%;
+
+		/* Semantic colors */
+		--color-success: 142 71% 45%;
+		--color-success-light: 142 71% 55%;
+		--color-success-dark: 142 71% 35%;
+
+		--color-warning: 38 92% 50%;
+		--color-warning-light: 38 92% 60%;
+		--color-warning-dark: 38 92% 40%;
+
+		--color-error: 0 84% 60%;
+		--color-error-light: 0 84% 70%;
+		--color-error-dark: 0 84% 50%;
+
+		--color-info: 199 89% 48%;
+		--color-info-light: 199 89% 58%;
+		--color-info-dark: 199 89% 38%;
+
+		/* Neutral colors (inverted for dark mode) */
+		--color-neutral-50: 0 0% 4%;
+		--color-neutral-100: 0 0% 9%;
+		--color-neutral-200: 0 0% 15%;
+		--color-neutral-300: 0 0% 25%;
+		--color-neutral-400: 0 0% 32%;
+		--color-neutral-500: 0 0% 45%;
+		--color-neutral-600: 0 0% 64%;
+		--color-neutral-700: 0 0% 83%;
+		--color-neutral-800: 0 0% 90%;
+		--color-neutral-900: 0 0% 96%;
+		--color-neutral-950: 0 0% 98%;
+
+		/* Surface colors */
+		--color-background: 0 0% 4%;
+		--color-surface: 0 0% 9%;
+		--color-surface-hover: 0 0% 15%;
+		--color-border: 0 0% 25%;
+		--color-text: 0 0% 98%;
+		--color-text-secondary: 0 0% 64%;
+	}
+}
+
+@layer base {
+	*,
+	::before,
+	::after {
+		box-sizing: border-box;
+		border-width: 0;
+		border-style: solid;
+		border-color: hsl(var(--color-border));
+	}
+
+	body {
+		margin: 0;
+		font-family: ui-sans-serif, system-ui, sans-serif;
+		background-color: hsl(var(--color-background));
+		color: hsl(var(--color-text));
+	}
+}
