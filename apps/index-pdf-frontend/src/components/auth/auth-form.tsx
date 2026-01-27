@@ -1,48 +1,69 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Input, Logo } from "@pubint/pixel";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { useAuthToken } from "../../hooks/use-auth";
 import { trpc } from "../../utils/trpc";
 
+const signInSchema = z.object({
+	email: z.string().email("Please enter a valid email address"),
+	password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+const signUpSchema = signInSchema.extend({
+	name: z.string().optional(),
+});
+
+type SignUpFormData = z.infer<typeof signUpSchema>;
+
 export const AuthForm = () => {
 	const [isSignUp, setIsSignUp] = useState(false);
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [name, setName] = useState("");
 	const { saveToken } = useAuthToken();
+
+	const {
+		register,
+		handleSubmit,
+		formState: { errors },
+		reset,
+	} = useForm<SignUpFormData>({
+		resolver: zodResolver(isSignUp ? signUpSchema : signInSchema),
+		mode: "onBlur",
+	});
 
 	const signUpMutation = trpc.auth.signUp.useMutation({
 		onSuccess: (data: { authToken: string; message: string }) => {
 			saveToken(data.authToken);
-			alert("Sign up successful!");
+			reset();
 		},
 		onError: (error: { message: string }) => {
-			alert(`Sign up failed: ${error.message}`);
+			console.error("Sign up failed:", error.message);
 		},
 	});
 
 	const signInMutation = trpc.auth.signIn.useMutation({
 		onSuccess: (data: { authToken: string; message: string }) => {
 			saveToken(data.authToken);
-			alert("Sign in successful!");
+			reset();
 		},
 		onError: (error: { message: string }) => {
-			alert(`Sign in failed: ${error.message}`);
+			console.error("Sign in failed:", error.message);
 		},
 	});
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-
+	const onSubmit = (data: SignUpFormData) => {
 		if (isSignUp) {
-			signUpMutation.mutate({ email, password, name });
+			signUpMutation.mutate(data);
 		} else {
-			signInMutation.mutate({ email, password });
+			const { name, ...signInData } = data;
+			signInMutation.mutate(signInData);
 		}
 	};
 
 	const isLoading = signUpMutation.isPending || signInMutation.isPending;
+	const apiError = signUpMutation.error || signInMutation.error;
 
 	return (
 		<div className="max-w-md mx-auto mt-8 p-6 bg-surface rounded-lg shadow-lg">
@@ -52,7 +73,8 @@ export const AuthForm = () => {
 					{isSignUp ? "Sign Up" : "Sign In"}
 				</h2>
 			</div>
-			<form onSubmit={handleSubmit} className="space-y-4">
+
+			<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 				{isSignUp && (
 					<div>
 						<label
@@ -64,13 +86,13 @@ export const AuthForm = () => {
 						<Input
 							id="name"
 							type="text"
-							value={name}
-							onChange={setName}
 							placeholder="Enter your name"
 							size="md"
+							{...register("name")}
 						/>
 					</div>
 				)}
+
 				<div>
 					<label
 						htmlFor="email"
@@ -81,13 +103,16 @@ export const AuthForm = () => {
 					<Input
 						id="email"
 						type="email"
-						value={email}
-						onChange={setEmail}
 						placeholder="you@example.com"
-						required
 						size="md"
+						variant={errors.email ? "error" : "default"}
+						{...register("email")}
 					/>
+					{errors.email && (
+						<p className="text-error text-sm mt-1">{errors.email.message}</p>
+					)}
 				</div>
+
 				<div>
 					<label
 						htmlFor="password"
@@ -98,13 +123,22 @@ export const AuthForm = () => {
 					<Input
 						id="password"
 						type="password"
-						value={password}
-						onChange={setPassword}
 						placeholder="Min 8 characters"
-						required
 						size="md"
+						variant={errors.password ? "error" : "default"}
+						{...register("password")}
 					/>
+					{errors.password && (
+						<p className="text-error text-sm mt-1">{errors.password.message}</p>
+					)}
 				</div>
+
+				{apiError && (
+					<div className="p-3 bg-error/10 border border-error rounded-lg">
+						<p className="text-error text-sm">{apiError.message}</p>
+					</div>
+				)}
+
 				<Button
 					type="submit"
 					variant="primary"
@@ -115,11 +149,15 @@ export const AuthForm = () => {
 					{isLoading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
 				</Button>
 			</form>
+
 			<Button
 				type="button"
-				variant="primary"
+				variant="ghost"
 				size="md"
-				onClick={() => setIsSignUp(!isSignUp)}
+				onClick={() => {
+					setIsSignUp(!isSignUp);
+					reset();
+				}}
 				className="w-full mt-4"
 			>
 				{isSignUp

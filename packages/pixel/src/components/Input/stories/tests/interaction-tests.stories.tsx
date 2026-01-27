@@ -23,7 +23,7 @@ export const RendersWithPlaceholder: StoryObj<typeof Input> = {
 				data-testid="input"
 				placeholder="Enter text..."
 				value={value}
-				onChange={setValue}
+				onChange={(e) => setValue(e.target.value)}
 			/>
 		);
 	},
@@ -46,7 +46,7 @@ export const AcceptsTextInput: StoryObj<typeof Input> = {
 					data-testid="text-input"
 					placeholder="Type here..."
 					value={value}
-					onChange={setValue}
+					onChange={(e) => setValue(e.target.value)}
 				/>
 				<div data-testid="output" style={{ marginTop: "16px" }}>
 					Value: {value}
@@ -79,7 +79,7 @@ export const DisabledInputCannotBeEdited: StoryObj<typeof Input> = {
 					data-testid="disabled-input"
 					disabled={true}
 					value={value}
-					onChange={setValue}
+					onChange={(e) => setValue(e.target.value)}
 				/>
 			</div>
 		);
@@ -107,28 +107,28 @@ export const AppliesVariantStyles: StoryObj<typeof Input> = {
 					variant="default"
 					placeholder="Default"
 					value={value1}
-					onChange={setValue1}
+					onChange={(e) => setValue1(e.target.value)}
 				/>
 				<Input
 					data-testid="input-success"
 					variant="success"
 					placeholder="Success"
 					value={value2}
-					onChange={setValue2}
+					onChange={(e) => setValue2(e.target.value)}
 				/>
 				<Input
 					data-testid="input-error"
 					variant="error"
 					placeholder="Error"
 					value={value3}
-					onChange={setValue3}
+					onChange={(e) => setValue3(e.target.value)}
 				/>
 				<Input
 					data-testid="input-warning"
 					variant="warning"
 					placeholder="Warning"
 					value={value4}
-					onChange={setValue4}
+					onChange={(e) => setValue4(e.target.value)}
 				/>
 			</div>
 		);
@@ -163,21 +163,21 @@ export const AppliesSizeStyles: StoryObj<typeof Input> = {
 					size="sm"
 					placeholder="Small"
 					value={value1}
-					onChange={setValue1}
+					onChange={(e) => setValue1(e.target.value)}
 				/>
 				<Input
 					data-testid="input-medium"
 					size="md"
 					placeholder="Medium"
 					value={value2}
-					onChange={setValue2}
+					onChange={(e) => setValue2(e.target.value)}
 				/>
 				<Input
 					data-testid="input-large"
 					size="lg"
 					placeholder="Large"
 					value={value3}
-					onChange={setValue3}
+					onChange={(e) => setValue3(e.target.value)}
 				/>
 			</div>
 		);

@@ -1,17 +1,17 @@
 import { Input as BaseInput } from "@base-ui/react/input";
 import { cva, type VariantProps } from "class-variance-authority";
 import { clsx } from "clsx";
-import type { ChangeEvent } from "react";
+import { type ComponentPropsWithoutRef, forwardRef } from "react";
 
 const inputVariants = cva(
-	"w-full rounded-lg border-2 bg-surface text-text transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-text-secondary",
+	"w-full rounded-lg border-2 text-text transition-colors duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-text-secondary",
 	{
 		variants: {
 			variant: {
-				default: "border-border focus:border-primary focus:ring-primary",
-				success: "border-success focus:border-success focus:ring-success",
-				error: "border-error focus:border-error focus:ring-error",
-				warning: "border-warning focus:border-warning focus:ring-warning",
+				default: "border-border bg-surface focus:border-primary",
+				success: "border-border bg-success/10 focus:border-success",
+				error: "border-border bg-error/10 focus:border-error",
+				warning: "border-border bg-warning/10 focus:border-warning",
 			},
 			size: {
 				sm: "px-3 py-1.5 text-sm",
@@ -26,49 +26,20 @@ const inputVariants = cva(
 	},
 );
 
-export type InputProps = VariantProps<typeof inputVariants> & {
-	id?: string;
-	value?: string;
-	placeholder?: string;
-	disabled?: boolean;
-	required?: boolean;
-	type?: "text" | "email" | "password" | "number" | "tel" | "url";
-	className?: string;
-	onChange?: (value: string) => void;
-	onBlur?: () => void;
-	onFocus?: () => void;
-};
+export type InputProps = VariantProps<typeof inputVariants> &
+	Omit<ComponentPropsWithoutRef<"input">, "size">;
 
-export const Input = ({
-	id,
-	value,
-	placeholder,
-	disabled = false,
-	required = false,
-	type = "text",
-	variant,
-	size,
-	className,
-	onChange,
-	onBlur,
-	onFocus,
-}: InputProps) => {
-	const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-		onChange?.(event.target.value);
-	};
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+	({ variant, size, className, type = "text", ...props }, ref) => {
+		return (
+			<BaseInput
+				ref={ref}
+				className={clsx(inputVariants({ variant, size }), className)}
+				type={type}
+				{...props}
+			/>
+		);
+	},
+);
 
-	return (
-		<BaseInput
-			id={id}
-			className={clsx(inputVariants({ variant, size }), className)}
-			value={value}
-			placeholder={placeholder}
-			disabled={disabled}
-			required={required}
-			type={type}
-			onChange={handleChange}
-			onBlur={onBlur}
-			onFocus={onFocus}
-		/>
-	);
-};
+Input.displayName = "Input";

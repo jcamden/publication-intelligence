@@ -42,7 +42,7 @@ export const Logo = ({ size, variant, className, href }: LogoProps) => {
 		return (
 			<a
 				href={href}
-				className="inline-block no-underline hover:opacity-80 transition-opacity"
+				className="inline-block no-underline hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm"
 			>
 				{logoElement}
 			</a>

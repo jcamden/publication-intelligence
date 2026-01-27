@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Audiowide, Exo_2 } from "next/font/google";
 import "./globals.css";
+import { ThemeScript } from "../components/theme-script";
+import { ThemeProvider } from "../providers/theme-provider";
 import { TrpcProvider } from "../providers/trpc-provider";
 
 const exo2 = Exo_2({
@@ -27,8 +29,13 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" className={`${exo2.variable} ${audiowide.variable}`}>
+			<head>
+				<ThemeScript />
+			</head>
 			<body className={exo2.className}>
-				<TrpcProvider>{children}</TrpcProvider>
+				<ThemeProvider>
+					<TrpcProvider>{children}</TrpcProvider>
+				</ThemeProvider>
 			</body>
 		</html>
 	);

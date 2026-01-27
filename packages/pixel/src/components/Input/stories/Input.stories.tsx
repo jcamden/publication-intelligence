@@ -10,7 +10,7 @@ const MyInput = () => {
   return (
     <Input 
       value={value} 
-      onChange={setValue} 
+      onChange={(e) => setValue(e.target.value)} 
       placeholder="Enter text..."
     />
   );
@@ -106,14 +106,26 @@ ${codeBlock}
 export const Default: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("");
-		return <Input {...args} value={value} onChange={setValue} />;
+		return (
+			<Input
+				{...args}
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
+		);
 	},
 };
 
 export const WithValue: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("Hello World");
-		return <Input {...args} value={value} onChange={setValue} />;
+		return (
+			<Input
+				{...args}
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
+		);
 	},
 };
 
@@ -121,7 +133,12 @@ export const Success: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("valid@email.com");
 		return (
-			<Input {...args} variant="success" value={value} onChange={setValue} />
+			<Input
+				{...args}
+				variant="success"
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
 		);
 	},
 };
@@ -130,7 +147,12 @@ export const ErrorState: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("invalid-email");
 		return (
-			<Input {...args} variant="error" value={value} onChange={setValue} />
+			<Input
+				{...args}
+				variant="error"
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
 		);
 	},
 };
@@ -144,7 +166,7 @@ export const Warning: StoryObj<typeof Input> = {
 				variant="warning"
 				placeholder="This field needs attention"
 				value={value}
-				onChange={setValue}
+				onChange={(e) => setValue(e.target.value)}
 			/>
 		);
 	},
@@ -153,28 +175,56 @@ export const Warning: StoryObj<typeof Input> = {
 export const Small: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("");
-		return <Input {...args} size="sm" value={value} onChange={setValue} />;
+		return (
+			<Input
+				{...args}
+				size="sm"
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
+		);
 	},
 };
 
 export const Medium: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("");
-		return <Input {...args} size="md" value={value} onChange={setValue} />;
+		return (
+			<Input
+				{...args}
+				size="md"
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
+		);
 	},
 };
 
 export const Large: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("");
-		return <Input {...args} size="lg" value={value} onChange={setValue} />;
+		return (
+			<Input
+				{...args}
+				size="lg"
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
+		);
 	},
 };
 
 export const Disabled: StoryObj<typeof Input> = {
 	render: (args) => {
 		const [value, setValue] = useState("Disabled input");
-		return <Input {...args} disabled value={value} onChange={setValue} />;
+		return (
+			<Input
+				{...args}
+				disabled
+				value={value}
+				onChange={(e) => setValue(e.target.value)}
+			/>
+		);
 	},
 };
 
@@ -187,7 +237,7 @@ export const Password: StoryObj<typeof Input> = {
 				type="password"
 				placeholder="Enter password"
 				value={value}
-				onChange={setValue}
+				onChange={(e) => setValue(e.target.value)}
 			/>
 		);
 	},
@@ -202,7 +252,7 @@ export const Email: StoryObj<typeof Input> = {
 				type="email"
 				placeholder="Enter email"
 				value={value}
-				onChange={setValue}
+				onChange={(e) => setValue(e.target.value)}
 			/>
 		);
 	},
@@ -221,25 +271,25 @@ export const AllVariants: StoryObj<typeof Input> = {
 					variant="default"
 					placeholder="Default"
 					value={value1}
-					onChange={setValue1}
+					onChange={(e) => setValue1(e.target.value)}
 				/>
 				<Input
 					variant="success"
 					placeholder="Success"
 					value={value2}
-					onChange={setValue2}
+					onChange={(e) => setValue2(e.target.value)}
 				/>
 				<Input
 					variant="error"
 					placeholder="Error"
 					value={value3}
-					onChange={setValue3}
+					onChange={(e) => setValue3(e.target.value)}
 				/>
 				<Input
 					variant="warning"
 					placeholder="Warning"
 					value={value4}
-					onChange={setValue4}
+					onChange={(e) => setValue4(e.target.value)}
 				/>
 			</div>
 		);
@@ -258,19 +308,19 @@ export const AllSizes: StoryObj<typeof Input> = {
 					size="sm"
 					placeholder="Small"
 					value={value1}
-					onChange={setValue1}
+					onChange={(e) => setValue1(e.target.value)}
 				/>
 				<Input
 					size="md"
 					placeholder="Medium"
 					value={value2}
-					onChange={setValue2}
+					onChange={(e) => setValue2(e.target.value)}
 				/>
 				<Input
 					size="lg"
 					placeholder="Large"
 					value={value3}
-					onChange={setValue3}
+					onChange={(e) => setValue3(e.target.value)}
 				/>
 			</div>
 		);
