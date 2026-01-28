@@ -1,4 +1,1 @@
-pnpm exec biome ci .
-pnpm -r run typecheck
-pnpm lint:access-policies
-pnpm lint:env
+pnpm exec tsx scripts/test-affected-workspaces.ts

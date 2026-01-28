@@ -97,11 +97,14 @@ const findVRTStories = ({ dir }: { dir: string }): string[] => {
 const parseStoryFile = ({ filePath }: { filePath: string }): StoryInfo => {
 	const content = readFileSync(filePath, "utf-8");
 
-	// Extract component name from path: src/components/card/stories/tests/...
+	// Extract component name from path by finding "stories" dir and using its parent
+	// e.g., .../login-form/stories/tests/... -> "login-form"
 	const pathParts = filePath.split("/");
-	const componentIndex = pathParts.indexOf("components");
+	const storiesIndex = pathParts.indexOf("stories");
 	const componentName =
-		componentIndex !== -1 ? pathParts[componentIndex + 1] : "unknown";
+		storiesIndex !== -1 && storiesIndex > 0
+			? pathParts[storiesIndex - 1]
+			: "unknown";
 
 	// Extract title from default export
 	const titleMatch = content.match(/title:\s*["']([^"']+)["']/);

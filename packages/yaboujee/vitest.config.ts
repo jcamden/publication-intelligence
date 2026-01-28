@@ -1,18 +1,15 @@
+import { jsdomConfig } from "@pubint/vitest-config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
-		globals: true,
-		environment: "jsdom",
+		...jsdomConfig,
 		setupFiles: [],
 		coverage: {
-			provider: "v8",
-			reporter: ["text", "json", "html"],
+			...jsdomConfig.coverage,
 			exclude: [
-				"node_modules/",
-				"dist/",
+				...(jsdomConfig.coverage?.exclude || []),
 				"**/*.stories.tsx",
-				"**/*.test.tsx",
 				".storybook/",
 			],
 		},

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { nodeConfig } from "@pubint/vitest-config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -8,24 +9,15 @@ export default defineConfig({
 		},
 	},
 	test: {
-		globals: true,
-		environment: "node",
+		...nodeConfig,
 		include: ["src/**/*.{test,spec}.{js,ts}"],
-		exclude: ["**/node_modules/**", "**/dist/**"],
 		setupFiles: ["./vitest.setup.ts"],
 		testTimeout: 30000,
 		hookTimeout: 30000,
 		coverage: {
-			provider: "v8",
-			reporter: ["text", "json", "html"],
+			...nodeConfig.coverage,
 			include: ["src/**/*.ts"],
-			exclude: [
-				"**/*.test.ts",
-				"**/*.spec.ts",
-				"**/test/**",
-				"**/*.config.ts",
-				"**/*.d.ts",
-			],
+			exclude: [...(nodeConfig.coverage?.exclude || []), "**/test/**"],
 		},
 	},
 });

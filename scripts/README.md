@@ -2,6 +2,50 @@
 
 This directory contains utility scripts for development, testing, and security enforcement.
 
+## Test Scripts
+
+### `test-affected-workspaces.ts`
+
+Comprehensive pre-commit checks for workspaces affected by staged changes, including their dependents.
+
+**Features:**
+- Detects which workspaces have staged changes
+- Analyzes workspace dependency graph to find all affected workspaces
+- For each affected workspace, runs:
+  - **Biome linting** (code quality and formatting)
+  - **TypeScript type checking** (if workspace has typecheck script)
+  - **Unit tests** (if workspace has test script)
+  - **VRT tests** (for yaboujee and index-pdf-frontend)
+- Conditionally runs access policy linting only if `db/` folder has changes
+- Skips checks for workspaces without the corresponding scripts
+
+**Usage:**
+```bash
+# Runs automatically on pre-commit
+git commit -m "message"
+
+# Run manually
+pnpm exec tsx scripts/test-affected-workspaces.ts
+
+# Dry run to see what would be checked (without running checks)
+pnpm exec tsx scripts/test-affected-workspaces.ts --dry-run
+```
+
+**Example workflow:**
+1. You modify code in `packages/core`
+2. Script detects `@pubint/core` has changes
+3. Script finds `@pubint/index-pdf-backend` and `@pubint/index-pdf-frontend` depend on `@pubint/core`
+4. For each workspace (core, backend, frontend):
+   - Runs biome linting
+   - Runs type checking
+   - Runs unit tests
+5. Runs VRT for `@pubint/index-pdf-frontend`
+6. If you also changed `db/gel/dbschema/`, runs access policy linting
+
+**CI Integration:** Runs automatically on pre-commit hook as the sole check (replaces individual lint/typecheck commands).
+
+---
+
 ## Security Scripts
 
 ### `lint-access-policies.sh`
@@ -110,10 +154,8 @@ openssl rand -base64 32
 ## CI/CD Notes
 
 **Pre-commit hooks run:**
-- Code formatting (`biome ci`)
-- TypeScript type checking
-- Access policy linting
-- Auth key validation
+- Affected workspace checks (linting, type checking, tests, VRT) via `test-affected-workspaces.ts`
+- Access policy linting (only if `db/` folder changes detected)
 
 **To skip hooks (emergency only):**
 ```bash
