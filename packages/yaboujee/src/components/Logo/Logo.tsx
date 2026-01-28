@@ -12,7 +12,7 @@ const logoVariants = cva("font-normal transition-colors duration-200", {
 		variant: {
 			primary: "text-primary",
 			gradient:
-				"bg-gradient-to-r from-black to-primary bg-clip-text text-transparent",
+				"bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent",
 			light: "text-white",
 			dark: "text-neutral-900",
 		},

@@ -10,7 +10,7 @@ const config: StorybookConfig = {
 		"@storybook/addon-docs",
 	],
 	framework: "@storybook/react-vite",
-	staticDirs: ["../src/fonts"],
+	staticDirs: ["./public"],
 	async viteFinal(config) {
 		config.plugins = config.plugins || [];
 		config.plugins.push(tailwindcss());

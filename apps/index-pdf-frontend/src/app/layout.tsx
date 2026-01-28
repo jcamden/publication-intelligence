@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Audiowide, Exo_2 } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeScript } from "../components/theme-script";
 import { ThemeProvider } from "../providers/theme-provider";
@@ -17,6 +18,13 @@ const audiowide = Audiowide({
 	variable: "--font-audiowide",
 });
 
+const anurati = localFont({
+	src: "../../public/fonts/Anurati-Regular.otf",
+	variable: "--font-anurati",
+	weight: "400",
+	display: "swap",
+});
+
 export const metadata: Metadata = {
 	title: "Publication Intelligence",
 	description: "PDF indexing and search powered by AI",
@@ -28,7 +36,11 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" className={`${exo2.variable} ${audiowide.variable}`}>
+		<html
+			lang="en"
+			className={`${exo2.variable} ${audiowide.variable} ${anurati.variable}`}
+			suppressHydrationWarning
+		>
 			<head>
 				<ThemeScript />
 			</head>

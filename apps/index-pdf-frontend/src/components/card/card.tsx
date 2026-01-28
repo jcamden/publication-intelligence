@@ -1,3 +1,4 @@
+import { Logo } from "@pubint/yaboujee";
 import type { ReactNode } from "react";
 
 export type CardProps = {
@@ -21,5 +22,10 @@ export const Card = ({
 	const classes =
 		`bg-white text-gray-900 rounded-lg p-6 ${elevationClass} ${className}`.trim();
 
-	return <div className={classes}>{children}</div>;
+	return (
+		<div className={classes}>
+			<Logo />
+			{children}
+		</div>
+	);
 };
