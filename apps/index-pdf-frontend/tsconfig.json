@@ -21,7 +21,10 @@
 		],
 		"paths": {
 			"@/*": ["./src/*"],
-			"@gel": ["../../db/gel/generated/index.ts"]
+			"@gel": ["../../db/gel/generated/index.ts"],
+			"@pubint/yabasic/*": ["../../packages/yabasic/src/*"],
+			"@pubint/yaboujee": ["../../packages/yaboujee/src/index.ts"],
+			"@pubint/yaboujee/*": ["../../packages/yaboujee/src/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

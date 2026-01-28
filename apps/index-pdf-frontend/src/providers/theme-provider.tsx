@@ -39,8 +39,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 		const resolved = theme === "system" ? getSystemTheme() : theme;
 		setResolvedTheme(resolved);
 
-		// Update data-theme attribute
+		// Update data-theme attribute and .dark class
 		document.documentElement.setAttribute("data-theme", resolved);
+		if (resolved === "dark") {
+			document.documentElement.classList.add("dark");
+		} else {
+			document.documentElement.classList.remove("dark");
+		}
 
 		// Listen for system theme changes
 		if (theme === "system") {
@@ -49,6 +54,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 				const newResolved = getSystemTheme();
 				setResolvedTheme(newResolved);
 				document.documentElement.setAttribute("data-theme", newResolved);
+				if (newResolved === "dark") {
+					document.documentElement.classList.add("dark");
+				} else {
+					document.documentElement.classList.remove("dark");
+				}
 			};
 
 			mediaQuery.addEventListener("change", handleChange);

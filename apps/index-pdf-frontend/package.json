@@ -17,8 +17,7 @@
 		"test:vrt:ui": "playwright test --config=playwright/vrt/vrt.config.ts --ui",
 		"test:vrt:update": "playwright test --config=playwright/vrt/vrt.config.ts --update-snapshots",
 		"test:e2e": "playwright test --config=playwright/e2e/e2e.config.ts",
-		"test:e2e:ui": "playwright test --config=playwright/e2e/e2e.config.ts --ui",
-		"prepare": "husky"
+		"test:e2e:ui": "playwright test --config=playwright/e2e/e2e.config.ts --ui"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
@@ -26,14 +25,15 @@
 		"@pubint/core": "workspace:*",
 		"@pubint/llm": "workspace:*",
 		"@pubint/pdf": "workspace:*",
-		"@pubint/pixel": "workspace:*",
+		"@pubint/yaboujee": "workspace:*",
+		"@tanstack/react-form": "^1.28.0",
 		"@tanstack/react-query": "^5.90.20",
+		"@tanstack/zod-form-adapter": "^0.42.1",
 		"@trpc/client": "^11.8.1",
 		"@trpc/react-query": "^11.8.1",
 		"next": "^15.1.6",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
-		"react-hook-form": "^7.71.1",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {

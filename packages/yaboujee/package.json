@@ -1,0 +1,53 @@
+{
+	"name": "@pubint/yaboujee",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts"
+		},
+		"./styles": "./src/index.css"
+	},
+	"scripts": {
+		"build": "tsc",
+		"clean": "rm -rf dist storybook-static",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"storybook": "storybook dev -p 6007",
+		"build-storybook": "storybook build"
+	},
+	"dependencies": {
+		"@base-ui/react": "^1.1.0",
+		"@pubint/yabasic": "workspace:*",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"lucide-react": "^0.563.0"
+	},
+	"devDependencies": {
+		"@chromatic-com/storybook": "^5.0.0",
+		"@storybook/addon-a11y": "^10.2.0",
+		"@storybook/addon-docs": "^10.2.0",
+		"@storybook/addon-vitest": "^10.2.0",
+		"@storybook/react": "^10.2.0",
+		"@storybook/react-vite": "^10.2.0",
+		"@storybook/test": "^8.6.15",
+		"@tailwindcss/vite": "^4.1.18",
+		"@types/react": "^19.0.6",
+		"@types/react-dom": "^19.0.2",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"storybook": "^10.2.0",
+		"tailwindcss": "^4.1.18",
+		"typescript": "^5.7.3",
+		"vite": "^7.3.1"
+	},
+	"peerDependencies": {
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	}
+}

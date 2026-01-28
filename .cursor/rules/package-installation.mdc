@@ -1,0 +1,49 @@
+---
+description: Never install packages automatically - always prompt user first
+alwaysApply: true
+---
+
+# Package Installation Policy
+
+## Never install packages automatically
+
+Always ask the user to install packages manually instead of running installation commands.
+
+```bash
+# ❌ BAD - Don't run these automatically
+pnpm install
+pnpm add some-package
+npm install
+yarn add some-package
+
+# ✅ GOOD - Prompt the user instead
+"Please run: pnpm add some-package"
+```
+
+## When dependencies are needed
+
+If code changes require new dependencies:
+
+1. **Identify the packages** needed
+2. **Tell the user** which packages to install
+3. **Provide the exact command** they should run
+4. **Wait for confirmation** before proceeding
+
+```
+❌ BAD:
+"I'll install the required packages now..."
+[runs pnpm install]
+
+✅ GOOD:
+"This feature requires the `zod` package. Please run:
+pnpm add zod
+
+Let me know when it's installed and I'll continue."
+```
+
+## Why this matters
+
+- Gives user control over dependency changes
+- Allows review of package choices before installation
+- Prevents unexpected changes to lock files
+- User can verify package versions and licenses first

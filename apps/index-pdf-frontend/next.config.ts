@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
 		"@pubint/core",
 		"@pubint/pdf",
 		"@pubint/llm",
-		"@pubint/pixel",
+		"@pubint/yabasic",
+		"@pubint/yaboujee",
 	],
 };
 

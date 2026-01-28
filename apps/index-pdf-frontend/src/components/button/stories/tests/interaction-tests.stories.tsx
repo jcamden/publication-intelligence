@@ -111,8 +111,8 @@ export const DisabledButtonDoesNotClick: StoryObj<typeof Button> = {
 export const AppliesVariantStyles: StoryObj<typeof Button> = {
 	render: () => (
 		<div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-			<Button data-testid="button-primary" variant="primary">
-				Primary
+			<Button data-testid="button-default" variant="default">
+				Default
 			</Button>
 			<Button data-testid="button-secondary" variant="secondary">
 				Secondary
@@ -127,20 +127,20 @@ export const AppliesVariantStyles: StoryObj<typeof Button> = {
 	),
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		const primaryButton = canvas.getByTestId("button-primary");
+		const defaultButton = canvas.getByTestId("button-default");
 		const secondaryButton = canvas.getByTestId("button-secondary");
 		const outlineButton = canvas.getByTestId("button-outline");
 		const ghostButton = canvas.getByTestId("button-ghost");
 
-		await expect(primaryButton).toBeVisible();
+		await expect(defaultButton).toBeVisible();
 		await expect(secondaryButton).toBeVisible();
 		await expect(outlineButton).toBeVisible();
 		await expect(ghostButton).toBeVisible();
 
-		const primaryStyle = window.getComputedStyle(primaryButton);
+		const defaultStyle = window.getComputedStyle(defaultButton);
 		const outlineStyle = window.getComputedStyle(outlineButton);
 
-		await expect(primaryStyle.backgroundColor).toBeTruthy();
+		await expect(defaultStyle.backgroundColor).toBeTruthy();
 		await expect(outlineStyle.borderWidth).toBeTruthy();
 	},
 };
@@ -151,8 +151,8 @@ export const AppliesSizeStyles: StoryObj<typeof Button> = {
 			<Button data-testid="button-small" size="sm">
 				Small
 			</Button>
-			<Button data-testid="button-medium" size="md">
-				Medium
+			<Button data-testid="button-default" size="default">
+				Default
 			</Button>
 			<Button data-testid="button-large" size="lg">
 				Large
@@ -162,19 +162,19 @@ export const AppliesSizeStyles: StoryObj<typeof Button> = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const smallButton = canvas.getByTestId("button-small");
-		const mediumButton = canvas.getByTestId("button-medium");
+		const defaultButton = canvas.getByTestId("button-default");
 		const largeButton = canvas.getByTestId("button-large");
 
 		await expect(smallButton).toBeVisible();
-		await expect(mediumButton).toBeVisible();
+		await expect(defaultButton).toBeVisible();
 		await expect(largeButton).toBeVisible();
 
 		const smallStyle = window.getComputedStyle(smallButton);
-		const mediumStyle = window.getComputedStyle(mediumButton);
+		const defaultStyle = window.getComputedStyle(defaultButton);
 		const largeStyle = window.getComputedStyle(largeButton);
 
 		await expect(smallStyle.paddingLeft).toBeTruthy();
-		await expect(mediumStyle.paddingLeft).toBeTruthy();
+		await expect(defaultStyle.paddingLeft).toBeTruthy();
 		await expect(largeStyle.paddingLeft).toBeTruthy();
 	},
 };
@@ -184,7 +184,7 @@ export const AcceptsCustomClassName: StoryObj<typeof Button> = {
 		<Button
 			data-testid="custom-button"
 			className="custom-test-class"
-			variant="primary"
+			variant="default"
 		>
 			Custom Class Button
 		</Button>

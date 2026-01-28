@@ -1,4 +1,3 @@
-// Simple re-export from pixel design system
+// Simple re-export from yabasic primitives
 
-export type { ButtonProps } from "@pubint/pixel";
-export { Button } from "@pubint/pixel";
+export { Button } from "@pubint/yabasic/components/ui/button";

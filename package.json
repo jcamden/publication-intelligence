@@ -32,7 +32,7 @@
 		"lint": "biome lint .",
 		"lint:access-policies": "./scripts/lint-access-policies.sh",
 		"lint:auth-key": "./scripts/validate-auth-key.sh",
-		"lint:env": "tsx scripts/validate-env.ts",
+		"lint:env": "pnpx tsx scripts/validate-env.ts",
 		"format": "biome format --write .",
 		"check": "biome check --write .",
 		"ci": "biome ci .",

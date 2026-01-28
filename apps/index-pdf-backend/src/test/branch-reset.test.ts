@@ -16,6 +16,8 @@ import { testGelClient } from "./setup";
  * - Keeps security policies clean and pure
  *
  * Note: Tests run sequentially to avoid transaction conflicts from parallel user creation
+ *
+ * sequential did nothing; they are really sequential
  */
 describe.sequential("Branch Reset Test Isolation", () => {
 	it("should provide clean database for test data", async () => {

@@ -1,5 +1,6 @@
 @import "tailwindcss";
-@import "@pubint/pixel/styles";
+@import "@pubint/yaboujee/styles";
 
 @source "../";
-@source "../../../packages/pixel/src";
+@source "../../../packages/yaboujee/src";
+@source "../../../packages/yabasic/src";

@@ -5,7 +5,7 @@ const codeBlock = `import { Button } from "@/components/button";
 
 const MyButton = () => {
   return (
-    <Button variant="primary" size="md" onClick={() => console.log("Clicked!")}>
+    <Button variant="default" size="default" onClick={() => console.log("Clicked!")}>
       Click me
     </Button>
   );
@@ -17,13 +17,15 @@ const additionalMarkdownDescription = `
 Use the Button component for user interactions such as form submissions, navigation, and triggering actions.
 
 ## Variants
-- **Primary**: Main call-to-action buttons
+- **Default**: Main call-to-action buttons
 - **Secondary**: Secondary actions
 - **Outline**: Alternative style with border
 - **Ghost**: Minimal style for tertiary actions
+- **Destructive**: For destructive actions
+- **Link**: Link-style buttons
 
 ## Sizes
-The Button supports three sizes: sm, md, and lg for different contexts.
+The Button supports multiple sizes: xs, sm, default, and lg for different contexts.
 
 ## Accessibility
 Built with Base UI, the Button component includes proper ARIA attributes and keyboard navigation support.`;
@@ -33,8 +35,8 @@ export default {
 	title: "Components/Button",
 	args: {
 		children: "Button",
-		variant: "primary",
-		size: "md",
+		variant: "default",
+		size: "default",
 		disabled: false,
 	},
 	argTypes: {
@@ -42,14 +44,21 @@ export default {
 			control: {
 				type: "select",
 			},
-			options: ["primary", "secondary", "outline", "ghost"],
+			options: [
+				"default",
+				"secondary",
+				"outline",
+				"ghost",
+				"destructive",
+				"link",
+			],
 			description: "The visual style variant of the button",
 		},
 		size: {
 			control: {
 				type: "select",
 			},
-			options: ["sm", "md", "lg"],
+			options: ["xs", "sm", "default", "lg"],
 			description: "The size of the button",
 		},
 		disabled: {
@@ -84,10 +93,10 @@ ${codeBlock}
 	},
 } satisfies Meta<typeof Button>;
 
-export const Primary: StoryObj<typeof Button> = {
+export const Default: StoryObj<typeof Button> = {
 	args: {
-		variant: "primary",
-		children: "Primary Button",
+		variant: "default",
+		children: "Default Button",
 	},
 };
 
@@ -112,6 +121,20 @@ export const Ghost: StoryObj<typeof Button> = {
 	},
 };
 
+export const Destructive: StoryObj<typeof Button> = {
+	args: {
+		variant: "destructive",
+		children: "Destructive Button",
+	},
+};
+
+export const ExtraSmall: StoryObj<typeof Button> = {
+	args: {
+		size: "xs",
+		children: "Extra Small",
+	},
+};
+
 export const Small: StoryObj<typeof Button> = {
 	args: {
 		size: "sm",
@@ -119,10 +142,10 @@ export const Small: StoryObj<typeof Button> = {
 	},
 };
 
-export const Medium: StoryObj<typeof Button> = {
+export const DefaultSize: StoryObj<typeof Button> = {
 	args: {
-		size: "md",
-		children: "Medium Button",
+		size: "default",
+		children: "Default Size",
 	},
 };
 
@@ -144,10 +167,12 @@ export const AllVariants: StoryObj<typeof Button> = {
 	render: () => (
 		<div className="flex flex-col gap-4">
 			<div className="flex gap-4 items-center">
-				<Button variant="primary">Primary</Button>
+				<Button variant="default">Default</Button>
 				<Button variant="secondary">Secondary</Button>
 				<Button variant="outline">Outline</Button>
 				<Button variant="ghost">Ghost</Button>
+				<Button variant="destructive">Destructive</Button>
+				<Button variant="link">Link</Button>
 			</div>
 		</div>
 	),
@@ -156,8 +181,9 @@ export const AllVariants: StoryObj<typeof Button> = {
 export const AllSizes: StoryObj<typeof Button> = {
 	render: () => (
 		<div className="flex gap-4 items-center">
+			<Button size="xs">Extra Small</Button>
 			<Button size="sm">Small</Button>
-			<Button size="md">Medium</Button>
+			<Button size="default">Default</Button>
 			<Button size="lg">Large</Button>
 		</div>
 	),

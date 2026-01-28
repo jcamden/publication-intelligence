@@ -21,6 +21,37 @@
 			}
 		}
 	},
+	"overrides": [
+		{
+			"includes": ["packages/yabasic/src/components/ui/**"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useSemanticElements": "off",
+						"noLabelWithoutControl": "off",
+						"useKeyWithClickEvents": "off"
+					},
+					"suspicious": {
+						"noArrayIndexKey": "off",
+						"noDoubleEquals": "off"
+					},
+					"style": {
+						"noNonNullAssertion": "warn"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["packages/yabasic/src/main.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noNonNullAssertion": "warn"
+					}
+				}
+			}
+		}
+	],
 	"css": {
 		"parser": {
 			"cssModules": false,

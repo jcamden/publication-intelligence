@@ -30,10 +30,10 @@ export default {
 	},
 } satisfies Meta<typeof Button>;
 
-export const PrimaryVariant: StoryObj<typeof Button> = {
+export const DefaultVariant: StoryObj<typeof Button> = {
 	args: {
-		variant: "primary",
-		children: "Primary Button",
+		variant: "default",
+		children: "Default Button",
 	},
 };
 
@@ -65,10 +65,10 @@ export const SmallSize: StoryObj<typeof Button> = {
 	},
 };
 
-export const MediumSize: StoryObj<typeof Button> = {
+export const DefaultSize: StoryObj<typeof Button> = {
 	args: {
-		size: "md",
-		children: "Medium Button",
+		size: "default",
+		children: "Default Size Button",
 	},
 };
 
@@ -86,11 +86,11 @@ export const DisabledState: StoryObj<typeof Button> = {
 	},
 };
 
-export const DisabledPrimary: StoryObj<typeof Button> = {
+export const DisabledDefault: StoryObj<typeof Button> = {
 	args: {
-		variant: "primary",
+		variant: "default",
 		disabled: true,
-		children: "Disabled Primary",
+		children: "Disabled Default",
 	},
 };
 
@@ -112,7 +112,7 @@ export const AllVariantsComparison: StoryObj<typeof Button> = {
 				padding: "16px",
 			}}
 		>
-			<Button variant="primary">Primary</Button>
+			<Button variant="default">Default</Button>
 			<Button variant="secondary">Secondary</Button>
 			<Button variant="outline">Outline</Button>
 			<Button variant="ghost">Ghost</Button>
@@ -131,7 +131,7 @@ export const AllSizesComparison: StoryObj<typeof Button> = {
 			}}
 		>
 			<Button size="sm">Small</Button>
-			<Button size="md">Medium</Button>
+			<Button size="default">Default</Button>
 			<Button size="lg">Large</Button>
 		</div>
 	),
@@ -140,7 +140,7 @@ export const AllSizesComparison: StoryObj<typeof Button> = {
 export const ButtonGroup: StoryObj<typeof Button> = {
 	render: () => (
 		<div style={{ display: "flex", gap: "12px", padding: "16px" }}>
-			<Button variant="primary">Save</Button>
+			<Button variant="default">Save</Button>
 			<Button variant="secondary">Cancel</Button>
 			<Button variant="outline">Reset</Button>
 		</div>
@@ -158,13 +158,13 @@ export const VerticalButtonStack: StoryObj<typeof Button> = {
 				maxWidth: "200px",
 			}}
 		>
-			<Button variant="primary" size="md">
+			<Button variant="default" size="default">
 				Create Document
 			</Button>
-			<Button variant="secondary" size="md">
+			<Button variant="secondary" size="default">
 				Upload File
 			</Button>
-			<Button variant="outline" size="md">
+			<Button variant="outline" size="default">
 				View All
 			</Button>
 			<Button variant="ghost" size="sm">
@@ -176,7 +176,7 @@ export const VerticalButtonStack: StoryObj<typeof Button> = {
 
 export const LongTextButton: StoryObj<typeof Button> = {
 	args: {
-		variant: "primary",
+		variant: "default",
 		children: "This is a very long button text that might wrap",
 	},
 	parameters: {
@@ -199,10 +199,10 @@ export const SmallViewportLayout: StoryObj<typeof Button> = {
 				padding: "16px",
 			}}
 		>
-			<Button variant="primary" size="md">
+			<Button variant="default" size="default">
 				Full Width Action
 			</Button>
-			<Button variant="outline" size="md">
+			<Button variant="outline" size="default">
 				Secondary Action
 			</Button>
 		</div>
@@ -222,7 +222,7 @@ export const DarkBackground: StoryObj<typeof Button> = {
 				padding: "16px",
 			}}
 		>
-			<Button variant="primary">Primary</Button>
+			<Button variant="default">Default</Button>
 			<Button variant="secondary">Secondary</Button>
 			<Button variant="outline">Outline</Button>
 			<Button variant="ghost">Ghost</Button>
@@ -233,7 +233,7 @@ export const DarkBackground: StoryObj<typeof Button> = {
 export const WithIconLikeContent: StoryObj<typeof Button> = {
 	render: () => (
 		<div style={{ display: "flex", gap: "16px", padding: "16px" }}>
-			<Button variant="primary">
+			<Button variant="default">
 				<span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
 					<span>📄</span>
 					<span>Upload Document</span>
