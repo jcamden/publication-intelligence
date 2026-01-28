@@ -1,45 +1,48 @@
 "use client";
 
-import { ThemeToggle } from "@pubint/yaboujee";
-import { AuthForm } from "../../components/auth/auth-form";
-import { UserProfile } from "../../components/auth/user-profile";
+import { LandingNavbar } from "@pubint/yaboujee";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { LoginForm } from "../../components/auth/login-form/login-form";
 import { useAuthToken } from "../../hooks/use-auth";
 import { useTheme } from "../../providers/theme-provider";
 
 export default function Login() {
 	const { isAuthenticated, isLoading } = useAuthToken();
 	const { resolvedTheme, setTheme } = useTheme();
+	const router = useRouter();
+
+	useEffect(() => {
+		if (!isLoading && isAuthenticated) {
+			router.push("/projects");
+		}
+	}, [isAuthenticated, isLoading, router]);
 
 	if (isLoading) {
-		return <main className="p-8">Loading...</main>;
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-background">
+				<p className="text-muted-foreground">Loading...</p>
+			</div>
+		);
+	}
+
+	if (isAuthenticated) {
+		return null;
 	}
 
 	return (
-		<main className="min-h-screen p-8 bg-background">
-			<div className="max-w-5xl mx-auto">
-				<header className="flex justify-between items-center mb-8">
-					<div>
-						<h1 className="text-4xl font-bold text-foreground">
-							Publication Intelligence
-						</h1>
-						<p className="text-muted-foreground">
-							PDF indexing and search platform
-						</p>
-					</div>
-					<ThemeToggle
-						theme={resolvedTheme}
-						onToggle={() =>
-							setTheme({
-								theme: resolvedTheme === "dark" ? "light" : "dark",
-							})
-						}
-					/>
-				</header>
-
-				<div className="pt-8">
-					{isAuthenticated ? <UserProfile /> : <AuthForm />}
-				</div>
-			</div>
-		</main>
+		<div className="h-screen bg-background flex flex-col">
+			<LandingNavbar
+				theme={resolvedTheme}
+				onThemeToggle={() =>
+					setTheme({
+						theme: resolvedTheme === "dark" ? "light" : "dark",
+					})
+				}
+			/>
+			<main className="pb-24 flex items-center justify-center flex-1">
+				<LoginForm />
+			</main>
+		</div>
 	);
 }

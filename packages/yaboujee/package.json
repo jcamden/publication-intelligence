@@ -23,10 +23,12 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
+		"@pubint/storybook-config": "workspace:*",
 		"@pubint/yabasic": "workspace:*",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
-		"lucide-react": "^0.563.0"
+		"lucide-react": "^0.563.0",
+		"next": "^15.5.9"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.0",
@@ -37,17 +39,17 @@
 		"@storybook/react-vite": "^10.2.0",
 		"@storybook/test": "^8.6.15",
 		"@tailwindcss/vite": "^4.1.18",
-		"@types/react": "^19.0.6",
-		"@types/react-dom": "^19.0.2",
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0",
+		"@types/react": "^19.2.9",
+		"@types/react-dom": "^19.2.3",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0",
 		"storybook": "^10.2.0",
 		"tailwindcss": "^4.1.18",
 		"typescript": "^5.7.3",
 		"vite": "^7.3.1"
 	},
 	"peerDependencies": {
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
 	}
 }

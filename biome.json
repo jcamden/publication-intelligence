@@ -23,6 +23,18 @@
 	},
 	"overrides": [
 		{
+			"includes": ["packages/storybook-vrt/tests/**/*.visual.spec.ts"],
+			"linter": {
+				"enabled": false
+			},
+			"formatter": {
+				"enabled": false
+			},
+			"assist": {
+				"enabled": false
+			}
+		},
+		{
 			"includes": ["packages/yabasic/src/components/ui/**"],
 			"linter": {
 				"rules": {

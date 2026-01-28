@@ -4,20 +4,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
 
-const modalVariants = cva("w-full bg-card rounded-lg shadow-xl", {
-	variants: {
-		size: {
-			sm: "max-w-sm",
-			md: "max-w-md",
-			lg: "max-w-lg",
-			xl: "max-w-xl",
-			full: "max-w-full mx-4",
+const modalVariants = cva(
+	"w-full bg-card rounded-lg shadow-xl flex flex-col max-h-[90vh]",
+	{
+		variants: {
+			size: {
+				sm: "max-w-sm",
+				md: "max-w-md",
+				lg: "max-w-lg",
+				xl: "max-w-xl",
+				full: "max-w-full mx-4",
+			},
+		},
+		defaultVariants: {
+			size: "md",
 		},
 	},
-	defaultVariants: {
-		size: "md",
-	},
-});
+);
 
 export type ModalProps = VariantProps<typeof modalVariants> & {
 	open: boolean;
@@ -69,7 +72,9 @@ export const Modal = ({
 								)}
 							</div>
 						)}
-						<div className="px-6 py-4 text-foreground">{children}</div>
+						<div className="px-6 py-4 text-foreground overflow-y-auto flex-1">
+							{children}
+						</div>
 						{footer && (
 							<div className="px-6 py-4 border-t border-border flex justify-end gap-3">
 								{footer}

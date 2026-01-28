@@ -1,0 +1,28 @@
+{
+	"name": "@pubint/storybook-vrt",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Component visual regression testing against Storybook",
+	"scripts": {
+		"generate:yaboujee": "tsx scripts/generate-visual-tests.ts --package yaboujee",
+		"generate:frontend": "tsx scripts/generate-visual-tests.ts --package index-pdf-frontend",
+		"test:yaboujee": "PACKAGE=yaboujee playwright test",
+		"test:yaboujee:ui": "PACKAGE=yaboujee playwright test --ui",
+		"test:yaboujee:update": "PACKAGE=yaboujee playwright test --update-snapshots",
+		"test:frontend": "PACKAGE=index-pdf-frontend playwright test",
+		"test:frontend:ui": "PACKAGE=index-pdf-frontend playwright test --ui",
+		"test:frontend:update": "PACKAGE=index-pdf-frontend playwright test --update-snapshots",
+		"vrt:yaboujee": "pnpm generate:yaboujee && pnpm test:yaboujee",
+		"vrt:yaboujee:ui": "pnpm generate:yaboujee && pnpm test:yaboujee:ui",
+		"vrt:yaboujee:update": "pnpm generate:yaboujee && pnpm test:yaboujee:update",
+		"vrt:frontend": "pnpm generate:frontend && pnpm test:frontend",
+		"vrt:frontend:ui": "pnpm generate:frontend && pnpm test:frontend:ui",
+		"vrt:frontend:update": "pnpm generate:frontend && pnpm test:frontend:update"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.58.0",
+		"@types/node": "^22.10.5",
+		"tsx": "^4.19.2"
+	}
+}

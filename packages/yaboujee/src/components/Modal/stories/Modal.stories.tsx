@@ -1,7 +1,10 @@
 import { Button } from "@pubint/yabasic/components/ui/button";
+import { Field, FieldLabel } from "@pubint/yabasic/components/ui/field";
+import { Input } from "@pubint/yabasic/components/ui/input";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { Modal } from "../Modal";
+import { Alert } from "../../alert";
+import { Modal } from "../modal";
 
 const codeBlock = `import { Modal, Button } from "@pubint/pixel";
 import { useState } from "react";
@@ -228,6 +231,15 @@ export const NoTitle: StoryObj<typeof Modal> = {
 export const WithForm: StoryObj<typeof Modal> = {
 	render: () => {
 		const [open, setOpen] = useState(false);
+		const [showSuccess, setShowSuccess] = useState(false);
+
+		const handleSubmit = () => {
+			setShowSuccess(true);
+			setTimeout(() => {
+				setShowSuccess(false);
+				setOpen(false);
+			}, 2000);
+		};
 
 		return (
 			<>
@@ -241,41 +253,32 @@ export const WithForm: StoryObj<typeof Modal> = {
 							<Button variant="outline" onClick={() => setOpen(false)}>
 								Cancel
 							</Button>
-							<Button variant="default" onClick={() => setOpen(false)}>
+							<Button variant="default" onClick={handleSubmit}>
 								Create
 							</Button>
 						</>
 					}
 				>
 					<div className="space-y-4">
-						<div>
-							<label
-								htmlFor="name-input"
-								className="block text-sm font-medium mb-1"
-							>
-								Name
-							</label>
-							<input
+						{showSuccess && (
+							<Alert variant="success">Account created successfully!</Alert>
+						)}
+						<Field>
+							<FieldLabel htmlFor="name-input">Name</FieldLabel>
+							<Input
 								id="name-input"
 								type="text"
-								className="w-full px-3 py-2 border rounded-lg"
 								placeholder="Enter your name"
 							/>
-						</div>
-						<div>
-							<label
-								htmlFor="email-input"
-								className="block text-sm font-medium mb-1"
-							>
-								Email
-							</label>
-							<input
+						</Field>
+						<Field>
+							<FieldLabel htmlFor="email-input">Email</FieldLabel>
+							<Input
 								id="email-input"
 								type="email"
-								className="w-full px-3 py-2 border rounded-lg"
 								placeholder="Enter your email"
 							/>
-						</div>
+						</Field>
 					</div>
 				</Modal>
 			</>

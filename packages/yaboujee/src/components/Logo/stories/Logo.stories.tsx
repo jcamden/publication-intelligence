@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Logo } from "../Logo";
+import { Logo } from "../logo";
 
 const meta = {
 	title: "Components/Logo",
@@ -33,64 +33,32 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Primary: Story = {
-	args: {
-		variant: "primary",
-		size: "md",
-	},
-};
-
-export const Gradient: Story = {
-	args: {
-		variant: "gradient",
-		size: "md",
-	},
-};
-
-export const Light: Story = {
-	args: {
-		variant: "light",
-		size: "md",
-	},
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
-};
-
-export const Dark: Story = {
-	args: {
-		variant: "dark",
-		size: "md",
-	},
-};
-
-export const Small: Story = {
-	args: {
-		variant: "primary",
-		size: "sm",
-	},
-};
-
-export const Large: Story = {
-	args: {
-		variant: "gradient",
-		size: "lg",
-	},
-};
-
-export const ExtraLarge: Story = {
-	args: {
-		variant: "gradient",
-		size: "xl",
-	},
-};
-
-export const AsLink: Story = {
-	args: {
-		variant: "gradient",
-		size: "md",
-		href: "/",
-	},
+export const AllVariants: Story = {
+	render: () => (
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				gap: "32px",
+				padding: "32px",
+			}}
+		>
+			<div>
+				<Logo variant="primary" size="md" />
+			</div>
+			<div>
+				<Logo variant="gradient" size="md" />
+			</div>
+			<div>
+				<Logo variant="dark" size="md" />
+			</div>
+			<div className="flex">
+				<div className="bg-black">
+					<Logo variant="light" size="md" />
+				</div>
+			</div>
+		</div>
+	),
 };
 
 export const AllSizes: Story = {
@@ -100,16 +68,6 @@ export const AllSizes: Story = {
 			<Logo size="md" variant="gradient" />
 			<Logo size="lg" variant="gradient" />
 			<Logo size="xl" variant="gradient" />
-		</div>
-	),
-};
-
-export const AllVariants: Story = {
-	render: () => (
-		<div className="flex flex-col gap-8 items-start">
-			<Logo variant="primary" />
-			<Logo variant="gradient" />
-			<Logo variant="dark" />
 		</div>
 	),
 };

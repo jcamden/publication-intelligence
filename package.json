@@ -12,9 +12,12 @@
 		"test:coverage": "vitest run --coverage",
 		"storybook": "pnpm --filter @pubint/index-pdf-frontend storybook",
 		"build-storybook": "pnpm --filter @pubint/index-pdf-frontend build-storybook",
-		"test:vrt": "pnpm --filter @pubint/index-pdf-frontend test:vrt",
-		"test:vrt:ui": "pnpm --filter @pubint/index-pdf-frontend test:vrt:ui",
-		"test:vrt:update": "pnpm --filter @pubint/index-pdf-frontend test:vrt:update",
+		"vrt:yaboujee": "pnpm --filter @pubint/storybook-vrt vrt:yaboujee",
+		"vrt:yaboujee:ui": "pnpm --filter @pubint/storybook-vrt vrt:yaboujee:ui",
+		"vrt:yaboujee:update": "pnpm --filter @pubint/storybook-vrt vrt:yaboujee:update",
+		"vrt:frontend": "pnpm --filter @pubint/storybook-vrt vrt:frontend",
+		"vrt:frontend:ui": "pnpm --filter @pubint/storybook-vrt vrt:frontend:ui",
+		"vrt:frontend:update": "pnpm --filter @pubint/storybook-vrt vrt:frontend:update",
 		"test:e2e": "pnpm --filter @pubint/index-pdf-frontend test:e2e",
 		"test:e2e:ui": "pnpm --filter @pubint/index-pdf-frontend test:e2e:ui",
 		"gel:ui": "pnpm --filter @pubint/db-gel exec gel ui",
@@ -56,5 +59,13 @@
 		"@edgedb/generate": "^0.6.1",
 		"dotenv": "^17.2.3",
 		"edgedb": "^2.0.1"
+	},
+	"pnpm": {
+		"overrides": {
+			"react": "^19.2.0",
+			"react-dom": "^19.2.0",
+			"@types/react": "^19.2.9",
+			"@types/react-dom": "^19.2.3"
+		}
 	}
 }

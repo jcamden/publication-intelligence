@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Audiowide, Exo_2 } from "next/font/google";
+import {
+	Audiowide,
+	Exo_2,
+	Merriweather,
+	Merriweather_Sans,
+	Ubuntu,
+} from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeScript } from "../components/theme-script";
@@ -16,6 +22,24 @@ const audiowide = Audiowide({
 	subsets: ["latin"],
 	weight: ["400"],
 	variable: "--font-audiowide",
+});
+
+const ubuntu = Ubuntu({
+	subsets: ["latin"],
+	weight: ["300", "400", "500", "700"],
+	variable: "--font-ubuntu",
+});
+
+const merriweather = Merriweather({
+	subsets: ["latin"],
+	weight: ["300", "400", "700", "900"],
+	variable: "--font-merriweather",
+});
+
+const merriweatherSans = Merriweather_Sans({
+	subsets: ["latin"],
+	weight: ["300", "400", "500", "600", "700", "800"],
+	variable: "--font-merriweather-sans",
 });
 
 const anurati = localFont({
@@ -38,13 +62,13 @@ export default function RootLayout({
 	return (
 		<html
 			lang="en"
-			className={`${exo2.variable} ${audiowide.variable} ${anurati.variable}`}
+			className={`${exo2.variable} ${audiowide.variable} ${ubuntu.variable} ${merriweather.variable} ${merriweatherSans.variable} ${anurati.variable}`}
 			suppressHydrationWarning
 		>
 			<head>
 				<ThemeScript />
 			</head>
-			<body className={exo2.className}>
+			<body className={merriweatherSans.className}>
 				<ThemeProvider>
 					<TrpcProvider>{children}</TrpcProvider>
 				</ThemeProvider>

@@ -1,0 +1,34 @@
+{
+	"name": "@pubint/storybook-config",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts"
+		},
+		"./configs": {
+			"types": "./src/configs/index.ts",
+			"import": "./src/configs/index.ts"
+		},
+		"./decorators": {
+			"types": "./src/decorators/index.ts",
+			"import": "./src/decorators/index.ts"
+		}
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"peerDependencies": {
+		"@storybook/react": "^8.0.0",
+		"react": "^18.0.0"
+	},
+	"devDependencies": {
+		"@storybook/react": "^8.4.7",
+		"@types/react": "^18.3.18",
+		"react": "^18.3.1",
+		"typescript": "^5.7.3"
+	}
+}

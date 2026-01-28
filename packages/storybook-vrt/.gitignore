@@ -1,0 +1,6 @@
+test-results/
+playwright-report-*/
+playwright/.cache/
+suites/*/tests/
+suites/*/test-results/
+suites/*/playwright-report/

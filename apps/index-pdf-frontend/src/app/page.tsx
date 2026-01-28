@@ -10,9 +10,8 @@ import {
 	CardTitle,
 } from "@pubint/yabasic/components/ui/card";
 import { Separator } from "@pubint/yabasic/components/ui/separator";
-import { Logo, ThemeToggle } from "@pubint/yaboujee";
+import { LandingNavbar, Logo } from "@pubint/yaboujee";
 import Image from "next/image";
-import Link from "next/link";
 import { useTheme } from "../providers/theme-provider";
 
 export default function Home() {
@@ -20,40 +19,25 @@ export default function Home() {
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
-			{/* Navigation */}
-			<nav className="fixed top-0 w-full bg-background/80 backdrop-blur-sm border-b border-border z-50">
-				<div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-					<Logo variant="gradient" size="md" />
-					<div className="flex items-center gap-6">
-						<ThemeToggle
-							theme={resolvedTheme}
-							onToggle={() =>
-								setTheme({
-									theme: resolvedTheme === "dark" ? "light" : "dark",
-								})
-							}
-						/>
-						<Link
-							href="/login"
-							className="text-muted-foreground hover:text-foreground transition-colors"
-						>
-							Sign In
-						</Link>
-						<Button size="lg">Get Early Access</Button>
-					</div>
-				</div>
-			</nav>
+			<LandingNavbar
+				theme={resolvedTheme}
+				onThemeToggle={() =>
+					setTheme({
+						theme: resolvedTheme === "dark" ? "light" : "dark",
+					})
+				}
+			/>
 
 			{/* Hero Section */}
 			<section className="pt-32 pb-20 px-6">
-				<div className="max-w-7xl mx-auto">
+				<div className="px-24 mx-auto">
 					<div className="grid lg:grid-cols-2 gap-12 items-center">
 						<div>
-							<h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+							<h1 className="font-merriweather text-5xl lg:text-6xl font-bold mb-6 leading-tight">
 								10x Your Index
 							</h1>
-							<p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-								with AI-assisted indexing for authors, indexers, and publishers
+							<p className="text-2xl text-muted-foreground mb-8 leading-relaxed">
+								with AI-assisted indexing for authors, indexers, and publishers.
 							</p>
 							<p className="text-lg mb-10">
 								Generate, review, and export higher quality indices in a
@@ -78,7 +62,7 @@ export default function Home() {
 							alt="Split-screen interface showing index tree on left with expandable entries and subentries, highlighted PDF manuscript on right with AI-detected key concepts marked in context"
 							width={1200}
 							height={800}
-							className="w-full h-auto"
+							className="w-full h-auto rounded-2xl"
 						/>
 					</div>
 				</div>
@@ -87,7 +71,7 @@ export default function Home() {
 			{/* Problem Section */}
 			<section className="py-20 px-6 bg-muted/50">
 				<div className="max-w-4xl mx-auto">
-					<h2 className="text-4xl font-bold mb-8 text-center">
+					<h2 className="font-merriweather text-4xl font-bold mb-8 text-center">
 						Indexing Shouldn't Feel Like Archaeology
 					</h2>
 					<p className="text-xl text-muted-foreground mb-8 text-center">
@@ -117,7 +101,7 @@ export default function Home() {
 			{/* Solution Section */}
 			<section className="py-20 px-6">
 				<div className="max-w-5xl mx-auto">
-					<h2 className="text-4xl font-bold mb-6 text-center">
+					<h2 className="font-merriweather text-4xl font-bold mb-6 text-center">
 						Meet IndexPDF: AI That Works With You
 					</h2>
 					<p className="text-xl text-muted-foreground mb-12 text-center max-w-3xl mx-auto">
@@ -125,7 +109,7 @@ export default function Home() {
 						index entries — then lets you refine them with professional
 						judgment.
 					</p>
-					<p className="text-2xl font-semibold text-center text-primary mb-16">
+					<p className="font-merriweather text-2xl font-semibold text-center text-primary mb-16">
 						You stay in control. The AI handles the grunt work.
 					</p>
 					<div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -153,7 +137,7 @@ export default function Home() {
 			{/* How It Works */}
 			<section className="py-20 px-6 bg-muted/50">
 				<div className="max-w-6xl mx-auto">
-					<h2 className="text-4xl font-bold mb-4 text-center">
+					<h2 className="font-merriweather text-4xl font-bold mb-4 text-center">
 						From Manuscript to Publishable Index
 					</h2>
 					<p className="text-xl text-muted-foreground mb-16 text-center">
@@ -196,7 +180,9 @@ export default function Home() {
 									<Badge variant="outline" className="mb-2 self-center">
 										Step {item.step}
 									</Badge>
-									<CardTitle className="text-2xl">{item.title}</CardTitle>
+									<CardTitle className="font-merriweather text-2xl">
+										{item.title}
+									</CardTitle>
 									<CardDescription>{item.description}</CardDescription>
 								</CardHeader>
 								<CardContent>
@@ -213,7 +199,7 @@ export default function Home() {
 			{/* Who It's For */}
 			<section className="py-20 px-6">
 				<div className="max-w-6xl mx-auto">
-					<h2 className="text-4xl font-bold mb-4 text-center">
+					<h2 className="font-merriweather text-4xl font-bold mb-4 text-center">
 						Built for Professional Indexing Work
 					</h2>
 					<p className="text-xl text-muted-foreground mb-16 text-center max-w-3xl mx-auto">
@@ -244,7 +230,9 @@ export default function Home() {
 							<Card key={persona.title}>
 								<CardHeader>
 									<div className="text-5xl mb-4">{persona.icon}</div>
-									<CardTitle className="text-2xl">{persona.title}</CardTitle>
+									<CardTitle className="font-merriweather text-2xl">
+										{persona.title}
+									</CardTitle>
 									<CardDescription className="text-base">
 										{persona.description}
 									</CardDescription>
@@ -258,7 +246,7 @@ export default function Home() {
 			{/* Key Features */}
 			<section className="py-20 px-6 bg-muted/50">
 				<div className="max-w-6xl mx-auto">
-					<h2 className="text-4xl font-bold mb-4 text-center">
+					<h2 className="font-merriweather text-4xl font-bold mb-4 text-center">
 						Everything You Need — Nothing You Don't
 					</h2>
 					<p className="text-xl text-muted-foreground mb-16 text-center">
@@ -294,7 +282,9 @@ export default function Home() {
 							<Card key={feature.title}>
 								<CardHeader>
 									<div className="text-4xl mb-4">{feature.icon}</div>
-									<CardTitle className="text-2xl">{feature.title}</CardTitle>
+									<CardTitle className="font-merriweather text-2xl">
+										{feature.title}
+									</CardTitle>
 									<CardDescription className="text-base leading-relaxed">
 										{feature.description}
 									</CardDescription>
@@ -308,39 +298,40 @@ export default function Home() {
 			{/* Proof / Credibility */}
 			<section className="py-20 px-6">
 				<div className="max-w-4xl mx-auto text-center">
-					<h2 className="text-4xl font-bold mb-8">
+					<h2 className="font-merriweather text-4xl font-bold mb-8">
 						Built by Someone Who's Been There
 					</h2>
-					<p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-						While working on a PhD, I created multiple indices by hand for
-						commentaries and reference works. One index was so massive — the
-						index was 300 pages — that I built an application to survive it.
-						That project took me a year, and I realized: there is a real need
-						for a high-quality indexing product.
+					<p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+						Index PDF Founder,
+						<span className="[word-spacing:0.2em]"> John</span> Camden, has
+						worked as both a professional software engineer and as a PhD student
+						tasked with indexing massive commentaries and reference works.
 					</p>
-					<p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-						Thanks to that experience, I was able to spend next four-and-a-half
-						years working as software engineer at Box Inc. paying off student
-						debt and learning to build enterprise-grade software. When I had
-						learned everything I needed, I decided to leave Box and bring it all
-						together — for all the indexers who have felt the pain — and also
-						because I did a market analysis.
-					</p>
-					<Card className="border-primary/20 bg-primary/5">
+					{/* <blockquote className="text-xl mb-8 bg-muted/30 rounded-r-lg">
+						<p className="text-foreground/90 mb-2">
+							<span className="italic mr-1">I know your pain </span> 😅
+						</p>
+						<cite className="text-lg not-italic text-muted-foreground">
+							— John
+						</cite>
+					</blockquote> */}
+					{/* <Card className="border-primary/20 bg-primary/5">
 						<CardContent>
 							<p className="text-lg font-medium">
 								Currently in private beta. We're onboarding early users and
 								shaping IndexPDF with professional feedback.
 							</p>
 						</CardContent>
-					</Card>
+					</Card> */}
 				</div>
 			</section>
 
 			{/* Final CTA */}
 			<section className="py-20 px-6 bg-primary text-primary-foreground">
 				<div className="max-w-4xl mx-auto text-center">
-					<h2 className="text-4xl font-bold mb-6">Ready to Index Faster?</h2>
+					<h2 className="font-merriweather text-4xl font-bold mb-6">
+						Ready to Index Faster?
+					</h2>
 					<p className="text-xl mb-10 max-w-2xl mx-auto opacity-90">
 						We're onboarding early users and shaping IndexPDF with professional
 						feedback. Join us in building the future of professional indexing.
@@ -367,7 +358,7 @@ export default function Home() {
 							</p>
 						</div>
 						<div>
-							<h4 className="font-semibold mb-3">Product</h4>
+							<h4 className="font-merriweather font-semibold mb-3">Product</h4>
 							<ul className="space-y-2 text-sm">
 								<li>
 									<a
@@ -396,7 +387,7 @@ export default function Home() {
 							</ul>
 						</div>
 						<div>
-							<h4 className="font-semibold mb-3">Company</h4>
+							<h4 className="font-merriweather font-semibold mb-3">Company</h4>
 							<ul className="space-y-2 text-sm">
 								<li>
 									<a
@@ -417,7 +408,7 @@ export default function Home() {
 							</ul>
 						</div>
 						<div>
-							<h4 className="font-semibold mb-3">Legal</h4>
+							<h4 className="font-merriweather font-semibold mb-3">Legal</h4>
 							<ul className="space-y-2 text-sm">
 								<li>
 									<a

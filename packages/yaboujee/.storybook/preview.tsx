@@ -40,6 +40,9 @@ const preview: Preview = {
 			},
 		},
 	},
+	initialGlobals: {
+		theme: "light",
+	},
 	decorators: [
 		(Story, context) => {
 			const theme = context.globals.theme || "light";
@@ -55,11 +58,7 @@ const preview: Preview = {
 				}
 			}
 
-			return (
-				<div style={{ minHeight: "100vh", padding: "2rem" }}>
-					<Story />
-				</div>
-			);
+			return <Story />;
 		},
 	],
 };
