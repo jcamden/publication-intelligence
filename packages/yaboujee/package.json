@@ -28,7 +28,9 @@
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-react": "^0.563.0",
-		"next": "^15.5.9"
+		"next": "^15.5.9",
+		"pdfjs-dist": "^4.10.38",
+		"tailwind-merge": "^3.4.0"
 	},
 	"devDependencies": {
 		"@chromatic-com/storybook": "^5.0.0",

@@ -9,9 +9,11 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@pubint/yabasic/components/ui/card";
+import { LandingNavbar } from "@pubint/yabasic/components/ui/landing-navbar";
 import { Separator } from "@pubint/yabasic/components/ui/separator";
-import { LandingNavbar, Logo } from "@pubint/yaboujee";
+import { Logo } from "@pubint/yaboujee";
 import Image from "next/image";
+import Link from "next/link";
 import { useTheme } from "../providers/theme-provider";
 
 export default function Home() {
@@ -25,6 +27,25 @@ export default function Home() {
 					setTheme({
 						theme: resolvedTheme === "dark" ? "light" : "dark",
 					})
+				}
+				logo={<Logo variant="gradient" size="sm" className="sm:text-4xl" />}
+				homeLink={
+					<Link href="/">
+						<Logo variant="gradient" size="sm" className="sm:text-4xl" />
+					</Link>
+				}
+				signInLink={
+					<Link
+						href="/login"
+						className="text-sm sm:text-base text-muted-foreground hover:text-foreground transition-colors"
+					>
+						Sign In
+					</Link>
+				}
+				signUpLink={
+					<Link href="/signup" className="w-full">
+						Get Started
+					</Link>
 				}
 			/>
 

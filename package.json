@@ -32,6 +32,7 @@
 		"db:reset": "./db/gel/reset.sh",
 		"db:setup-test": "./db/gel/setup-test-db.sh",
 		"db:reset-test": "./db/gel/reset-test-branch.sh",
+		"pdf:copy-workers": "pnpx tsx scripts/copy-pdf-workers.ts",
 		"lint": "biome lint .",
 		"lint:access-policies": "./scripts/lint-access-policies.sh",
 		"lint:auth-key": "./scripts/validate-auth-key.sh",
@@ -40,7 +41,8 @@
 		"check": "biome check --write .",
 		"ci": "biome ci .",
 		"typecheck": "pnpm -r run typecheck",
-		"prepare": "husky"
+		"prepare": "husky",
+		"postinstall": "pnpm pdf:copy-workers"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.12",

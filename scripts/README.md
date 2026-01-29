@@ -2,6 +2,36 @@
 
 This directory contains utility scripts for development, testing, and security enforcement.
 
+## Build & Setup Scripts
+
+### `copy-pdf-workers.ts`
+
+Automatically copies the PDF.js worker file from `node_modules` to the required public directories.
+
+**What it does:**
+- Finds the PDF.js worker file in node_modules (handles both pnpm and npm structures)
+- Copies `pdf.worker.min.mjs` to:
+  - `packages/yaboujee/.storybook/public/` (for yaboujee Storybook)
+  - `apps/index-pdf-frontend/public/` (for Next.js app + Storybook)
+
+**Usage:**
+```bash
+# Runs automatically after pnpm install
+pnpm install
+
+# Run manually
+pnpm pdf:copy-workers
+```
+
+**When to use:**
+- Automatically runs after any `pnpm install`
+- Manually run after upgrading `pdfjs-dist`
+- Run if worker files are missing
+
+**Why it's needed:** PDF.js requires a separate worker file for off-main-thread PDF parsing. The worker must be accessible from the public directory, but it's distributed in node_modules, so it must be copied during the build process.
+
+---
+
 ## Test Scripts
 
 ### `test-affected-workspaces.ts`

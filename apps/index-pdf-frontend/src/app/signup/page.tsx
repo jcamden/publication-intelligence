@@ -1,11 +1,13 @@
 "use client";
 
-import { LandingNavbar } from "@pubint/yaboujee";
+import { LandingNavbar } from "@pubint/yabasic/components/ui/landing-navbar";
+import { Logo } from "@pubint/yaboujee";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { SignupForm } from "../../components/auth/signup-form/signup-form";
-import { useAuthToken } from "../../hooks/use-auth";
-import { useTheme } from "../../providers/theme-provider";
+import { SignupForm } from "@/components/ui/auth/signup-form";
+import { useAuthToken } from "@/hooks/use-auth";
+import { useTheme } from "@/providers/theme-provider";
 
 export default function Signup() {
 	const { isAuthenticated, isLoading } = useAuthToken();
@@ -38,6 +40,25 @@ export default function Signup() {
 					setTheme({
 						theme: resolvedTheme === "dark" ? "light" : "dark",
 					})
+				}
+				logo={<Logo variant="gradient" size="sm" className="sm:text-4xl" />}
+				homeLink={
+					<Link href="/">
+						<Logo variant="gradient" size="sm" className="sm:text-4xl" />
+					</Link>
+				}
+				signInLink={
+					<Link
+						href="/login"
+						className="text-sm sm:text-base text-muted-foreground hover:text-foreground transition-colors"
+					>
+						Sign In
+					</Link>
+				}
+				signUpLink={
+					<Link href="/signup" className="w-full">
+						Get Started
+					</Link>
 				}
 			/>
 			<main className="pb-24 flex items-center justify-center flex-1">

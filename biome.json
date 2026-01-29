@@ -23,6 +23,22 @@
 	},
 	"overrides": [
 		{
+			"includes": [
+				"**/pdf.worker.min.mjs",
+				"**/*.worker.min.mjs",
+				"**/public/**"
+			],
+			"linter": {
+				"enabled": false
+			},
+			"formatter": {
+				"enabled": false
+			},
+			"assist": {
+				"enabled": false
+			}
+		},
+		{
 			"includes": ["packages/storybook-vrt/tests/**/*.visual.spec.ts"],
 			"linter": {
 				"enabled": false
