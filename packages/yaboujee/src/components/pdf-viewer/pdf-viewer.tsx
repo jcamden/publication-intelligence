@@ -179,7 +179,7 @@ export const PdfViewer = ({
 	}, [pdfDoc, currentPage, scale, loadingState]);
 
 	const containerClasses =
-		`flex h-full flex-col bg-[hsl(var(--color-neutral-100))] dark:bg-[hsl(var(--color-neutral-900))] ${className}`.trim();
+		`flex h-full w-full flex-col bg-[hsl(var(--color-neutral-100))] dark:bg-[hsl(var(--color-neutral-900))] ${className}`.trim();
 
 	if (loadingState === "loading") {
 		return (
@@ -216,7 +216,7 @@ export const PdfViewer = ({
 	return (
 		<div className={containerClasses}>
 			{/* PDF Canvas */}
-			<div ref={scrollContainerRef} className="flex-1 overflow-auto pt-20">
+			<div ref={scrollContainerRef} className="flex-1 overflow-auto pt-4">
 				<div className="mx-auto w-fit rounded-lg bg-[hsl(var(--color-background))] shadow-lg">
 					<canvas ref={canvasRef} className="block" />
 				</div>

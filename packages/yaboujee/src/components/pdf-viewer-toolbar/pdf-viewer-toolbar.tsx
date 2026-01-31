@@ -1,7 +1,14 @@
 "use client";
 
 import { Button } from "@pubint/yabasic/components/ui/button";
-import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	Eye,
+	EyeOff,
+	Minus,
+	Plus,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export type PdfViewerToolbarProps = {
@@ -11,6 +18,9 @@ export type PdfViewerToolbarProps = {
 	onPageChange: ({ page }: { page: number }) => void;
 	onZoomChange: ({ zoom }: { zoom: number }) => void;
 	className?: string;
+	pdfVisible?: boolean;
+	onPdfVisibilityToggle?: () => void;
+	showPdfToggle?: boolean;
 };
 
 /**
@@ -42,6 +52,9 @@ export const PdfViewerToolbar = ({
 	onPageChange,
 	onZoomChange,
 	className = "",
+	pdfVisible = true,
+	onPdfVisibilityToggle,
+	showPdfToggle = false,
 }: PdfViewerToolbarProps) => {
 	// Local state for inputs to allow free typing
 	const [pageInputValue, setPageInputValue] = useState(String(currentPage));
@@ -168,6 +181,20 @@ export const PdfViewerToolbar = ({
 
 	return (
 		<div className={dockClasses}>
+			{/* PDF Visibility Toggle (Desktop Only) */}
+			{showPdfToggle && onPdfVisibilityToggle && (
+				<>
+					<Button
+						onClick={onPdfVisibilityToggle}
+						variant={pdfVisible ? "default" : "ghost"}
+						size="icon-sm"
+						aria-label={pdfVisible ? "Hide PDF" : "Show PDF"}
+					>
+						{pdfVisible ? <Eye /> : <EyeOff />}
+					</Button>
+					<div className={separatorClasses} />
+				</>
+			)}
 			{/* Page Controls */}
 			<Button
 				onClick={handlePrevPage}

@@ -54,15 +54,15 @@ export default function Home() {
 				<div className="px-24 mx-auto">
 					<div className="grid lg:grid-cols-2 gap-12 items-center">
 						<div>
-							<h1 className="font-merriweather text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+							<h1 className="font-audiowide text-5xl lg:text-6xl font-bold mb-6 leading-tight">
 								10x Your Index
 							</h1>
 							<p className="text-2xl text-muted-foreground mb-8 leading-relaxed">
-								with AI-assisted indexing for authors, indexers, and publishers.
+								with AI-assisted tools for authors, indexers, and publishers.
 							</p>
 							<p className="text-lg mb-10">
-								Generate, review, and export higher quality indices in a
-								fraction of the time.
+								Generate, review, and export high-quality indices in a fraction
+								of the time.
 							</p>
 							<div className="flex flex-col sm:flex-row gap-4">
 								<Button size="lg" className="text-lg px-8 py-6">

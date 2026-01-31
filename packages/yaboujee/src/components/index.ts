@@ -2,6 +2,12 @@ export type { AlertProps } from "./alert";
 export { Alert } from "./alert";
 export type { FormFooterProps } from "./form-footer";
 export { FormFooter } from "./form-footer";
+export {
+	CloseButton,
+	MaximizeButton,
+	PopButton,
+	UnpopButton,
+} from "./icon-button";
 export type { LogoProps } from "./logo";
 export { Logo } from "./logo";
 export type { ModalProps } from "./modal";
@@ -10,5 +16,14 @@ export type { PdfViewerProps } from "./pdf-viewer";
 export { PdfViewer } from "./pdf-viewer";
 export type { PdfViewerToolbarProps } from "./pdf-viewer-toolbar";
 export { PdfViewerToolbar } from "./pdf-viewer-toolbar";
+export type { SidebarPanelProps } from "./sidebar-panel";
+export { SidebarPanel } from "./sidebar-panel";
+export type {
+	ToggleButton,
+	ToggleButtonGroupProps,
+} from "./toggle-button-group";
+export { ToggleButtonGroup } from "./toggle-button-group";
 export type { UserDropdownProps } from "./user-dropdown";
 export { UserDropdown } from "./user-dropdown";
+export type { WindowProps } from "./window";
+export { Window } from "./window";

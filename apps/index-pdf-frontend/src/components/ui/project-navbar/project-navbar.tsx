@@ -1,14 +1,20 @@
 "use client";
 
+import {
+	type Theme,
+	ThemeToggle,
+} from "@pubint/yabasic/components/ui/theme-toggle";
+import { cn } from "@pubint/yabasic/lib/utils";
 import { Logo, UserDropdown } from "@pubint/yaboujee";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 export type ProjectNavbarProps = {
 	userName?: string;
 	userEmail?: string;
 	className?: string;
+	theme?: Theme;
+	onThemeToggle?: () => void;
 };
 
 const navItems = [
@@ -21,6 +27,8 @@ export const ProjectNavbar = ({
 	userName,
 	userEmail,
 	className,
+	theme = "light",
+	onThemeToggle,
 }: ProjectNavbarProps) => {
 	const pathname = usePathname();
 	const router = useRouter();
@@ -62,6 +70,9 @@ export const ProjectNavbar = ({
 							);
 						})}
 					</div>
+					{onThemeToggle && (
+						<ThemeToggle theme={theme} onToggle={onThemeToggle} />
+					)}
 					<UserDropdown
 						userName={userName}
 						userEmail={userEmail}
