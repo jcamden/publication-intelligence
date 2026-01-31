@@ -119,8 +119,9 @@ const parseStoryFile = ({ filePath }: { filePath: string }): StoryInfo => {
 		globals?: Record<string, unknown>;
 	}> = [];
 
-	// 1. Match direct exports: export const Name: StoryObj<...> = { ... };
-	const storyRegex = /export const (\w+):\s*StoryObj[^=]*=\s*{([\s\S]*?)^};/gm;
+	// 1. Match direct exports: export const Name: StoryObj<...> = { ... }; or export const Name: Story = { ... };
+	const storyRegex =
+		/export const (\w+):\s*(?:StoryObj[^=]*|Story)\s*=\s*{([\s\S]*?)^};/gm;
 	const matches = content.matchAll(storyRegex);
 	for (const match of matches) {
 		const exportName = match[1];
@@ -203,7 +204,7 @@ const parseStoryFile = ({ filePath }: { filePath: string }): StoryInfo => {
 			// Try to extract globals from the shared file
 			if (sharedContent) {
 				const storyDefRegex = new RegExp(
-					`export const ${exportName}:[^=]*=\\s*{([\\s\\S]*?)^};`,
+					`export const ${exportName}:\\s*(?:StoryObj[^=]*|Story)\\s*=\\s*{([\\s\\S]*?)^};`,
 					"m",
 				);
 				const storyDefMatch = sharedContent.match(storyDefRegex);

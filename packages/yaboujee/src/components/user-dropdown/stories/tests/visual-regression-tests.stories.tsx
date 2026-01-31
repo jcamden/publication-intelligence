@@ -3,6 +3,7 @@ import {
 	visualRegressionTestConfig,
 } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
+import { userEvent, within } from "@storybook/test";
 import { UserDropdown } from "../../user-dropdown";
 import { defaultHandlers, defaultUser } from "../shared";
 
@@ -25,6 +26,11 @@ export const DefaultLight: StoryObj<typeof UserDropdown> = {
 			<UserDropdown {...defaultUser} {...defaultHandlers} />
 		</div>
 	),
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		const trigger = canvas.getByRole("button");
+		await userEvent.click(trigger);
+	},
 };
 
 export const DefaultDark: StoryObj<typeof UserDropdown> = {
@@ -38,4 +44,9 @@ export const DefaultDark: StoryObj<typeof UserDropdown> = {
 			<UserDropdown {...defaultUser} {...defaultHandlers} />
 		</div>
 	),
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		const trigger = canvas.getByRole("button");
+		await userEvent.click(trigger);
+	},
 };

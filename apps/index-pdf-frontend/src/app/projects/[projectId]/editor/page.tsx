@@ -36,7 +36,7 @@ export default function EditorPage() {
 	return (
 		<>
 			<ProjectNavbar userName="User" userEmail="user@example.com" />
-			<div className="h-[calc(100vh-3.5rem)] overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+			<div className="h-[calc(100vh-3.5rem-1px)] overflow-hidden bg-neutral-50 dark:bg-neutral-900">
 				<PdfEditor fileUrl={pdfUrl} />
 			</div>
 		</>

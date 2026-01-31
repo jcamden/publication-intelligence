@@ -1,5 +1,6 @@
 export type { AlertProps } from "./alert";
 export { Alert } from "./alert";
+export { DraggableSidebar, SidebarAccordionItem } from "./draggable-sidebar";
 export type { FormFooterProps } from "./form-footer";
 export { FormFooter } from "./form-footer";
 export {
@@ -12,18 +13,18 @@ export type { LogoProps } from "./logo";
 export { Logo } from "./logo";
 export type { ModalProps } from "./modal";
 export { Modal } from "./modal";
-export type { PdfViewerProps } from "./pdf-viewer";
-export { PdfViewer } from "./pdf-viewer";
-export type { PdfViewerToolbarProps } from "./pdf-viewer-toolbar";
-export { PdfViewerToolbar } from "./pdf-viewer-toolbar";
+export type { PdfViewerProps, PdfViewerToolbarProps } from "./pdf";
+export { PdfViewer, PdfViewerToolbar } from "./pdf";
 export type { SidebarPanelProps } from "./sidebar-panel";
 export { SidebarPanel } from "./sidebar-panel";
+export type { StyledIconButtonProps } from "./styled-icon-button";
+export { StyledIconButton } from "./styled-icon-button";
 export type {
-	ToggleButton,
-	ToggleButtonGroupProps,
-} from "./toggle-button-group";
-export { ToggleButtonGroup } from "./toggle-button-group";
+	StyledToggleButton,
+	StyledToggleButtonGroupProps,
+} from "./styled-toggle-button-group";
+export { StyledToggleButtonGroup } from "./styled-toggle-button-group";
 export type { UserDropdownProps } from "./user-dropdown";
 export { UserDropdown } from "./user-dropdown";
 export type { WindowProps } from "./window";
-export { Window } from "./window";
+export { useHasScrollbars, Window, WindowFrame, WindowTopBar } from "./window";

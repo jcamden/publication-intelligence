@@ -1,4 +1,4 @@
-export { CloseButton } from "./close-button";
-export { MaximizeButton } from "./maximize-button";
-export { PopButton } from "./pop-button";
-export { UnpopButton } from "./unpop-button";
+export { CloseButton } from "./components/close-button";
+export { MaximizeButton } from "./components/maximize-button";
+export { PopButton } from "./components/pop-button";
+export { UnpopButton } from "./components/unpop-button";

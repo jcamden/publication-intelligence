@@ -4,9 +4,9 @@ import { Card } from "@pubint/yabasic/components/ui/card";
 import { cn } from "@pubint/yabasic/lib/utils";
 import type { ReactNode } from "react";
 import { Rnd } from "react-rnd";
+import { WindowFrame } from "./components/window-frame";
+import { WindowTopBar } from "./components/window-top-bar";
 import { useHasScrollbars } from "./use-has-scrollbars";
-import { WindowFrame } from "./window-frame";
-import { WindowTopBar } from "./window-top-bar";
 
 export type WindowProps = {
 	id: string;
@@ -17,7 +17,9 @@ export type WindowProps = {
 	sidebarCollapsed: boolean;
 	position: { x: number; y: number }; // in rem
 	size: { width: number; height: number }; // in rem
+	side?: "left" | "right";
 	onUnpop: () => void;
+	onClose: () => void;
 	onMaximize: () => void;
 	onPositionChange: (position: { x: number; y: number }) => void;
 	onSizeChange: (size: { width: number; height: number }) => void;
@@ -37,7 +39,9 @@ export const Window = ({
 	sidebarCollapsed,
 	position,
 	size,
+	side = "left",
 	onUnpop,
+	onClose,
 	onMaximize,
 	onPositionChange,
 	onSizeChange,
@@ -102,7 +106,9 @@ export const Window = ({
 					title={title}
 					isMaximized={isMaximized}
 					sidebarCollapsed={sidebarCollapsed}
+					side={side}
 					onUnpop={onUnpop}
+					onClose={onClose}
 					onMaximize={onMaximize}
 				/>
 				<div

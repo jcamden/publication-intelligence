@@ -25,14 +25,11 @@ const getStoredTheme = (): Theme => {
 };
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-	const [theme, setThemeState] = useState<Theme>("system");
-	const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
-
-	useEffect(() => {
-		// Initialize theme from localStorage
+	const [theme, setThemeState] = useState<Theme>(() => getStoredTheme());
+	const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => {
 		const stored = getStoredTheme();
-		setThemeState(stored);
-	}, []);
+		return stored === "system" ? getSystemTheme() : stored;
+	});
 
 	useEffect(() => {
 		// Resolve the actual theme based on system preference

@@ -26,6 +26,7 @@ export type SectionState = {
 		isMaximized: boolean;
 		lastRestorePosition?: { x: number; y: number };
 		lastRestoreSize?: { width: number; height: number };
+		side?: "left" | "right";
 	};
 };
 
@@ -219,7 +220,7 @@ export const activeResponsiveLayerAtom = atomWithStorage<ResponsiveLayer>(
 // Active section when layer is 'section'
 export const activeResponsiveSectionAtom = atom<SectionId | null>(null);
 
-// PDF viewer state atoms
-export const currentPageAtom = atom(1);
-export const totalPagesAtom = atom(0);
-export const zoomAtom = atom(1.7);
+// PDF viewer state atoms (persisted)
+export const currentPageAtom = atomWithStorage("pdf-current-page", 1);
+export const totalPagesAtom = atom(0); // Not persisted - recalculated on load
+export const zoomAtom = atomWithStorage("pdf-zoom", 1.7);

@@ -16,12 +16,13 @@ import {
 	totalPagesAtom,
 	zoomAtom,
 } from "@/atoms/editor-atoms";
-import { PageBar } from "./editor/page-bar";
-import { PageSidebar } from "./editor/page-sidebar";
-import { ProjectBar } from "./editor/project-bar";
-import { ProjectSidebar } from "./editor/project-sidebar";
-import { ResizableSidebar } from "./editor/resizable-sidebar";
-import { WindowManager } from "./editor/window-manager";
+import { useHydrated } from "@/hooks/use-hydrated";
+import { PageBar } from "./components/page-bar";
+import { PageSidebar } from "./components/page-sidebar";
+import { ProjectBar } from "./components/project-bar";
+import { ProjectSidebar } from "./components/project-sidebar";
+import { ResizableSidebar } from "./components/resizable-sidebar";
+import { WindowManager } from "./components/window-manager";
 
 /**
  * PDF Editor - Three-section layout for PDF indexing
@@ -52,6 +53,7 @@ type PdfEditorProps = {
 };
 
 export const PdfEditor = ({ fileUrl }: PdfEditorProps) => {
+	const hydrated = useHydrated();
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const [totalPages, setTotalPages] = useAtom(totalPagesAtom);
 	const [zoom, setZoom] = useAtom(zoomAtom);
@@ -135,10 +137,15 @@ export const PdfEditor = ({ fileUrl }: PdfEditorProps) => {
 	const onlyProjectVisible = !projectCollapsed && !pdfVisible && pageCollapsed;
 	const onlyPageVisible = projectCollapsed && !pdfVisible && !pageCollapsed;
 
+	// Wait for hydration to complete before rendering to prevent flash of default state
+	if (!hydrated) {
+		return null;
+	}
+
 	return (
 		<div className="relative h-full w-full flex flex-col">
 			{/* Fixed top bar row - all three bars in one row */}
-			<div className="flex-shrink-0 flex justify-between items-center p-4 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+			<div className="flex-shrink-0 flex justify-between items-center p-1 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
 				<ProjectBar />
 				<PdfViewerToolbar
 					currentPage={currentPage}
@@ -155,21 +162,24 @@ export const PdfEditor = ({ fileUrl }: PdfEditorProps) => {
 
 			{/* Resizable sections row */}
 			<div className="flex-1 flex min-h-0">
-				{/* Project sidebar - resizable or full width */}
-				{!projectCollapsed &&
-					(onlyProjectVisible ? (
-						<div className="flex-1 min-w-0">
-							<ProjectSidebar />
-						</div>
-					) : (
-						<ResizableSidebar side="left" widthAtom={projectSidebarWidthAtom}>
-							<ProjectSidebar />
-						</ResizableSidebar>
-					))}
+				{/* Project sidebar - always rendered, transitions to 0 width when collapsed */}
+				{onlyProjectVisible ? (
+					<div className="flex-1 min-w-0">
+						<ProjectSidebar />
+					</div>
+				) : (
+					<ResizableSidebar
+						side="left"
+						widthAtom={projectSidebarWidthAtom}
+						isCollapsed={projectCollapsed}
+					>
+						<ProjectSidebar />
+					</ResizableSidebar>
+				)}
 
 				{/* PDF section - conditional */}
 				{pdfVisible && (
-					<div className="flex-1 min-w-0 relative">
+					<div className="flex-1 min-w-0 h-full relative">
 						<PdfViewer
 							url={fileUrl}
 							scale={zoom}
@@ -180,17 +190,20 @@ export const PdfEditor = ({ fileUrl }: PdfEditorProps) => {
 					</div>
 				)}
 
-				{/* Page sidebar - resizable or full width */}
-				{!pageCollapsed &&
-					(onlyPageVisible ? (
-						<div className="flex-1 min-w-0">
-							<PageSidebar />
-						</div>
-					) : (
-						<ResizableSidebar side="right" widthAtom={pageSidebarWidthAtom}>
-							<PageSidebar />
-						</ResizableSidebar>
-					))}
+				{/* Page sidebar - always rendered, transitions to 0 width when collapsed */}
+				{onlyPageVisible ? (
+					<div className="flex-1 min-w-0">
+						<PageSidebar />
+					</div>
+				) : (
+					<ResizableSidebar
+						side="right"
+						widthAtom={pageSidebarWidthAtom}
+						isCollapsed={pageCollapsed}
+					>
+						<PageSidebar />
+					</ResizableSidebar>
+				)}
 			</div>
 
 			{/* Windows overlay */}
