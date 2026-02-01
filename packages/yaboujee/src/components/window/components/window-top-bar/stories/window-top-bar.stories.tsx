@@ -218,9 +218,7 @@ export const LongTitle: Story = {
 /**
  * All button combinations
  */
-export const AllCombinations: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const AllCombinations: StoryObj<typeof WindowTopBar> = {
 	render: () => (
 		<div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 			<div>

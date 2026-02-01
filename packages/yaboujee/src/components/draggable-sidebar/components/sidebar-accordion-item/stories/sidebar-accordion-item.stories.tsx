@@ -84,14 +84,11 @@ ${codeBlock}
 } satisfies Meta<typeof SidebarAccordionItem>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
 
 /**
  * Left side accordion item
  */
-export const LeftSide: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const LeftSide: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
 
@@ -120,9 +117,7 @@ export const LeftSide: Story = {
 /**
  * Right side accordion item
  */
-export const RightSide: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const RightSide: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
 
@@ -151,9 +146,7 @@ export const RightSide: Story = {
 /**
  * Collapsed state
  */
-export const Collapsed: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const Collapsed: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>([]);
 
@@ -180,9 +173,7 @@ export const Collapsed: Story = {
 /**
  * First item (no top border)
  */
-export const FirstItem: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const FirstItem: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
 
@@ -210,9 +201,7 @@ export const FirstItem: Story = {
 /**
  * Non-first item (with top border)
  */
-export const NonFirstItem: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const NonFirstItem: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
 
@@ -240,9 +229,7 @@ export const NonFirstItem: Story = {
 /**
  * Multiple items showing interaction
  */
-export const MultipleItems: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const MultipleItems: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["pages"]);
 
@@ -290,9 +277,7 @@ export const MultipleItems: Story = {
 /**
  * Without drag handle
  */
-export const WithoutDragHandle: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const WithoutDragHandle: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
 

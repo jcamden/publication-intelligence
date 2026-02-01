@@ -61,7 +61,7 @@ export default function Login() {
 					</Link>
 				}
 			/>
-			<main className="pb-24 flex items-center justify-center flex-1">
+			<main className="flex items-center justify-center flex-1">
 				<LoginForm />
 			</main>
 		</div>

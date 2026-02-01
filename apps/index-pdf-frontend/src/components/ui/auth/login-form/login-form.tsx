@@ -9,6 +9,7 @@ import {
 import { Input } from "@pubint/yabasic/components/ui/input";
 import { Alert, FormFooter } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useAuthToken } from "@/hooks/use-auth";
 import { trpc } from "@/utils/trpc";
@@ -20,11 +21,13 @@ const signInSchema = z.object({
 
 export const LoginForm = () => {
 	const { saveToken } = useAuthToken();
+	const router = useRouter();
 
 	const signInMutation = trpc.auth.signIn.useMutation({
 		onSuccess: (data: { authToken: string; message: string }) => {
 			saveToken(data.authToken);
 			form.reset();
+			router.push("/projects");
 		},
 		onError: (error: { message: string }) => {
 			console.error("Sign in failed:", error.message);

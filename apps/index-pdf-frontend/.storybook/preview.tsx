@@ -1,6 +1,24 @@
 import type { Preview } from "@storybook/nextjs-vite";
 import "../src/app/globals.css";
 
+// Mock Next.js navigation hooks for Storybook
+if (typeof window !== "undefined") {
+	// @ts-expect-error - Mocking Next.js internals for Storybook
+	window.next = window.next || {};
+	// @ts-expect-error - Mocking Next.js router
+	window.next.router = {
+		push: (href: string) => console.log("[Mock Router] push:", href),
+		replace: (href: string) => console.log("[Mock Router] replace:", href),
+		refresh: () => console.log("[Mock Router] refresh"),
+		back: () => console.log("[Mock Router] back"),
+		forward: () => console.log("[Mock Router] forward"),
+		prefetch: (href: string) => console.log("[Mock Router] prefetch:", href),
+		pathname: "/",
+		query: {},
+		asPath: "/",
+	};
+}
+
 const preview: Preview = {
 	parameters: {
 		controls: {
@@ -24,6 +42,13 @@ const preview: Preview = {
 						enabled: true,
 					},
 				],
+			},
+		},
+		nextjs: {
+			appDirectory: true,
+			navigation: {
+				pathname: "/",
+				query: {},
 			},
 		},
 	},

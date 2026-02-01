@@ -7,6 +7,14 @@ import { z } from "zod";
 export const CreateProjectSchema = z.object({
 	title: z.string().min(1, "Title is required").max(500),
 	description: z.string().max(2000).optional(),
+	project_dir: z
+		.string()
+		.min(1, "Project directory is required")
+		.max(100)
+		.regex(
+			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+			"Project directory must be lowercase letters, numbers, and hyphens only (e.g., my-project)",
+		),
 	workspace: z.string().uuid().optional(),
 });
 
@@ -28,13 +36,14 @@ export type Project = {
 	id: string;
 	title: string;
 	description: string | null;
+	project_dir: string;
 	workspace: { id: string } | null;
 	owner: { id: string; email: string };
 	collaborators: Array<{ id: string; email: string }>;
 	created_at: Date;
 	updated_at: Date | null;
 	deleted_at: Date | null;
-	document_count: number;
+	has_document: boolean;
 	entry_count: number;
 	is_deleted: boolean;
 };
@@ -43,8 +52,17 @@ export type ProjectListItem = {
 	id: string;
 	title: string;
 	description: string | null;
-	document_count: number;
+	project_dir: string;
 	entry_count: number;
 	created_at: Date;
 	updated_at: Date | null;
+	source_document: {
+		id: string;
+		title: string;
+		file_name: string;
+		file_size: number | null;
+		page_count: number | null;
+		storage_key: string;
+		status: string;
+	} | null;
 };

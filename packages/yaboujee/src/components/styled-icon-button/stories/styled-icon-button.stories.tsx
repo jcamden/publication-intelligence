@@ -223,9 +223,7 @@ export const WithTooltip: Story = {
 /**
  * Multiple buttons showing different icons
  */
-export const MultipleIcons: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const MultipleIcons: StoryObj<typeof StyledIconButton> = {
 	render: () => (
 		<div style={{ display: "flex", gap: "12px" }}>
 			<StyledIconButton
@@ -264,9 +262,7 @@ export const MultipleIcons: Story = {
 /**
  * Size comparison
  */
-export const SizeComparison: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const SizeComparison: StoryObj<typeof StyledIconButton> = {
 	render: () => (
 		<div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
 			<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>

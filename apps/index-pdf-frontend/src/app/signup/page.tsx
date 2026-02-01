@@ -61,7 +61,7 @@ export default function Signup() {
 					</Link>
 				}
 			/>
-			<main className="pb-24 flex items-center justify-center flex-1">
+			<main className="flex items-center justify-center flex-1">
 				<SignupForm />
 			</main>
 		</div>

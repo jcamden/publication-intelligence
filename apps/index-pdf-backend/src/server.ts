@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { logger } from "./logger";
 import { registerRequestId } from "./middleware/request-id";
 import { verifyGelToken } from "./modules/auth/verify-token";
+import { registerDownloadRoutes } from "./modules/source-document/download.routes";
 import { registerUploadRoutes } from "./modules/source-document/upload.routes";
 import { appRouter } from "./routers/index";
 
@@ -74,6 +75,7 @@ export const registerPlugins = async (server: FastifyInstance) => {
 	});
 
 	await registerUploadRoutes(server);
+	await registerDownloadRoutes(server);
 
 	server.get("/health", async () => ({
 		status: "ok",

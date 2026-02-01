@@ -37,6 +37,10 @@ module default {
     name: str;
     required identity: ext::auth::Identity {
       constraint exclusive;
+      # NOTE: Cannot use 'on target delete' here because Identity is owned by ext::auth
+      # To delete a user AND their auth identity, use programmatic deletion:
+      # 1. Delete the User record
+      # 2. Then: DELETE ext::auth::Identity FILTER .id = <identity_id>
     };
     required created_at: datetime {
       default := datetime_current();

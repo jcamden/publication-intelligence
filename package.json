@@ -32,6 +32,8 @@
 		"db:reset": "./db/gel/reset.sh",
 		"db:setup-test": "./db/gel/setup-test-db.sh",
 		"db:reset-test": "./db/gel/reset-test-branch.sh",
+		"db:clear-auth": "./db/gel/clear-auth-identities.sh",
+		"db:clear-auth-test": "./db/gel/clear-auth-identities.sh test",
 		"pdf:copy-workers": "pnpx tsx scripts/copy-pdf-workers.ts",
 		"lint": "biome lint .",
 		"lint:access-policies": "./scripts/lint-access-policies.sh",

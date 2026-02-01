@@ -15,6 +15,7 @@ export type ProjectNavbarProps = {
 	className?: string;
 	theme?: Theme;
 	onThemeToggle?: () => void;
+	onSignOutClick?: () => void;
 };
 
 const navItems = [
@@ -29,6 +30,7 @@ export const ProjectNavbar = ({
 	className,
 	theme = "light",
 	onThemeToggle,
+	onSignOutClick,
 }: ProjectNavbarProps) => {
 	const pathname = usePathname();
 	const router = useRouter();
@@ -38,7 +40,11 @@ export const ProjectNavbar = ({
 	};
 
 	const handleSignOutClick = () => {
-		router.push("/api/auth/signout");
+		if (onSignOutClick) {
+			onSignOutClick();
+		} else {
+			router.push("/api/auth/signout");
+		}
 	};
 
 	return (

@@ -6,10 +6,20 @@ import { logEvent } from "../lib/logger";
 const AUTH_TOKEN_KEY = "gel_auth_token";
 
 export const useAuthToken = () => {
+	// Check for Storybook mock before initializing state
+	const hasMock =
+		typeof window !== "undefined" &&
+		// @ts-expect-error - Storybook mock
+		window.__mockUseAuthToken;
+
+	// Always call hooks at top level (React rules)
 	const [authToken, setAuthToken] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
 	useEffect(() => {
+		// Skip if using mock
+		if (hasMock) return;
+
 		const token = localStorage.getItem(AUTH_TOKEN_KEY);
 		setAuthToken(token);
 		setIsLoading(false);
@@ -22,7 +32,7 @@ export const useAuthToken = () => {
 				},
 			});
 		}
-	}, []);
+	}, [hasMock]);
 
 	const saveToken = (token: string) => {
 		localStorage.setItem(AUTH_TOKEN_KEY, token);
@@ -45,6 +55,12 @@ export const useAuthToken = () => {
 			context: {},
 		});
 	};
+
+	// Return mock if available, otherwise return real implementation
+	if (hasMock) {
+		// @ts-expect-error - Storybook mock
+		return window.__mockUseAuthToken();
+	}
 
 	return {
 		authToken,

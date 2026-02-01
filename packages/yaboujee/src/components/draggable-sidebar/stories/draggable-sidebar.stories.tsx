@@ -177,14 +177,11 @@ ${codeBlock}
 } satisfies Meta<typeof DraggableSidebar>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
 
 /**
  * Left sidebar with multiple sections
  */
-export const LeftSidebar: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const LeftSidebar: StoryObj<typeof DraggableSidebar> = {
 	render: () => {
 		const [visibleSections, setVisibleSections] = useState<string[]>([
 			"pages",
@@ -227,9 +224,7 @@ export const LeftSidebar: Story = {
 /**
  * Right sidebar (flipped layout)
  */
-export const RightSidebar: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const RightSidebar: StoryObj<typeof DraggableSidebar> = {
 	render: () => {
 		const [visibleSections, setVisibleSections] = useState<string[]>([
 			"pages",
@@ -271,9 +266,7 @@ export const RightSidebar: Story = {
 /**
  * Multiple sections expanded
  */
-export const MultipleSectionsExpanded: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const MultipleSectionsExpanded: StoryObj<typeof DraggableSidebar> = {
 	render: () => {
 		const [visibleSections, setVisibleSections] = useState<string[]>([
 			"pages",
@@ -319,9 +312,7 @@ export const MultipleSectionsExpanded: Story = {
 /**
  * All collapsed
  */
-export const AllCollapsed: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const AllCollapsed: StoryObj<typeof DraggableSidebar> = {
 	render: () => {
 		const [visibleSections, setVisibleSections] = useState<string[]>([
 			"pages",
@@ -363,9 +354,7 @@ export const AllCollapsed: Story = {
 /**
  * Single section
  */
-export const SingleSection: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const SingleSection: StoryObj<typeof DraggableSidebar> = {
 	render: () => {
 		const [visibleSections, setVisibleSections] = useState<string[]>(["pages"]);
 		const [expandedItems, setExpandedItems] = useState<string[]>(["pages"]);

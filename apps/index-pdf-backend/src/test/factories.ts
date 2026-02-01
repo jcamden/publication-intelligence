@@ -13,6 +13,19 @@ export const generateTestPassword = () => randomBytes(16).toString("hex");
 export const generateTestTitle = () =>
 	`Test Project ${randomBytes(4).toString("hex")}`;
 
+export const generateProjectDir = (title?: string) => {
+	if (title) {
+		// Convert title to valid project_dir format
+		return title
+			.toLowerCase()
+			.replace(/[^a-z0-9\s-]/g, "")
+			.replace(/\s+/g, "-")
+			.replace(/-+/g, "-")
+			.slice(0, 100);
+	}
+	return `test-project-${randomBytes(4).toString("hex")}`;
+};
+
 // ============================================================================
 // User Factory
 // ============================================================================
@@ -148,20 +161,26 @@ export const createTestProject = async ({
 	gelClient,
 	title = generateTestTitle(),
 	description,
+	project_dir,
 }: {
 	gelClient: Client;
 	title?: string;
 	description?: string;
+	project_dir?: string;
 }) => {
+	const projectDir = project_dir ?? generateProjectDir(title);
+
 	const project = await gelClient.querySingle<{
 		id: string;
 		title: string;
 		description: string | null;
+		project_dir: string;
 	}>(
 		`
 		INSERT Project {
 			title := <str>$title,
 			description := <optional str>$description,
+			project_dir := <str>$projectDir,
 			owner := global current_user,
 			collaborators := {}
 		}
@@ -169,6 +188,7 @@ export const createTestProject = async ({
 		{
 			title,
 			description: description ?? null,
+			projectDir,
 		},
 	);
 

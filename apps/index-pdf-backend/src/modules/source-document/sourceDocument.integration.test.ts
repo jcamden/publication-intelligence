@@ -37,7 +37,10 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Upload Test Project" },
+				payload: {
+					title: "Upload Test Project",
+					project_dir: "upload-test-project",
+				},
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -84,7 +87,10 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Filename Default Test" },
+				payload: {
+					title: "Filename Default Test",
+					project_dir: "filename-default-test",
+				},
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -122,7 +128,7 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Auth Test" },
+				payload: { title: "Auth Test", project_dir: "auth-test" },
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -155,7 +161,7 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Validation Test" },
+				payload: { title: "Validation Test", project_dir: "validation-test" },
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -221,7 +227,10 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "List Test Project" },
+				payload: {
+					title: "List Test Project",
+					project_dir: "list-test-project",
+				},
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -278,7 +287,7 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Get Test Project" },
+				payload: { title: "Get Test Project", project_dir: "get-test-project" },
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -336,7 +345,10 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Delete Test Project" },
+				payload: {
+					title: "Delete Test Project",
+					project_dir: "delete-test-project",
+				},
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -397,7 +409,7 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await user1Request.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "User 1 Project" },
+				payload: { title: "User 1 Project", project_dir: "user-1-project" },
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;
@@ -444,7 +456,10 @@ describe("SourceDocument API (Integration)", () => {
 			const projectResponse = await user1Request.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "User 1 Project" },
+				payload: {
+					title: "User 1 Project",
+					project_dir: "user-1-project-docs",
+				},
 			});
 
 			const project = JSON.parse(projectResponse.body).result.data;

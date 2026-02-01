@@ -103,6 +103,35 @@ export const getProjectById = async ({
 	return found;
 };
 
+export const getProjectByDir = async ({
+	gelClient,
+	projectDir,
+	userId,
+	requestId,
+}: {
+	gelClient: Client;
+	projectDir: string;
+	userId: string;
+	requestId: string;
+}): Promise<Project> => {
+	const project = await projectRepo.getProjectByDir({ gelClient, projectDir });
+
+	// Security principle: Don't reveal whether project exists if user can't access it
+	// Both "doesn't exist" and "forbidden" return 404 (via requireFound)
+	const found = requireFound(project);
+
+	logEvent({
+		event: "project.retrieved",
+		context: {
+			requestId,
+			userId,
+			metadata: { projectId: found.id, projectDir: found.project_dir },
+		},
+	});
+
+	return found;
+};
+
 export const updateProject = async ({
 	gelClient,
 	projectId,

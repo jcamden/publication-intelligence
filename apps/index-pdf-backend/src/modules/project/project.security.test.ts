@@ -62,7 +62,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Owner's Project" },
+						payload: {
+							title: "Owner's Project",
+							project_dir: "owners-project",
+						},
 					}),
 			});
 
@@ -95,7 +98,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Collaborative Project" },
+						payload: {
+							title: "Collaborative Project",
+							project_dir: "collaborative-project",
+						},
 					}),
 			});
 
@@ -149,7 +155,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Private Project" },
+						payload: {
+							title: "Private Project",
+							project_dir: "private-project",
+						},
 					}),
 			});
 
@@ -179,7 +188,10 @@ describe("Project Security & Authorization", () => {
 			const createResponse = await ownerRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Private Project" },
+				payload: {
+					title: "Private Project",
+					project_dir: "private-project-anon",
+				},
 			});
 
 			const project = JSON.parse(createResponse.body).result.data;
@@ -205,7 +217,7 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "To Be Deleted" },
+						payload: { title: "To Be Deleted", project_dir: "to-be-deleted" },
 					}),
 			});
 
@@ -247,7 +259,7 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Active Project" },
+						payload: { title: "Active Project", project_dir: "active-project" },
 					}),
 			});
 
@@ -257,7 +269,7 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "To Delete" },
+						payload: { title: "To Delete", project_dir: "to-delete" },
 					}),
 			});
 
@@ -308,7 +320,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Owner's Project" },
+						payload: {
+							title: "Owner's Project",
+							project_dir: "owners-project-update",
+						},
 					}),
 			});
 
@@ -355,7 +370,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Owner's Project" },
+						payload: {
+							title: "Owner's Project",
+							project_dir: "owners-project-delete",
+						},
 					}),
 			});
 
@@ -400,7 +418,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Collaborative Project" },
+						payload: {
+							title: "Collaborative Project",
+							project_dir: "collaborative-project-collab",
+						},
 					}),
 			});
 
@@ -469,7 +490,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Owner's Private Project" },
+						payload: {
+							title: "Owner's Private Project",
+							project_dir: "owners-private-project",
+						},
 					}),
 			});
 
@@ -506,7 +530,7 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Secret Project" },
+						payload: { title: "Secret Project", project_dir: "secret-project" },
 					}),
 			});
 
@@ -558,7 +582,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "To Delete" },
+						payload: {
+							title: "To Delete",
+							project_dir: "to-delete-info-leak",
+						},
 					}),
 			});
 
@@ -601,7 +628,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Protected Project" },
+						payload: {
+							title: "Protected Project",
+							project_dir: "protected-project",
+						},
 					}),
 			});
 
@@ -631,7 +661,10 @@ describe("Project Security & Authorization", () => {
 					request.inject({
 						method: "POST",
 						url: "/trpc/project.create",
-						payload: { title: "Secret Project" },
+						payload: {
+							title: "Secret Project",
+							project_dir: "secret-project-codes",
+						},
 					}),
 			});
 

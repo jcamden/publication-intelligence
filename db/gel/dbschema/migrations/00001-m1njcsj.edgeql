@@ -1,4 +1,4 @@
-CREATE MIGRATION m1zbvrcybnwxhqal3mtx5l4gq5lnq6c5pvubzbv65easxac3uf66eq
+CREATE MIGRATION m1njcsjqbywmcyncftusf2ogz64mnvrdxvjfhwbwztqc6qapd7h7wa
     ONTO initial
 {
   CREATE EXTENSION pgcrypto VERSION '1.3';
@@ -56,13 +56,19 @@ CREATE MIGRATION m1zbvrcybnwxhqal3mtx5l4gq5lnq6c5pvubzbv65easxac3uf66eq
       ))));
       CREATE ACCESS POLICY owner_full_access
           ALLOW ALL USING ((.owner.id ?= GLOBAL default::current_user_id));
+      CREATE PROPERTY deleted_at: std::datetime;
+      CREATE REQUIRED PROPERTY title: std::str;
+      CREATE CONSTRAINT std::exclusive ON ((.owner, .title)) EXCEPT (EXISTS (.deleted_at));
+      CREATE REQUIRED PROPERTY project_dir: std::str {
+          CREATE CONSTRAINT std::max_len_value(100);
+          CREATE CONSTRAINT std::regexp('^[a-z0-9]+(?:-[a-z0-9]+)*$');
+      };
+      CREATE CONSTRAINT std::exclusive ON ((.owner, .project_dir)) EXCEPT (EXISTS (.deleted_at));
       CREATE REQUIRED PROPERTY created_at: std::datetime {
           SET default := (std::datetime_current());
       };
-      CREATE PROPERTY deleted_at: std::datetime;
       CREATE PROPERTY is_deleted := (EXISTS (.deleted_at));
       CREATE PROPERTY description: std::str;
-      CREATE REQUIRED PROPERTY title: std::str;
       CREATE PROPERTY updated_at: std::datetime;
   };
   CREATE TYPE default::LLMRun {
@@ -135,6 +141,7 @@ CREATE MIGRATION m1zbvrcybnwxhqal3mtx5l4gq5lnq6c5pvubzbv65easxac3uf66eq
       CREATE REQUIRED PROPERTY status: default::SourceDocumentStatus {
           SET default := (default::SourceDocumentStatus.uploaded);
       };
+      CREATE REQUIRED PROPERTY storage_key: std::str;
       CREATE REQUIRED PROPERTY title: std::str;
   };
   ALTER TYPE default::LLMRun {
@@ -331,10 +338,13 @@ CREATE MIGRATION m1zbvrcybnwxhqal3mtx5l4gq5lnq6c5pvubzbv65easxac3uf66eq
       CREATE PROPERTY entry_count := (std::count(.index_entries FILTER
           NOT (EXISTS (.deleted_at))
       ));
-      CREATE MULTI LINK source_documents := (.<project[IS default::SourceDocument]);
-      CREATE PROPERTY document_count := (std::count(.source_documents FILTER
-          NOT (EXISTS (.deleted_at))
-      ));
+      CREATE LINK source_document := (SELECT
+          .<project[IS default::SourceDocument] FILTER
+              NOT (EXISTS (.deleted_at))
+      LIMIT
+          1
+      );
+      CREATE PROPERTY has_document := (EXISTS (.source_document));
       CREATE LINK workspace: default::Workspace {
           ON TARGET DELETE DELETE SOURCE;
       };

@@ -19,16 +19,22 @@ import { ProjectNavbar } from "@/components/ui/project-navbar";
  * CURRENT STATUS:
  * - New three-section layout with project/page sidebars
  * - Toggle bars for controlling panel visibility
+ * - Uses project_dir for routing
  *
  * TODO:
  * - Populate panel content with actual data
  * - Add text selection using PDF.js text layer
- * - Connect to real tRPC backend
  * - Add highlights overlay for mentions
  */
 export default function EditorPage() {
 	const params = useParams();
-	const _projectId = params.projectId as string;
+	const _projectDir = params.projectDir as string;
+
+	// TODO: Fetch project data and get actual PDF URL from source_document
+	// const projectQuery = trpc.project.getByDir.useQuery({ projectDir });
+	// const pdfUrl = projectQuery.data?.source_document
+	//   ? `http://localhost:3001/source-documents/${projectQuery.data.source_document.id}/file`
+	//   : "/sample.pdf";
 
 	// Mock PDF URL - replace with actual project document URL from tRPC
 	const pdfUrl = "/sample.pdf";
