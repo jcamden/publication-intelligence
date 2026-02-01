@@ -8,9 +8,9 @@ import {
 } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
-import { ThemeScript } from "../components/theme-script";
-import { ThemeProvider } from "../providers/theme-provider";
-import { TrpcProvider } from "../providers/trpc-provider";
+import { ThemeScript } from "./_common/_lib/theme-script";
+import { ThemeProvider } from "./_common/_providers/theme-provider";
+import { TrpcProvider } from "./_common/_providers/trpc-provider";
 
 const exo2 = Exo_2({
 	subsets: ["latin"],

@@ -1,6 +1,6 @@
 import { interactionTestConfig } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { UserDropdown } from "../../user-dropdown";
 import { defaultHandlers, defaultUser } from "../shared";
 
@@ -25,11 +25,15 @@ export const OpensDropdownMenu: StoryObj<typeof UserDropdown> = {
 
 		await userEvent.click(trigger);
 
-		const settingsItem = await canvas.findByText("Settings");
-		const signOutItem = await canvas.findByText("Sign out");
+		// Wait for dropdown to open and find items in the document (dropdown may be in a portal)
+		await waitFor(async () => {
+			const body = within(document.body);
+			const settingsItem = await body.findByText("Settings");
+			const signOutItem = await body.findByText("Sign out");
 
-		await expect(settingsItem).toBeInTheDocument();
-		await expect(signOutItem).toBeInTheDocument();
+			await expect(settingsItem).toBeInTheDocument();
+			await expect(signOutItem).toBeInTheDocument();
+		});
 	},
 };
 
@@ -45,10 +49,14 @@ export const DisplaysUserInfo: StoryObj<typeof UserDropdown> = {
 
 		await userEvent.click(trigger);
 
-		const userName = await canvas.findByText(defaultUser.userName);
-		const userEmail = await canvas.findByText(defaultUser.userEmail);
+		// Wait for dropdown to open and find items in the document (dropdown may be in a portal)
+		await waitFor(async () => {
+			const body = within(document.body);
+			const userName = await body.findByText(defaultUser.userName);
+			const userEmail = await body.findByText(defaultUser.userEmail);
 
-		await expect(userName).toBeInTheDocument();
-		await expect(userEmail).toBeInTheDocument();
+			await expect(userName).toBeInTheDocument();
+			await expect(userEmail).toBeInTheDocument();
+		});
 	},
 };

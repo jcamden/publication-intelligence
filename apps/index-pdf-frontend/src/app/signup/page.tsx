@@ -5,9 +5,9 @@ import { Logo } from "@pubint/yaboujee";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { SignupForm } from "@/components/ui/auth/signup-form";
-import { useAuthToken } from "@/hooks/use-auth";
-import { useTheme } from "@/providers/theme-provider";
+import { useAuthToken } from "@/app/_common/_hooks/use-auth";
+import { useTheme } from "@/app/_common/_providers/theme-provider";
+import { SignupForm } from "./_components/signup-form";
 
 export default function Signup() {
 	const { isAuthenticated, isLoading } = useAuthToken();
@@ -61,7 +61,7 @@ export default function Signup() {
 					</Link>
 				}
 			/>
-			<main className="pb-24 flex items-center justify-center flex-1">
+			<main className="flex items-center justify-center flex-1">
 				<SignupForm />
 			</main>
 		</div>

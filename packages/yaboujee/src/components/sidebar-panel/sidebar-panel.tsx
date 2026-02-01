@@ -11,6 +11,7 @@ export type SidebarPanelProps = {
 	title?: string;
 	onClose?: () => void;
 	className?: string;
+	"data-testid"?: string;
 };
 
 /**
@@ -36,9 +37,10 @@ export const SidebarPanel = ({
 	title,
 	onClose,
 	className,
+	"data-testid": dataTestId,
 }: SidebarPanelProps) => {
 	return (
-		<Card className={cn("overflow-hidden", className)}>
+		<Card className={cn("overflow-hidden", className)} data-testid={dataTestId}>
 			{(title || onClose) && (
 				<div className="flex items-center justify-between border-b border-[hsl(var(--color-border))] px-4 py-3">
 					{title && (

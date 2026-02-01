@@ -14,7 +14,7 @@ import { Separator } from "@pubint/yabasic/components/ui/separator";
 import { Logo } from "@pubint/yaboujee";
 import Image from "next/image";
 import Link from "next/link";
-import { useTheme } from "../providers/theme-provider";
+import { useTheme } from "./_common/_providers/theme-provider";
 
 export default function Home() {
 	const { resolvedTheme, setTheme } = useTheme();

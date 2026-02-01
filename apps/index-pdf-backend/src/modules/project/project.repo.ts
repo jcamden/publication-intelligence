@@ -26,6 +26,7 @@ export const createProject = async ({
 			INSERT Project {
 				title := <str>$title,
 				description := <optional str>$description,
+				project_dir := <str>$projectDir,
 				workspace := (SELECT Workspace FILTER .id = <optional uuid>$workspaceId),
 				owner := global current_user,
 				collaborators := {}
@@ -34,13 +35,14 @@ export const createProject = async ({
 			id,
 			title,
 			description,
+			project_dir,
 			workspace: { id },
 			owner: { id, email },
 			collaborators: { id, email },
 			created_at,
 			updated_at,
 			deleted_at,
-			document_count,
+			has_document,
 			entry_count,
 			is_deleted
 		}
@@ -48,6 +50,7 @@ export const createProject = async ({
 		{
 			title: input.title,
 			description: input.description ?? null,
+			projectDir: input.project_dir,
 			workspaceId: input.workspace ?? null,
 		},
 	);
@@ -68,10 +71,19 @@ export const listProjectsForUser = async ({
 		id: true,
 		title: true,
 		description: true,
-		document_count: true,
+		project_dir: true,
 		entry_count: true,
 		created_at: true,
 		updated_at: true,
+		source_document: {
+			id: true,
+			title: true,
+			file_name: true,
+			file_size: true,
+			page_count: true,
+			storage_key: true,
+			status: true,
+		},
 		filter: e.op("not", e.op("exists", project.deleted_at)),
 		order_by: {
 			expression: project.created_at,
@@ -98,19 +110,53 @@ export const getProjectById = async ({
 			id,
 			title,
 			description,
+			project_dir,
 			workspace: { id },
 			owner: { id, email },
 			collaborators: { id, email },
 			created_at,
 			updated_at,
 			deleted_at,
-			document_count,
+			has_document,
 			entry_count,
 			is_deleted
 		}
 		FILTER .id = <uuid>$projectId AND NOT EXISTS .deleted_at
 	`,
 		{ projectId },
+	);
+
+	return project;
+};
+
+export const getProjectByDir = async ({
+	gelClient,
+	projectDir,
+}: {
+	gelClient: Client;
+	projectDir: string;
+}): Promise<Project | null> => {
+	// Use raw EdgeQL to ensure access policies are respected
+	const project = await gelClient.querySingle<Project | null>(
+		`
+		SELECT Project {
+			id,
+			title,
+			description,
+			project_dir,
+			workspace: { id },
+			owner: { id, email },
+			collaborators: { id, email },
+			created_at,
+			updated_at,
+			deleted_at,
+			has_document,
+			entry_count,
+			is_deleted
+		}
+		FILTER .project_dir = <str>$projectDir AND NOT EXISTS .deleted_at
+	`,
+		{ projectDir },
 	);
 
 	return project;
@@ -137,7 +183,7 @@ export const updateProject = async ({
 	if (input.description !== undefined) {
 		setFields.push(
 			input.description === null
-				? "description := <str>{})"
+				? "description := <str>{}"
 				: "description := <str>$description",
 		);
 		if (input.description !== null) {
@@ -168,13 +214,14 @@ export const updateProject = async ({
 			id,
 			title,
 			description,
+			project_dir,
 			workspace: { id },
 			owner: { id, email },
 			collaborators: { id, email },
 			created_at,
 			updated_at,
 			deleted_at,
-			document_count,
+			has_document,
 			entry_count,
 			is_deleted
 		}

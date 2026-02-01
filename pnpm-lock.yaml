@@ -170,9 +170,6 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@chromatic-com/storybook':
-        specifier: ^5.0.0
-        version: 5.0.0(storybook@10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))
       '@playwright/test':
         specifier: ^1.58.0
         version: 1.58.0
@@ -245,6 +242,9 @@ importers:
       storybook:
         specifier: ^10.2.0
         version: 10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      storybook-addon-pseudo-states:
+        specifier: ^10.2.3
+        version: 10.2.3(storybook@10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
@@ -480,6 +480,12 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.9)
+      '@vitest/browser-playwright':
+        specifier: ^4.0.18
+        version: 4.0.18(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(playwright@1.58.0)(vite@7.3.1(@types/node@24.10.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))(vitest@4.0.18)
+      playwright:
+        specifier: ^1.58.0
+        version: 1.58.0
       react:
         specifier: ^19.2.0
         version: 19.2.3
@@ -489,6 +495,9 @@ importers:
       storybook:
         specifier: ^10.2.0
         version: 10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      storybook-addon-pseudo-states:
+        specifier: ^10.2.3
+        version: 10.2.3(storybook@10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
@@ -498,6 +507,9 @@ importers:
       vite:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@24.10.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@24.10.9)(@vitest/browser-playwright@4.0.18)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(tsx@4.21.0)
 
 packages:
 
@@ -3818,6 +3830,11 @@ packages:
     resolution: {integrity: sha512-UhDfHmA92YAlNnCfhmq0VeNL5bDbiZGg7sZ2IvPsXubGkiNa9EC+tUTsjBRsYUAz87btI6/1wf4XoVvQ3uRnmQ==}
     engines: {node: '>=18'}
 
+  storybook-addon-pseudo-states@10.2.3:
+    resolution: {integrity: sha512-Eok0uJRHyBV9aS3Tlp+fg0j07AUhY5TGT+jS1g/IZqzEonIC1j6Wd46YcMOuWgwww2tNr9v0s+7PFzISqpQ1cQ==}
+    peerDependencies:
+      storybook: ^10.2.3
+
   storybook@10.2.0:
     resolution: {integrity: sha512-fIQnFtpksRRgHR1CO1onGX3djaog4qsW/c5U8arqYTkUEr2TaWpn05mIJDOBoPJFlOdqFrB4Ttv0PZJxV7avhw==}
     hasBin: true
@@ -5853,7 +5870,6 @@ snapshots:
       - msw
       - utf-8-validate
       - vite
-    optional: true
 
   '@vitest/browser@4.0.18(msw@2.12.7(@types/node@22.19.7)(typescript@5.9.3))(vite@7.3.1(@types/node@22.19.7)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))(vitest@4.0.18)':
     dependencies:
@@ -5888,7 +5904,6 @@ snapshots:
       - msw
       - utf-8-validate
       - vite
-    optional: true
 
   '@vitest/coverage-v8@4.0.18(@vitest/browser@4.0.18(msw@2.12.7(@types/node@22.19.7)(typescript@5.9.3))(vite@7.3.1(@types/node@22.19.7)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))(vitest@4.0.18))(vitest@4.0.18)':
     dependencies:
@@ -7785,6 +7800,10 @@ snapshots:
   std-env@3.10.0: {}
 
   stdin-discarder@0.2.2: {}
+
+  storybook-addon-pseudo-states@10.2.3(storybook@10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)):
+    dependencies:
+      storybook: 10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
 
   storybook@10.2.0(@testing-library/dom@10.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
     dependencies:

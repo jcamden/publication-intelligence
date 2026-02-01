@@ -42,13 +42,15 @@ export const ButtonClick: Story = {
 		const canvas = within(canvasElement);
 		const activeIndex = canvas.getByTestId("active-index");
 		const buttons = canvas.getAllByRole("button");
+		// Each button is rendered as a wrapper div + inner Button, so we need to click every other element (the wrappers)
+		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
 
 		await expect(activeIndex).toHaveTextContent("0");
 
-		await userEvent.click(buttons[1]);
+		await userEvent.click(clickableButtons[1]);
 		await expect(activeIndex).toHaveTextContent("1");
 
-		await userEvent.click(buttons[2]);
+		await userEvent.click(clickableButtons[2]);
 		await expect(activeIndex).toHaveTextContent("2");
 	},
 };
@@ -78,12 +80,16 @@ export const KeyboardNavigation: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const buttons = canvas.getAllByRole("button");
+		// Each button is rendered as a wrapper div + inner Button, so we need to use every other element (the wrappers)
+		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
 
-		buttons[0].focus();
-		await expect(buttons[0]).toHaveFocus();
+		clickableButtons[0].focus();
+		await expect(clickableButtons[0]).toHaveFocus();
 
+		// Tab twice: first tab goes to the inner button, second tab goes to the next wrapper
 		await userEvent.keyboard("{Tab}");
-		await expect(buttons[1]).toHaveFocus();
+		await userEvent.keyboard("{Tab}");
+		await expect(clickableButtons[1]).toHaveFocus();
 	},
 };
 
@@ -188,20 +194,22 @@ export const MultipleButtonInteractions: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const buttons = canvas.getAllByRole("button");
+		// Each button is rendered as a wrapper div + inner Button, so we need to click every other element (the wrappers)
+		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
 		const activeCount = canvas.getByTestId("active-count");
 
 		await expect(activeCount).toHaveTextContent("0");
 
-		await userEvent.click(buttons[0]);
+		await userEvent.click(clickableButtons[0]);
 		await expect(activeCount).toHaveTextContent("1");
 
-		await userEvent.click(buttons[1]);
+		await userEvent.click(clickableButtons[1]);
 		await expect(activeCount).toHaveTextContent("2");
 
-		await userEvent.click(buttons[2]);
+		await userEvent.click(clickableButtons[2]);
 		await expect(activeCount).toHaveTextContent("3");
 
-		await userEvent.click(buttons[0]);
+		await userEvent.click(clickableButtons[0]);
 		await expect(activeCount).toHaveTextContent("2");
 	},
 };
@@ -220,10 +228,12 @@ export const AllButtonsRender: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const buttons = canvas.getAllByRole("button");
+		// Each button is rendered as a wrapper div + inner Button, so we need to check every other element (the wrappers)
+		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
 
-		await expect(buttons.length).toBe(5);
+		await expect(clickableButtons.length).toBe(5);
 
-		for (const button of buttons) {
+		for (const button of clickableButtons) {
 			await expect(button).toBeVisible();
 		}
 	},
@@ -240,9 +250,12 @@ export const AriaLabelsFromTooltips: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const buttons = canvas.getAllByRole("button");
+		// Each button is rendered as a wrapper div + inner Button
+		// The inner Button (odd indices) has the aria-label
+		const innerButtons = buttons.filter((_, index) => index % 2 === 1);
 
-		await expect(buttons[0]).toHaveAccessibleName("Toggle view");
-		await expect(buttons[1]).toHaveAccessibleName("Show pages");
-		await expect(buttons[2]).toHaveAccessibleName("Open search");
+		await expect(innerButtons[0]).toHaveAccessibleName("Toggle view");
+		await expect(innerButtons[1]).toHaveAccessibleName("Show pages");
+		await expect(innerButtons[2]).toHaveAccessibleName("Open search");
 	},
 };

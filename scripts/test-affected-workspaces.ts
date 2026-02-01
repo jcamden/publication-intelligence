@@ -19,6 +19,10 @@ type PackageJson = {
 
 const WORKSPACE_ROOTS = ["apps", "packages", "db"];
 const VRT_PACKAGES = ["@pubint/yaboujee", "@pubint/index-pdf-frontend"];
+const INTERACTION_TEST_PACKAGES = [
+	"@pubint/yaboujee",
+	"@pubint/index-pdf-frontend",
+];
 
 const execCommand = ({ command }: { command: string }): string => {
 	try {
@@ -204,6 +208,32 @@ const runVRT = ({ workspaceName }: { workspaceName: string }) => {
 	}
 };
 
+const runInteractionTests = ({
+	workspaceName,
+	workspacePath,
+}: {
+	workspaceName: string;
+	workspacePath: string;
+}) => {
+	console.log(`\n🎭 Running interaction tests for ${workspaceName}...`);
+
+	if (!hasScript({ workspacePath, scriptName: "test:interaction" })) {
+		console.log(`  ⏭️  No interaction test script found, skipping`);
+		return;
+	}
+
+	try {
+		execSync(`pnpm --filter "${workspaceName}" test:interaction`, {
+			stdio: "inherit",
+			encoding: "utf-8",
+		});
+		console.log(`  ✅ Interaction tests passed`);
+	} catch (error) {
+		console.error(`  ❌ Interaction tests failed`);
+		throw error;
+	}
+};
+
 const runBiome = ({ workspacePath }: { workspacePath: string }) => {
 	console.log(`\n🔍 Linting ${workspacePath}...`);
 
@@ -357,6 +387,8 @@ const main = () => {
 				scriptName: "typecheck",
 			});
 			const hasVRT = VRT_PACKAGES.includes(workspaceName);
+			const hasInteractionTests =
+				INTERACTION_TEST_PACKAGES.includes(workspaceName);
 
 			console.log(`   ${workspaceName}:`);
 			console.log(`     - Biome lint: ✅ yes`);
@@ -365,6 +397,9 @@ const main = () => {
 			);
 			console.log(
 				`     - Unit tests: ${hasTests ? "✅ yes" : "⏭️  skipped (no test script)"}`,
+			);
+			console.log(
+				`     - Interaction tests: ${hasInteractionTests ? "✅ yes" : "⏭️  skipped (no interaction tests)"}`,
 			);
 			console.log(
 				`     - VRT tests: ${hasVRT ? "✅ yes" : "⏭️  skipped (no VRT)"}`,
@@ -385,6 +420,10 @@ const main = () => {
 		runBiome({ workspacePath: workspace.path });
 		runTypecheck({ workspaceName, workspacePath: workspace.path });
 		runTests({ workspaceName, workspacePath: workspace.path });
+
+		if (INTERACTION_TEST_PACKAGES.includes(workspaceName)) {
+			runInteractionTests({ workspaceName, workspacePath: workspace.path });
+		}
 
 		if (VRT_PACKAGES.includes(workspaceName)) {
 			runVRT({ workspaceName });

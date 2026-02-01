@@ -1,5 +1,11 @@
 @import "@pubint/yabasic/styles";
 
+/* Tailwind 4 workaround: Override hover variant to work with storybook-addon-pseudo-states */
+/* Generate hover styles for both :hover pseudo-class AND .pseudo-hover class */
+@custom-variant hover (&:hover,
+&.pseudo-hover,
+.pseudo-hover-all &);
+
 @source "../";
 
 /* Yaboujee-specific styles can go here */

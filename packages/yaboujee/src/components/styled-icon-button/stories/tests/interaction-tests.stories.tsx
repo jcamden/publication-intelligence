@@ -40,7 +40,7 @@ export const ClickHandler: Story = {
 		const canvas = within(canvasElement);
 		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
 
-		const button = within(wrapper).getByRole("button");
+		const button = within(wrapper).getAllByRole("button")[0];
 		await userEvent.click(button);
 
 		await expect(button).toBeVisible();
@@ -67,10 +67,11 @@ export const KeyboardEnter: Story = {
 		const canvas = within(canvasElement);
 		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
 
-		wrapper.focus();
+		const button = within(wrapper).getAllByRole("button")[0];
+		button.focus();
 		await userEvent.keyboard("{Enter}");
 
-		await expect(wrapper).toHaveAttribute("role", "button");
+		await expect(button).toHaveAttribute("role", "button");
 	},
 };
 
@@ -94,10 +95,11 @@ export const KeyboardSpace: Story = {
 		const canvas = within(canvasElement);
 		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
 
-		wrapper.focus();
+		const button = within(wrapper).getAllByRole("button")[0];
+		button.focus();
 		await userEvent.keyboard(" ");
 
-		await expect(wrapper).toHaveAttribute("role", "button");
+		await expect(button).toHaveAttribute("role", "button");
 	},
 };
 
@@ -122,10 +124,11 @@ export const DisabledClickPrevention: Story = {
 		const canvas = within(canvasElement);
 		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
 
-		await expect(wrapper).toHaveAttribute("tabIndex", "-1");
+		const outerButton = within(wrapper).getAllByRole("button")[0];
+		await expect(outerButton).toHaveAttribute("tabIndex", "-1");
 
-		const button = within(wrapper).getByRole("button");
-		await expect(button).toBeDisabled();
+		const innerButton = within(wrapper).getAllByRole("button")[1];
+		await expect(innerButton).toBeDisabled();
 	},
 };
 
@@ -154,7 +157,7 @@ export const ActiveStateToggle: Story = {
 
 		await expect(activeState).toHaveTextContent("inactive");
 
-		const button = canvas.getByRole("button");
+		const button = canvas.getAllByRole("button")[0];
 		await userEvent.click(button);
 
 		await expect(activeState).toHaveTextContent("active");
@@ -191,12 +194,17 @@ export const FocusBehavior: Story = {
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		const button1 = canvas.getByTestId("button-1");
-		const button2 = canvas.getByTestId("button-2");
+		const button1Container = canvas.getByTestId("button-1");
+		const button2Container = canvas.getByTestId("button-2");
+
+		const button1 = within(button1Container).getAllByRole("button")[0];
+		const button2 = within(button2Container).getAllByRole("button")[0];
 
 		button1.focus();
 		await expect(button1).toHaveFocus();
 
+		// Tab twice: first tab goes to button1's inner button, second tab goes to button2's wrapper
+		await userEvent.tab();
 		await userEvent.tab();
 		await expect(button2).toHaveFocus();
 	},
@@ -217,9 +225,10 @@ export const TooltipAccessibility: Story = {
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		const button = canvas.getByRole("button");
+		const buttons = canvas.getAllByRole("button");
+		const innerButton = buttons[1]; // The actual <Button> element with aria-label
 
-		await expect(button).toHaveAccessibleName("Toggle visibility");
-		await expect(button).toHaveAttribute("title", "Toggle visibility");
+		await expect(innerButton).toHaveAccessibleName("Toggle visibility");
+		await expect(innerButton).toHaveAttribute("title", "Toggle visibility");
 	},
 };

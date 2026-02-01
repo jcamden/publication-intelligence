@@ -39,6 +39,7 @@ describe("Project API (Integration)", () => {
 				payload: {
 					title: "HTTP Test Project",
 					description: "Created via HTTP",
+					project_dir: "http-test-project",
 				},
 			});
 
@@ -53,6 +54,7 @@ describe("Project API (Integration)", () => {
 				url: "/trpc/project.create",
 				payload: {
 					title: "Unauthenticated Project",
+					project_dir: "unauth-project",
 				},
 			});
 
@@ -77,13 +79,13 @@ describe("Project API (Integration)", () => {
 			await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "List Test 1" },
+				payload: { title: "List Test 1", project_dir: "list-test-1" },
 			});
 
 			await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "List Test 2" },
+				payload: { title: "List Test 2", project_dir: "list-test-2" },
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -112,7 +114,7 @@ describe("Project API (Integration)", () => {
 			const createResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Get By ID Test" },
+				payload: { title: "Get By ID Test", project_dir: "get-by-id-test" },
 			});
 
 			const created = JSON.parse(createResponse.body).result.data;
@@ -144,7 +146,7 @@ describe("Project API (Integration)", () => {
 			const createResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "Original" },
+				payload: { title: "Original", project_dir: "original" },
 			});
 
 			const created = JSON.parse(createResponse.body).result.data;
@@ -169,7 +171,7 @@ describe("Project API (Integration)", () => {
 			const createResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "To Be Deleted" },
+				payload: { title: "To Be Deleted", project_dir: "to-be-deleted" },
 			});
 
 			const created = JSON.parse(createResponse.body).result.data;
@@ -209,7 +211,7 @@ describe("Project API (Integration)", () => {
 			const createResponse = await user1Request.inject({
 				method: "POST",
 				url: "/trpc/project.create",
-				payload: { title: "User 1 Project" },
+				payload: { title: "User 1 Project", project_dir: "user-1-project" },
 			});
 
 			const created = JSON.parse(createResponse.body).result.data;

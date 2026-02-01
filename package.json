@@ -10,6 +10,9 @@
 		"test": "pnpm --recursive test",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest run --coverage",
+		"test:interaction": "pnpm --filter @pubint/yaboujee test:interaction && pnpm --filter @pubint/index-pdf-frontend test:interaction",
+		"test:interaction:yaboujee": "pnpm --filter @pubint/yaboujee test:interaction",
+		"test:interaction:frontend": "pnpm --filter @pubint/index-pdf-frontend test:interaction",
 		"storybook": "pnpm --filter @pubint/index-pdf-frontend storybook",
 		"build-storybook": "pnpm --filter @pubint/index-pdf-frontend build-storybook",
 		"vrt:yaboujee": "pnpm --filter @pubint/storybook-vrt vrt:yaboujee",
@@ -32,6 +35,8 @@
 		"db:reset": "./db/gel/reset.sh",
 		"db:setup-test": "./db/gel/setup-test-db.sh",
 		"db:reset-test": "./db/gel/reset-test-branch.sh",
+		"db:clear-auth": "./db/gel/clear-auth-identities.sh",
+		"db:clear-auth-test": "./db/gel/clear-auth-identities.sh test",
 		"pdf:copy-workers": "pnpx tsx scripts/copy-pdf-workers.ts",
 		"lint": "biome lint .",
 		"lint:access-policies": "./scripts/lint-access-policies.sh",
@@ -68,6 +73,12 @@
 			"react-dom": "^19.2.0",
 			"@types/react": "^19.2.9",
 			"@types/react-dom": "^19.2.3"
-		}
+		},
+		"onlyBuiltDependencies": [
+			"@swc/core",
+			"esbuild",
+			"msw",
+			"sharp"
+		]
 	}
 }

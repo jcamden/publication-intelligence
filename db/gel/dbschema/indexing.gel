@@ -212,6 +212,13 @@ module default {
     required title: str;
     description: str;
     
+    # URL-friendly project directory name (e.g., "my-research-paper")
+    # Unique per user, used in URLs like /projects/{project_dir}
+    required project_dir: str {
+      constraint max_len_value(100);
+      constraint regexp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$');
+    };
+    
     # Optional workspace (for team/org management)
     # If null, project is user-owned directly
     workspace: Workspace {
@@ -224,6 +231,11 @@ module default {
     };
     multi collaborators: User;
     
+    # Unique constraint: project_dir must be unique per owner (not globally unique)
+    # Only enforce uniqueness for non-deleted projects
+    constraint exclusive on ((.owner, .project_dir)) except (exists .deleted_at);
+    constraint exclusive on ((.owner, .title)) except (exists .deleted_at);
+    
     required created_at: datetime {
       default := datetime_current();
     };
@@ -234,13 +246,13 @@ module default {
     deleted_at: datetime;
     
     # Relationships
-    multi source_documents := .<project[is SourceDocument];
+    source_document := (select .<project[is SourceDocument] filter not exists .deleted_at limit 1);
     multi index_entries := .<project[is IndexEntry];
     multi events := .<project[is Event];
     multi exported_indices := .<project[is ExportedIndex];
     
     # Computed properties
-    property document_count := count(.source_documents filter not exists .deleted_at);
+    property has_document := exists .source_document;
     property entry_count := count(.index_entries filter not exists .deleted_at);
     property is_deleted := exists .deleted_at;
     

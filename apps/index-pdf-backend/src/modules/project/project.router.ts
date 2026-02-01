@@ -91,6 +91,34 @@ export const projectRouter = router({
 			}
 		}),
 
+	getByDir: protectedProcedure
+		.input(z.object({ projectDir: z.string() }))
+		.query(async ({ ctx, input }) => {
+			try {
+				const gelClient = createAuthenticatedClient({
+					authToken: ctx.authToken,
+				});
+
+				return await projectService.getProjectByDir({
+					gelClient,
+					projectDir: input.projectDir,
+					userId: ctx.user.id,
+					requestId: ctx.requestId,
+				});
+			} catch (error) {
+				// Service layer throws TRPCError with NOT_FOUND via requireFound()
+				if (error instanceof TRPCError) {
+					throw error;
+				}
+
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message:
+						error instanceof Error ? error.message : "Failed to get project",
+				});
+			}
+		}),
+
 	update: protectedProcedure
 		.input(
 			z.object({

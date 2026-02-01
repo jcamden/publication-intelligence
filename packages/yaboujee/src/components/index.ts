@@ -13,8 +13,22 @@ export type { LogoProps } from "./logo";
 export { Logo } from "./logo";
 export type { ModalProps } from "./modal";
 export { Modal } from "./modal";
-export type { PdfViewerProps, PdfViewerToolbarProps } from "./pdf";
-export { PdfViewer, PdfViewerToolbar } from "./pdf";
+export type {
+	PdfFileUploadProps,
+	PdfHighlightBoxProps,
+	PdfHighlightLayerProps,
+	PdfThumbnailProps,
+	PdfViewerProps,
+	PdfViewerToolbarProps,
+} from "./pdf";
+export {
+	PdfFileUpload,
+	PdfHighlightBox,
+	PdfHighlightLayer,
+	PdfThumbnail,
+	PdfViewer,
+	PdfViewerToolbar,
+} from "./pdf";
 export type { SidebarPanelProps } from "./sidebar-panel";
 export { SidebarPanel } from "./sidebar-panel";
 export type { StyledIconButtonProps } from "./styled-icon-button";

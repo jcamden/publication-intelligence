@@ -38,8 +38,12 @@ export const PageNavigation: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 
-		const prevButton = canvas.getByLabelText("Previous page");
-		const nextButton = canvas.getByLabelText("Next page");
+		// Get the wrapper elements that are actually clickable (parent of the inner Button with pointer-events-none)
+		const prevButtonInner = canvas.getByLabelText("Previous page");
+		const nextButtonInner = canvas.getByLabelText("Next page");
+		const prevButton = prevButtonInner.parentElement;
+		const nextButton = nextButtonInner.parentElement;
+		if (!prevButton || !nextButton) throw new Error("Button parents not found");
 		const pageInput = canvas.getByLabelText("Current page");
 
 		// Test next button
@@ -182,8 +186,13 @@ export const ZoomControls: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 
-		const zoomInButton = canvas.getByLabelText("Zoom in");
-		const zoomOutButton = canvas.getByLabelText("Zoom out");
+		// Get the wrapper elements that are actually clickable (parent of the inner Button with pointer-events-none)
+		const zoomInButtonInner = canvas.getByLabelText("Zoom in");
+		const zoomOutButtonInner = canvas.getByLabelText("Zoom out");
+		const zoomInButton = zoomInButtonInner.parentElement;
+		const zoomOutButton = zoomOutButtonInner.parentElement;
+		if (!zoomInButton || !zoomOutButton)
+			throw new Error("Button parents not found");
 		const zoomInput = canvas.getByLabelText("Zoom percentage");
 
 		// Test zoom in

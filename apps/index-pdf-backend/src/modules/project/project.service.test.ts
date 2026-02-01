@@ -23,6 +23,7 @@ describe("Project Service", () => {
 			const input = {
 				title: "My Test Book",
 				description: "A comprehensive guide to testing",
+				project_dir: "my-test-book",
 			};
 
 			const project = await projectService.createProject({
@@ -42,6 +43,7 @@ describe("Project Service", () => {
 		it("should create project without description", async () => {
 			const input = {
 				title: "Minimal Project",
+				project_dir: "minimal-project",
 			};
 
 			const project = await projectService.createProject({
@@ -59,6 +61,7 @@ describe("Project Service", () => {
 		it("should emit event on creation", async () => {
 			const input = {
 				title: "Event Test Project",
+				project_dir: "event-test-project",
 			};
 
 			const project = await projectService.createProject({

@@ -88,14 +88,15 @@ export const MobileViewportDark: StoryObj<typeof MyComponent> = {
 
 ## Available Viewports
 
-Common viewport values you can use:
+Supported viewport values for VRT tests (defined in `generate-visual-tests.ts`):
 
-- `mobile1` - 375px (iPhone SE)
-- `mobile2` - 414px (iPhone 11 Pro Max)
-- `tablet` - 768px (iPad)
-- `desktop` - 1280px (Desktop)
+- `mobile1` - 375x667 (iPhone SE)
+- `mobile2` - 414x896 (iPhone 11 Pro Max)
+- `tablet` - 768x1024 (iPad)
 
-See [Storybook's default viewports](https://storybook.js.org/docs/essentials/viewport) for more options.
+**Default viewport:** Stories without explicit viewport settings use Playwright's Desktop Chrome viewport (1280x720).
+
+**Note:** Only use explicit viewport settings for mobile/tablet. Desktop is the default and doesn't need to be specified.
 
 ## Features
 

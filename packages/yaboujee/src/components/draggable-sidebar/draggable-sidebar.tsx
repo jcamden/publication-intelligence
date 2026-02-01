@@ -46,7 +46,11 @@ export const DraggableSidebar = <TSectionId extends string>({
 				<Droppable droppableId={droppableId}>
 					{(provided) => (
 						<div ref={provided.innerRef} {...provided.droppableProps}>
-							<Accordion value={expandedItems} onValueChange={onExpandedChange}>
+							<Accordion
+								multiple
+								value={expandedItems}
+								onValueChange={onExpandedChange}
+							>
 								{visibleSections.map((sectionId, index) => {
 									const meta = sectionMetadata[sectionId];
 									if (!meta) return null;

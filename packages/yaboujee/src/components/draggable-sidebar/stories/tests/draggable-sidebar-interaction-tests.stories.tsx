@@ -1,6 +1,6 @@
 import type { DropResult } from "@hello-pangea/dnd";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { FileText, Tag, User } from "lucide-react";
 import { useState } from "react";
 import { DraggableSidebar } from "../../draggable-sidebar";
@@ -142,19 +142,26 @@ export const MultipleSectionToggle: Story = {
 
 		await expect(expandedCount).toHaveTextContent("0");
 
-		const pagesButton = canvas.getByRole("button", { name: /pages/i });
+		// Click accordion triggers by finding the text and clicking its parent button
+		const pagesText = canvas.getByText("Pages");
+		const pagesButton = pagesText.closest("button");
+		if (!pagesButton) throw new Error("Pages button not found");
 		await userEvent.click(pagesButton);
 
-		await expect(expandedCount).toHaveTextContent("1");
+		await waitFor(() => expect(expandedCount).toHaveTextContent("1"));
 
-		const tagsButton = canvas.getByRole("button", { name: /tags/i });
+		const tagsText = canvas.getByText("Tags");
+		const tagsButton = tagsText.closest("button");
+		if (!tagsButton) throw new Error("Tags button not found");
 		await userEvent.click(tagsButton);
 
-		await expect(expandedCount).toHaveTextContent("2");
+		await waitFor(() => expect(expandedCount).toHaveTextContent("2"));
 
-		const authorButton = canvas.getByRole("button", { name: /author/i });
+		const authorText = canvas.getByText("Author");
+		const authorButton = authorText.closest("button");
+		if (!authorButton) throw new Error("Author button not found");
 		await userEvent.click(authorButton);
 
-		await expect(expandedCount).toHaveTextContent("3");
+		await waitFor(() => expect(expandedCount).toHaveTextContent("3"));
 	},
 };

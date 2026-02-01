@@ -1,0 +1,260 @@
+---
+description: UI component testing standards - file structure, Testing Library patterns, step functions, shared code, pseudo-states
+alwaysApply: true
+---
+
+# UI Component Testing Standards
+
+## File Structure
+
+- **Stories:** `{component}.stories.tsx` - Documentation/interactive stories
+- **Tests:** Nested in `stories/tests/`:
+  - `interaction-tests.stories.tsx` - User interaction tests
+  - `visual-regression-tests.stories.tsx` - Screenshot tests with pseudo-states
+
+## Testing Library Query Priority
+
+Always follow [Testing Library priority guide](https://testing-library.com/docs/queries/about/#priority):
+
+1. `getByRole` (most accessible)
+2. `getByLabelText`
+3. `getByPlaceholderText`
+4. `getByText`
+5. `getByDisplayValue`
+6. `getByAltText`
+7. `getByTitle`
+8. `getByTestId` (last resort)
+
+## Step Functions
+
+**Always** wrap interaction/VRT steps using `step()` from the play function parameters:
+
+```typescript
+import { userEvent, within, expect } from '@storybook/test';
+
+export const MyTest: Story = {
+  play: async ({ canvasElement, step }) => {
+    const canvas = within(canvasElement);
+    
+    await step('Enter valid credentials', async () => {
+      const usernameInput = canvas.getByLabelText('Username');
+      await userEvent.type(usernameInput, 'testuser');
+    });
+  },
+};
+```
+
+**Note:** `step` is provided by Storybook's play function context, not imported from `@storybook/test`.
+
+## Shared Code Patterns
+
+- **Within component:** Create `stories/shared.tsx` for component-specific fixtures
+- **Across components:** Promote to `test-helpers/interaction-steps.ts` for reusable steps
+- **Pattern:** Always look for duplicate steps across existing stories to identify sharing opportunities
+
+Example from `apps/index-pdf-frontend/src/test-helpers/interaction-steps.ts`:
+
+```typescript
+export const openModal = async ({ canvas, triggerLabel, modalRole = "dialog" }) => {
+  const trigger = canvas.getByRole("button", { name: triggerLabel });
+  await userEvent.click(trigger);
+  await waitFor(async () => {
+    const modal = within(document.body).getByRole(modalRole, { hidden: true });
+    await expect(modal).toBeInTheDocument();
+  });
+};
+```
+
+## Story Naming Convention
+
+Story titles must reflect the **full route hierarchy** including dynamic segments:
+
+```typescript
+// Route: app/projects/[projectDir]/editor/_components/page-sidebar/...
+export default {
+  title: 'Projects/[ProjectDir]/Editor/PageSidebar',  // Include [ProjectDir]!
+  component: PageSidebar,
+};
+
+// Test stories nested under component
+export default {
+  title: 'Projects/[ProjectDir]/Editor/PageSidebar/tests/Interaction Tests',
+  component: PageSidebar,
+};
+```
+
+**Pattern**: Route segments (including dynamic ones like `[projectDir]`) → Storybook hierarchy
+
+## Story Types
+
+**Documentation Stories:**
+- Minimal but interactive
+- Allow users to browse states/modes
+- Use controls/args for interactivity
+
+**Interaction Tests:**
+- Strictly test user interactions (clicks, typing, keyboard navigation)
+- Use `play` functions with `step()` wrapping
+- Assert behavioral outcomes, not just rendering
+
+**Visual Regression Tests:**
+- Minimal stories capturing visual states
+- Trigger pseudo-states (focus, hover, disabled) for untested components
+- Use `storybook-addon-pseudo-states` for hover/focus/active states
+
+## VRT Viewport Selection
+
+**Goal:** Use the minimum viewport size that fits your content to minimize snapshot disk space.
+
+**Available viewports** (defined in `generate-visual-tests.ts`):
+- `mobile1` - 375x667 (iPhone SE)
+- `mobile2` - 414x896 (iPhone 11 Pro Max)
+- `tablet` - 768x1024 (iPad)
+- `undefined` - 1280x720 (Desktop Chrome - default from `defaultGlobals`)
+
+**Strategy:**
+1. Start with the smallest viewport that fits your content
+2. Use `isRotated: true` to get landscape orientation if needed:
+   - `mobile1` rotated = 667x375
+   - `mobile2` rotated = 896x414
+   - `tablet` rotated = 1024x768
+3. If no viewport + rotation fits, omit `viewport` property (uses `undefined` from `defaultGlobals`)
+
+**Examples:**
+
+```typescript
+// Small modal - fits in mobile1 portrait
+export const SmallModal: Story = {
+  globals: {
+    ...defaultGlobals,
+    viewport: { value: "mobile1" },
+  },
+};
+
+// Wide dialog - use mobile1 landscape
+export const WideDialog: Story = {
+  globals: {
+    ...defaultGlobals,
+    viewport: { value: "mobile1", isRotated: true }, // 667x375
+  },
+};
+
+// Large component - needs desktop
+export const LargeGrid: Story = {
+  globals: {
+    ...defaultGlobals,
+    // viewport: undefined from defaultGlobals (1280x720)
+  },
+};
+```
+
+**Note:** Only specify `viewport` when you need mobile/tablet. Desktop is the default and should be omitted.
+
+## Pseudo-States for Tailwind 4
+
+**Problem:** Tailwind 4's `hover:` uses `@media (hover: hover)`, incompatible with `storybook-addon-pseudo-states`
+
+**Solution:** Use `@custom-variant` to make Tailwind generate hover styles for both `:hover` pseudo-class AND `.pseudo-hover` classes.
+
+Already implemented in:
+- `apps/index-pdf-frontend/src/app/globals.css`
+- `packages/yaboujee/src/index.css`
+
+```css
+/* Tailwind 4 workaround: Override hover variant to work with storybook-addon-pseudo-states */
+/* Generate hover styles for both :hover pseudo-class AND .pseudo-hover class */
+@custom-variant hover (&:hover, &.pseudo-hover, .pseudo-hover-all &);
+```
+
+This makes `hover:bg-yellow-400/50` generate CSS that works with:
+1. `&:hover` - Normal hover behavior (production)
+2. `&.pseudo-hover` - When element has `.pseudo-hover` class (addon)
+3. `.pseudo-hover-all &` - When parent has `.pseudo-hover-all` class (addon)
+
+**Usage in components:**
+
+Just use normal Tailwind `hover:` classes - the custom variant handles both production and testing:
+
+```typescript
+<button className="bg-yellow-400/30 hover:bg-yellow-400/50" />
+```
+
+**Usage in VRT stories:**
+
+```typescript
+export const HoverState: Story = {
+  parameters: {
+    pseudo: {
+      hover: ['[data-testid="target-element"]'], // Specific element
+      // OR
+      hover: true, // All hoverable elements
+    },
+  },
+  // If component has CSS transitions, add delay for VRT snapshots
+  play: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  },
+};
+```
+
+**Note:** When pseudo-states trigger CSS transitions (like `transition-colors`), add a `play` function with a delay to ensure transitions complete before Playwright captures the screenshot. Adjust the delay based on your transition duration (e.g., 300ms for most transitions).
+
+## Portal Rendering (Modals/Dialogs)
+
+Components rendering in portals require `within(document.body)`:
+
+```typescript
+await waitFor(async () => {
+  const body = within(document.body);
+  const modal = body.getByRole("dialog", { hidden: true });
+  await expect(modal).toBeInTheDocument();
+});
+```
+
+## Async UI Updates
+
+Use `waitFor` for debounced inputs, animations, or async state:
+
+```typescript
+await waitFor(async () => {
+  const value = (input as HTMLInputElement).value;
+  expect(value).toBe('expected-value');
+}, { timeout: 3000, interval: 100 });
+```
+
+## TypeScript Patterns
+
+**Avoid non-null assertions (`!`):**
+
+```typescript
+// ❌ BAD
+const button = element.closest('button')!;
+
+// ✅ GOOD
+const button = element.closest('button');
+if (!button) throw new Error('Button not found');
+```
+
+**Type casting for DOM methods:**
+
+```typescript
+// For .focus()
+(element as HTMLElement).focus();
+
+// For .value
+(input as HTMLInputElement).value;
+```
+
+## Key Files to Reference
+
+- `apps/index-pdf-frontend/src/test-helpers/interaction-steps.ts` - Shared step functions
+- `apps/index-pdf-frontend/src/app/globals.css` - Pseudo-states CSS workaround
+- Any component's `stories/shared.tsx` - Component-specific fixtures
+
+## Why This Matters
+
+- **Accessibility:** Testing Library priority ensures accessible queries
+- **Maintainability:** Shared steps reduce duplication
+- **Debuggability:** Named steps provide clear test output
+- **Visual Testing:** Pseudo-states capture hover/focus without manual CSS hacks
+- **Type Safety:** Explicit type assertions prevent runtime errors

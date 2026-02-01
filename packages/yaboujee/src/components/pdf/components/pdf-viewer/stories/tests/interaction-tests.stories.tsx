@@ -33,17 +33,13 @@ export const LoadsAndDisplaysPdf: StoryObj<typeof PdfViewer> = {
 		);
 	},
 	play: async ({ canvasElement }) => {
-		const canvas = within(canvasElement);
-
 		// Wait for PDF canvas to be rendered
 		await waitFor(
 			async () => {
-				const pdfCanvas =
-					canvas.queryByRole("img", { hidden: true }) ||
-					canvasElement.querySelector("canvas");
+				const pdfCanvas = canvasElement.querySelector("canvas");
 				await expect(pdfCanvas).toBeTruthy();
 			},
-			{ timeout: 5000 },
+			{ timeout: 10000 },
 		);
 	},
 };

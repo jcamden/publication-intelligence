@@ -33,6 +33,12 @@ gel -I "$INSTANCE" branch create "$BRANCH" --from main
 echo "  Applying migrations..."
 gel -I "$INSTANCE" -b "$BRANCH" migrate
 
+# Clear auth identities for clean test state
+echo "  Clearing auth identities..."
+gel -I "$INSTANCE" -b "$BRANCH" query "DELETE ext::auth::EmailPasswordFactor;" > /dev/null 2>&1 || true
+gel -I "$INSTANCE" -b "$BRANCH" query "DELETE ext::auth::EmailFactor;" > /dev/null 2>&1 || true
+gel -I "$INSTANCE" -b "$BRANCH" query "DELETE ext::auth::Identity;" > /dev/null 2>&1 || true
+
 # Configure auth extension on test branch
 echo "  Configuring auth..."
 

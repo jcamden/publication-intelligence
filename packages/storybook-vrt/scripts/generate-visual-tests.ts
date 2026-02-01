@@ -9,7 +9,13 @@
  *   pnpm generate --package index-pdf-frontend
  */
 
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { join, relative } from "node:path";
 
 type StoryInfo = {
@@ -258,9 +264,11 @@ const generateStoryId = ({
 	title: string;
 	storyName: string;
 }): string => {
-	// Convert "Components/Card/tests/Visual Regression Tests" to "components-card-tests-visual-regression-tests"
+	// Convert "Projects/[ProjectDir]/Editor/tests/Visual Regression Tests" to "projects-projectdir-editor-tests-visual-regression-tests"
+	// Storybook strips brackets from dynamic route segments
 	const titlePart = title
 		.toLowerCase()
+		.replace(/\[|\]/g, "") // Remove brackets from [ProjectDir], [id], etc.
 		.replace(/\//g, "-")
 		.replace(/\s+/g, "-");
 	return `${titlePart}--${storyName}`;
@@ -372,6 +380,16 @@ const main = async () => {
 	}
 
 	console.log(`Found ${allVrtStoryFiles.length} VRT story file(s):\n`);
+
+	// Clean up old tests directory to avoid stale test files
+	try {
+		rmSync(outputDir, { recursive: true, force: true });
+		console.log(
+			`🗑️  Cleaned up old tests: ${relative(process.cwd(), outputDir)}\n`,
+		);
+	} catch (_error) {
+		// Directory might not exist yet - that's fine
+	}
 
 	// Create output directory if it doesn't exist
 	const fs = await import("node:fs/promises");

@@ -125,14 +125,11 @@ ${codeBlock}
 } satisfies Meta<typeof Window>;
 
 export default meta;
-type Story = StoryObj<typeof meta>;
 
 /**
  * Default window from left sidebar
  */
-export const DefaultLeftSide: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const DefaultLeftSide: StoryObj<typeof Window> = {
 	render: () => {
 		const [position, setPosition] = useState({ x: 6.25, y: 6.25 });
 		const [size, setSize] = useState({ width: 25, height: 18.75 });
@@ -171,9 +168,7 @@ export const DefaultLeftSide: Story = {
 /**
  * Window from right sidebar
  */
-export const RightSide: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const RightSide: StoryObj<typeof Window> = {
 	render: () => {
 		const [position, setPosition] = useState({ x: 50, y: 6.25 });
 		const [size, setSize] = useState({ width: 25, height: 18.75 });
@@ -212,9 +207,7 @@ export const RightSide: Story = {
 /**
  * Maximized window
  */
-export const Maximized: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const Maximized: StoryObj<typeof Window> = {
 	render: () => {
 		const [isMaximized, setIsMaximized] = useState(true);
 
@@ -252,9 +245,7 @@ export const Maximized: Story = {
 /**
  * Small window
  */
-export const SmallWindow: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const SmallWindow: StoryObj<typeof Window> = {
 	render: () => {
 		const [position, setPosition] = useState({ x: 6.25, y: 6.25 });
 		const [size, setSize] = useState({ width: 18, height: 12 });
@@ -295,9 +286,7 @@ export const SmallWindow: Story = {
 /**
  * Large window
  */
-export const LargeWindow: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const LargeWindow: StoryObj<typeof Window> = {
 	render: () => {
 		const [position, setPosition] = useState({ x: 6.25, y: 6.25 });
 		const [size, setSize] = useState({ width: 40, height: 30 });
@@ -336,9 +325,7 @@ export const LargeWindow: Story = {
 /**
  * Window with scrollable content
  */
-export const WithScrollableContent: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const WithScrollableContent: StoryObj<typeof Window> = {
 	render: () => {
 		const [position, setPosition] = useState({ x: 6.25, y: 6.25 });
 		const [size, setSize] = useState({ width: 25, height: 18.75 });
@@ -378,9 +365,7 @@ export const WithScrollableContent: Story = {
 /**
  * Multiple windows with z-index
  */
-export const MultipleWindows: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const MultipleWindows: StoryObj<typeof Window> = {
 	render: () => {
 		const [activeWindow, setActiveWindow] = useState("window-1");
 

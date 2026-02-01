@@ -99,9 +99,7 @@ type Story = StoryObj<typeof meta>;
 /**
  * Default non-draggable group with mixed active states
  */
-export const Default: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const Default: StoryObj<typeof StyledToggleButtonGroup> = {
 	render: () => {
 		const [activeIndex, setActiveIndex] = useState(0);
 		const buttons = createMockStyledButtons({
@@ -175,9 +173,7 @@ export const SingleActive: Story = {
 /**
  * Draggable version
  */
-export const Draggable: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const Draggable: StoryObj<typeof StyledToggleButtonGroup> = {
 	render: () => {
 		const [buttons, setButtons] = useState(
 			createMockStyledButtons({ count: 4, activeIndices: [0] }),
@@ -221,9 +217,7 @@ export const Draggable: Story = {
 /**
  * With excluded buttons (first and last locked)
  */
-export const WithExcludeFromDrag: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
+export const WithExcludeFromDrag: StoryObj<typeof StyledToggleButtonGroup> = {
 	render: () => {
 		const [buttons, setButtons] = useState(
 			createMockStyledButtons({ count: 4, activeIndices: [0] }),
@@ -285,43 +279,42 @@ export const ManyButtons: Story = {
 /**
  * Interactive multi-select
  */
-export const InteractiveMultiSelect: Story = {
-	// biome-ignore lint/suspicious/noExplicitAny: custom render function doesn't use args
-	args: {} as any,
-	render: () => {
-		const [activeButtons, setActiveButtons] = useState<number[]>([0]);
+export const InteractiveMultiSelect: StoryObj<typeof StyledToggleButtonGroup> =
+	{
+		render: () => {
+			const [activeButtons, setActiveButtons] = useState<number[]>([0]);
 
-		const buttons = createMockStyledButtons({
-			count: 4,
-			activeIndices: [],
-		}).map((btn, i) => ({
-			...btn,
-			isActive: activeButtons.includes(i),
-			onClick: () => {
-				if (activeButtons.includes(i)) {
-					setActiveButtons(activeButtons.filter((idx) => idx !== i));
-				} else {
-					setActiveButtons([...activeButtons, i]);
-				}
-			},
-		}));
+			const buttons = createMockStyledButtons({
+				count: 4,
+				activeIndices: [],
+			}).map((btn, i) => ({
+				...btn,
+				isActive: activeButtons.includes(i),
+				onClick: () => {
+					if (activeButtons.includes(i)) {
+						setActiveButtons(activeButtons.filter((idx) => idx !== i));
+					} else {
+						setActiveButtons([...activeButtons, i]);
+					}
+				},
+			}));
 
-		return (
-			<div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-				<StyledToggleButtonGroup buttons={buttons} />
-				<div style={{ fontSize: "14px", color: "#666" }}>
-					Active buttons:{" "}
-					{activeButtons.length === 0 ? "none" : activeButtons.join(", ")}
+			return (
+				<div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+					<StyledToggleButtonGroup buttons={buttons} />
+					<div style={{ fontSize: "14px", color: "#666" }}>
+						Active buttons:{" "}
+						{activeButtons.length === 0 ? "none" : activeButtons.join(", ")}
+					</div>
 				</div>
-			</div>
-		);
-	},
-	parameters: {
-		docs: {
-			description: {
-				story:
-					"Interactive example with multiple active states (click buttons to toggle).",
+			);
+		},
+		parameters: {
+			docs: {
+				description: {
+					story:
+						"Interactive example with multiple active states (click buttons to toggle).",
+				},
 			},
 		},
-	},
-};
+	};

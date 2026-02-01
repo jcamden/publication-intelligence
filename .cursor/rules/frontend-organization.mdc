@@ -1,0 +1,225 @@
+# Frontend Organization (index-pdf-frontend only)
+
+## Route-Based Structure
+
+Organize all code by the routes where it's used, co-located with route files in the `app/` directory.
+
+## Core Principles
+
+1. **Co-locate with routes**: Place components, hooks, types, and utilities in the `app/` directory alongside route files
+2. **Underscore prefix for private folders**: Use `_components/`, `_hooks/`, `_types/`, `_atoms/`, `_utils/`, etc. to mark folders as non-route segments (Next.js App Router convention)
+3. **Nearest common ancestor**: Shared code goes in the closest common route ancestor
+4. **`app/_common/` for unrelated routes**: Code shared across routes with no common ancestor OR app-wide infrastructure goes in `app/_common/` (no page.tsx)
+5. **Component nesting**: Nest components under their parent component; shared sibling components go in nearest ancestor's `_components/`
+6. **Route-level exports**: Main route components can export from `index.ts` in their own directory
+
+## Directory Structure Pattern
+
+```
+app/
+├── _common/                          # Shared across unrelated routes (no page.tsx)
+│   └── _components/
+├── {route}/
+│   ├── page.tsx                     # Route file
+│   ├── _components/                 # Components used by this route
+│   │   ├── {component-name}/        # Each component has its own directory
+│   │   │   ├── {component-name}.tsx
+│   │   │   ├── index.ts             # export { ComponentName } from './component-name'
+│   │   │   └── stories/             # Storybook stories
+│   │   │       ├── {component-name}.stories.tsx
+│   │   │       └── tests/
+│   │   │           ├── interaction-tests.stories.tsx
+│   │   │           └── visual-regression-tests.stories.tsx
+│   │   └── {child-component}/       # Child components nested here
+│   ├── _hooks/                      # Route-specific hooks
+│   ├── _types/                      # Route-specific types
+│   ├── _atoms/                      # Route-specific Jotai atoms
+│   └── {nested-route}/              # Nested routes follow same pattern
+│       ├── page.tsx
+│       └── _components/
+```
+
+## Example: Projects Editor Route
+
+```
+app/projects/
+├── page.tsx                         # /projects page
+├── _components/                     # Shared across /projects and /projects/[projectDir]/editor
+│   ├── project-navbar/              # Shared navbar
+│   ├── project-grid/                # Used by projects page
+│   └── project-card/
+├── _hooks/
+│   └── use-authenticated-pdf.ts     # Shared hook
+└── [projectDir]/
+    └── editor/
+        ├── page.tsx                 # /projects/[projectDir]/editor page
+        ├── _components/
+        │   ├── editor/              # Main editor component
+        │   │   ├── editor.tsx
+        │   │   └── index.ts
+        │   ├── project-bar/         # Editor sub-components
+        │   ├── project-sidebar/
+        │   ├── page-bar/
+        │   └── page-sidebar/
+        ├── _hooks/
+        │   └── use-hydrated.ts
+        ├── _atoms/
+        │   └── editor-atoms.ts
+        └── _types/
+            └── mentions.ts
+```
+
+## Import Patterns
+
+Use absolute imports from `app/` directory:
+
+```typescript
+// Importing from same route
+import { Editor } from '@/app/projects/[projectDir]/editor/_components/editor';
+
+// Importing from parent route
+import { ProjectNavbar } from '@/app/projects/_components/project-navbar';
+
+// Importing from different route
+import { LoginForm } from '@/app/login/_components/login-form';
+
+// Importing app-wide shared infrastructure from _common
+import { useAuthToken } from '@/app/_common/_hooks/use-auth';
+import { trpc } from '@/app/_common/_utils/trpc';
+import { ThemeProvider } from '@/app/_common/_providers/theme-provider';
+import { logEvent } from '@/app/_common/_lib/logger';
+
+// Importing other cross-route shared code
+import { SharedComponent } from '@/app/_common/_components/shared-component';
+```
+
+## Storybook Story Naming
+
+Story titles should reflect the **full route hierarchy** including dynamic segments:
+
+```typescript
+// app/login/_components/login-form/stories/login-form.stories.tsx
+export default {
+  title: 'Login/LoginForm',
+  component: LoginForm,
+};
+
+// app/projects/_components/project-navbar/stories/project-navbar.stories.tsx
+export default {
+  title: 'Projects/ProjectNavbar',  // Shared across projects routes
+  component: ProjectNavbar,
+};
+
+// app/projects/[projectDir]/editor/_components/editor/stories/editor.stories.tsx
+export default {
+  title: 'Projects/[ProjectDir]/Editor',  // Include dynamic route segments!
+  component: Editor,
+};
+
+// Sub-components in editor
+export default {
+  title: 'Projects/[ProjectDir]/Editor/SelectionPopover',  // Full hierarchy
+  component: SelectionPopover,
+};
+
+// Test stories (nested under component)
+export default {
+  title: 'Projects/[ProjectDir]/Editor/SelectionPopover/tests/Visual Regression Tests',
+  component: SelectionPopover,
+};
+```
+
+**Key principle**: Dynamic route segments like `[projectDir]`, `[id]`, etc. should appear in story titles to reflect the actual URL structure.
+
+## Shared Infrastructure (`app/_common/`)
+
+All code shared across **unrelated routes** or **app-wide infrastructure** lives in `app/_common/` with underscore prefix.
+
+### What Goes in `_common`
+
+**Application Infrastructure:**
+- `_utils/` - Core infrastructure (e.g., `trpc.ts` for API client setup)
+- `_lib/` - Shared utilities (e.g., `logger.ts`, `theme-script.tsx`)
+- `_providers/` - App-wide providers (e.g., `theme-provider.tsx`, `trpc-provider.tsx`)
+- `_hooks/` - Cross-route hooks (e.g., `use-auth.ts`, `use-theme.ts`)
+- `_types/` - Shared TypeScript types used across multiple routes
+
+**Testing Infrastructure:**
+- `test-helpers/` - Shared interaction test utilities (e.g., `interaction-steps.ts` with reusable `openModal()`)
+- `test-utils/` - Storybook-specific utilities (e.g., `trpc-decorator.tsx`)
+
+**Components:**
+- `_components/` - UI components used across unrelated routes (rare - most components should be route-specific)
+
+### What Does NOT Go in `_common`
+
+**Route-specific code** should live with its route:
+- Components used by one route → `app/{route}/_components/`
+- Hooks used within one feature → `app/{route}/_hooks/`
+- Types specific to a domain → `app/{route}/_types/`
+
+**Shared between related routes** should use nearest common ancestor:
+- Used by `/projects` and `/projects/[projectDir]/editor` → `app/projects/_components/`
+- NOT in `_common`
+
+### Examples
+
+```typescript
+// ✅ GOOD: App-wide infrastructure in _common
+app/_common/_hooks/use-auth.ts              // Used by login, signup, settings, projects
+app/_common/_utils/trpc.ts                  // API client used everywhere
+app/_common/_providers/theme-provider.tsx   // Theme system used app-wide
+app/_common/_lib/logger.ts                  // Logging used everywhere
+
+// ✅ GOOD: Route-specific in route folder
+app/projects/_hooks/use-authenticated-pdf.ts       // Only used in projects routes
+app/projects/[projectDir]/editor/_atoms/editor-atoms.ts  // Only editor state
+
+// ✅ GOOD: Shared between related routes (common ancestor)
+app/projects/_components/project-navbar/    // Used by /projects and /projects/[projectDir]/editor
+
+// ❌ BAD: Route-specific in _common
+app/_common/_hooks/use-project-details.ts   // Should be app/projects/_hooks/
+
+// ❌ BAD: Related routes not using common ancestor
+app/_common/_components/project-sidebar/    // Should be app/projects/_components/
+```
+
+## Decision Tree: Where Should This Code Live?
+
+Ask these questions in order:
+
+### 1. Is it used by only ONE route (including its nested routes)?
+→ **Place it in that route's folder**
+- Example: `use-hydrated.ts` only used in editor → `app/projects/[projectDir]/editor/_hooks/`
+
+### 2. Is it shared between routes with a COMMON ANCESTOR?
+→ **Place it in the nearest common ancestor's folder**
+- Example: `ProjectNavbar` used by `/projects` and `/projects/[projectDir]/editor` → `app/projects/_components/`
+
+### 3. Is it APP-WIDE INFRASTRUCTURE or used across UNRELATED routes?
+→ **Place it in `app/_common/`**
+- Examples:
+  - `use-auth.ts` used by login, signup, settings, projects → `app/_common/_hooks/`
+  - `trpc.ts` (API client) → `app/_common/_utils/`
+  - `theme-provider.tsx` → `app/_common/_providers/`
+  - `logger.ts` → `app/_common/_lib/`
+
+### Quick Reference
+
+| Type | Scope | Location |
+|------|-------|----------|
+| Editor atoms | Only editor route | `app/projects/[projectDir]/editor/_atoms/` |
+| Project navbar | Projects routes | `app/projects/_components/` |
+| Auth hook | Login, signup, settings, projects | `app/_common/_hooks/` |
+| tRPC client | All routes | `app/_common/_utils/` |
+| Theme provider | App-wide | `app/_common/_providers/` |
+| Logger | App-wide | `app/_common/_lib/` |
+
+## Benefits
+
+- **Locality**: Related code lives together
+- **Discoverability**: Easy to find what's used where
+- **Encapsulation**: Private folders signal internal implementation
+- **Scalability**: Routes can grow independently
+- **Refactoring**: Moving/deleting routes is easier when code is co-located
