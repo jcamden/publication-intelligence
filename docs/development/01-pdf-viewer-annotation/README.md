@@ -2,11 +2,16 @@
 
 ## Goal
 
-Build interactive PDF viewer with text selection and highlighting capabilities for linking index entries to source text.
+Build interactive PDF viewer with multi-type mentions, context system, and page numbering for professional indexing workflows.
 
-## User Story
+## User Stories
 
-As an indexer, I want to select text in the PDF and attach it to index entries, so I can create precise, verifiable index mentions that link back to the source document.
+**As an indexer:**
+- I want to create mentions for different index types (subject, author, scripture), so I can generate multiple indices from one document
+- I want to mark a mention as belonging to multiple index types, so it appears in multiple indices
+- I want to define ignore contexts (headers/footers), so they don't interfere with text extraction
+- I want to define page number contexts, so the AI can extract canonical page numbers
+- I want to override page numbers at project or page level, so I can handle complex pagination (Roman numerals, alphabetic, etc.)
 
 ## Phases
 
@@ -29,9 +34,10 @@ As an indexer, I want to select text in the PDF and attach it to index entries, 
 - Per-page filtering and viewport-based conversion
 - Click handlers for highlight interactions
 
-### 🟡 Phase 3: Selection Capture ([phase-3-selection-capture.md](./phase-3-selection-capture.md))
-**Status:** In Progress  
-**Summary:** Annotation mode system + text selection → draft highlights
+### ✅ Phase 3: Selection Capture ([phase-3-selection-capture.md](./phase-3-selection-capture.md))
+**Status:** Complete (needs Phase 4 refactoring)  
+**Completed:** Commit b88f38a (Feb 2, 2026)  
+**Summary:** Text selection and region drawing → draft highlights with coordinate conversion
 
 **Deliverables:**
 - Annotation mode system (view, add-text-highlight, add-region)
@@ -44,15 +50,15 @@ As an indexer, I want to select text in the PDF and attach it to index entries, 
 **Current Blockers:** None  
 **Next Steps:** Complete implementation, test at multiple scales
 
-### ⚪ Phase 4: Highlight Management ([phase-4-highlight-management.md](./phase-4-highlight-management.md))
+### ⚪ Phase 4: Highlight Management ([phase-4-highlight-management/](./phase-4-highlight-management/))
 **Status:** Planning  
 **Summary:** UI for persisting drafts, managing highlights, linking to IndexEntries
 
 **Sub-phases:**
-- 4A: Toolbar UI + Mode Indicators
-- 4B: Mention Creation Flow (draft → persistent)
-- 4C: Highlight CRUD Operations
-- 4D: IndexEntry Connection UI
+- [4A: Sidebar Action Buttons](./phase-4-highlight-management/task-4a-sidebar-actions.md)
+- [4B: Mention Creation Flow](./phase-4-highlight-management/task-4b-mention-creation.md)
+- [4C: Highlight CRUD Operations](./phase-4-highlight-management/task-4c-crud-operations.md)
+- [4D: IndexEntry Connection UI](./phase-4-highlight-management/task-4d-entry-connection.md)
 
 **Dependencies:** Phase 3 completion  
 **Estimated Duration:** 1 week
@@ -62,13 +68,46 @@ As an indexer, I want to select text in the PDF and attach it to index entries, 
 **Summary:** Persist highlights to database, CRUD API integration
 
 **Deliverables:**
-- IndexMention Gel schema
+- IndexMention Gel schema (with multi-type support)
+- IndexEntry Gel schema (typed)
+- Context Gel schema
 - tRPC CRUD endpoints
 - Application adapter (IndexMention ↔ PdfHighlight)
 - Optimistic updates
 - Error handling
 
 **Dependencies:** Phase 4 completion  
+**Estimated Duration:** 3-4 days
+
+### ⚪ Phase 6: Context System ([phase-6-context-system.md](./phase-6-context-system.md))
+**Status:** Not Started  
+**Summary:** Draw regions for ignore/page-number contexts, apply to pages
+
+**Deliverables:**
+- Draw region mode (rectangle drawing)
+- Context creation UI (type, page config)
+- Context management (project sidebar)
+- Page-level context display (page sidebar)
+- Apply to pages configuration (this-page, all-pages, range, custom, every-other)
+- Context visibility toggles
+
+**Dependencies:** Phase 4 completion  
+**Estimated Duration:** 4-5 days
+
+### ⚪ Phase 7: Page Numbering System ([phase-7-page-numbering.md](./phase-7-page-numbering.md))
+**Status:** Not Started  
+**Summary:** Multi-layer page numbering with context extraction and overrides
+
+**Deliverables:**
+- Document page display
+- Context-derived page extraction and display
+- Project-level override UI (editable string)
+- Page-level override UI (single-page)
+- Final page number computation
+- Validation (count, sequence, format)
+- Color-coded display per layer
+
+**Dependencies:** Phase 6 completion  
 **Estimated Duration:** 3-4 days
 
 ## Technical Architecture
@@ -90,11 +129,16 @@ As an indexer, I want to select text in the PDF and attach it to index entries, 
 ## Success Criteria
 
 Epic 1 complete when:
-- ✅ User can select text and create draft highlights
-- ✅ User can attach highlights to IndexEntries
-- ✅ Highlights persist to database
+- ✅ User can select text and draw regions
+- ✅ User can create mentions for different index types
+- ✅ User can mark mentions as multiple types (diagonal stripes)
+- ✅ User can create ignore contexts (exclude from extraction)
+- ✅ User can create page number contexts (auto-extract page numbers)
+- ✅ User can configure contexts to apply to multiple pages
+- ✅ Page numbering system works (4 layers with overrides)
+- ✅ Mentions and contexts persist to database
 - ✅ Highlights render correctly at all zoom levels
-- ✅ User can edit/delete highlights
+- ✅ User can edit/delete mentions and contexts
 - ✅ Round-trip coordinate conversion is accurate (±1pt)
 
 ## Dependencies

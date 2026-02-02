@@ -9,7 +9,20 @@ Persist highlights to Gel database with CRUD operations and optimistic updates.
 
 ## Schema Design
 
-### IndexMention
+### IndexType (Project Configuration)
+```tsx
+type IndexType {
+  required id: uuid;
+  required project: Project;
+  required name: str; // 'subject', 'author', 'scripture', etc.
+  required ordinal: int16; // For default color assignment
+  required color: str; // Hex color
+  required visible: bool; // Toggle in UI
+  created_at: datetime;
+}
+```
+
+### IndexMention (Multi-Type Support)
 ```tsx
 type IndexMention {
   required id: uuid;
@@ -18,63 +31,174 @@ type IndexMention {
   required page_number: int16;
   required bbox_pdf: json; // BoundingBox in PDF user space
   required text_span: str;
-  entry: IndexEntry; // Optional - can create mention before linking to entry
+  required index_types: array<str>; // ['subject', 'author']
+  entry: IndexEntry; // Optional - can create before linking
   created_at: datetime;
   updated_at: datetime;
   deleted_at: datetime; // Soft delete
 }
 ```
 
-### IndexEntry
+### IndexEntry (Typed)
 ```tsx
 type IndexEntry {
   required id: uuid;
   required project: Project;
+  required index_type: str; // 'subject', 'author', etc.
   required label: str;
   parent: IndexEntry; // For hierarchy
   sort_key: str; // Custom alphabetization
   aliases: array<str>; // Alternative names
-  color: str; // Hex color for visual grouping
   metadata: json;
   created_at: datetime;
+}
+```
+
+### Context
+```tsx
+type Context {
+  required id: uuid;
+  required project: Project;
+  required type: str; // 'ignore' | 'page-number'
+  required bbox_pdf: json; // BoundingBox in PDF user space
+  required page_config: json; // { mode, pages?, everyOther?, startPage? }
+  extracted_page_number: str; // For page-number contexts
+  extraction_confidence: str; // 'high' | 'medium' | 'low'
+  required color: str; // Hex color
+  required visible: bool;
+  created_at: datetime;
+  updated_at: datetime;
+}
+```
+
+**page_config JSON structure:**
+```typescript
+{
+  mode: 'this-page' | 'all-pages' | 'range' | 'custom';
+  pages?: string; // "1-50" or "1-2,5-6,8,10-12"
+  everyOther?: boolean;
+  startPage?: number; // For "every other"
+}
+```
+
+### DocumentPage (Multi-Layer Page Numbering)
+```tsx
+type DocumentPage {
+  required id: uuid;
+  required document: SourceDocument;
+  required document_page_number: int16; // Always present
+  context_page_number: str; // From page number context
+  context_extraction_confidence: str; // 'high' | 'medium' | 'low'
+  project_override_page_number: str; // Project-level override
+  page_override_page_number: str; // Single-page override
+  canonical_page_number: str; // Computed
+  required is_indexable: bool; // False if [bracketed]
+  extracted_text: str; // Full page text
+  text_atoms: json; // Word-level bboxes from PyMuPDF
+  created_at: datetime;
+  updated_at: datetime;
+}
+```
+
+### Project (Page Number Override)
+```tsx
+type Project {
+  // ... existing fields
+  page_number_override_string: str; // Full override string
+  page_number_validation_errors: array<str>; // From last validation
 }
 ```
 
 ## tRPC Endpoints
 
 ### Mentions
-- `mention.list` - Get mentions for document/page
-- `mention.create` - Create new mention
-- `mention.update` - Update mention (change entry, text)
+- `mention.list` - Get mentions for document/page (filter by index type)
+- `mention.create` - Create new mention (with index_types array)
+- `mention.update` - Update mention (change entry, text, index types)
+- `mention.updateIndexTypes` - Change which index types a mention belongs to
 - `mention.delete` - Soft delete mention
 - `mention.bulkCreate` - Create multiple mentions
+- `mention.bulkUpdateIndexTypes` - Bulk "Index As" operations
 
 ### Entries
-- `entry.list` - Get all entries for project
-- `entry.create` - Create new entry
+- `entry.list` - Get all entries for project (filter by index type)
+- `entry.create` - Create new entry (with index_type)
 - `entry.update` - Update entry label/hierarchy
 - `entry.delete` - Delete entry (cascade mentions?)
-- `entry.search` - Search/autocomplete entries
+- `entry.search` - Search/autocomplete entries (filter by index type)
+
+### Contexts
+- `context.list` - Get all contexts for project
+- `context.listForPage` - Get contexts applying to specific page
+- `context.create` - Create new context
+- `context.update` - Update context (bbox, page config, color, visibility)
+- `context.delete` - Delete context
+- `context.removeFromPage` - Remove page from context's page config
+- `context.extractPageNumbers` - Trigger page number extraction for page-number contexts
+
+### Index Types
+- `indexType.list` - Get all index types for project
+- `indexType.create` - Create custom index type
+- `indexType.update` - Update index type (name, color, visibility)
+- `indexType.delete` - Delete index type (cascade entries/mentions?)
+- `indexType.reorder` - Change ordinal order
+
+### Pages
+- `page.list` - Get all pages for document (with page numbering)
+- `page.updatePageNumber` - Set page-level override
+- `page.clearPageNumber` - Clear page-level override
+- `page.computeCanonical` - Recompute canonical page numbers for all pages
+
+### Project
+- `project.updatePageNumberString` - Set project-level page number override
+- `project.validatePageNumberString` - Validate override string (returns errors)
 
 ## Application Adapter
 
-**IndexMention → PdfHighlight:**
+**IndexMention → PdfHighlight (with multi-type):**
 ```tsx
-const highlights: PdfHighlight[] = indexMentions.map(mention => ({
-  id: mention.id,
-  pageNumber: mention.page_number,
-  bbox: mention.bbox_pdf, // Keep PDF coordinates
-  label: mention.entry?.label || 'Unlabeled',
-  text: mention.text_span,
-  metadata: {
-    entryId: mention.entry_id,
-    color: mention.entry?.color,
-    createdAt: mention.created_at,
-  },
-}));
+const highlights: PdfHighlight[] = indexMentions.map(mention => {
+  // Get colors for all index types this mention belongs to
+  const colors = mention.index_types.map(typeName => {
+    const indexType = projectIndexTypes.find(t => t.name === typeName);
+    return indexType?.color || '#FCD34D';
+  });
+  
+  return {
+    id: mention.id,
+    pageNumber: mention.page_number,
+    bbox: mention.bbox_pdf, // Keep PDF coordinates
+    label: mention.entry?.label || 'Unlabeled',
+    text: mention.text_span,
+    metadata: {
+      entryId: mention.entry_id,
+      indexTypes: mention.index_types,
+      colors: colors, // Array of colors for multi-type stripes
+      createdAt: mention.created_at,
+    },
+  };
+});
 ```
 
-**Draft → IndexMention:**
+**Context → PdfHighlight (for rendering):**
+```tsx
+const contextHighlights: PdfHighlight[] = contexts
+  .filter(ctx => ctx.visible && appliesToCurrentPage(ctx))
+  .map(ctx => ({
+    id: ctx.id,
+    pageNumber: currentPage,
+    bbox: ctx.bbox_pdf,
+    label: ctx.type === 'ignore' ? 'Ignore Context' : 'Page Number Context',
+    text: ctx.extracted_page_number || '',
+    metadata: {
+      contextType: ctx.type,
+      color: ctx.color,
+      isContext: true, // Flag to render differently
+    },
+  }));
+```
+
+**Draft → IndexMention (with index types):**
 ```tsx
 const createMentionInput = {
   projectId: project.id,
@@ -82,7 +206,8 @@ const createMentionInput = {
   pageNumber: draft.pageNumber,
   bboxPdf: draft.bbox, // Already in PDF user space
   textSpan: draft.text,
-  entryId: selectedEntry.id, // From Phase 4 UI
+  entryId: selectedEntry.id,
+  indexTypes: selectedIndexTypes, // ['subject', 'author']
 };
 
 await createMention.mutateAsync(createMentionInput);

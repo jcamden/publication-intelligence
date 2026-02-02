@@ -1,38 +1,45 @@
 # Phase 3: Selection Capture
 
-**Status:** In Progress  
-**Plan Doc:** `~/.cursor/plans/pdf_selection_capture_phase3.plan.md`
+**Status:** ✅ Complete (needs Phase 4 refactoring)  
+**Completed:** Commit b88f38a (Feb 2, 2026)  
+**Plan Doc:** `~/.cursor/plans/pdf_selection_capture_phase3.plan.md`  
+**Status Doc:** [PHASE-3-STATUS.md](./PHASE-3-STATUS.md)
 
 ## Overview
 
-Implement annotation mode system and capture user text selections to create draft highlights.
+Enable text selection and region drawing capabilities in PdfViewer. Activated transiently from sidebar buttons (Phase 4), not persistent modes.
 
 ## Key Features
 
-- Annotation mode system (view, add-text-highlight, add-region)
-- Mode-based layer control (CSS pointer-events toggle)
+- Text layer pointer-events control (enabled only when selecting)
+- Region drawing capability (click-drag to draw bbox)
 - Text selection event handlers
 - DOM → PDF coordinate conversion
 - Draft highlight state with visual styling
 - onCreateDraftHighlight callback
+- Auto-revert to view mode after creation
 
 ## Implementation Status
 
-### ✅ Complete
-- Annotation mode type definition
-- Mode-based layer control concept
-
-### 🟡 In Progress
-- Selection event handlers
+### ✅ Complete (Commit b88f38a)
+- Text selection event handlers
+- Region drawing interaction (click-drag with live preview)
 - convertDomRectToPdf helper
 - convertSelectionToPdfBbox (multi-rect union)
-- Draft highlight state
-- Keyboard handlers (Escape to cancel)
+- Draft highlight state and visual styling
+- Escape key handler (cancel draft)
+- Pointer-events control for layers
+- VRT and interaction tests
 
-### ⚪ Todo
-- Testing at multiple scales
-- Round-trip conversion validation
-- Edge case handling
+### ⚠️ Needs Refactoring (Phase 4)
+- Replace `annotationMode` prop with `textLayerInteractive`/`regionDrawingActive`
+- Update pointer-events logic for sidebar-based activation
+- Add auto-revert after draft creation
+
+### ⚪ Minor Improvements
+- Add scale-independence test (test at 0.75x, 1.0x, 1.5x, 2.0x)
+- Add round-trip conversion validation test
+- Document region drawing interaction test (currently manual)
 
 ## Technical Details
 
@@ -45,16 +52,17 @@ viewport.convertToViewportRectangle([x1, y1, x2, y2])
 viewport.convertToPdfPoint(x, y)
 ```
 
-**Mode-Based Layer Interaction:**
+**Layer Interaction Control:**
 ```tsx
-// Text layer: selectable ONLY in add-text-highlight mode
+// Text layer: selectable when activated from sidebar button
 <div style={{
-  pointerEvents: annotationMode === 'add-text-highlight' ? 'auto' : 'none'
+  pointerEvents: textLayerInteractive ? 'auto' : 'none'
 }} />
 
-// Highlight layer: clickable ONLY in view mode
+// Highlight layer: clickable by default (view mode)
+// Disabled when text selection or region drawing active
 <PdfHighlightLayer style={{
-  pointerEvents: annotationMode === 'view' ? 'auto' : 'none'
+  pointerEvents: (!textLayerInteractive && !regionDrawingActive) ? 'auto' : 'none'
 }} />
 ```
 
@@ -64,12 +72,14 @@ viewport.convertToPdfPoint(x, y)
 
 ## Testing Requirements
 
-- [ ] Single-line selection works
+- [ ] Text selection works when activated
+- [ ] Region drawing works when activated
+- [ ] Single-line selection captures correctly
 - [ ] Multi-line selection creates union bbox
 - [ ] Coordinates scale-independent (same at 0.75x and 2.0x)
 - [ ] Escape key clears draft
 - [ ] Round-trip conversion accurate (±1pt tolerance)
-- [ ] Mode switching clean (no stale state)
+- [ ] Auto-revert to view mode after draft creation
 
 ## Next Phase
 

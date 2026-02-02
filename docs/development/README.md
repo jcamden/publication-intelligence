@@ -8,33 +8,36 @@ Build an AI-assisted PDF indexing tool that helps professional indexers create h
 
 **Core Workflow:**
 1. Upload PDF manuscript
-2. AI generates candidate index entries
-3. User reviews/edits entries interactively
-4. User links entries to PDF text via highlights
-5. Export formatted index
+2. Configure project (index types, colors, page numbering)
+3. Set up contexts (ignore regions, page number extraction)
+4. AI generates candidate index entries per type
+5. User reviews/edits entries interactively
+6. User links entries to PDF text via highlights (can index as multiple types)
+7. Export formatted indices (separate per type)
 
 ## Epics & Status
 
 ### 1. [PDF Viewer & Annotation](./01-pdf-viewer-annotation/) 🟡 In Progress
-Interactive PDF viewer with text selection and highlighting for linking index entries to source text.
+Interactive PDF viewer with multi-type mentions, contexts, and page numbering system.
 
-**Status:** Phase 3/5 in progress  
+**Status:** Phase 3 complete, Phase 4 next  
+**Completed:** Phase 1 (Text Layer), Phase 2 (Rendering), Phase 3 (Selection Capture)  
 **Priority:** P0 (Critical path)
 
 ### 2. [Concept Detection & Indexing](./02-concept-detection/) ⚪ Not Started
-AI-powered concept extraction and index entry generation from PDF text.
+AI-powered concept extraction and index entry generation per index type, respecting ignore contexts.
 
 **Status:** Waiting on PDF viewer completion  
 **Priority:** P0 (Critical path)
 
 ### 3. [Index Editor](./03-index-editor/) ⚪ Not Started
-Tree-based editor for managing index entries, hierarchy, and cross-references.
+Tree-based editor with tabs per index type, managing entries, hierarchy, and cross-references.
 
 **Status:** Waiting on concept detection  
 **Priority:** P0 (Critical path)
 
 ### 4. [Export & Publishing](./04-export-publishing/) ⚪ Not Started
-Format and export index in multiple formats (Word, LaTeX, plain text).
+Format and export each index type separately in HTML (MVP) or Word/LaTeX (post-MVP).
 
 **Status:** Can start in parallel with editor work  
 **Priority:** P1 (Required for MVP)
@@ -48,9 +51,11 @@ Core services: auth, projects, document storage, database schema.
 ## Current Sprint
 
 **Focus:** Epic 1 - PDF Viewer & Annotation  
-**Active Tasks:**
-- Phase 3: Selection Capture (implementing)
-- Phase 4: Highlight Management UI (planning)
+**Completed:**
+- ✅ Phase 3: Selection Capture (commit b88f38a)
+
+**Next Up:**
+- Phase 4: Highlight Management UI (sidebar actions + multi-type system)
 
 ## Next 2 Weeks
 
@@ -77,11 +82,15 @@ Infrastructure (5) ─┬─> PDF Viewer (1) ──> Concept Detection (2) ─�
 
 MVP is complete when:
 - ✅ User can upload PDF
-- ✅ AI generates candidate index entries
-- ✅ User can review entries in tree view
+- ✅ User can configure index types and colors
+- ✅ User can set up contexts (ignore, page numbers)
+- ✅ AI generates candidate entries per index type
+- ✅ User can review entries in tree view (tabs per type)
 - ✅ User can link entries to PDF text via highlights
+- ✅ User can index mentions as multiple types
 - ✅ User can edit/merge/delete entries
-- ✅ User can export formatted index
+- ✅ User can export formatted indices (HTML copy/paste)
+- ✅ Page numbering system works (context → project → page overrides)
 - ✅ 3 real indexers complete a book with the tool
 
 ## Out of Scope (Post-MVP)
