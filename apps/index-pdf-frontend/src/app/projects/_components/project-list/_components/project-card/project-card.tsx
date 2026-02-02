@@ -11,6 +11,7 @@ import {
 import { PdfThumbnail } from "@pubint/yaboujee";
 import { FileIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
+import { API_URL } from "@/app/_common/_config/api";
 import { useAuthenticatedPdf } from "@/app/projects/_hooks/use-authenticated-pdf";
 
 export type ProjectCardProps = {
@@ -41,7 +42,7 @@ const formatFileSize = (bytes: number): string => {
 
 export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
 	const fileUrl = project.source_document
-		? `http://localhost:3001/source-documents/${project.source_document.id}/file`
+		? `${API_URL}/source-documents/${project.source_document.id}/file`
 		: null;
 
 	const { blobUrl, isLoading } = useAuthenticatedPdf({ url: fileUrl });
@@ -62,8 +63,11 @@ export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
 				<Trash2Icon className="h-4 w-4" />
 			</Button>
 
-			<Link href={`/projects/${project.project_dir}/editor`} className="block">
-				<div className="aspect-[1/1.414] bg-muted overflow-hidden">
+			<Link
+				href={`/projects/${project.project_dir}/editor`}
+				className="flex flex-row items-start gap-4 p-4"
+			>
+				<div className="w-24 h-32 bg-muted overflow-hidden flex-shrink-0 rounded">
 					{isLoading ? (
 						<div className="flex items-center justify-center h-full">
 							<div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -72,34 +76,34 @@ export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
 						<PdfThumbnail source={blobUrl} alt={project.title} />
 					) : (
 						<div className="flex items-center justify-center h-full text-muted-foreground">
-							<FileIcon className="h-16 w-16" />
+							<FileIcon className="h-12 w-12" />
 						</div>
 					)}
 				</div>
 
-				<CardHeader>
-					<CardTitle className="line-clamp-1">{project.title}</CardTitle>
-					{project.description && (
-						<CardDescription className="line-clamp-2">
-							{project.description}
-						</CardDescription>
-					)}
-				</CardHeader>
-
-				{project.source_document && (
-					<CardContent className="text-xs text-muted-foreground space-y-1">
-						<div className="flex items-center justify-between">
-							<span>Pages:</span>
-							<span>{project.source_document.page_count ?? "—"}</span>
-						</div>
-						{project.source_document.file_size && (
-							<div className="flex items-center justify-between">
-								<span>Size:</span>
-								<span>{formatFileSize(project.source_document.file_size)}</span>
-							</div>
+				<div className="flex-1 min-w-0">
+					<CardHeader className="p-0 space-y-1.5 mb-3">
+						<CardTitle className="line-clamp-2">{project.title}</CardTitle>
+						{project.description && (
+							<CardDescription className="line-clamp-2">
+								{project.description}
+							</CardDescription>
 						)}
-					</CardContent>
-				)}
+					</CardHeader>
+
+					{project.source_document && (
+						<CardContent className="p-0 text-xs text-muted-foreground space-y-1">
+							<div className="flex items-center gap-4">
+								<span>Pages: {project.source_document.page_count ?? "—"}</span>
+								{project.source_document.file_size && (
+									<span>
+										Size: {formatFileSize(project.source_document.file_size)}
+									</span>
+								)}
+							</div>
+						</CardContent>
+					)}
+				</div>
 			</Link>
 		</Card>
 	);

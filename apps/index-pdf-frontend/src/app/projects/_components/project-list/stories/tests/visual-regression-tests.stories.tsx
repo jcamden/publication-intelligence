@@ -3,17 +3,17 @@ import {
 	visualRegressionTestConfig,
 } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ProjectGrid } from "../../project-grid";
+import { ProjectList } from "../../project-list";
 
 export default {
-	title: "Projects/ProjectGrid/tests/Visual Regression Tests",
-	component: ProjectGrid,
+	title: "Projects/ProjectList/tests/Visual Regression Tests",
+	component: ProjectList,
 	tags: ["visual-regression"],
 	parameters: {
 		...visualRegressionTestConfig,
 		layout: "padded",
 	},
-} satisfies Meta<typeof ProjectGrid>;
+} satisfies Meta<typeof ProjectList>;
 
 const mockProjects = [
 	{
@@ -60,7 +60,7 @@ const mockProjects = [
 	},
 ];
 
-export const DefaultLight: StoryObj<typeof ProjectGrid> = {
+export const DefaultLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
@@ -72,7 +72,7 @@ export const DefaultLight: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const DefaultDark: StoryObj<typeof ProjectGrid> = {
+export const DefaultDark: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
@@ -87,7 +87,7 @@ export const DefaultDark: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const EmptyStateLight: StoryObj<typeof ProjectGrid> = {
+export const EmptyStateLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: false,
@@ -100,7 +100,7 @@ export const EmptyStateLight: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const EmptyStateDark: StoryObj<typeof ProjectGrid> = {
+export const EmptyStateDark: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: false,
@@ -116,7 +116,7 @@ export const EmptyStateDark: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const LoadingStateLight: StoryObj<typeof ProjectGrid> = {
+export const LoadingStateLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: true,
@@ -128,7 +128,7 @@ export const LoadingStateLight: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const MobileLight: StoryObj<typeof ProjectGrid> = {
+export const MobileLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
@@ -141,7 +141,7 @@ export const MobileLight: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const TabletLight: StoryObj<typeof ProjectGrid> = {
+export const TabletLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,

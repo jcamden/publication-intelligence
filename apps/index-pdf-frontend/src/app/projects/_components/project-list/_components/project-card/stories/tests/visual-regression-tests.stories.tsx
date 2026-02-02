@@ -6,7 +6,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { ProjectCard } from "../../project-card";
 
 export default {
-	title: "Projects/ProjectCard/tests/Visual Regression Tests",
+	title: "Projects/ProjectList/ProjectCard/tests/Visual Regression Tests",
 	component: ProjectCard,
 	tags: ["visual-regression"],
 	parameters: {
@@ -15,7 +15,7 @@ export default {
 	},
 	decorators: [
 		(Story) => (
-			<div className="w-[350px]">
+			<div className="w-[800px]">
 				<Story />
 			</div>
 		),

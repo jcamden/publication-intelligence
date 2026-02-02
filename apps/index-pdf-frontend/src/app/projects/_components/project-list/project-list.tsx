@@ -2,9 +2,9 @@
 
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { ProjectCard } from "../project-card";
+import { ProjectCard } from "./_components/project-card";
 
-export type ProjectGridProps = {
+export type ProjectListProps = {
 	projects?: Array<{
 		id: string;
 		title: string;
@@ -25,16 +25,17 @@ export type ProjectGridProps = {
 };
 
 const LoadingSkeleton = () => (
-	<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+	<div className="flex flex-col gap-4">
 		{Array.from({ length: 8 }, (_, i) => `skeleton-${i}`).map((key) => (
 			<div
 				key={key}
-				className="rounded-lg border border-input overflow-hidden animate-pulse"
+				className="rounded-lg border border-input overflow-hidden animate-pulse flex flex-row items-start gap-4 p-4"
 			>
-				<div className="aspect-[1/1.414] bg-muted" />
-				<div className="p-4 space-y-3">
+				<div className="w-24 h-32 bg-muted rounded flex-shrink-0" />
+				<div className="flex-1 space-y-3 py-2">
 					<div className="h-5 bg-muted rounded" />
 					<div className="h-4 bg-muted rounded w-2/3" />
+					<div className="h-3 bg-muted rounded w-1/3" />
 				</div>
 			</div>
 		))}
@@ -57,12 +58,12 @@ const EmptyState = ({ onCreateClick }: { onCreateClick?: () => void }) => (
 	</div>
 );
 
-export const ProjectGrid = ({
+export const ProjectList = ({
 	projects,
 	isLoading,
 	onDeleteClick,
 	onCreateClick,
-}: ProjectGridProps) => {
+}: ProjectListProps) => {
 	if (isLoading) {
 		return <LoadingSkeleton />;
 	}
@@ -72,7 +73,7 @@ export const ProjectGrid = ({
 	}
 
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+		<div className="flex flex-col gap-4">
 			{projects.map((project) => (
 				<ProjectCard
 					key={project.id}

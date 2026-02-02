@@ -22,12 +22,5 @@ const windowFrameClassNames: Record<Edge, string> = {
 };
 
 export const WindowFrame = ({ edge }: WindowFrameProps) => {
-	return (
-		<div
-			className={cn(
-				"sticky bg-white dark:bg-neutral-900",
-				windowFrameClassNames[edge],
-			)}
-		/>
-	);
+	return <div className={cn("sticky", windowFrameClassNames[edge])} />;
 };

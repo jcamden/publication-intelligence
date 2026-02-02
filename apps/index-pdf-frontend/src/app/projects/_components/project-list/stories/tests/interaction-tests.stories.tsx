@@ -1,17 +1,17 @@
 import { interactionTestConfig } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
-import { ProjectGrid } from "../../project-grid";
+import { ProjectList } from "../../project-list";
 
 export default {
-	title: "Projects/ProjectGrid/tests/Interaction Tests",
-	component: ProjectGrid,
+	title: "Projects/ProjectList/tests/Interaction Tests",
+	component: ProjectList,
 	tags: ["interaction-test"],
 	parameters: {
 		...interactionTestConfig,
 		layout: "padded",
 	},
-} satisfies Meta<typeof ProjectGrid>;
+} satisfies Meta<typeof ProjectList>;
 
 const mockProjects = [
 	{
@@ -58,7 +58,7 @@ const mockProjects = [
 	},
 ];
 
-export const DisplaysProjects: StoryObj<typeof ProjectGrid> = {
+export const DisplaysProjects: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
@@ -76,7 +76,7 @@ export const DisplaysProjects: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const ShowsLoadingState: StoryObj<typeof ProjectGrid> = {
+export const ShowsLoadingState: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: true,
@@ -89,7 +89,7 @@ export const ShowsLoadingState: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const ShowsEmptyState: StoryObj<typeof ProjectGrid> = {
+export const ShowsEmptyState: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: false,
@@ -111,7 +111,7 @@ export const ShowsEmptyState: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const DeleteButtonsWork: StoryObj<typeof ProjectGrid> = {
+export const DeleteButtonsWork: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
@@ -136,7 +136,7 @@ export const DeleteButtonsWork: StoryObj<typeof ProjectGrid> = {
 	},
 };
 
-export const ProjectCardsAreClickable: StoryObj<typeof ProjectGrid> = {
+export const ProjectCardsAreClickable: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,

@@ -7,7 +7,7 @@ import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { CreateProjectModal } from "./_components/create-project-modal";
 import { DeleteProjectDialog } from "./_components/delete-project-dialog";
-import { ProjectGrid } from "./_components/project-grid";
+import { ProjectList } from "./_components/project-list";
 import { ProjectNavbar } from "./_components/project-navbar";
 
 export default function ProjectsPage() {
@@ -74,7 +74,7 @@ export default function ProjectsPage() {
 			<div className="container mx-auto p-6">
 				<header className="flex justify-between items-center mb-8">
 					<div>
-						<h1 className="text-3xl font-bold">Projects</h1>
+						<h1 className="text-3xl font-bold font-merriweather">Projects</h1>
 						<p className="text-muted-foreground">
 							Manage your publication index projects
 						</p>
@@ -84,7 +84,7 @@ export default function ProjectsPage() {
 					</Button>
 				</header>
 
-				<ProjectGrid
+				<ProjectList
 					projects={projectsQuery.data}
 					isLoading={projectsQuery.isLoading}
 					onDeleteClick={setProjectToDelete}

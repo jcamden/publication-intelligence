@@ -3,7 +3,7 @@ import { fn } from "@storybook/test";
 import { ProjectCard } from "../project-card";
 
 const meta = {
-	title: "Projects/ProjectCard",
+	title: "Projects/ProjectList/ProjectCard",
 	component: ProjectCard,
 	parameters: {
 		layout: "centered",
@@ -36,56 +36,56 @@ export const Default: Story = {
 	},
 };
 
-export const GridLayout: StoryObj<typeof ProjectCard> = {
+export const ListLayout: StoryObj<typeof ProjectCard> = {
 	render: () => (
-		<div className="grid grid-cols-3 gap-4 max-w-[900px]">
+		<div className="flex flex-col gap-4 max-w-[800px]">
 			<ProjectCard
 				project={{
-					id: "grid-1",
+					id: "list-1",
 					title: "Commentary 1",
 					description: "First commentary",
 					project_dir: "commentary-1",
 					source_document: {
-						id: "doc-g1",
+						id: "doc-l1",
 						title: "Commentary 1",
 						file_name: "commentary1.pdf",
 						file_size: 10485760,
 						page_count: 250,
-						storage_key: "storage-key-g1",
+						storage_key: "storage-key-l1",
 					},
 				}}
 				onDelete={fn()}
 			/>
 			<ProjectCard
 				project={{
-					id: "grid-2",
+					id: "list-2",
 					title: "Commentary 2",
 					description: "Second commentary",
 					project_dir: "commentary-2",
 					source_document: {
-						id: "doc-g2",
+						id: "doc-l2",
 						title: "Commentary 2",
 						file_name: "commentary2.pdf",
 						file_size: 15728640,
 						page_count: 380,
-						storage_key: "storage-key-g2",
+						storage_key: "storage-key-l2",
 					},
 				}}
 				onDelete={fn()}
 			/>
 			<ProjectCard
 				project={{
-					id: "grid-3",
+					id: "list-3",
 					title: "Commentary 3",
 					description: null,
 					project_dir: "commentary-3",
 					source_document: {
-						id: "doc-g3",
+						id: "doc-l3",
 						title: "Commentary 3",
 						file_name: "commentary3.pdf",
 						file_size: 8388608,
 						page_count: 195,
-						storage_key: "storage-key-g3",
+						storage_key: "storage-key-l3",
 					},
 				}}
 				onDelete={fn()}

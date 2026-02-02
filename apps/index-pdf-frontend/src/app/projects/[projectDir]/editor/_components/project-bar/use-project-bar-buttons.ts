@@ -5,7 +5,6 @@ import { useAtom, useAtomValue } from "jotai";
 import {
 	Book,
 	BookOpen,
-	ChevronLeft,
 	ChevronRight,
 	File,
 	Filter,
@@ -170,9 +169,7 @@ export const useProjectBarButtons = (): {
 	const buttons: StyledToggleButton[] = [
 		{
 			name: "toggleSidebar",
-			icon: (projectSidebarCollapsed
-				? ChevronRight
-				: ChevronLeft) as LucideIcon,
+			icon: ChevronRight as LucideIcon,
 			isActive: !projectSidebarCollapsed,
 			onClick: handleSidebarToggle,
 			tooltip: projectSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar",

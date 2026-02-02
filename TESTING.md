@@ -63,6 +63,8 @@ describe("myFunction", () => {
 
 Testing with **Storybook** for component development and documentation, plus **Playwright** for visual regression testing.
 
+**📖 See [Frontend Testing Strategy](./apps/index-pdf-frontend/TESTING-STRATEGY.md) for detailed guidance on when to use unit tests vs Storybook vs E2E tests.**
+
 ### Package
 
 - `@pubint/index-pdf-frontend` - Next.js frontend

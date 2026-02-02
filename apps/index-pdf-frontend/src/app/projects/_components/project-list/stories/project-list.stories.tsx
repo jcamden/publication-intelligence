@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
-import { ProjectGrid } from "../project-grid";
+import { ProjectList } from "../project-list";
 
 const meta = {
-	title: "Projects/ProjectGrid",
-	component: ProjectGrid,
+	title: "Projects/ProjectList",
+	component: ProjectList,
 	parameters: {
 		layout: "padded",
 	},
 	tags: ["autodocs"],
-} satisfies Meta<typeof ProjectGrid>;
+} satisfies Meta<typeof ProjectList>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -200,21 +200,21 @@ export const ResponsiveLayout: Story = {
 	render: (args) => (
 		<div className="space-y-8">
 			<div>
-				<h3 className="text-lg font-semibold mb-4">Mobile (1 column)</h3>
+				<h3 className="text-lg font-semibold mb-4">Mobile</h3>
 				<div className="max-w-[400px]">
-					<ProjectGrid {...args} />
+					<ProjectList {...args} />
 				</div>
 			</div>
 			<div>
-				<h3 className="text-lg font-semibold mb-4">Tablet (2 columns)</h3>
+				<h3 className="text-lg font-semibold mb-4">Tablet</h3>
 				<div className="max-w-[768px]">
-					<ProjectGrid {...args} />
+					<ProjectList {...args} />
 				</div>
 			</div>
 			<div>
-				<h3 className="text-lg font-semibold mb-4">Desktop (3 columns)</h3>
+				<h3 className="text-lg font-semibold mb-4">Desktop</h3>
 				<div className="max-w-[1200px]">
-					<ProjectGrid {...args} />
+					<ProjectList {...args} />
 				</div>
 			</div>
 		</div>
@@ -227,8 +227,7 @@ export const ResponsiveLayout: Story = {
 	parameters: {
 		docs: {
 			description: {
-				story:
-					"Grid layout adapts to different screen sizes: 1 column on mobile, 2 on tablet, 3 on desktop",
+				story: "List layout shown at different viewport widths",
 			},
 		},
 	},

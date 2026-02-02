@@ -4,7 +4,7 @@ import { expect, userEvent, within } from "@storybook/test";
 import { ProjectCard } from "../../project-card";
 
 export default {
-	title: "Projects/ProjectCard/tests/Interaction Tests",
+	title: "Projects/ProjectList/ProjectCard/tests/Interaction Tests",
 	component: ProjectCard,
 	tags: ["interaction-test"],
 	parameters: {

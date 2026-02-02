@@ -4,6 +4,7 @@ import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import type { ReactNode } from "react";
 import React from "react";
+import { API_URL } from "../../_config/api";
 import { trpc } from "../../_utils/trpc";
 
 const queryClient = new QueryClient({
@@ -46,7 +47,7 @@ const mockRouter: AppRouterInstance = {
 const mockTrpcClient = trpc.createClient({
 	links: [
 		httpLink({
-			url: "http://localhost:3001/trpc",
+			url: `${API_URL}/trpc`,
 			fetch: async () => {
 				// Return a mock response
 				return new Response(

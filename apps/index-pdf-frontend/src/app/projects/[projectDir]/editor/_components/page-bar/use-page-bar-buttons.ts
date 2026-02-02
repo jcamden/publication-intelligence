@@ -6,7 +6,6 @@ import {
 	Book,
 	BookOpen,
 	ChevronLeft,
-	ChevronRight,
 	Filter,
 	Info,
 	type LucideIcon,
@@ -173,7 +172,7 @@ export const usePageBarButtons = (): {
 		...sectionButtons,
 		{
 			name: "toggleSidebar",
-			icon: (pageSidebarCollapsed ? ChevronLeft : ChevronRight) as LucideIcon,
+			icon: ChevronLeft as LucideIcon,
 			isActive: !pageSidebarCollapsed,
 			onClick: handleSidebarToggle,
 			tooltip: pageSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar",

@@ -16,13 +16,8 @@ export type ProjectNavbarProps = {
 	theme?: Theme;
 	onThemeToggle?: () => void;
 	onSignOutClick?: () => void;
+	showOnlyProjectsLink?: boolean;
 };
-
-const navItems = [
-	{ label: "Editor", href: "/projects/editor" },
-	{ label: "Index", href: "/projects/index" },
-	{ label: "Projects", href: "/projects" },
-];
 
 export const ProjectNavbar = ({
 	userName,
@@ -31,9 +26,32 @@ export const ProjectNavbar = ({
 	theme = "light",
 	onThemeToggle,
 	onSignOutClick,
+	showOnlyProjectsLink = false,
 }: ProjectNavbarProps) => {
 	const pathname = usePathname();
 	const router = useRouter();
+
+	const isProjectSpecificRoute =
+		pathname.startsWith("/projects/") && pathname !== "/projects";
+
+	const projectDir = pathname.match(/^\/projects\/([^/]+)/)?.[1];
+
+	const navItems = [
+		{
+			label: "Editor",
+			href: projectDir ? `/projects/${projectDir}/editor` : "/projects/editor",
+		},
+		{
+			label: "Index",
+			href: projectDir ? `/projects/${projectDir}/index` : "/projects/index",
+		},
+		{ label: "Projects", href: "/projects" },
+	];
+
+	const shouldShowNav = showOnlyProjectsLink || isProjectSpecificRoute;
+	const itemsToShow = showOnlyProjectsLink
+		? navItems.filter((item) => item.label === "Projects")
+		: navItems;
 
 	const handleSettingsClick = () => {
 		router.push("/settings");
@@ -59,23 +77,25 @@ export const ProjectNavbar = ({
 					<Logo variant="gradient" size="sm" />
 				</Link>
 				<div className="flex items-center gap-6">
-					<div className="flex items-center gap-1">
-						{navItems.map((item) => {
-							const isActive = pathname === item.href;
-							return (
-								<Link
-									key={item.href}
-									href={item.href}
-									className={cn(
-										"text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors",
-										isActive && "bg-muted text-foreground",
-									)}
-								>
-									{item.label}
-								</Link>
-							);
-						})}
-					</div>
+					{shouldShowNav && (
+						<div className="flex items-center gap-1">
+							{itemsToShow.map((item) => {
+								const isActive = pathname === item.href;
+								return (
+									<Link
+										key={item.href}
+										href={item.href}
+										className={cn(
+											"text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium transition-colors",
+											isActive && "bg-muted text-foreground",
+										)}
+									>
+										{item.label}
+									</Link>
+								);
+							})}
+						</div>
+					)}
 					{onThemeToggle && (
 						<ThemeToggle theme={theme} onToggle={onThemeToggle} />
 					)}

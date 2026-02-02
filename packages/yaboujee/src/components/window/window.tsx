@@ -101,7 +101,7 @@ export const Window = ({
 			disableDragging={isMaximized}
 			enableResizing={!isMaximized}
 		>
-			<Card className="overflow-hidden p-0 h-full flex flex-col">
+			<Card className="overflow-hidden p-0 h-full flex flex-col shadow-md dark:shadow-none! dark:bg-neutral-800 dark:border-1 dark:border-neutral-500">
 				<WindowTopBar
 					title={title}
 					isMaximized={isMaximized}

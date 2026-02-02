@@ -13,6 +13,7 @@ import { PdfFileUpload, PdfThumbnail } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { API_URL } from "@/app/_common/_config/api";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { trpc } from "@/app/_common/_utils/trpc";
 
@@ -126,7 +127,7 @@ export const ProjectForm = ({
 				formData.append("title", selectedFile.name);
 
 				const response = await fetch(
-					`http://localhost:3001/projects/${project.id}/source-documents/upload`,
+					`${API_URL}/projects/${project.id}/source-documents/upload`,
 					{
 						method: "POST",
 						headers: {

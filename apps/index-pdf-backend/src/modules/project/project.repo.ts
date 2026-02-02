@@ -135,26 +135,33 @@ export const getProjectByDir = async ({
 }: {
 	gelClient: Client;
 	projectDir: string;
-}): Promise<Project | null> => {
+}): Promise<ProjectListItem | null> => {
 	// Use raw EdgeQL to ensure access policies are respected
-	const project = await gelClient.querySingle<Project | null>(
+	// Returns source_document info needed for editor
+	// Prioritize owned projects over collaborated projects, then most recent
+	const project = await gelClient.querySingle<ProjectListItem | null>(
 		`
 		SELECT Project {
 			id,
 			title,
 			description,
 			project_dir,
-			workspace: { id },
-			owner: { id, email },
-			collaborators: { id, email },
+			entry_count,
 			created_at,
 			updated_at,
-			deleted_at,
-			has_document,
-			entry_count,
-			is_deleted
+			source_document: {
+				id,
+				title,
+				file_name,
+				file_size,
+				page_count,
+				storage_key,
+				status
+			}
 		}
 		FILTER .project_dir = <str>$projectDir AND NOT EXISTS .deleted_at
+		ORDER BY .owner.id = global current_user_id DESC THEN .created_at DESC
+		LIMIT 1
 	`,
 		{ projectDir },
 	);

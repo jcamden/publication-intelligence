@@ -23,15 +23,23 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Test navigation links are clickable
+ * Test navigation links are visible and clickable on project-specific routes
  */
-export const NavigationLinks: Story = {
+export const NavigationLinksInProjectRoute: Story = {
 	args: {
 		userName: "John Doe",
 		userEmail: "john@example.com",
 		theme: "light",
 		onThemeToggle: fn(),
 		onSignOutClick: fn(),
+	},
+	parameters: {
+		nextjs: {
+			appDirectory: true,
+			navigation: {
+				pathname: "/projects/my-book/editor",
+			},
+		},
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
@@ -44,6 +52,20 @@ export const NavigationLinks: Story = {
 			await expect(editorLink).toBeVisible();
 			await expect(indexLink).toBeVisible();
 			await expect(projectsLink).toBeVisible();
+		});
+
+		await step("Verify dynamic links use correct projectDir", async () => {
+			const editorLink = canvas.getByRole("link", { name: /editor/i });
+			const indexLink = canvas.getByRole("link", { name: /^index$/i });
+
+			await expect(editorLink).toHaveAttribute(
+				"href",
+				"/projects/my-book/editor",
+			);
+			await expect(indexLink).toHaveAttribute(
+				"href",
+				"/projects/my-book/index",
+			);
 		});
 	},
 };
@@ -126,6 +148,80 @@ export const LogoLink: Story = {
 			const logoLink = canvas.getByRole("link", { name: /indexpdf/i });
 			await expect(logoLink).toBeVisible();
 			await expect(logoLink).toHaveAttribute("href", "/");
+		});
+	},
+};
+
+/**
+ * Test showOnlyProjectsLink prop - only shows Projects link
+ */
+export const ShowOnlyProjectsLink: Story = {
+	args: {
+		userName: "John Doe",
+		userEmail: "john@example.com",
+		theme: "light",
+		onThemeToggle: fn(),
+		onSignOutClick: fn(),
+		showOnlyProjectsLink: true,
+	},
+	parameters: {
+		nextjs: {
+			appDirectory: true,
+			navigation: {
+				pathname: "/settings",
+			},
+		},
+	},
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+
+		await step("Verify only Projects link is visible", async () => {
+			const projectsLink = canvas.getByRole("link", { name: /projects/i });
+			await expect(projectsLink).toBeVisible();
+			await expect(projectsLink).toHaveAttribute("href", "/projects");
+		});
+
+		await step("Verify Editor and Index links are NOT present", async () => {
+			const allLinks = canvas.queryAllByRole("link");
+			const linkTexts = allLinks.map((link) => link.textContent);
+
+			// Should only have logo link and projects link
+			await expect(linkTexts).not.toContain("Editor");
+			await expect(linkTexts).not.toContain("Index");
+		});
+	},
+};
+
+/**
+ * Test non-project routes hide navigation links
+ */
+export const NoNavigationLinksOnNonProjectRoutes: Story = {
+	args: {
+		userName: "John Doe",
+		userEmail: "john@example.com",
+		theme: "light",
+		onThemeToggle: fn(),
+		onSignOutClick: fn(),
+	},
+	parameters: {
+		nextjs: {
+			appDirectory: true,
+			navigation: {
+				pathname: "/projects",
+			},
+		},
+	},
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+
+		await step("Verify navigation links are NOT visible", async () => {
+			const allLinks = canvas.queryAllByRole("link");
+			const linkTexts = allLinks.map((link) => link.textContent);
+
+			// Should only have logo link, no navigation links
+			await expect(linkTexts).not.toContain("Editor");
+			await expect(linkTexts).not.toContain("Index");
+			await expect(linkTexts).not.toContain("Projects");
 		});
 	},
 };

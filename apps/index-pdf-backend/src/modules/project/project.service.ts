@@ -113,7 +113,7 @@ export const getProjectByDir = async ({
 	projectDir: string;
 	userId: string;
 	requestId: string;
-}): Promise<Project> => {
+}): Promise<ProjectListItem> => {
 	const project = await projectRepo.getProjectByDir({ gelClient, projectDir });
 
 	// Security principle: Don't reveal whether project exists if user can't access it
