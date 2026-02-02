@@ -1,5 +1,6 @@
 "use client";
 
+import type { PdfHighlight } from "@pubint/yaboujee";
 import { PdfViewer, PdfViewerToolbar } from "@pubint/yaboujee";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback } from "react";
@@ -51,6 +52,87 @@ import { WindowManager } from "../window-manager";
 type EditorProps = {
 	fileUrl: string;
 };
+
+/**
+ * Mock highlights for Phase 2 testing - Corner & Edge positioning
+ *
+ * Coordinates are in PDF user space:
+ * - Origin: bottom-left of page
+ * - Y increases upward
+ * - Units: PDF points (1/72 inch)
+ *
+ * Assuming standard letter size: 612pt wide x 792pt tall (8.5" x 11")
+ *
+ * TODO Phase 5: Replace with real data from API
+ */
+const mockHighlights: PdfHighlight[] = [
+	// CORNERS
+	{
+		id: "top-left",
+		pageNumber: 1,
+		label: "Top-Left Corner",
+		text: "Should be in top-left corner",
+		bbox: { x: 20, y: 772, width: 100, height: 15 }, // Near top (792-20=772)
+	},
+	{
+		id: "top-right",
+		pageNumber: 1,
+		label: "Top-Right Corner",
+		text: "Should be in top-right corner",
+		bbox: { x: 492, y: 772, width: 100, height: 15 }, // Near right edge (612-120=492)
+	},
+	{
+		id: "bottom-left",
+		pageNumber: 1,
+		label: "Bottom-Left Corner",
+		text: "Should be in bottom-left corner",
+		bbox: { x: 20, y: 20, width: 100, height: 15 }, // Near bottom
+	},
+	{
+		id: "bottom-right",
+		pageNumber: 1,
+		label: "Bottom-Right Corner",
+		text: "Should be in bottom-right corner",
+		bbox: { x: 492, y: 20, width: 100, height: 15 },
+	},
+	// EDGES - MIDPOINTS
+	{
+		id: "left-middle",
+		pageNumber: 1,
+		label: "Left Edge Middle",
+		text: "Should be on left edge, vertically centered",
+		bbox: { x: 20, y: 388, width: 80, height: 15 }, // 792/2 = 396, minus half height
+	},
+	{
+		id: "right-middle",
+		pageNumber: 1,
+		label: "Right Edge Middle",
+		text: "Should be on right edge, vertically centered",
+		bbox: { x: 512, y: 388, width: 80, height: 15 }, // 612-100=512
+	},
+	{
+		id: "top-center",
+		pageNumber: 1,
+		label: "Top Edge Center",
+		text: "Should be at top, horizontally centered",
+		bbox: { x: 256, y: 772, width: 100, height: 15 }, // 612/2 - 50 = 256
+	},
+	{
+		id: "bottom-center",
+		pageNumber: 1,
+		label: "Bottom Edge Center",
+		text: "Should be at bottom, horizontally centered",
+		bbox: { x: 256, y: 20, width: 100, height: 15 },
+	},
+	// CENTER
+	{
+		id: "center",
+		pageNumber: 1,
+		label: "Dead Center",
+		text: "Should be in the absolute center of the page",
+		bbox: { x: 256, y: 388, width: 100, height: 15 }, // (612/2 - 50, 792/2 - 7.5)
+	},
+];
 
 export const Editor = ({ fileUrl }: EditorProps) => {
 	const hydrated = useHydrated();
@@ -186,6 +268,12 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 							currentPage={currentPage}
 							onPageChange={handlePageChange}
 							onLoadSuccess={handleLoadSuccess}
+							highlights={mockHighlights}
+							onHighlightClick={(h) => {
+								alert(
+									`Highlight Clicked!\n\nLabel: ${h.label}\nText: ${h.text}\nPage: ${h.pageNumber}`,
+								);
+							}}
 						/>
 					</div>
 				)}

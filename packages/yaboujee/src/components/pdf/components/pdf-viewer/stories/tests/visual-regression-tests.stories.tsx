@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { waitFor } from "@storybook/test";
+import { fn, waitFor } from "@storybook/test";
 import { useState } from "react";
 import { PdfViewer } from "../../pdf-viewer";
-import { defaultArgs } from "../shared";
+import { defaultArgs, mockHighlights } from "../shared";
 
 export default {
 	title: "Components/PDF/PdfViewer/tests/Visual Regression Tests",
@@ -286,5 +286,233 @@ export const TextLayerDisabled: StoryObj<typeof PdfViewer> = {
 		chromatic: {
 			delay: 3000,
 		},
+	},
+};
+
+export const WithHighlightsDefaultScale: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={mockHighlights}
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		theme: "light",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
+
+export const WithHighlightsSmallScale: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={0.75}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={mockHighlights}
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		theme: "light",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
+
+export const WithHighlightsLargeScale: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={2.0}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={mockHighlights}
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		theme: "light",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
+
+export const WithHighlightsDark: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={mockHighlights}
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		backgrounds: { default: "dark" },
+		theme: "dark",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
+
+export const WithHighlightsHoverState: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={mockHighlights}
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		theme: "light",
+	},
+	play: async ({ canvasElement }) => {
+		// Wait for PDF canvas to render
+		await waitFor(
+			() => {
+				const canvas = canvasElement.querySelector("canvas");
+				if (!canvas) throw new Error("Canvas not found");
+			},
+			{ timeout: 10000 },
+		);
+
+		// Wait for highlights to render
+		await waitFor(
+			() => {
+				const highlight = canvasElement.querySelector(
+					'[data-testid="highlight-top-left"]',
+				);
+				if (!highlight) throw new Error("Highlight not found");
+			},
+			{ timeout: 5000 },
+		);
+
+		// Manually apply pseudo-hover class after element exists
+		const highlightElement = canvasElement.querySelector(
+			'[data-testid="highlight-top-left"]',
+		);
+		if (highlightElement) {
+			highlightElement.classList.add("pseudo-hover");
+		}
+
+		// Wait for CSS transitions to complete
+		await new Promise((resolve) => setTimeout(resolve, 500));
+	},
+};
+
+export const WithHighlightsHoverStateDark: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={mockHighlights}
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		backgrounds: { default: "dark" },
+		theme: "dark",
+	},
+	play: async ({ canvasElement }) => {
+		// Wait for PDF canvas to render
+		await waitFor(
+			() => {
+				const canvas = canvasElement.querySelector("canvas");
+				if (!canvas) throw new Error("Canvas not found");
+			},
+			{ timeout: 10000 },
+		);
+
+		// Wait for highlights to render
+		await waitFor(
+			() => {
+				const highlight = canvasElement.querySelector(
+					'[data-testid="highlight-top-left"]',
+				);
+				if (!highlight) throw new Error("Highlight not found");
+			},
+			{ timeout: 5000 },
+		);
+
+		// Manually apply pseudo-hover class after element exists
+		const highlightElement = canvasElement.querySelector(
+			'[data-testid="highlight-top-left"]',
+		);
+		if (highlightElement) {
+			highlightElement.classList.add("pseudo-hover");
+		}
+
+		// Wait for CSS transitions to complete
+		await new Promise((resolve) => setTimeout(resolve, 500));
 	},
 };

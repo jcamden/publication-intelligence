@@ -3,6 +3,11 @@
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
+import type {
+	BoundingBox,
+	PdfHighlight,
+} from "../../../../types/pdf-highlight";
+import { PdfHighlightLayer } from "../../../pdf-highlight-layer";
 
 /**
  * PDF.js Worker Configuration
@@ -29,6 +34,57 @@ export type PdfViewerProps = {
 	onLoadSuccess?: ({ numPages }: { numPages: number }) => void;
 	className?: string;
 	showTextLayer?: boolean;
+	highlights?: PdfHighlight[];
+	onHighlightClick?: (highlight: PdfHighlight) => void;
+};
+
+/**
+ * Converts a bounding box from PDF user space to DOM viewport space
+ *
+ * PDF user space: bottom-left origin, Y increases upward, units in points
+ * DOM viewport space: top-left origin, Y increases downward, units in pixels
+ */
+const convertBboxToViewport = ({
+	bbox,
+	viewport,
+}: {
+	bbox: BoundingBox;
+	viewport: pdfjsLib.PageViewport;
+}): BoundingBox => {
+	const [xA, yA, xB, yB] = viewport.convertToViewportRectangle([
+		bbox.x,
+		bbox.y,
+		bbox.x + bbox.width,
+		bbox.y + bbox.height,
+	]);
+
+	return {
+		x: Math.min(xA, xB),
+		y: Math.min(yA, yB),
+		width: Math.abs(xA - xB),
+		height: Math.abs(yA - yB),
+		rotation: bbox.rotation,
+	};
+};
+
+/**
+ * Filters highlights for the current page and converts their bboxes to DOM coordinates
+ */
+const convertHighlightsForPage = ({
+	highlights,
+	pageNumber,
+	viewport,
+}: {
+	highlights: PdfHighlight[];
+	pageNumber: number;
+	viewport: pdfjsLib.PageViewport;
+}): PdfHighlight[] => {
+	return highlights
+		.filter((h) => h.pageNumber === pageNumber)
+		.map((h) => ({
+			...h,
+			bbox: convertBboxToViewport({ bbox: h.bbox, viewport }),
+		}));
 };
 
 /**
@@ -40,9 +96,15 @@ export type PdfViewerProps = {
  * ## Features
  * - Renders PDF pages to canvas
  * - Selectable text layer overlay (enabled by default)
+ * - Highlight overlay for annotations (optional)
  * - Controlled page navigation via props
  * - Loading and error states
  * - Configurable scale/zoom
+ *
+ * ## Coordinate Systems
+ * - `highlights` prop expects PDF user space coordinates (bottom-left origin, points)
+ * - Conversion to DOM space happens automatically using viewport
+ * - Each page has its own viewport (different dimensions, rotation)
  *
  * ## Usage
  * ```tsx
@@ -57,6 +119,8 @@ export type PdfViewerProps = {
  *   onPageChange={({ page }) => setPage(page)}
  *   onLoadSuccess={({ numPages }) => setNumPages(numPages)}
  *   showTextLayer={true}
+ *   highlights={highlights}
+ *   onHighlightClick={(h) => console.log('Clicked:', h.label)}
  * />
  * ```
  *
@@ -70,16 +134,24 @@ export const PdfViewer = ({
 	onLoadSuccess,
 	className = "",
 	showTextLayer = true,
+	highlights,
+	onHighlightClick,
 }: PdfViewerProps) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const pageContainerRef = useRef<HTMLDivElement>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const textLayerRef = useRef<HTMLDivElement>(null);
 	const textLayerInstanceRef = useRef<TextLayer | null>(null);
-	const viewportRef = useRef<pdfjsLib.PageViewport | null>(null);
+	const onLoadSuccessRef = useRef(onLoadSuccess);
+	const [viewport, setViewport] = useState<pdfjsLib.PageViewport | null>(null);
 	const [loadingState, setLoadingState] = useState<LoadingState>("idle");
 	const [error, setError] = useState<string | null>(null);
 	const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
+
+	// Keep callback ref up to date
+	useEffect(() => {
+		onLoadSuccessRef.current = onLoadSuccess;
+	}, [onLoadSuccess]);
 
 	// Load PDF document
 	useEffect(() => {
@@ -102,7 +174,7 @@ export const PdfViewer = ({
 				loadedPdf = pdf;
 				setPdfDoc(pdf);
 				setLoadingState("success");
-				onLoadSuccess?.({ numPages: pdf.numPages });
+				onLoadSuccessRef.current?.({ numPages: pdf.numPages });
 			} catch (err) {
 				if (!isCancelled) {
 					setError(err instanceof Error ? err.message : "Failed to load PDF");
@@ -119,7 +191,7 @@ export const PdfViewer = ({
 				loadedPdf.destroy();
 			}
 		};
-	}, [url, onLoadSuccess]);
+	}, [url]);
 
 	// Render current page
 	useEffect(() => {
@@ -137,8 +209,8 @@ export const PdfViewer = ({
 					return;
 				}
 
-				const viewport = page.getViewport({ scale });
-				viewportRef.current = viewport;
+				const pageViewport = page.getViewport({ scale });
+				setViewport(pageViewport);
 
 				const canvas = canvasRef.current;
 
@@ -151,17 +223,17 @@ export const PdfViewer = ({
 					return;
 				}
 
-				canvas.height = viewport.height;
-				canvas.width = viewport.width;
+				canvas.height = pageViewport.height;
+				canvas.width = pageViewport.width;
 
 				if (pageContainerRef.current) {
-					pageContainerRef.current.style.width = `${viewport.width}px`;
-					pageContainerRef.current.style.height = `${viewport.height}px`;
+					pageContainerRef.current.style.width = `${pageViewport.width}px`;
+					pageContainerRef.current.style.height = `${pageViewport.height}px`;
 				}
 
 				const renderContext = {
 					canvasContext: context,
-					viewport: viewport,
+					viewport: pageViewport,
 				};
 
 				await page.render(renderContext).promise;
@@ -179,8 +251,8 @@ export const PdfViewer = ({
 
 					const textLayerDiv = textLayerRef.current;
 					textLayerDiv.innerHTML = "";
-					textLayerDiv.style.width = `${viewport.width}px`;
-					textLayerDiv.style.height = `${viewport.height}px`;
+					textLayerDiv.style.width = `${pageViewport.width}px`;
+					textLayerDiv.style.height = `${pageViewport.height}px`;
 					textLayerDiv.style.left = "0px";
 					textLayerDiv.style.top = "0px";
 					textLayerDiv.style.setProperty("--scale-factor", String(scale));
@@ -188,7 +260,7 @@ export const PdfViewer = ({
 					const textLayer = new TextLayer({
 						textContentSource: textContent,
 						container: textLayerDiv,
-						viewport: viewport,
+						viewport: pageViewport,
 					});
 
 					textLayerInstanceRef.current = textLayer;
@@ -266,10 +338,28 @@ export const PdfViewer = ({
 				<div className="mx-auto w-fit rounded-lg bg-[hsl(var(--color-background))] shadow-lg">
 					<div ref={pageContainerRef} className="relative">
 						<canvas ref={canvasRef} className="block" />
+
+						{/* Text Layer - selectable text (middle layer) */}
 						{showTextLayer && (
 							<div
 								ref={textLayerRef}
 								className="textLayer absolute left-0 top-0"
+							/>
+						)}
+
+						{/* Highlight Layer - clickable highlights on top */}
+						{highlights && viewport && (
+							<PdfHighlightLayer
+								pageNumber={currentPage}
+								highlights={convertHighlightsForPage({
+									highlights,
+									pageNumber: currentPage,
+									viewport: viewport,
+								})}
+								pageWidth={viewport.width}
+								pageHeight={viewport.height}
+								scale={1}
+								onHighlightClick={onHighlightClick}
 							/>
 						)}
 					</div>

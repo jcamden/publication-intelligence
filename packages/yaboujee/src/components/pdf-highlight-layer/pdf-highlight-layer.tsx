@@ -48,6 +48,7 @@ export const PdfHighlightLayer = ({
 			style={{
 				width: pageWidth * scale,
 				height: pageHeight * scale,
+				zIndex: 1, // Below text layer, but highlights have pointer-events: auto
 			}}
 		>
 			{pageHighlights.map((highlight) => (

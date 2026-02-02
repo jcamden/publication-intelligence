@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { PdfViewer } from "../pdf-viewer";
+import { mockHighlights } from "./shared";
 
 const codeBlock = `import { PdfViewer } from "@pubint/yaboujee";
 import { useState } from "react";
@@ -159,6 +160,82 @@ export const ErrorState: StoryObj<typeof PdfViewer> = {
 		docs: {
 			description: {
 				story: "Shows error state when PDF fails to load.",
+			},
+		},
+	},
+};
+
+export const WithHighlights: StoryObj<typeof PdfViewer> = {
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url="/sample.pdf"
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={mockHighlights}
+				onHighlightClick={(h) => {
+					alert(`Clicked: ${h.label}`);
+				}}
+			/>
+		);
+	},
+	parameters: {
+		docs: {
+			description: {
+				story:
+					"PDF viewer with highlight overlays. Click a highlight to trigger the callback.",
+			},
+		},
+	},
+};
+
+export const HighlightsInteractive: StoryObj<typeof PdfViewer> = {
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+		const [clickedHighlight, setClickedHighlight] = useState<string | null>(
+			null,
+		);
+
+		return (
+			<div
+				style={{ height: "100vh", display: "flex", flexDirection: "column" }}
+			>
+				{clickedHighlight && (
+					<div
+						style={{
+							padding: "8px 16px",
+							background: "#f0f0f0",
+							borderBottom: "1px solid #ccc",
+						}}
+					>
+						Last clicked: <strong>{clickedHighlight}</strong>
+					</div>
+				)}
+				<div style={{ flex: 1 }}>
+					<PdfViewer
+						url="/sample.pdf"
+						scale={1.25}
+						currentPage={page}
+						onPageChange={({ page }) => setPage(page)}
+						onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+						highlights={mockHighlights}
+						onHighlightClick={(h) => setClickedHighlight(h.label)}
+					/>
+				</div>
+			</div>
+		);
+	},
+	parameters: {
+		docs: {
+			description: {
+				story:
+					"Interactive example showing highlight click handling with state updates.",
 			},
 		},
 	},

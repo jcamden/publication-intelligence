@@ -72,51 +72,74 @@ export default function EditorPage() {
 		}
 	}, [isAuthenticated, authLoading, router]);
 
-	if (authLoading || projectQuery.isLoading || pdfLoading) {
-		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
-					<p className="text-muted-foreground">Loading...</p>
-				</div>
-			</div>
-		);
+	const handleSignOut = () => {
+		clearToken();
+		router.push("/login");
+	};
+
+	if (!isAuthenticated && !authLoading) {
+		return null;
 	}
 
-	if (!isAuthenticated) {
-		return null;
+	const isLoading = authLoading || projectQuery.isLoading || pdfLoading;
+
+	if (isLoading) {
+		return (
+			<>
+				<ProjectNavbar
+					userName={userQuery.data?.name ?? undefined}
+					userEmail={userQuery.data?.email ?? undefined}
+					onSignOutClick={handleSignOut}
+				/>
+				<div className="flex items-center justify-center h-[calc(100vh-3.5rem-1px)]">
+					<div className="text-center">
+						<div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+						<p className="text-muted-foreground">Loading...</p>
+					</div>
+				</div>
+			</>
+		);
 	}
 
 	// Handle project not found or error
 	if (projectQuery.isError) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<p className="text-destructive mb-2">Failed to load project</p>
-					<p className="text-muted-foreground text-sm">
-						{projectQuery.error.message}
-					</p>
+			<>
+				<ProjectNavbar
+					userName={userQuery.data?.name ?? undefined}
+					userEmail={userQuery.data?.email ?? undefined}
+					onSignOutClick={handleSignOut}
+				/>
+				<div className="flex items-center justify-center h-[calc(100vh-3.5rem-1px)]">
+					<div className="text-center">
+						<p className="text-destructive mb-2">Failed to load project</p>
+						<p className="text-muted-foreground text-sm">
+							{projectQuery.error.message}
+						</p>
+					</div>
 				</div>
-			</div>
+			</>
 		);
 	}
 
 	// Handle PDF loading error
 	if (pdfError) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">
-					<p className="text-destructive mb-2">Failed to load PDF</p>
-					<p className="text-muted-foreground text-sm">{pdfError}</p>
+			<>
+				<ProjectNavbar
+					userName={userQuery.data?.name ?? undefined}
+					userEmail={userQuery.data?.email ?? undefined}
+					onSignOutClick={handleSignOut}
+				/>
+				<div className="flex items-center justify-center h-[calc(100vh-3.5rem-1px)]">
+					<div className="text-center">
+						<p className="text-destructive mb-2">Failed to load PDF</p>
+						<p className="text-muted-foreground text-sm">{pdfError}</p>
+					</div>
 				</div>
-			</div>
+			</>
 		);
 	}
-
-	const handleSignOut = () => {
-		clearToken();
-		router.push("/login");
-	};
 
 	return (
 		<>
