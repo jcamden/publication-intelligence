@@ -1,6 +1,7 @@
 "use client";
 
 import * as pdfjsLib from "pdfjs-dist";
+import { TextLayer } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -27,6 +28,7 @@ export type PdfViewerProps = {
 	onPageChange?: ({ page }: { page: number }) => void;
 	onLoadSuccess?: ({ numPages }: { numPages: number }) => void;
 	className?: string;
+	showTextLayer?: boolean;
 };
 
 /**
@@ -37,6 +39,7 @@ export type PdfViewerProps = {
  *
  * ## Features
  * - Renders PDF pages to canvas
+ * - Selectable text layer overlay (enabled by default)
  * - Controlled page navigation via props
  * - Loading and error states
  * - Configurable scale/zoom
@@ -53,6 +56,7 @@ export type PdfViewerProps = {
  *   currentPage={page}
  *   onPageChange={({ page }) => setPage(page)}
  *   onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+ *   showTextLayer={true}
  * />
  * ```
  *
@@ -65,9 +69,14 @@ export const PdfViewer = ({
 	currentPage = 1,
 	onLoadSuccess,
 	className = "",
+	showTextLayer = true,
 }: PdfViewerProps) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const pageContainerRef = useRef<HTMLDivElement>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
+	const textLayerRef = useRef<HTMLDivElement>(null);
+	const textLayerInstanceRef = useRef<TextLayer | null>(null);
+	const viewportRef = useRef<pdfjsLib.PageViewport | null>(null);
 	const [loadingState, setLoadingState] = useState<LoadingState>("idle");
 	const [error, setError] = useState<string | null>(null);
 	const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -129,6 +138,8 @@ export const PdfViewer = ({
 				}
 
 				const viewport = page.getViewport({ scale });
+				viewportRef.current = viewport;
+
 				const canvas = canvasRef.current;
 
 				if (!canvas) {
@@ -143,12 +154,46 @@ export const PdfViewer = ({
 				canvas.height = viewport.height;
 				canvas.width = viewport.width;
 
+				if (pageContainerRef.current) {
+					pageContainerRef.current.style.width = `${viewport.width}px`;
+					pageContainerRef.current.style.height = `${viewport.height}px`;
+				}
+
 				const renderContext = {
 					canvasContext: context,
 					viewport: viewport,
 				};
 
 				await page.render(renderContext).promise;
+
+				if (isCancelled) {
+					return;
+				}
+
+				if (showTextLayer && textLayerRef.current) {
+					const textContent = await page.getTextContent();
+
+					if (isCancelled) {
+						return;
+					}
+
+					const textLayerDiv = textLayerRef.current;
+					textLayerDiv.innerHTML = "";
+					textLayerDiv.style.width = `${viewport.width}px`;
+					textLayerDiv.style.height = `${viewport.height}px`;
+					textLayerDiv.style.left = "0px";
+					textLayerDiv.style.top = "0px";
+					textLayerDiv.style.setProperty("--scale-factor", String(scale));
+
+					const textLayer = new TextLayer({
+						textContentSource: textContent,
+						container: textLayerDiv,
+						viewport: viewport,
+					});
+
+					textLayerInstanceRef.current = textLayer;
+					await textLayer.render();
+				}
 
 				// Center scroll horizontally after rendering completes
 				// Use requestAnimationFrame to ensure layout has been applied
@@ -175,8 +220,9 @@ export const PdfViewer = ({
 
 		return () => {
 			isCancelled = true;
+			textLayerInstanceRef.current?.cancel();
 		};
-	}, [pdfDoc, currentPage, scale, loadingState]);
+	}, [pdfDoc, currentPage, scale, loadingState, showTextLayer]);
 
 	const containerClasses =
 		`flex h-full w-full flex-col bg-[hsl(var(--color-neutral-100))] dark:bg-[hsl(var(--color-neutral-900))] ${className}`.trim();
@@ -218,7 +264,15 @@ export const PdfViewer = ({
 			{/* PDF Canvas */}
 			<div ref={scrollContainerRef} className="flex-1 overflow-auto pt-4">
 				<div className="mx-auto w-fit rounded-lg bg-[hsl(var(--color-background))] shadow-lg">
-					<canvas ref={canvasRef} className="block" />
+					<div ref={pageContainerRef} className="relative">
+						<canvas ref={canvasRef} className="block" />
+						{showTextLayer && (
+							<div
+								ref={textLayerRef}
+								className="textLayer absolute left-0 top-0"
+							/>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>

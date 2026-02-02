@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, waitFor, within } from "@storybook/test";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PdfViewer } from "../../pdf-viewer";
 import { defaultArgs } from "../shared";
 
@@ -102,5 +102,153 @@ export const ShowsErrorForInvalidPdf: StoryObj<typeof PdfViewer> = {
 			},
 			{ timeout: 5000 },
 		);
+	},
+};
+
+export const TextLayerIsSelectable: StoryObj<typeof PdfViewer> = {
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				showTextLayer={true}
+			/>
+		);
+	},
+	play: async ({ canvasElement, step }) => {
+		await step("Wait for text layer to render", async () => {
+			await waitFor(
+				async () => {
+					const textLayer = canvasElement.querySelector(".textLayer");
+					await expect(textLayer).toBeTruthy();
+					const textSpans = textLayer?.querySelectorAll("span");
+					await expect(textSpans?.length).toBeGreaterThan(0);
+				},
+				{ timeout: 10000 },
+			);
+		});
+
+		await step("Verify text layer has correct dimensions", async () => {
+			const textLayer = canvasElement.querySelector(
+				".textLayer",
+			) as HTMLElement;
+			const pdfCanvas = canvasElement.querySelector("canvas");
+
+			await expect(textLayer).toBeTruthy();
+			await expect(pdfCanvas).toBeTruthy();
+
+			if (textLayer && pdfCanvas) {
+				const textLayerWidth = textLayer.getBoundingClientRect().width;
+				const textLayerHeight = textLayer.getBoundingClientRect().height;
+
+				await expect(Math.round(textLayerWidth)).toBe(pdfCanvas.width);
+				await expect(Math.round(textLayerHeight)).toBe(pdfCanvas.height);
+			}
+		});
+
+		await step("Verify text layer has scale factor CSS variable", async () => {
+			const textLayer = canvasElement.querySelector(
+				".textLayer",
+			) as HTMLElement;
+
+			if (textLayer) {
+				const scaleValue = textLayer.style.getPropertyValue("--scale-factor");
+				await expect(scaleValue).toBe("1.25");
+			}
+		});
+	},
+};
+
+export const TextLayerScalesCorrectly: StoryObj<typeof PdfViewer> = {
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+		const [scale, setScale] = useState(1.0);
+
+		useEffect(() => {
+			const timer = setTimeout(() => setScale(1.5), 1000);
+			return () => clearTimeout(timer);
+		}, []);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={scale}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				showTextLayer={true}
+			/>
+		);
+	},
+	play: async ({ canvasElement, step }) => {
+		await step("Verify text layer updates after scale change", async () => {
+			await waitFor(
+				async () => {
+					const textLayer = canvasElement.querySelector(
+						".textLayer",
+					) as HTMLElement;
+					const scaleValue =
+						textLayer?.style.getPropertyValue("--scale-factor");
+					await expect(scaleValue).toBe("1.5");
+				},
+				{ timeout: 5000 },
+			);
+		});
+
+		await step("Verify text layer dimensions update", async () => {
+			const textLayer = canvasElement.querySelector(
+				".textLayer",
+			) as HTMLElement;
+			const pdfCanvas = canvasElement.querySelector("canvas");
+
+			if (textLayer && pdfCanvas) {
+				const textLayerWidth = textLayer.getBoundingClientRect().width;
+				const textLayerHeight = textLayer.getBoundingClientRect().height;
+
+				await expect(Math.round(textLayerWidth)).toBe(pdfCanvas.width);
+				await expect(Math.round(textLayerHeight)).toBe(pdfCanvas.height);
+			}
+		});
+	},
+};
+
+export const TextLayerCanBeDisabled: StoryObj<typeof PdfViewer> = {
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				showTextLayer={false}
+			/>
+		);
+	},
+	play: async ({ canvasElement, step }) => {
+		await step("Wait for PDF to load", async () => {
+			await waitFor(
+				async () => {
+					const pdfCanvas = canvasElement.querySelector("canvas");
+					await expect(pdfCanvas).toBeTruthy();
+				},
+				{ timeout: 5000 },
+			);
+		});
+
+		await step("Verify text layer is not present", async () => {
+			const textLayer = canvasElement.querySelector(".textLayer");
+			await expect(textLayer).toBeFalsy();
+		});
 	},
 };
