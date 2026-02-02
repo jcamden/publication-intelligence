@@ -18,22 +18,32 @@ db/gel/
 
 ## Schema Overview
 
-### Core Types
+### Indexing Domain (Publication Indexing)
 
-**User**
-- Links to `ext::auth::Identity` for authentication
-- Stores application-specific user data (email, name)
-- Created automatically after successful signup
+Defined in `dbschema/indexing.gel`.
 
-**Document**
-- Represents uploaded PDF files
-- Has access policies: owner has full access, others read-only
-- Tracks upload metadata and indexing status
+- **Workspace**: Optional top-level grouping (teams or orgs)
+- **Project**: Primary workspace for a single indexing effort
+- **SourceDocument**: A PDF/book being indexed
+- **DocumentPage**: Per-page extraction unit
+- **IndexEntry**: Concept in the final index
+- **IndexMention**: Occurrence of a concept in the document
+- **IndexVariant**: Synonyms/aliases for an IndexEntry
+- **IndexRelation**: See/see-also relationships between entries
+- **Event**: Audit log of domain changes
+- **Prompt / LLMRun**: LLM prompt versions + run tracking
+- **ExportedIndex**: Generated index artifacts
 
-**DocumentChunk**
-- Represents chunked content from documents for vector search
-- Stores embeddings for semantic search
-- Inherits access from parent document
+### Search / Embedding Domain
+
+Defined in `dbschema/default.gel`.
+
+- **Document**: Uploaded PDF metadata (ownership + access policies)
+- **DocumentChunk**: Chunked content with optional embeddings for search
+
+### Shared Auth Types
+
+- **User**: Links to `ext::auth::Identity` for authentication
 
 ### Global Variables
 

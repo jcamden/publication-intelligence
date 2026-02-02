@@ -1,2 +1,0 @@
-app_user
-dev_password_12345

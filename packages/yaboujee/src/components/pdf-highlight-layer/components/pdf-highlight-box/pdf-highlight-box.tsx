@@ -13,12 +13,17 @@ export const PdfHighlightBox = ({
 	scale,
 	onClick,
 }: PdfHighlightBoxProps) => {
-	const { bbox, label, text } = highlight;
+	const { bbox, label, text, metadata } = highlight;
+	const isDraft = metadata?.isDraft === true;
 
 	return (
 		<button
 			type="button"
-			className="pointer-events-auto absolute cursor-pointer rounded-sm border-0 bg-yellow-400/30 p-0 transition-colors hover:bg-yellow-400/50 dark:bg-yellow-500/40 dark:hover:bg-yellow-500/60"
+			className={`pointer-events-auto absolute cursor-pointer rounded-sm p-0 transition-colors ${
+				isDraft
+					? "border-2 border-dashed border-blue-500 bg-blue-400/30 hover:bg-blue-400/50 dark:border-blue-400 dark:bg-blue-500/40 dark:hover:bg-blue-500/60"
+					: "border-0 bg-yellow-400/30 hover:bg-yellow-400/50 dark:bg-yellow-500/40 dark:hover:bg-yellow-500/60"
+			}`}
 			style={{
 				left: bbox.x * scale,
 				top: bbox.y * scale,

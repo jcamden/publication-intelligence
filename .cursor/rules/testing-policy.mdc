@@ -1,0 +1,69 @@
+# Testing Policy
+
+## What you can and cannot run
+
+### ❌ Never run these automatically:
+
+**Interaction Tests** (require Playwright browser binaries):
+```bash
+# ❌ DON'T run these
+pnpm test:interaction
+cd packages/yaboujee && pnpm test:interaction
+vitest run --project=storybook
+```
+
+**Visual Regression Tests** (require Playwright and generate large snapshots):
+```bash
+# ❌ DON'T run these
+pnpm vrt:yaboujee
+pnpm --filter @pubint/storybook-vrt vrt:yaboujee
+pnpm vrt
+```
+
+### ✅ You CAN run these:
+
+**Regular Vitest Unit Tests**:
+```bash
+# ✅ OK to run
+pnpm test
+pnpm --recursive test
+cd packages/yaboujee && pnpm test
+```
+
+**Code Quality Checks**:
+```bash
+# ✅ OK to run
+pnpm typecheck    # TypeScript type checking
+pnpm format       # Biome formatting
+pnpm check        # Biome linting
+```
+
+## Why this matters
+
+- **Interaction tests**: Require Playwright browser binaries (`pnpm exec playwright install`)
+- **VRT tests**: Require Playwright + generate large snapshot images + take a long time
+- **Both**: Require special sandbox permissions and significant resources
+- Users should control when expensive browser tests run
+
+## When tests are needed
+
+If code changes require test verification:
+
+1. **Tell the user** which tests to run
+2. **Provide the exact command** they should run
+3. **Explain what** you expect the tests to verify
+4. **Wait for results** before proceeding
+
+```
+✅ GOOD:
+"I've added new interaction tests for the mode-based system. Please run:
+
+cd packages/yaboujee && pnpm test:interaction
+
+This will verify:
+- Text selection creates draft highlights
+- Region drawing shows live preview
+- Mode switching toggles layer interactivity
+
+Let me know the results and I'll fix any failures."
+```

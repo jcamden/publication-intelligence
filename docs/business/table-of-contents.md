@@ -12,4 +12,5 @@
 - [Risks and Unknowns](./risks-and-unknowns.md)
 
 ## 4. Technical
-- [Technical Architecture & Data Model](./technical-architecture.md)
+- [Technical Architecture & Data Model](../architecture/technical-architecture.md)
+- [Component Architecture](../architecture/component-architecture.md)

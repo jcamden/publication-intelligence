@@ -10,6 +10,7 @@ export type PdfHighlightLayerProps = {
 	pageHeight: number;
 	scale?: number;
 	onHighlightClick?: (highlight: PdfHighlight) => void;
+	style?: React.CSSProperties;
 };
 
 /**
@@ -35,6 +36,7 @@ export const PdfHighlightLayer = ({
 	pageHeight,
 	scale = 1,
 	onHighlightClick,
+	style,
 }: PdfHighlightLayerProps) => {
 	const pageHighlights = highlights.filter((h) => h.pageNumber === pageNumber);
 
@@ -49,6 +51,7 @@ export const PdfHighlightLayer = ({
 				width: pageWidth * scale,
 				height: pageHeight * scale,
 				zIndex: 1, // Below text layer, but highlights have pointer-events: auto
+				...style,
 			}}
 		>
 			{pageHighlights.map((highlight) => (

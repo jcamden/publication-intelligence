@@ -14,6 +14,7 @@ export { Logo } from "./logo";
 export type { ModalProps } from "./modal";
 export { Modal } from "./modal";
 export type {
+	AnnotationMode,
 	PdfFileUploadProps,
 	PdfHighlightBoxProps,
 	PdfHighlightLayerProps,

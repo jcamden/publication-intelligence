@@ -1,9 +1,9 @@
 "use client";
 
-import type { PdfHighlight } from "@pubint/yaboujee";
+import type { AnnotationMode, PdfHighlight } from "@pubint/yaboujee";
 import { PdfViewer, PdfViewerToolbar } from "@pubint/yaboujee";
 import { useAtom, useAtomValue } from "jotai";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
 	currentPageAtom,
 	MIN_PDF_WIDTH,
@@ -139,6 +139,7 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const [totalPages, setTotalPages] = useAtom(totalPagesAtom);
 	const [zoom, setZoom] = useAtom(zoomAtom);
+	const [annotationMode, setAnnotationMode] = useState<AnnotationMode>("view");
 
 	const projectCollapsed = useAtomValue(projectSidebarCollapsedAtom);
 	const pageCollapsed = useAtomValue(pageSidebarCollapsedAtom);
@@ -166,6 +167,20 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 			setTotalPages(numPages);
 		},
 		[setTotalPages],
+	);
+
+	const handleCreateDraftHighlight = useCallback(
+		(draft: { pageNumber: number; text: string; bbox: unknown }) => {
+			console.log("Draft highlight created:", {
+				page: draft.pageNumber,
+				text: draft.text,
+				bbox: JSON.stringify(draft.bbox),
+			});
+			// Phase 4: Show UI to attach to IndexEntry
+			// For now, auto-return to view mode after draft created
+			setAnnotationMode("view");
+		},
+		[],
 	);
 
 	const handlePdfVisibilityToggle = useCallback(() => {
@@ -262,6 +277,42 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 				{/* PDF section - conditional */}
 				{pdfVisible && (
 					<div className="flex-1 min-w-0 h-full relative">
+						{/* Temporary mode toggle buttons - Phase 4 will add proper toolbar */}
+						<div className="absolute top-2 right-2 z-10 flex gap-2">
+							<button
+								type="button"
+								onClick={() => setAnnotationMode("view")}
+								className={`px-3 py-1 rounded text-sm ${
+									annotationMode === "view"
+										? "bg-blue-600 text-white"
+										: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+								}`}
+							>
+								View
+							</button>
+							<button
+								type="button"
+								onClick={() => setAnnotationMode("add-text-highlight")}
+								className={`px-3 py-1 rounded text-sm ${
+									annotationMode === "add-text-highlight"
+										? "bg-blue-600 text-white"
+										: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+								}`}
+							>
+								Select Text
+							</button>
+							<button
+								type="button"
+								onClick={() => setAnnotationMode("add-region")}
+								className={`px-3 py-1 rounded text-sm ${
+									annotationMode === "add-region"
+										? "bg-blue-600 text-white"
+										: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+								}`}
+							>
+								Draw Region
+							</button>
+						</div>
 						<PdfViewer
 							url={fileUrl}
 							scale={zoom}
@@ -274,6 +325,9 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 									`Highlight Clicked!\n\nLabel: ${h.label}\nText: ${h.text}\nPage: ${h.pageNumber}`,
 								);
 							}}
+							annotationMode={annotationMode}
+							onCreateDraftHighlight={handleCreateDraftHighlight}
+							onModeExit={() => setAnnotationMode("view")}
 						/>
 					</div>
 				)}

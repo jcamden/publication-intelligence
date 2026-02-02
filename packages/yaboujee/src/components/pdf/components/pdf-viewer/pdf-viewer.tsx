@@ -26,6 +26,15 @@ if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
 
 type LoadingState = "idle" | "loading" | "success" | "error";
 
+/**
+ * Annotation mode controls layer interactivity and user actions
+ *
+ * - 'view': Default browsing mode (highlights clickable, text not selectable)
+ * - 'add-text-highlight': Text selection mode (text selectable, highlights not clickable)
+ * - 'add-region': Future drawing mode for arbitrary regions
+ */
+export type AnnotationMode = "view" | "add-text-highlight" | "add-region";
+
 export type PdfViewerProps = {
 	url: string;
 	scale?: number;
@@ -36,6 +45,13 @@ export type PdfViewerProps = {
 	showTextLayer?: boolean;
 	highlights?: PdfHighlight[];
 	onHighlightClick?: (highlight: PdfHighlight) => void;
+	annotationMode?: AnnotationMode;
+	onCreateDraftHighlight?: (draft: {
+		pageNumber: number;
+		text: string;
+		bbox: BoundingBox;
+	}) => void;
+	onModeExit?: () => void;
 };
 
 /**
@@ -88,6 +104,80 @@ const convertHighlightsForPage = ({
 };
 
 /**
+ * Converts a DOM rect (viewport space) to PDF user space
+ *
+ * DOM rect: relative to viewport, top-left origin, pixels
+ * PDF bbox: relative to page, bottom-left origin, points
+ */
+const convertDomRectToPdf = ({
+	domRect,
+	viewport,
+	pageContainer,
+}: {
+	domRect: DOMRect;
+	viewport: pdfjsLib.PageViewport;
+	pageContainer: HTMLElement;
+}): BoundingBox => {
+	// Get page container position
+	const containerRect = pageContainer.getBoundingClientRect();
+
+	// Convert to page-relative coordinates
+	const pageX = domRect.left - containerRect.left;
+	const pageY = domRect.top - containerRect.top;
+	const pageX2 = domRect.right - containerRect.left;
+	const pageY2 = domRect.bottom - containerRect.top;
+
+	// Convert corners to PDF user space
+	const [pdfX1, pdfY1] = viewport.convertToPdfPoint(pageX, pageY);
+	const [pdfX2, pdfY2] = viewport.convertToPdfPoint(pageX2, pageY2);
+
+	// Normalize (convertToPdfPoint can return inverted coords)
+	return {
+		x: Math.min(pdfX1, pdfX2),
+		y: Math.min(pdfY1, pdfY2),
+		width: Math.abs(pdfX2 - pdfX1),
+		height: Math.abs(pdfY2 - pdfY1),
+	};
+};
+
+/**
+ * Converts multiple DOM rects (from wrapped text) to a single PDF bbox
+ * MVP: Union all rects into one bounding box
+ * Future: Support multi-bbox highlights for precise line wrapping
+ */
+const convertSelectionToPdfBbox = ({
+	domRects,
+	viewport,
+	pageContainer,
+}: {
+	domRects: DOMRect[];
+	viewport: pdfjsLib.PageViewport;
+	pageContainer: HTMLElement;
+}): BoundingBox => {
+	if (domRects.length === 0) {
+		throw new Error("No rects provided for selection");
+	}
+
+	// Convert all rects to PDF space
+	const pdfBboxes = domRects.map((rect) =>
+		convertDomRectToPdf({ domRect: rect, viewport, pageContainer }),
+	);
+
+	// Union into single bbox
+	const minX = Math.min(...pdfBboxes.map((b) => b.x));
+	const minY = Math.min(...pdfBboxes.map((b) => b.y));
+	const maxX = Math.max(...pdfBboxes.map((b) => b.x + b.width));
+	const maxY = Math.max(...pdfBboxes.map((b) => b.y + b.height));
+
+	return {
+		x: minX,
+		y: minY,
+		width: maxX - minX,
+		height: maxY - minY,
+	};
+};
+
+/**
  * PDF Viewer Component
  *
  * A minimal PDF viewer using PDF.js that renders one page at a time.
@@ -136,6 +226,9 @@ export const PdfViewer = ({
 	showTextLayer = true,
 	highlights,
 	onHighlightClick,
+	annotationMode = "view",
+	onCreateDraftHighlight,
+	onModeExit,
 }: PdfViewerProps) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -147,6 +240,19 @@ export const PdfViewer = ({
 	const [loadingState, setLoadingState] = useState<LoadingState>("idle");
 	const [error, setError] = useState<string | null>(null);
 	const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
+	const [draftHighlight, setDraftHighlight] = useState<PdfHighlight | null>(
+		null,
+	);
+
+	// Region drawing state (add-region mode)
+	const [regionDragStart, setRegionDragStart] = useState<{
+		x: number;
+		y: number;
+	} | null>(null);
+	const [regionDragCurrent, setRegionDragCurrent] = useState<{
+		x: number;
+		y: number;
+	} | null>(null);
 
 	// Keep callback ref up to date
 	useEffect(() => {
@@ -296,6 +402,235 @@ export const PdfViewer = ({
 		};
 	}, [pdfDoc, currentPage, scale, loadingState, showTextLayer]);
 
+	// Selection event handler (only active in add-text-highlight mode)
+	useEffect(() => {
+		// Only listen when in add-text-highlight mode
+		if (annotationMode !== "add-text-highlight") {
+			return;
+		}
+
+		const handleSelectionEnd = () => {
+			if (!viewport || !pageContainerRef.current) return;
+
+			const selection = window.getSelection();
+			if (!selection || selection.isCollapsed) {
+				setDraftHighlight(null);
+				return;
+			}
+
+			// Check selection belongs to text layer
+			const textLayerDiv = textLayerRef.current;
+			if (!textLayerDiv || !textLayerDiv.contains(selection.anchorNode)) {
+				return;
+			}
+
+			const selectedText = selection.toString().trim();
+			if (!selectedText) {
+				setDraftHighlight(null);
+				return;
+			}
+
+			// Get selection rects and convert to PDF coordinates
+			const range = selection.getRangeAt(0);
+			const domRects = Array.from(range.getClientRects());
+
+			if (domRects.length === 0) return;
+
+			try {
+				// Convert to page-relative coordinates and then to PDF user space
+				const pdfBbox = convertSelectionToPdfBbox({
+					domRects,
+					viewport: viewport,
+					pageContainer: pageContainerRef.current,
+				});
+
+				const draft: PdfHighlight = {
+					id: "draft",
+					pageNumber: currentPage,
+					bbox: pdfBbox,
+					label: "Draft Selection",
+					text: selectedText,
+					metadata: { isDraft: true },
+				};
+
+				setDraftHighlight(draft);
+				onCreateDraftHighlight?.({
+					pageNumber: currentPage,
+					text: selectedText,
+					bbox: pdfBbox,
+				});
+			} catch (err) {
+				console.error("Failed to create draft highlight:", err);
+				setDraftHighlight(null);
+			}
+		};
+
+		document.addEventListener("mouseup", handleSelectionEnd);
+
+		return () => {
+			document.removeEventListener("mouseup", handleSelectionEnd);
+		};
+	}, [annotationMode, currentPage, viewport, onCreateDraftHighlight]);
+
+	// Region drawing handlers (only active in add-region mode)
+	useEffect(() => {
+		if (annotationMode !== "add-region") {
+			// Clear any in-progress drag when exiting mode
+			setRegionDragStart(null);
+			setRegionDragCurrent(null);
+			return;
+		}
+
+		const handleMouseDown = (e: MouseEvent) => {
+			if (!pageContainerRef.current || !viewport) return;
+
+			// Only start drag if clicking inside the page container
+			const pageContainer = pageContainerRef.current;
+			const rect = pageContainer.getBoundingClientRect();
+			const x = e.clientX;
+			const y = e.clientY;
+
+			if (
+				x >= rect.left &&
+				x <= rect.right &&
+				y >= rect.top &&
+				y <= rect.bottom
+			) {
+				// Convert to page-relative coordinates
+				const pageX = x - rect.left;
+				const pageY = y - rect.top;
+
+				setRegionDragStart({ x: pageX, y: pageY });
+				setRegionDragCurrent({ x: pageX, y: pageY });
+			}
+		};
+
+		const handleMouseMove = (e: MouseEvent) => {
+			if (!regionDragStart || !pageContainerRef.current) return;
+
+			const pageContainer = pageContainerRef.current;
+			const rect = pageContainer.getBoundingClientRect();
+
+			// Constrain to page bounds
+			const pageX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+			const pageY = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+
+			setRegionDragCurrent({ x: pageX, y: pageY });
+		};
+
+		const handleMouseUp = () => {
+			if (
+				!regionDragStart ||
+				!regionDragCurrent ||
+				!viewport ||
+				!pageContainerRef.current
+			) {
+				setRegionDragStart(null);
+				setRegionDragCurrent(null);
+				return;
+			}
+
+			// Calculate final rectangle in DOM coordinates
+			const left = Math.min(regionDragStart.x, regionDragCurrent.x);
+			const top = Math.min(regionDragStart.y, regionDragCurrent.y);
+			const width = Math.abs(regionDragCurrent.x - regionDragStart.x);
+			const height = Math.abs(regionDragCurrent.y - regionDragStart.y);
+
+			// Only create if drag was substantial (not just a click)
+			if (width < 5 || height < 5) {
+				setRegionDragStart(null);
+				setRegionDragCurrent(null);
+				return;
+			}
+
+			// Convert to PDF coordinates
+			const pageContainer = pageContainerRef.current;
+			const containerRect = pageContainer.getBoundingClientRect();
+			const domRect = new DOMRect(
+				left + containerRect.left,
+				top + containerRect.top,
+				width,
+				height,
+			);
+
+			try {
+				const pdfBbox = convertDomRectToPdf({
+					domRect,
+					viewport,
+					pageContainer,
+				});
+
+				const draft: PdfHighlight = {
+					id: "draft",
+					pageNumber: currentPage,
+					bbox: pdfBbox,
+					label: "Draft Region",
+					text: "", // No text for region highlights
+					metadata: { isDraft: true },
+				};
+
+				setDraftHighlight(draft);
+				onCreateDraftHighlight?.({
+					pageNumber: currentPage,
+					text: "",
+					bbox: pdfBbox,
+				});
+
+				// Clear drag state
+				setRegionDragStart(null);
+				setRegionDragCurrent(null);
+			} catch (err) {
+				console.error("Failed to create draft region:", err);
+				setRegionDragStart(null);
+				setRegionDragCurrent(null);
+			}
+		};
+
+		document.addEventListener("mousedown", handleMouseDown);
+		document.addEventListener("mousemove", handleMouseMove);
+		document.addEventListener("mouseup", handleMouseUp);
+
+		return () => {
+			document.removeEventListener("mousedown", handleMouseDown);
+			document.removeEventListener("mousemove", handleMouseMove);
+			document.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, [
+		annotationMode,
+		regionDragStart,
+		regionDragCurrent,
+		viewport,
+		currentPage,
+		onCreateDraftHighlight,
+	]);
+
+	// Keyboard handlers
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				if (draftHighlight) {
+					// Clear draft highlight
+					setDraftHighlight(null);
+					window.getSelection()?.removeAllRanges();
+				}
+
+				// Clear region drag if in progress
+				if (regionDragStart || regionDragCurrent) {
+					setRegionDragStart(null);
+					setRegionDragCurrent(null);
+				}
+
+				// Notify parent about mode exit (optional)
+				onModeExit?.();
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [draftHighlight, regionDragStart, regionDragCurrent, onModeExit]);
+
 	const containerClasses =
 		`flex h-full w-full flex-col bg-[hsl(var(--color-neutral-100))] dark:bg-[hsl(var(--color-neutral-900))] ${className}`.trim();
 
@@ -331,6 +666,23 @@ export const PdfViewer = ({
 		);
 	}
 
+	// Combine draft and persisted highlights
+	const allHighlights = [
+		...(highlights || []),
+		...(draftHighlight ? [draftHighlight] : []),
+	];
+
+	// Calculate live region preview during drag
+	const regionPreview =
+		regionDragStart && regionDragCurrent
+			? {
+					left: Math.min(regionDragStart.x, regionDragCurrent.x),
+					top: Math.min(regionDragStart.y, regionDragCurrent.y),
+					width: Math.abs(regionDragCurrent.x - regionDragStart.x),
+					height: Math.abs(regionDragCurrent.y - regionDragStart.y),
+				}
+			: null;
+
 	return (
 		<div className={containerClasses}>
 			{/* PDF Canvas */}
@@ -339,20 +691,24 @@ export const PdfViewer = ({
 					<div ref={pageContainerRef} className="relative">
 						<canvas ref={canvasRef} className="block" />
 
-						{/* Text Layer - selectable text (middle layer) */}
+						{/* Text Layer - selectable ONLY in add-text-highlight mode */}
 						{showTextLayer && (
 							<div
 								ref={textLayerRef}
 								className="textLayer absolute left-0 top-0"
+								style={{
+									pointerEvents:
+										annotationMode === "add-text-highlight" ? "auto" : "none",
+								}}
 							/>
 						)}
 
-						{/* Highlight Layer - clickable highlights on top */}
-						{highlights && viewport && (
+						{/* Highlight Layer - clickable ONLY in view mode */}
+						{allHighlights.length > 0 && viewport && (
 							<PdfHighlightLayer
 								pageNumber={currentPage}
 								highlights={convertHighlightsForPage({
-									highlights,
+									highlights: allHighlights,
 									pageNumber: currentPage,
 									viewport: viewport,
 								})}
@@ -360,6 +716,22 @@ export const PdfViewer = ({
 								pageHeight={viewport.height}
 								scale={1}
 								onHighlightClick={onHighlightClick}
+								style={{
+									pointerEvents: annotationMode === "view" ? "auto" : "none",
+								}}
+							/>
+						)}
+
+						{/* Region drawing preview - live rectangle during drag */}
+						{regionPreview && (
+							<div
+								className="pointer-events-none absolute border-2 border-dashed border-blue-500 bg-blue-400/20 dark:border-blue-400 dark:bg-blue-500/30"
+								style={{
+									left: regionPreview.left,
+									top: regionPreview.top,
+									width: regionPreview.width,
+									height: regionPreview.height,
+								}}
 							/>
 						)}
 					</div>

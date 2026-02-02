@@ -516,3 +516,174 @@ export const WithHighlightsHoverStateDark: StoryObj<typeof PdfViewer> = {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	},
 };
+
+// Phase 3: Draft highlight visual tests
+
+export const DraftTextHighlight: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		// Include a draft highlight in the highlights array
+		const highlightsWithDraft = [
+			...mockHighlights,
+			{
+				id: "draft",
+				pageNumber: 1,
+				label: "Draft Selection",
+				text: "Selected text preview",
+				bbox: { x: 150, y: 350, width: 200, height: 30 },
+				metadata: { isDraft: true },
+			},
+		];
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={highlightsWithDraft}
+				showTextLayer={true}
+				annotationMode="add-text-highlight"
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		theme: "light",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
+
+export const DraftTextHighlightDark: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		const highlightsWithDraft = [
+			...mockHighlights,
+			{
+				id: "draft",
+				pageNumber: 1,
+				label: "Draft Selection",
+				text: "Selected text preview",
+				bbox: { x: 150, y: 350, width: 200, height: 30 },
+				metadata: { isDraft: true },
+			},
+		];
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={highlightsWithDraft}
+				showTextLayer={true}
+				annotationMode="add-text-highlight"
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		backgrounds: { default: "dark" },
+		theme: "dark",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
+
+export const DraftRegionHighlight: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		const highlightsWithDraft = [
+			...mockHighlights,
+			{
+				id: "draft",
+				pageNumber: 1,
+				label: "Draft Region",
+				text: "", // No text for region
+				bbox: { x: 250, y: 250, width: 150, height: 100 },
+				metadata: { isDraft: true },
+			},
+		];
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={highlightsWithDraft}
+				annotationMode="add-region"
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		theme: "light",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
+
+export const DraftRegionHighlightDark: StoryObj<typeof PdfViewer> = {
+	globals: {
+		viewport: undefined,
+	},
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+
+		const highlightsWithDraft = [
+			...mockHighlights,
+			{
+				id: "draft",
+				pageNumber: 1,
+				label: "Draft Region",
+				text: "",
+				bbox: { x: 250, y: 250, width: 150, height: 100 },
+				metadata: { isDraft: true },
+			},
+		];
+
+		return (
+			<PdfViewer
+				url={defaultArgs.url}
+				scale={1.25}
+				currentPage={page}
+				onPageChange={({ page }) => setPage(page)}
+				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+				highlights={highlightsWithDraft}
+				annotationMode="add-region"
+				onHighlightClick={fn()}
+			/>
+		);
+	},
+	parameters: {
+		backgrounds: { default: "dark" },
+		theme: "dark",
+		chromatic: {
+			delay: 3000,
+		},
+	},
+};
