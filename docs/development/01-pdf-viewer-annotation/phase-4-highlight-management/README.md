@@ -12,7 +12,7 @@ Transform draft highlights into persistent, manageable mentions linked to IndexE
 
 ### [4A: Sidebar Action Buttons](./task-4a-sidebar-actions.md)
 **Duration:** 1 day  
-**Status:** ⚪ Not Started
+**Status:** ✅ Complete
 
 "Select Text" and "Draw Region" buttons in page sidebar sections (per index type). Transient activation (one action, then auto-revert).
 
@@ -37,10 +37,10 @@ Entry creation modal, picker with hierarchy, and color-coded highlights.
 ## Completion Criteria
 
 Phase 4 complete when:
-- [ ] Page sidebar sections per index type (created dynamically)
-- [ ] "Select Text" and "Draw Region" buttons per section
-- [ ] Transient activation (one action, auto-revert to view mode)
-- [ ] Escape key cancels active action
+- [x] Page sidebar sections per index type (created dynamically)
+- [x] "Select Text" and "Draw Region" buttons per section
+- [x] Transient activation (one action, auto-revert to view mode)
+- [x] Escape key cancels active action
 - [ ] Mention creation popover functional
 - [ ] "Index As" checklist for multi-type mentions
 - [ ] Draft → persistent transition works

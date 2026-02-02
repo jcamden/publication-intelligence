@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { fn } from "@storybook/test";
 import { PageSubjectContent } from "../page-subject-content";
 
 const meta: Meta<typeof PageSubjectContent> = {
@@ -13,4 +14,10 @@ const meta: Meta<typeof PageSubjectContent> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+	args: {
+		activeAction: { type: null, indexType: null },
+		onSelectText: fn(),
+		onDrawRegion: fn(),
+	},
+};

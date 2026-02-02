@@ -26,15 +26,6 @@ if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
 
 type LoadingState = "idle" | "loading" | "success" | "error";
 
-/**
- * Annotation mode controls layer interactivity and user actions
- *
- * - 'view': Default browsing mode (highlights clickable, text not selectable)
- * - 'add-text-highlight': Text selection mode (text selectable, highlights not clickable)
- * - 'add-region': Future drawing mode for arbitrary regions
- */
-export type AnnotationMode = "view" | "add-text-highlight" | "add-region";
-
 export type PdfViewerProps = {
 	url: string;
 	scale?: number;
@@ -45,13 +36,22 @@ export type PdfViewerProps = {
 	showTextLayer?: boolean;
 	highlights?: PdfHighlight[];
 	onHighlightClick?: (highlight: PdfHighlight) => void;
-	annotationMode?: AnnotationMode;
+	/**
+	 * When true, enables text selection (text layer becomes interactive).
+	 * Transient activation - typically set true for one selection, then reset to false.
+	 */
+	textLayerInteractive?: boolean;
+	/**
+	 * When true, enables region drawing with click-drag (crosshair cursor).
+	 * Transient activation - typically set true for one region, then reset to false.
+	 */
+	regionDrawingActive?: boolean;
 	onCreateDraftHighlight?: (draft: {
 		pageNumber: number;
 		text: string;
 		bbox: BoundingBox;
 	}) => void;
-	onModeExit?: () => void;
+	onDraftCancelled?: () => void;
 };
 
 /**
@@ -226,9 +226,10 @@ export const PdfViewer = ({
 	showTextLayer = true,
 	highlights,
 	onHighlightClick,
-	annotationMode = "view",
+	textLayerInteractive = false,
+	regionDrawingActive = false,
 	onCreateDraftHighlight,
-	onModeExit,
+	onDraftCancelled,
 }: PdfViewerProps) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -402,10 +403,10 @@ export const PdfViewer = ({
 		};
 	}, [pdfDoc, currentPage, scale, loadingState, showTextLayer]);
 
-	// Selection event handler (only active in add-text-highlight mode)
+	// Selection event handler (only active when text layer is interactive)
 	useEffect(() => {
-		// Only listen when in add-text-highlight mode
-		if (annotationMode !== "add-text-highlight") {
+		// Only listen when text layer is interactive
+		if (!textLayerInteractive) {
 			return;
 		}
 
@@ -470,12 +471,12 @@ export const PdfViewer = ({
 		return () => {
 			document.removeEventListener("mouseup", handleSelectionEnd);
 		};
-	}, [annotationMode, currentPage, viewport, onCreateDraftHighlight]);
+	}, [textLayerInteractive, currentPage, viewport, onCreateDraftHighlight]);
 
-	// Region drawing handlers (only active in add-region mode)
+	// Region drawing handlers (only active when region drawing is enabled)
 	useEffect(() => {
-		if (annotationMode !== "add-region") {
-			// Clear any in-progress drag when exiting mode
+		if (!regionDrawingActive) {
+			// Clear any in-progress drag when deactivating
 			setRegionDragStart(null);
 			setRegionDragCurrent(null);
 			return;
@@ -596,7 +597,7 @@ export const PdfViewer = ({
 			document.removeEventListener("mouseup", handleMouseUp);
 		};
 	}, [
-		annotationMode,
+		regionDrawingActive,
 		regionDragStart,
 		regionDragCurrent,
 		viewport,
@@ -620,8 +621,8 @@ export const PdfViewer = ({
 					setRegionDragCurrent(null);
 				}
 
-				// Notify parent about mode exit (optional)
-				onModeExit?.();
+				// Notify parent about cancellation
+				onDraftCancelled?.();
 			}
 		};
 
@@ -629,7 +630,7 @@ export const PdfViewer = ({
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [draftHighlight, regionDragStart, regionDragCurrent, onModeExit]);
+	}, [draftHighlight, regionDragStart, regionDragCurrent, onDraftCancelled]);
 
 	const containerClasses =
 		`flex h-full w-full flex-col bg-[hsl(var(--color-neutral-100))] dark:bg-[hsl(var(--color-neutral-900))] ${className}`.trim();
@@ -691,19 +692,21 @@ export const PdfViewer = ({
 					<div ref={pageContainerRef} className="relative">
 						<canvas ref={canvasRef} className="block" />
 
-						{/* Text Layer - selectable ONLY in add-text-highlight mode */}
+						{/* Text Layer - selectable when textLayerInteractive is true */}
 						{showTextLayer && (
 							<div
 								ref={textLayerRef}
 								className="textLayer absolute left-0 top-0"
 								style={{
-									pointerEvents:
-										annotationMode === "add-text-highlight" ? "auto" : "none",
+									pointerEvents: textLayerInteractive ? "auto" : "none",
+									// When interactive, text layer is on top (z-20)
+									// When not interactive, text layer is below highlights (z-5)
+									zIndex: textLayerInteractive ? 20 : 5,
 								}}
 							/>
 						)}
 
-						{/* Highlight Layer - clickable ONLY in view mode */}
+						{/* Highlight Layer - clickable when NOT in text/region mode */}
 						{allHighlights.length > 0 && viewport && (
 							<PdfHighlightLayer
 								pageNumber={currentPage}
@@ -717,7 +720,13 @@ export const PdfViewer = ({
 								scale={1}
 								onHighlightClick={onHighlightClick}
 								style={{
-									pointerEvents: annotationMode === "view" ? "auto" : "none",
+									pointerEvents:
+										textLayerInteractive || regionDrawingActive
+											? "none"
+											: "auto",
+									// Highlights are always at z-10, above inactive text layer (z-5)
+									// but below active text layer (z-20)
+									zIndex: 10,
 								}}
 							/>
 						)}
@@ -731,6 +740,7 @@ export const PdfViewer = ({
 									top: regionPreview.top,
 									width: regionPreview.width,
 									height: regionPreview.height,
+									zIndex: 30,
 								}}
 							/>
 						)}

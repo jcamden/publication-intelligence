@@ -28,12 +28,22 @@ import { PageInfoContent } from "./components/page-info-content";
 import { PageScriptureContent } from "./components/page-scripture-content";
 import { PageSubjectContent } from "./components/page-subject-content";
 
+type PageSidebarProps = {
+	activeAction: { type: string | null; indexType: string | null };
+	onSelectText: ({ indexType }: { indexType: string }) => void;
+	onDrawRegion: ({ indexType }: { indexType: string }) => void;
+};
+
 /**
  * Page Sidebar Component
  *
  * Right sidebar showing page-level panels (info, indices, etc.)
  */
-export const PageSidebar = () => {
+export const PageSidebar = ({
+	activeAction,
+	onSelectText,
+	onDrawRegion,
+}: PageSidebarProps) => {
 	const sections = useAtomValue(sectionsStateAtom);
 	const [, updateSection] = useAtom(updateSectionAtom);
 	const [, moveToFront] = useAtom(moveWindowToFrontAtom);
@@ -78,6 +88,12 @@ export const PageSidebar = () => {
 		setSectionOrder(newOrder);
 	};
 
+	const actionProps = {
+		activeAction,
+		onSelectText,
+		onDrawRegion,
+	};
+
 	const sectionMetadata: Partial<
 		Record<
 			SectionId,
@@ -96,17 +112,17 @@ export const PageSidebar = () => {
 		"page-subject": {
 			title: "Page Subject Index",
 			icon: Tags,
-			content: PageSubjectContent,
+			content: () => <PageSubjectContent {...actionProps} />,
 		},
 		"page-author": {
 			title: "Page Author Index",
 			icon: User,
-			content: PageAuthorContent,
+			content: () => <PageAuthorContent {...actionProps} />,
 		},
 		"page-scripture": {
 			title: "Page Scripture Index",
 			icon: BookOpen,
-			content: PageScriptureContent,
+			content: () => <PageScriptureContent {...actionProps} />,
 		},
 		"page-biblio": {
 			title: "Page Bibliography",

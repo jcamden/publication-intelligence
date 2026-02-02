@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnnotationMode, PdfHighlight } from "@pubint/yaboujee";
+import type { PdfHighlight } from "@pubint/yaboujee";
 import { PdfViewer, PdfViewerToolbar } from "@pubint/yaboujee";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useState } from "react";
@@ -139,7 +139,12 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const [totalPages, setTotalPages] = useAtom(totalPagesAtom);
 	const [zoom, setZoom] = useAtom(zoomAtom);
-	const [annotationMode, setAnnotationMode] = useState<AnnotationMode>("view");
+
+	// Transient action state (replaces persistent annotationMode)
+	const [activeAction, setActiveAction] = useState<{
+		type: "select-text" | "draw-region" | null;
+		indexType: string | null;
+	}>({ type: null, indexType: null });
 
 	const projectCollapsed = useAtomValue(projectSidebarCollapsedAtom);
 	const pageCollapsed = useAtomValue(pageSidebarCollapsedAtom);
@@ -169,19 +174,39 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 		[setTotalPages],
 	);
 
+	const handleSelectText = useCallback(
+		({ indexType }: { indexType: string }) => {
+			setActiveAction({ type: "select-text", indexType });
+		},
+		[],
+	);
+
+	const handleDrawRegion = useCallback(
+		({ indexType }: { indexType: string }) => {
+			setActiveAction({ type: "draw-region", indexType });
+		},
+		[],
+	);
+
 	const handleCreateDraftHighlight = useCallback(
 		(draft: { pageNumber: number; text: string; bbox: unknown }) => {
 			console.log("Draft highlight created:", {
 				page: draft.pageNumber,
 				text: draft.text,
 				bbox: JSON.stringify(draft.bbox),
+				indexType: activeAction.indexType,
 			});
-			// Phase 4: Show UI to attach to IndexEntry
-			// For now, auto-return to view mode after draft created
-			setAnnotationMode("view");
+			// Phase 4B: Show mention creation popover
+			// Auto-revert to view mode after draft created
+			setActiveAction({ type: null, indexType: null });
 		},
-		[],
+		[activeAction.indexType],
 	);
+
+	const handleDraftCancelled = useCallback(() => {
+		// Auto-revert to view mode when draft is cancelled
+		setActiveAction({ type: null, indexType: null });
+	}, []);
 
 	const handlePdfVisibilityToggle = useCallback(() => {
 		const viewportWidth = window.innerWidth / 16;
@@ -277,42 +302,6 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 				{/* PDF section - conditional */}
 				{pdfVisible && (
 					<div className="flex-1 min-w-0 h-full relative">
-						{/* Temporary mode toggle buttons - Phase 4 will add proper toolbar */}
-						<div className="absolute top-2 right-2 z-10 flex gap-2">
-							<button
-								type="button"
-								onClick={() => setAnnotationMode("view")}
-								className={`px-3 py-1 rounded text-sm ${
-									annotationMode === "view"
-										? "bg-blue-600 text-white"
-										: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-								}`}
-							>
-								View
-							</button>
-							<button
-								type="button"
-								onClick={() => setAnnotationMode("add-text-highlight")}
-								className={`px-3 py-1 rounded text-sm ${
-									annotationMode === "add-text-highlight"
-										? "bg-blue-600 text-white"
-										: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-								}`}
-							>
-								Select Text
-							</button>
-							<button
-								type="button"
-								onClick={() => setAnnotationMode("add-region")}
-								className={`px-3 py-1 rounded text-sm ${
-									annotationMode === "add-region"
-										? "bg-blue-600 text-white"
-										: "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-								}`}
-							>
-								Draw Region
-							</button>
-						</div>
 						<PdfViewer
 							url={fileUrl}
 							scale={zoom}
@@ -325,9 +314,10 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 									`Highlight Clicked!\n\nLabel: ${h.label}\nText: ${h.text}\nPage: ${h.pageNumber}`,
 								);
 							}}
-							annotationMode={annotationMode}
+							textLayerInteractive={activeAction.type === "select-text"}
+							regionDrawingActive={activeAction.type === "draw-region"}
 							onCreateDraftHighlight={handleCreateDraftHighlight}
-							onModeExit={() => setAnnotationMode("view")}
+							onDraftCancelled={handleDraftCancelled}
 						/>
 					</div>
 				)}
@@ -335,7 +325,11 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 				{/* Page sidebar - always rendered, transitions to 0 width when collapsed */}
 				{onlyPageVisible ? (
 					<div className="flex-1 min-w-0">
-						<PageSidebar />
+						<PageSidebar
+							activeAction={activeAction}
+							onSelectText={handleSelectText}
+							onDrawRegion={handleDrawRegion}
+						/>
 					</div>
 				) : (
 					<ResizableSidebar
@@ -343,13 +337,21 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 						widthAtom={pageSidebarWidthAtom}
 						isCollapsed={pageCollapsed}
 					>
-						<PageSidebar />
+						<PageSidebar
+							activeAction={activeAction}
+							onSelectText={handleSelectText}
+							onDrawRegion={handleDrawRegion}
+						/>
 					</ResizableSidebar>
 				)}
 			</div>
 
 			{/* Windows overlay */}
-			<WindowManager />
+			<WindowManager
+				activeAction={activeAction}
+				onSelectText={handleSelectText}
+				onDrawRegion={handleDrawRegion}
+			/>
 		</div>
 	);
 };

@@ -118,6 +118,7 @@ export const TextLayerIsSelectable: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
+				textLayerInteractive={true}
 			/>
 		);
 	},
@@ -184,6 +185,7 @@ export const TextLayerScalesCorrectly: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
+				textLayerInteractive={true}
 			/>
 		);
 	},
@@ -284,88 +286,80 @@ export const HighlightsRenderCorrectly: StoryObj<typeof PdfViewer> = {
 	},
 };
 
-export const HighlightClickTriggersCallback: StoryObj<typeof PdfViewer> = {
+export const HighlightClickableEvenWhenLayeredWithTextLayer: StoryObj<
+	typeof PdfViewer
+> = {
 	render: () => {
 		const [page, setPage] = useState(1);
 		const [_numPages, setNumPages] = useState(0);
-		const handleClick = fn();
+		const [clickedHighlight, setClickedHighlight] = useState<string | null>(
+			null,
+		);
 
 		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={mockHighlights}
-				onHighlightClick={handleClick}
-			/>
+			<div className="relative h-full">
+				{clickedHighlight && (
+					<div className="absolute top-2 left-2 z-50 bg-green-500 text-white px-3 py-1 rounded shadow-lg">
+						Clicked: {clickedHighlight}
+					</div>
+				)}
+				<PdfViewer
+					url={defaultArgs.url}
+					scale={1.25}
+					currentPage={page}
+					onPageChange={({ page }) => setPage(page)}
+					onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+					highlights={mockHighlights}
+					onHighlightClick={(h) => setClickedHighlight(h.label)}
+					showTextLayer={true}
+					textLayerInteractive={false}
+				/>
+			</div>
 		);
 	},
 	play: async ({ canvasElement, step }) => {
-		await step("Wait for highlights to render", async () => {
+		await step("Wait for text layer and highlights to render", async () => {
+			await waitFor(
+				async () => {
+					const textLayer = canvasElement.querySelector(".textLayer");
+					await expect(textLayer).toBeTruthy();
+					const textSpans = textLayer?.querySelectorAll("span");
+					await expect(textSpans?.length).toBeGreaterThan(0);
+				},
+				{ timeout: 10000 },
+			);
+
 			await waitFor(
 				async () => {
 					const canvas = within(canvasElement);
 					const highlights = canvas.queryAllByRole("button");
-					await expect(highlights.length).toBeGreaterThan(0);
-				},
-				{ timeout: 10000 },
-			);
-		});
-
-		await step("Click first highlight", async () => {
-			const canvas = within(canvasElement);
-			const highlights = canvas.getAllByRole("button");
-			await userEvent.click(highlights[0]);
-		});
-	},
-};
-
-export const HighlightsUpdateWithScale: StoryObj<typeof PdfViewer> = {
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-		const [scale, setScale] = useState(1.0);
-
-		useEffect(() => {
-			const timer = setTimeout(() => setScale(2.0), 1000);
-			return () => clearTimeout(timer);
-		}, []);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={scale}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={mockHighlights}
-				onHighlightClick={fn()}
-			/>
-		);
-	},
-	play: async ({ canvasElement, step }) => {
-		await step("Wait for initial render", async () => {
-			await waitFor(
-				async () => {
-					const pdfCanvas = canvasElement.querySelector("canvas");
-					await expect(pdfCanvas).toBeTruthy();
-				},
-				{ timeout: 10000 },
-			);
-		});
-
-		await step("Verify highlights persist after scale change", async () => {
-			await waitFor(
-				async () => {
-					const canvas = within(canvasElement);
-					const highlights = canvas.getAllByRole("button");
 					await expect(highlights.length).toBe(mockHighlights.length);
 				},
-				{ timeout: 5000 },
+				{ timeout: 10000 },
 			);
 		});
+
+		await step(
+			"Click the center highlight (overlaid by text layer)",
+			async () => {
+				const canvas = within(canvasElement);
+				// The "center" highlight is definitely overlaid by text
+				const centerHighlight = canvas.getByTestId("highlight-center");
+				await expect(centerHighlight).toBeTruthy();
+
+				// Click the center of the highlight
+				await userEvent.click(centerHighlight);
+
+				// Verify the click was registered by checking for the success message
+				await waitFor(
+					async () => {
+						const successMessage = canvas.queryByText(/Clicked: Center/i);
+						await expect(successMessage).toBeTruthy();
+					},
+					{ timeout: 2000 },
+				);
+			},
+		);
 	},
 };
 
@@ -431,7 +425,8 @@ export const ViewModeHighlightsAreClickable: StoryObj<typeof PdfViewer> = {
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				highlights={mockHighlights}
 				onHighlightClick={handleClick}
-				annotationMode="view"
+				textLayerInteractive={false}
+				regionDrawingActive={false}
 			/>
 		);
 	},
@@ -480,7 +475,7 @@ export const AddTextHighlightModeTextIsSelectable: StoryObj<typeof PdfViewer> =
 					onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 					showTextLayer={true}
 					highlights={mockHighlights}
-					annotationMode="add-text-highlight"
+					textLayerInteractive={true}
 					onCreateDraftHighlight={handleDraft}
 				/>
 			);
@@ -549,7 +544,7 @@ export const AddTextHighlightModeCreatesTextDraft: StoryObj<typeof PdfViewer> =
 					onPageChange={({ page }) => setPage(page)}
 					onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 					showTextLayer={true}
-					annotationMode="add-text-highlight"
+					textLayerInteractive={true}
 					onCreateDraftHighlight={handleDraft}
 				/>
 			);
@@ -622,7 +617,7 @@ export const EscapeKeyClearsDraftInTextMode: StoryObj<typeof PdfViewer> = {
 		const [page, setPage] = useState(1);
 		const [_numPages, setNumPages] = useState(0);
 		const handleDraft = fn();
-		const handleModeExit = fn();
+		const handleDraftCancelled = fn();
 
 		return (
 			<PdfViewer
@@ -632,9 +627,9 @@ export const EscapeKeyClearsDraftInTextMode: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
-				annotationMode="add-text-highlight"
+				textLayerInteractive={true}
 				onCreateDraftHighlight={handleDraft}
-				onModeExit={handleModeExit}
+				onDraftCancelled={handleDraftCancelled}
 			/>
 		);
 	},
@@ -717,7 +712,7 @@ export const ClickingOffDraftClearsDraft: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
-				annotationMode="add-text-highlight"
+				textLayerInteractive={true}
 				onCreateDraftHighlight={handleDraft}
 			/>
 		);

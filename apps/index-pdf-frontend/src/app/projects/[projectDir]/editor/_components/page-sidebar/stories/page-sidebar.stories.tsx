@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { fn } from "@storybook/test";
 import { PageSidebar } from "../page-sidebar";
 
 const meta: Meta<typeof PageSidebar> = {
@@ -28,7 +29,11 @@ export const Default: Story = {
 				border: "1px solid #ccc",
 			}}
 		>
-			<PageSidebar />
+			<PageSidebar
+				activeAction={{ type: null, indexType: null }}
+				onSelectText={fn()}
+				onDrawRegion={fn()}
+			/>
 		</div>
 	),
 };

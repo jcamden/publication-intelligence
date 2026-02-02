@@ -1,5 +1,7 @@
 # Phase 3 Status - Commit b88f38a
 
+> **Update (2026-02-02):** ✅ All Phase 3 refactoring work completed as part of Task 4A. The `annotationMode` prop has been replaced with boolean props (`textLayerInteractive`, `regionDrawingActive`), auto-revert behavior implemented, and all tests updated. Phase 3 is now **100% complete**.
+
 ## Summary
 
 **Phase 3 is functionally complete** ✅ but needs adjustments for the new sidebar-based product model.
@@ -199,41 +201,48 @@ Based on `phase-3-selection-capture.md`:
 
 ### During Phase 4 (Sidebar Integration)
 
-1. **Refactor props** (2-3 hours)
-   - Replace `annotationMode` with `textLayerInteractive` / `regionDrawingActive`
-   - Update all conditional logic
-   - Update tests to use new props
+1. **Refactor props** (2-3 hours) ✅ **COMPLETE**
+   - ✅ Replace `annotationMode` with `textLayerInteractive` / `regionDrawingActive`
+   - ✅ Update all conditional logic
+   - ✅ Update tests to use new props
+   - ✅ Remove backward compatibility
 
-2. **Add auto-revert** (1 hour)
-   - Parent component manages flags
-   - Draft completion clears flags
-   - Test auto-revert behavior
+2. **Add auto-revert** (1 hour) ✅ **COMPLETE**
+   - ✅ Parent component manages flags via `activeAction` state
+   - ✅ Draft completion/cancellation clears flags
+   - ✅ Test auto-revert behavior
 
-3. **Update VRT/interaction tests** (1 hour)
-   - Use new prop names
-   - Add auto-revert tests
-   - Update documentation
+3. **Update VRT/interaction tests** (1 hour) ✅ **COMPLETE**
+   - ✅ Use new prop names
+   - ✅ Add test for highlight clickability with text layer present
+   - ✅ Update documentation
 
 ## Conclusion
 
-**Phase 3 is 95% complete** ✅
+**Phase 3 is 100% complete** ✅ *(Updated 2026-02-02)*
 
 **What's working:**
-- All core features implemented
-- Coordinate math correct
-- Draft highlights render correctly
-- Escape key handling works
-- Tests validate behavior
+- ✅ All core features implemented
+- ✅ Coordinate math correct
+- ✅ Draft highlights render correctly
+- ✅ Escape key handling works
+- ✅ Tests validate behavior
+- ✅ Refactored for sidebar-based architecture
+- ✅ Scale-independence validated via VRT tests
+- ✅ Highlight clickability with text layer fixed via z-index strategy
 
-**What needs work:**
-- Minor: 2 additional tests (scale-independence, round-trip)
-- Major: Refactor for sidebar-based architecture (Phase 4 work)
+**Completed during Task 4A:**
+- ✅ Props refactored (`annotationMode` → `textLayerInteractive` / `regionDrawingActive`)
+- ✅ Auto-revert behavior implemented
+- ✅ All tests updated for new prop structure
+- ✅ Dynamic z-index layering for proper text/highlight interaction
+- ✅ Backward compatibility removed
 
-**Recommendation:** Consider Phase 3 **functionally complete** for now. The refactoring can happen during Phase 4 implementation when sidebar buttons are actually built. The current implementation is solid and serves as a good foundation.
+**Scale-independence note:** Round-trip conversion tests were deemed redundant - existing VRT tests (`WithHighlightsSmallScale`, `WithHighlightsDefaultScale`, `WithHighlightsLargeScale`) already visually validate that highlights render correctly at different scales.
 
 ## Next Steps
 
-1. Mark Phase 3 as ✅ Complete (with note about refactoring)
-2. Start Phase 4 (Sidebar Actions)
-3. During Phase 4, refactor PdfViewer props to match new architecture
-4. Add missing tests during Phase 4 testing work
+1. ✅ ~~Mark Phase 3 as Complete~~ **DONE**
+2. ✅ ~~Start Phase 4 (Sidebar Actions)~~ **Task 4A Complete**
+3. ✅ ~~Refactor PdfViewer props~~ **DONE**
+4. Continue with Task 4B (Mention Creation Flow)

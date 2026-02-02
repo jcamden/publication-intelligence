@@ -26,11 +26,18 @@ import { ProjectPagesContent } from "../project-sidebar/components/project-pages
 import { ProjectScriptureContent } from "../project-sidebar/components/project-scripture-content";
 import { ProjectSubjectContent } from "../project-sidebar/components/project-subject-content";
 
+type WindowManagerProps = {
+	activeAction: { type: string | null; indexType: string | null };
+	onSelectText: ({ indexType }: { indexType: string }) => void;
+	onDrawRegion: ({ indexType }: { indexType: string }) => void;
+};
+
 const windowRegistry: Record<
 	SectionId,
 	{
 		title: string;
-		component: ComponentType;
+		// biome-ignore lint/suspicious/noExplicitAny: Window registry needs to support components with varying prop types
+		component: ComponentType<any>;
 	}
 > = {
 	"project-pages": { title: "Project Pages", component: ProjectPagesContent },
@@ -81,7 +88,11 @@ const getDefaultWindowPosition = ({ sectionId }: { sectionId: SectionId }) => {
 	}
 };
 
-export const WindowManager = () => {
+export const WindowManager = ({
+	activeAction,
+	onSelectText,
+	onDrawRegion,
+}: WindowManagerProps) => {
 	const windowsToRender = useAtomValue(windowsToRenderAtom);
 	const sections = useAtomValue(sectionsStateAtom);
 	const [, updateSection] = useAtom(updateSectionAtom);
@@ -107,6 +118,16 @@ export const WindowManager = () => {
 				};
 
 				const Content = config.component;
+
+				// Determine if this section needs action props
+				const needsActionProps = [
+					"page-subject",
+					"page-author",
+					"page-scripture",
+				].includes(id);
+				const contentProps = needsActionProps
+					? { activeAction, onSelectText, onDrawRegion }
+					: {};
 
 				return (
 					<Window
@@ -223,7 +244,7 @@ export const WindowManager = () => {
 						}}
 						onFocus={() => moveToFront(id)}
 					>
-						<Content />
+						<Content {...contentProps} />
 					</Window>
 				);
 			})}

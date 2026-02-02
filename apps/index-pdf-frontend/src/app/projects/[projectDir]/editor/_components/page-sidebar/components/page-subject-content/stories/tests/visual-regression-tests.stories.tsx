@@ -3,6 +3,7 @@ import {
 	visualRegressionTestConfig,
 } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
+import { fn } from "@storybook/test";
 import { PageSubjectContent } from "../../page-subject-content";
 
 const meta: Meta<typeof PageSubjectContent> = {
@@ -20,12 +21,22 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const LightMode: Story = {
+	args: {
+		activeAction: { type: null, indexType: null },
+		onSelectText: fn(),
+		onDrawRegion: fn(),
+	},
 	globals: {
 		...defaultGlobals,
 	},
 };
 
 export const DarkMode: Story = {
+	args: {
+		activeAction: { type: null, indexType: null },
+		onSelectText: fn(),
+		onDrawRegion: fn(),
+	},
 	globals: {
 		...defaultGlobals,
 		theme: "dark",

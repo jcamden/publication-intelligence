@@ -81,6 +81,7 @@ export const TextLayerDefaultScale: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
+				textLayerInteractive={true}
 			/>
 		);
 	},
@@ -95,16 +96,15 @@ export const TextLayerDefaultScale: StoryObj<typeof PdfViewer> = {
 			{ timeout: 5000 },
 		);
 
-		const textLayer = canvasElement.querySelector(".textLayer");
+		// Programmatically select all text
+		const textLayer = canvasElement.querySelector(".textLayer") as HTMLElement;
 		if (textLayer) {
+			const selection = window.getSelection();
 			const range = document.createRange();
 			range.selectNodeContents(textLayer);
-			const selection = window.getSelection();
 			selection?.removeAllRanges();
 			selection?.addRange(range);
 		}
-
-		await new Promise((resolve) => setTimeout(resolve, 100));
 	},
 	parameters: {
 		theme: "light",
@@ -130,6 +130,7 @@ export const TextLayerSmallScale: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
+				textLayerInteractive={true}
 			/>
 		);
 	},
@@ -144,16 +145,14 @@ export const TextLayerSmallScale: StoryObj<typeof PdfViewer> = {
 			{ timeout: 5000 },
 		);
 
-		const textLayer = canvasElement.querySelector(".textLayer");
+		const textLayer = canvasElement.querySelector(".textLayer") as HTMLElement;
 		if (textLayer) {
+			const selection = window.getSelection();
 			const range = document.createRange();
 			range.selectNodeContents(textLayer);
-			const selection = window.getSelection();
 			selection?.removeAllRanges();
 			selection?.addRange(range);
 		}
-
-		await new Promise((resolve) => setTimeout(resolve, 100));
 	},
 	parameters: {
 		theme: "light",
@@ -179,6 +178,7 @@ export const TextLayerLargeScale: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
+				textLayerInteractive={true}
 			/>
 		);
 	},
@@ -193,16 +193,14 @@ export const TextLayerLargeScale: StoryObj<typeof PdfViewer> = {
 			{ timeout: 5000 },
 		);
 
-		const textLayer = canvasElement.querySelector(".textLayer");
+		const textLayer = canvasElement.querySelector(".textLayer") as HTMLElement;
 		if (textLayer) {
+			const selection = window.getSelection();
 			const range = document.createRange();
 			range.selectNodeContents(textLayer);
-			const selection = window.getSelection();
 			selection?.removeAllRanges();
 			selection?.addRange(range);
 		}
-
-		await new Promise((resolve) => setTimeout(resolve, 100));
 	},
 	parameters: {
 		theme: "light",
@@ -228,6 +226,7 @@ export const TextLayerDefaultScaleDark: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				showTextLayer={true}
+				textLayerInteractive={true}
 			/>
 		);
 	},
@@ -242,16 +241,14 @@ export const TextLayerDefaultScaleDark: StoryObj<typeof PdfViewer> = {
 			{ timeout: 5000 },
 		);
 
-		const textLayer = canvasElement.querySelector(".textLayer");
+		const textLayer = canvasElement.querySelector(".textLayer") as HTMLElement;
 		if (textLayer) {
+			const selection = window.getSelection();
 			const range = document.createRange();
 			range.selectNodeContents(textLayer);
-			const selection = window.getSelection();
 			selection?.removeAllRanges();
 			selection?.addRange(range);
 		}
-
-		await new Promise((resolve) => setTimeout(resolve, 100));
 	},
 	parameters: {
 		backgrounds: { default: "dark" },
@@ -280,6 +277,34 @@ export const TextLayerDisabled: StoryObj<typeof PdfViewer> = {
 				showTextLayer={false}
 			/>
 		);
+	},
+	play: async ({ canvasElement }) => {
+		await waitFor(
+			async () => {
+				const canvas = canvasElement.querySelector("canvas");
+				if (!canvas) throw new Error("Canvas not found");
+			},
+			{ timeout: 5000 },
+		);
+
+		// Attempt to select all text (should not work since text layer is disabled)
+		const selection = window.getSelection();
+		selection?.removeAllRanges();
+
+		// Try to create a range on the canvas element
+		const canvas = canvasElement.querySelector("canvas") as HTMLElement;
+		if (canvas) {
+			try {
+				const range = document.createRange();
+				range.selectNodeContents(canvas);
+				selection?.addRange(range);
+			} catch (_e) {
+				// Expected - canvas has no selectable text
+			}
+		}
+
+		// Small delay for visual confirmation that nothing is selected
+		await new Promise((resolve) => setTimeout(resolve, 200));
 	},
 	parameters: {
 		theme: "light",
@@ -402,7 +427,72 @@ export const WithHighlightsDark: StoryObj<typeof PdfViewer> = {
 	},
 };
 
-export const WithHighlightsHoverState: StoryObj<typeof PdfViewer> = {
+export const HighlightsLayeredAboveTextLayerHover: StoryObj<typeof PdfViewer> =
+	{
+		globals: {
+			viewport: undefined,
+		},
+		render: () => {
+			const [page, setPage] = useState(1);
+			const [_numPages, setNumPages] = useState(0);
+
+			return (
+				<PdfViewer
+					url={defaultArgs.url}
+					scale={1.25}
+					currentPage={page}
+					onPageChange={({ page }) => setPage(page)}
+					onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+					highlights={mockHighlights}
+					onHighlightClick={fn()}
+					showTextLayer={true}
+					textLayerInteractive={false}
+				/>
+			);
+		},
+		parameters: {
+			theme: "light",
+			chromatic: {
+				delay: 3000,
+			},
+		},
+		play: async ({ canvasElement }) => {
+			await waitFor(
+				async () => {
+					const textLayer = canvasElement.querySelector(".textLayer");
+					if (!textLayer) throw new Error("Text layer not found");
+					const textSpans = textLayer.querySelectorAll("span");
+					if (textSpans.length === 0)
+						throw new Error("Text layer has no spans");
+				},
+				{ timeout: 5000 },
+			);
+
+			await waitFor(
+				async () => {
+					const centerHighlight = canvasElement.querySelector(
+						'[data-testid="highlight-center"]',
+					);
+					if (!centerHighlight) throw new Error("Center highlight not found");
+				},
+				{ timeout: 5000 },
+			);
+
+			// Hover the center highlight to verify it's on top and interactive
+			const centerHighlight = canvasElement.querySelector(
+				'[data-testid="highlight-center"]',
+			);
+			if (centerHighlight) {
+				centerHighlight.classList.add("pseudo-hover");
+			}
+
+			await new Promise((resolve) => setTimeout(resolve, 500));
+		},
+	};
+
+export const HighlightsLayeredAboveTextLayerHoverDark: StoryObj<
+	typeof PdfViewer
+> = {
 	globals: {
 		viewport: undefined,
 	},
@@ -419,100 +509,46 @@ export const WithHighlightsHoverState: StoryObj<typeof PdfViewer> = {
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				highlights={mockHighlights}
 				onHighlightClick={fn()}
-			/>
-		);
-	},
-	parameters: {
-		theme: "light",
-	},
-	play: async ({ canvasElement }) => {
-		// Wait for PDF canvas to render
-		await waitFor(
-			() => {
-				const canvas = canvasElement.querySelector("canvas");
-				if (!canvas) throw new Error("Canvas not found");
-			},
-			{ timeout: 10000 },
-		);
-
-		// Wait for highlights to render
-		await waitFor(
-			() => {
-				const highlight = canvasElement.querySelector(
-					'[data-testid="highlight-top-left"]',
-				);
-				if (!highlight) throw new Error("Highlight not found");
-			},
-			{ timeout: 5000 },
-		);
-
-		// Manually apply pseudo-hover class after element exists
-		const highlightElement = canvasElement.querySelector(
-			'[data-testid="highlight-top-left"]',
-		);
-		if (highlightElement) {
-			highlightElement.classList.add("pseudo-hover");
-		}
-
-		// Wait for CSS transitions to complete
-		await new Promise((resolve) => setTimeout(resolve, 500));
-	},
-};
-
-export const WithHighlightsHoverStateDark: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={mockHighlights}
-				onHighlightClick={fn()}
+				showTextLayer={true}
+				textLayerInteractive={false}
 			/>
 		);
 	},
 	parameters: {
 		backgrounds: { default: "dark" },
 		theme: "dark",
+		chromatic: {
+			delay: 3000,
+		},
 	},
 	play: async ({ canvasElement }) => {
-		// Wait for PDF canvas to render
 		await waitFor(
-			() => {
-				const canvas = canvasElement.querySelector("canvas");
-				if (!canvas) throw new Error("Canvas not found");
-			},
-			{ timeout: 10000 },
-		);
-
-		// Wait for highlights to render
-		await waitFor(
-			() => {
-				const highlight = canvasElement.querySelector(
-					'[data-testid="highlight-top-left"]',
-				);
-				if (!highlight) throw new Error("Highlight not found");
+			async () => {
+				const textLayer = canvasElement.querySelector(".textLayer");
+				if (!textLayer) throw new Error("Text layer not found");
+				const textSpans = textLayer.querySelectorAll("span");
+				if (textSpans.length === 0) throw new Error("Text layer has no spans");
 			},
 			{ timeout: 5000 },
 		);
 
-		// Manually apply pseudo-hover class after element exists
-		const highlightElement = canvasElement.querySelector(
-			'[data-testid="highlight-top-left"]',
+		await waitFor(
+			async () => {
+				const centerHighlight = canvasElement.querySelector(
+					'[data-testid="highlight-center"]',
+				);
+				if (!centerHighlight) throw new Error("Center highlight not found");
+			},
+			{ timeout: 5000 },
 		);
-		if (highlightElement) {
-			highlightElement.classList.add("pseudo-hover");
+
+		const centerHighlight = canvasElement.querySelector(
+			'[data-testid="highlight-center"]',
+		);
+		if (centerHighlight) {
+			centerHighlight.classList.add("pseudo-hover");
 		}
 
-		// Wait for CSS transitions to complete
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	},
 };
@@ -549,7 +585,7 @@ export const DraftTextHighlight: StoryObj<typeof PdfViewer> = {
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				highlights={highlightsWithDraft}
 				showTextLayer={true}
-				annotationMode="add-text-highlight"
+				textLayerInteractive={true}
 				onHighlightClick={fn()}
 			/>
 		);
@@ -591,7 +627,7 @@ export const DraftTextHighlightDark: StoryObj<typeof PdfViewer> = {
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				highlights={highlightsWithDraft}
 				showTextLayer={true}
-				annotationMode="add-text-highlight"
+				textLayerInteractive={true}
 				onHighlightClick={fn()}
 			/>
 		);
@@ -633,7 +669,7 @@ export const DraftRegionHighlight: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				highlights={highlightsWithDraft}
-				annotationMode="add-region"
+				regionDrawingActive={true}
 				onHighlightClick={fn()}
 			/>
 		);
@@ -674,7 +710,7 @@ export const DraftRegionHighlightDark: StoryObj<typeof PdfViewer> = {
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
 				highlights={highlightsWithDraft}
-				annotationMode="add-region"
+				regionDrawingActive={true}
 				onHighlightClick={fn()}
 			/>
 		);
