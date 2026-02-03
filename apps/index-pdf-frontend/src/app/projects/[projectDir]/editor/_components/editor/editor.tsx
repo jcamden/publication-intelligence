@@ -1,9 +1,13 @@
 "use client";
 
 import type { PdfHighlight } from "@pubint/yaboujee";
-import { PdfViewer, PdfViewerToolbar } from "@pubint/yaboujee";
+import {
+	PdfAnnotationPopover,
+	PdfViewer,
+	PdfViewerToolbar,
+} from "@pubint/yaboujee";
 import { useAtom, useAtomValue } from "jotai";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	currentPageAtom,
 	MIN_PDF_WIDTH,
@@ -18,11 +22,13 @@ import {
 	zoomAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useHydrated } from "@/app/projects/[projectDir]/editor/_hooks/use-hydrated";
+import { DeleteMentionDialog } from "../delete-mention-dialog";
 import {
 	type BoundingBox,
 	type IndexEntry,
 	MentionCreationPopover,
 } from "../mention-creation-popover";
+import { MentionDetailsPopover } from "../mention-details-popover";
 import { PageBar } from "../page-bar";
 import { PageSidebar } from "../page-sidebar";
 import { ProjectBar } from "../project-bar";
@@ -56,6 +62,7 @@ import { WindowManager } from "../window-manager";
 
 type EditorProps = {
 	fileUrl: string;
+	initialMentions?: Mention[]; // For testing only
 };
 
 export type Mention = {
@@ -65,6 +72,7 @@ export type Mention = {
 	bbox: BoundingBox;
 	entryId: string;
 	entryLabel: string;
+	indexTypes: string[]; // ['subject', 'author', 'scripture']
 	createdAt: Date;
 };
 
@@ -77,6 +85,9 @@ export type Mention = {
  * - Units: PDF points (1/72 inch)
  *
  * Assuming standard letter size: 612pt wide x 792pt tall (8.5" x 11")
+ *
+ * NOTE: These are for Phase 2 positioning tests only.
+ * Real mentions are managed in the mentions state array.
  *
  * TODO Phase 5: Replace with real data from API
  */
@@ -169,7 +180,7 @@ const mockIndexEntries: IndexEntry[] = [
 	{ id: "12", label: "Theory of Forms", parentId: "10" },
 ];
 
-export const Editor = ({ fileUrl }: EditorProps) => {
+export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 	const hydrated = useHydrated();
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const [totalPages, setTotalPages] = useAtom(totalPagesAtom);
@@ -182,8 +193,24 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 	}>({ type: null, indexType: null });
 
 	// Mention state management
-	const [mentions, setMentions] = useState<Mention[]>([]);
+	// Phase 5 TODO: Replace with tRPC query
+	// const mentionsQuery = trpc.mention.listByDocument.useQuery({ documentId });
+	// const mentions = mentionsQuery.data ?? [];
+	//
+	// Current Phase 4 behavior:
+	// - Mentions can be initialized for testing (initialMentions prop)
+	// - handleDraftConfirmed simulates API call, then adds to state
+	// - In Phase 5, this will be replaced with real API + optimistic updates
+	const [mentions, setMentions] = useState<Mention[]>(initialMentions);
 	const [clearDraftTrigger, setClearDraftTrigger] = useState(0);
+
+	// Mention details popover state
+	const [selectedMention, setSelectedMention] = useState<Mention | null>(null);
+	const [detailsAnchor, setDetailsAnchor] = useState<HTMLElement | null>(null);
+
+	// Delete confirmation state
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [mentionToDelete, setMentionToDelete] = useState<string | null>(null);
 
 	const projectCollapsed = useAtomValue(projectSidebarCollapsedAtom);
 	const pageCollapsed = useAtomValue(pageSidebarCollapsedAtom);
@@ -228,28 +255,52 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 	);
 
 	const handleDraftConfirmed = useCallback(
-		({
+		async ({
 			draft,
 			entry,
 		}: {
 			draft: { pageNumber: number; text: string; bbox: BoundingBox };
-			entry: { entryId: string; entryLabel: string };
+			entry: { entryId: string; entryLabel: string; regionName?: string };
 		}) => {
-			const mention: Mention = {
-				id: crypto.randomUUID(),
+			// Capture which index type this mention was created from
+			const indexType = activeAction.indexType || "subject"; // Default to subject if none
+
+			// For region drafts, use regionName as the text; for text drafts, use draft.text
+			const mentionText = entry.regionName || draft.text;
+
+			// Phase 5 TODO: Replace with real tRPC mutation
+			// const result = await createMentionMutation.mutateAsync({
+			//   documentId,
+			//   entryId: entry.entryId,
+			//   pageNumber: draft.pageNumber,
+			//   text: mentionText,
+			//   bbox: draft.bbox,
+			//   indexTypes: [indexType],
+			// });
+
+			// Simulated API call - draft stays visible until server responds
+			await new Promise((resolve) => setTimeout(resolve, 300));
+
+			// Simulate server response (would come from tRPC in Phase 5)
+			const serverMention: Mention = {
+				id: crypto.randomUUID(), // In Phase 5: comes from server
 				pageNumber: draft.pageNumber,
-				text: draft.text,
+				text: mentionText, // Use regionName for regions, draft.text for text selections
 				bbox: draft.bbox,
 				entryId: entry.entryId,
 				entryLabel: entry.entryLabel,
-				createdAt: new Date(),
+				indexTypes: [indexType], // Created from this index type
+				createdAt: new Date(), // In Phase 5: comes from server
 			};
 
-			setMentions((prev) => [...prev, mention]);
+			// Add server-confirmed mention to state
+			setMentions((prev) => [...prev, serverMention]);
+
+			// Clear draft and revert to view mode
 			setActiveAction({ type: null, indexType: null });
 			setClearDraftTrigger((prev) => prev + 1);
 		},
-		[],
+		[activeAction.indexType],
 	);
 
 	const handleDraftCancelled = useCallback(() => {
@@ -257,6 +308,94 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 		setActiveAction({ type: null, indexType: null });
 		setClearDraftTrigger((prev) => prev + 1);
 	}, []);
+
+	const handleHighlightClick = useCallback(
+		(highlight: PdfHighlight) => {
+			const mention = mentions.find((m) => m.id === highlight.id);
+			if (mention) {
+				// Find the highlight element to use as anchor
+				const highlightEl = document.querySelector(
+					`[data-testid="highlight-${highlight.id}"]`,
+				);
+				if (highlightEl instanceof HTMLElement) {
+					setDetailsAnchor(highlightEl);
+					setSelectedMention(mention);
+				}
+			}
+		},
+		[mentions],
+	);
+
+	const handleMentionClickFromSidebar = useCallback(
+		({ mentionId }: { mentionId: string }) => {
+			const mention = mentions.find((m) => m.id === mentionId);
+			if (mention) {
+				// Find the highlight element to use as anchor
+				const highlightEl = document.querySelector(
+					`[data-testid="highlight-${mentionId}"]`,
+				);
+				if (highlightEl instanceof HTMLElement) {
+					setDetailsAnchor(highlightEl);
+					setSelectedMention(mention);
+				}
+			}
+		},
+		[mentions],
+	);
+
+	const handleEditMention = useCallback(
+		({ mentionId }: { mentionId: string }) => {
+			// TODO: Implement edit functionality in future task
+			// For now, just close the details popover
+			console.log("Edit mention:", mentionId);
+			setSelectedMention(null);
+			setDetailsAnchor(null);
+		},
+		[],
+	);
+
+	const handleDeleteMention = useCallback(
+		({ mentionId }: { mentionId: string }) => {
+			setMentionToDelete(mentionId);
+			setShowDeleteConfirm(true);
+			// Close details popover
+			setSelectedMention(null);
+			setDetailsAnchor(null);
+		},
+		[],
+	);
+
+	const handleConfirmDelete = useCallback(async () => {
+		if (!mentionToDelete) return;
+
+		// Phase 5 TODO: Replace with real tRPC mutation
+		// await deleteMentionMutation.mutateAsync({ id: mentionToDelete });
+
+		// Simulated API call
+		await new Promise((resolve) => setTimeout(resolve, 200));
+
+		// Remove mention after server confirms deletion
+		setMentions((prev) => prev.filter((m) => m.id !== mentionToDelete));
+		setMentionToDelete(null);
+	}, [mentionToDelete]);
+
+	const handleCloseDetailsPopover = useCallback(() => {
+		setSelectedMention(null);
+		setDetailsAnchor(null);
+	}, []);
+
+	// Keyboard handler for Delete key
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Delete" && selectedMention) {
+				e.preventDefault();
+				handleDeleteMention({ mentionId: selectedMention.id });
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [selectedMention, handleDeleteMention]);
 
 	const handlePdfVisibilityToggle = useCallback(() => {
 		const viewportWidth = window.innerWidth / 16;
@@ -371,11 +510,7 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 							onPageChange={handlePageChange}
 							onLoadSuccess={handleLoadSuccess}
 							highlights={allHighlights}
-							onHighlightClick={(h) => {
-								alert(
-									`Highlight Clicked!\n\nLabel: ${h.label}\nText: ${h.text}\nPage: ${h.pageNumber}`,
-								);
-							}}
+							onHighlightClick={handleHighlightClick}
 							textLayerInteractive={activeAction.type === "select-text"}
 							regionDrawingActive={activeAction.type === "draw-region"}
 							onDraftConfirmed={handleDraftConfirmed}
@@ -411,6 +546,9 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 							activeAction={activeAction}
 							onSelectText={handleSelectText}
 							onDrawRegion={handleDrawRegion}
+							mentions={mentions}
+							currentPage={currentPage}
+							onMentionClick={handleMentionClickFromSidebar}
 						/>
 					</div>
 				) : (
@@ -423,6 +561,9 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 							activeAction={activeAction}
 							onSelectText={handleSelectText}
 							onDrawRegion={handleDrawRegion}
+							mentions={mentions}
+							currentPage={currentPage}
+							onMentionClick={handleMentionClickFromSidebar}
 						/>
 					</ResizableSidebar>
 				)}
@@ -433,6 +574,35 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 				activeAction={activeAction}
 				onSelectText={handleSelectText}
 				onDrawRegion={handleDrawRegion}
+			/>
+
+			{/* Mention details popover */}
+			{selectedMention && detailsAnchor && (
+				<PdfAnnotationPopover
+					anchorElement={detailsAnchor}
+					isOpen={!!detailsAnchor}
+					onCancel={handleCloseDetailsPopover}
+				>
+					<MentionDetailsPopover
+						mention={{
+							id: selectedMention.id,
+							pageNumber: selectedMention.pageNumber,
+							text: selectedMention.text,
+							entryLabel: selectedMention.entryLabel,
+							entryId: selectedMention.entryId,
+							indexTypes: selectedMention.indexTypes,
+						}}
+						onEdit={handleEditMention}
+						onDelete={handleDeleteMention}
+					/>
+				</PdfAnnotationPopover>
+			)}
+
+			{/* Delete confirmation dialog */}
+			<DeleteMentionDialog
+				isOpen={showDeleteConfirm}
+				onOpenChange={({ open }) => setShowDeleteConfirm(open)}
+				onConfirm={handleConfirmDelete}
 			/>
 		</div>
 	);

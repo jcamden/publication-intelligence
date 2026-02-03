@@ -39,9 +39,11 @@ type MentionCreationPopoverProps = {
 	onAttach: ({
 		entryId,
 		entryLabel,
+		regionName,
 	}: {
 		entryId: string;
 		entryLabel: string;
+		regionName?: string;
 	}) => void;
 	onCancel: () => void;
 };
@@ -188,11 +190,22 @@ export const MentionCreationPopover = ({
 		}
 
 		// All validation passed, proceed with attachment
+		const regionName =
+			draft.type === "region" ? form.state.values.regionName : undefined;
+
 		if (selectedValue) {
-			onAttach({ entryId: selectedValue.id, entryLabel: selectedValue.label });
+			onAttach({
+				entryId: selectedValue.id,
+				entryLabel: selectedValue.label,
+				regionName,
+			});
 		} else if (inputValue.trim()) {
 			const newEntryId = crypto.randomUUID();
-			onAttach({ entryId: newEntryId, entryLabel: inputValue.trim() });
+			onAttach({
+				entryId: newEntryId,
+				entryLabel: inputValue.trim(),
+				regionName,
+			});
 		}
 	};
 
@@ -227,7 +240,7 @@ export const MentionCreationPopover = ({
 								<FormInput
 									field={field}
 									label="Region name"
-									placeholder="Region name"
+									placeholder="Region name..."
 									inputRef={regionNameInputRef}
 									hideLabel
 								/>

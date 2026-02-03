@@ -171,21 +171,21 @@ const runTests = ({
 	workspaceName: string;
 	workspacePath: string;
 }) => {
-	console.log(`\n🧪 Testing ${workspaceName}...`);
+	console.log(`\n🧪 Running unit tests for ${workspaceName}...`);
 
-	if (!hasScript({ workspacePath, scriptName: "test" })) {
-		console.log(`  ⏭️  No test script found, skipping`);
+	if (!hasScript({ workspacePath, scriptName: "test:unit" })) {
+		console.log(`  ⏭️  No unit test script found, skipping`);
 		return;
 	}
 
 	try {
-		execSync(`pnpm --filter "${workspaceName}" test`, {
+		execSync(`pnpm --filter "${workspaceName}" test:unit`, {
 			stdio: "inherit",
 			encoding: "utf-8",
 		});
-		console.log(`  ✅ Tests passed`);
+		console.log(`  ✅ Unit tests passed`);
 	} catch (error) {
-		console.error(`  ❌ Tests failed`);
+		console.error(`  ❌ Unit tests failed`);
 		throw error;
 	}
 };
@@ -380,7 +380,7 @@ const main = () => {
 
 			const hasTests = hasScript({
 				workspacePath: workspace.path,
-				scriptName: "test",
+				scriptName: "test:unit",
 			});
 			const hasTypecheck = hasScript({
 				workspacePath: workspace.path,
@@ -396,7 +396,7 @@ const main = () => {
 				`     - Type check: ${hasTypecheck ? "✅ yes" : "⏭️  skipped (no typecheck script)"}`,
 			);
 			console.log(
-				`     - Unit tests: ${hasTests ? "✅ yes" : "⏭️  skipped (no test script)"}`,
+				`     - Unit tests: ${hasTests ? "✅ yes" : "⏭️  skipped (no test:unit script)"}`,
 			);
 			console.log(
 				`     - Interaction tests: ${hasInteractionTests ? "✅ yes" : "⏭️  skipped (no interaction tests)"}`,

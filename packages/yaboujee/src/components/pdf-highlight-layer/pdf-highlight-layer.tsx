@@ -47,6 +47,7 @@ export const PdfHighlightLayer = ({
 	return (
 		<div
 			className="pointer-events-none absolute inset-0"
+			data-testid="pdf-highlight-layer"
 			style={{
 				width: pageWidth * scale,
 				height: pageHeight * scale,

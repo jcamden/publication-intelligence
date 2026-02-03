@@ -20,11 +20,32 @@ const meta: Meta<typeof PageAuthorContent> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const mockMentions = [
+	{
+		id: "1",
+		pageNumber: 1,
+		text: "This is a sample mention text",
+		entryLabel: "Author → Kant, Immanuel",
+		entryId: "entry-1",
+		indexTypes: ["author"],
+	},
+	{
+		id: "2",
+		pageNumber: 1,
+		text: "Another mention on the same page",
+		entryLabel: "Author → Heidegger, Martin",
+		entryId: "entry-2",
+		indexTypes: ["author"],
+	},
+];
+
 export const LightMode: Story = {
 	args: {
 		activeAction: { type: null, indexType: null },
 		onSelectText: fn(),
 		onDrawRegion: fn(),
+		mentions: mockMentions,
+		onMentionClick: fn(),
 	},
 	globals: {
 		...defaultGlobals,
@@ -36,6 +57,8 @@ export const DarkMode: Story = {
 		activeAction: { type: null, indexType: null },
 		onSelectText: fn(),
 		onDrawRegion: fn(),
+		mentions: mockMentions,
+		onMentionClick: fn(),
 	},
 	globals: {
 		...defaultGlobals,

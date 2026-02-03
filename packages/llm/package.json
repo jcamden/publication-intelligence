@@ -14,7 +14,8 @@
 		"build": "tsc",
 		"clean": "rm -rf dist",
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
+		"test": "pnpm test:unit",
+		"test:unit": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
 	},
@@ -22,6 +23,8 @@
 		"@pubint/core": "workspace:*"
 	},
 	"devDependencies": {
-		"typescript": "^5.7.3"
+		"@pubint/vitest-config": "workspace:*",
+		"typescript": "^5.7.3",
+		"vitest": "^4.0.18"
 	}
 }

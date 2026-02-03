@@ -20,6 +20,25 @@ const meta: Meta<typeof PageSidebar> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const mockMentions = [
+	{
+		id: "1",
+		pageNumber: 1,
+		text: "This is a sample mention text",
+		entryLabel: "Philosophy → Kant",
+		entryId: "entry-1",
+		indexTypes: ["subject"],
+	},
+	{
+		id: "2",
+		pageNumber: 1,
+		text: "Another mention on the same page",
+		entryLabel: "Author → Immanuel Kant",
+		entryId: "entry-2",
+		indexTypes: ["author"],
+	},
+];
+
 export const Default: Story = {
 	render: () => (
 		<div
@@ -33,6 +52,9 @@ export const Default: Story = {
 				activeAction={{ type: null, indexType: null }}
 				onSelectText={fn()}
 				onDrawRegion={fn()}
+				mentions={mockMentions}
+				currentPage={1}
+				onMentionClick={fn()}
 			/>
 		</div>
 	),

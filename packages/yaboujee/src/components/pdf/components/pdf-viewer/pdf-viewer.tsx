@@ -66,6 +66,7 @@ export type PdfViewerProps = {
 		entry: {
 			entryId: string;
 			entryLabel: string;
+			regionName?: string;
 		};
 	}) => void;
 	/**
@@ -81,7 +82,11 @@ export type PdfViewerProps = {
 		pageNumber: number;
 		text: string;
 		bbox: BoundingBox;
-		onConfirm: (data: { entryId: string; entryLabel: string }) => void;
+		onConfirm: (data: {
+			entryId: string;
+			entryLabel: string;
+			regionName?: string;
+		}) => void;
 		onCancel: () => void;
 	}) => React.ReactNode;
 };
@@ -704,9 +709,11 @@ export const PdfViewer = ({
 	const handleDraftConfirm = ({
 		entryId,
 		entryLabel,
+		regionName,
 	}: {
 		entryId: string;
 		entryLabel: string;
+		regionName?: string;
 	}) => {
 		if (!draftHighlight) return;
 
@@ -720,6 +727,7 @@ export const PdfViewer = ({
 			entry: {
 				entryId,
 				entryLabel,
+				regionName,
 			},
 		});
 

@@ -28,10 +28,22 @@ import { PageInfoContent } from "./components/page-info-content";
 import { PageScriptureContent } from "./components/page-scripture-content";
 import { PageSubjectContent } from "./components/page-subject-content";
 
+export type MentionData = {
+	id: string;
+	pageNumber: number;
+	text: string;
+	entryLabel: string;
+	entryId: string;
+	indexTypes: string[];
+};
+
 type PageSidebarProps = {
 	activeAction: { type: string | null; indexType: string | null };
 	onSelectText: ({ indexType }: { indexType: string }) => void;
 	onDrawRegion: ({ indexType }: { indexType: string }) => void;
+	mentions: MentionData[];
+	currentPage: number;
+	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
 };
 
 /**
@@ -43,6 +55,9 @@ export const PageSidebar = ({
 	activeAction,
 	onSelectText,
 	onDrawRegion,
+	mentions,
+	currentPage,
+	onMentionClick,
 }: PageSidebarProps) => {
 	const sections = useAtomValue(sectionsStateAtom);
 	const [, updateSection] = useAtom(updateSectionAtom);
@@ -88,10 +103,18 @@ export const PageSidebar = ({
 		setSectionOrder(newOrder);
 	};
 
+	// Filter mentions by current page
+	const mentionsOnPage = mentions.filter((m) => m.pageNumber === currentPage);
+
+	// Create filtered mention lists per index type
+	const getMentionsForType = (indexType: string) =>
+		mentionsOnPage.filter((m) => m.indexTypes.includes(indexType));
+
 	const actionProps = {
 		activeAction,
 		onSelectText,
 		onDrawRegion,
+		onMentionClick,
 	};
 
 	const sectionMetadata: Partial<
@@ -112,17 +135,32 @@ export const PageSidebar = ({
 		"page-subject": {
 			title: "Page Subject Index",
 			icon: Tags,
-			content: () => <PageSubjectContent {...actionProps} />,
+			content: () => (
+				<PageSubjectContent
+					{...actionProps}
+					mentions={getMentionsForType("subject")}
+				/>
+			),
 		},
 		"page-author": {
 			title: "Page Author Index",
 			icon: User,
-			content: () => <PageAuthorContent {...actionProps} />,
+			content: () => (
+				<PageAuthorContent
+					{...actionProps}
+					mentions={getMentionsForType("author")}
+				/>
+			),
 		},
 		"page-scripture": {
 			title: "Page Scripture Index",
 			icon: BookOpen,
-			content: () => <PageScriptureContent {...actionProps} />,
+			content: () => (
+				<PageScriptureContent
+					{...actionProps}
+					mentions={getMentionsForType("scripture")}
+				/>
+			),
 		},
 		"page-biblio": {
 			title: "Page Bibliography",

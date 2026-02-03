@@ -20,11 +20,32 @@ const meta: Meta<typeof PageScriptureContent> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const mockMentions = [
+	{
+		id: "1",
+		pageNumber: 1,
+		text: "This is a sample mention text",
+		entryLabel: "Scripture → Matthew 5:3",
+		entryId: "entry-1",
+		indexTypes: ["scripture"],
+	},
+	{
+		id: "2",
+		pageNumber: 1,
+		text: "Another mention on the same page",
+		entryLabel: "Scripture → John 3:16",
+		entryId: "entry-2",
+		indexTypes: ["scripture"],
+	},
+];
+
 export const LightMode: Story = {
 	args: {
 		activeAction: { type: null, indexType: null },
 		onSelectText: fn(),
 		onDrawRegion: fn(),
+		mentions: mockMentions,
+		onMentionClick: fn(),
 	},
 	globals: {
 		...defaultGlobals,
@@ -36,6 +57,8 @@ export const DarkMode: Story = {
 		activeAction: { type: null, indexType: null },
 		onSelectText: fn(),
 		onDrawRegion: fn(),
+		mentions: mockMentions,
+		onMentionClick: fn(),
 	},
 	globals: {
 		...defaultGlobals,

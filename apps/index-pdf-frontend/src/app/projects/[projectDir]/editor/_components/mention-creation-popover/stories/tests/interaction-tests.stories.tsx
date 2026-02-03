@@ -3,7 +3,7 @@ import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { useState } from "react";
 import type { IndexEntry, MentionDraft } from "../../mention-creation-popover";
 import { MentionCreationPopover } from "../../mention-creation-popover";
-import { mockDraft, mockIndexEntries } from "../shared";
+import { mockDraft, mockIndexEntries, mockRegionDraft } from "../shared";
 
 const meta = {
 	title:
@@ -24,12 +24,17 @@ const InteractiveWrapper = ({
 }: {
 	draft: MentionDraft;
 	existingEntries: IndexEntry[];
-	onAttachCallback?: (entryId: string, entryLabel: string) => void;
+	onAttachCallback?: (
+		entryId: string,
+		entryLabel: string,
+		regionName?: string,
+	) => void;
 }) => {
 	const [result, setResult] = useState<{
 		type: "attach" | "cancel" | null;
 		entryId?: string;
 		entryLabel?: string;
+		regionName?: string;
 	}>({ type: null });
 	const [showPopover, setShowPopover] = useState(true);
 
@@ -39,10 +44,10 @@ const InteractiveWrapper = ({
 				<MentionCreationPopover
 					draft={draft}
 					existingEntries={existingEntries}
-					onAttach={({ entryId, entryLabel }) => {
-						setResult({ type: "attach", entryId, entryLabel });
+					onAttach={({ entryId, entryLabel, regionName }) => {
+						setResult({ type: "attach", entryId, entryLabel, regionName });
 						setShowPopover(false);
-						onAttachCallback?.(entryId, entryLabel);
+						onAttachCallback?.(entryId, entryLabel, regionName);
 					}}
 					onCancel={() => {
 						setResult({ type: "cancel" });
@@ -51,8 +56,12 @@ const InteractiveWrapper = ({
 				/>
 			)}
 			<div data-testid="result" style={{ marginTop: "300px" }}>
-				{result.type === "attach" &&
-					`Attached: ${result.entryLabel} (${result.entryId})`}
+				{result.type === "attach" && (
+					<>
+						Attached: {result.entryLabel} ({result.entryId})
+						{result.regionName && ` | Region: ${result.regionName}`}
+					</>
+				)}
 				{result.type === "cancel" && "Cancelled"}
 			</div>
 		</div>
@@ -337,5 +346,89 @@ export const SelectNestedEntry: Story = {
 				{ timeout: 2000 },
 			);
 		});
+	},
+};
+
+export const CreateRegionMention: Story = {
+	args: {
+		draft: mockRegionDraft,
+		existingEntries: mockIndexEntries,
+		onAttach: () => {},
+		onCancel: () => {},
+	},
+	render: () => (
+		<InteractiveWrapper
+			draft={mockRegionDraft}
+			existingEntries={mockIndexEntries}
+		/>
+	),
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+
+		await step("Region name input should be focused on mount", async () => {
+			const regionNameInput = canvas.getByLabelText("Region name");
+			await waitFor(() => {
+				expect(document.activeElement).toBe(regionNameInput);
+			});
+		});
+
+		await step("Enter region name", async () => {
+			const regionNameInput = canvas.getByLabelText("Region name");
+			await userEvent.type(regionNameInput, "Introduction Section", {
+				delay: 50,
+			});
+		});
+
+		await step("Search for entry in combobox", async () => {
+			const entryInput = canvas.getByPlaceholderText("Search or create...");
+			await userEvent.click(entryInput);
+			await userEvent.type(entryInput, "Philosophy", { delay: 50 });
+
+			// Wait for dropdown to render
+			await new Promise((resolve) => setTimeout(resolve, 300));
+		});
+
+		await step("Select entry using keyboard", async () => {
+			// Verify dropdown has options
+			await waitFor(
+				async () => {
+					const options = within(document.body).queryAllByRole("option");
+					await expect(options.length).toBeGreaterThan(0);
+				},
+				{ timeout: 3000 },
+			);
+
+			// Select first option
+			await userEvent.keyboard("{ArrowDown}");
+			await userEvent.keyboard("{Enter}");
+
+			// Wait for selection to complete
+			await waitFor(
+				() => {
+					const attachButton = canvas.getByRole("button", { name: "Attach" });
+					expect(attachButton).toBeInTheDocument();
+				},
+				{ timeout: 2000 },
+			);
+		});
+
+		await step("Click Attach button", async () => {
+			const attachButton = canvas.getByRole("button", { name: "Attach" });
+			await userEvent.click(attachButton);
+		});
+
+		await step(
+			"Verify region mention was attached with region name",
+			async () => {
+				const result = canvas.getByTestId("result");
+				await waitFor(
+					() => {
+						expect(result).toHaveTextContent(/Attached: Philosophy/);
+						expect(result).toHaveTextContent(/Region: Introduction Section/);
+					},
+					{ timeout: 2000 },
+				);
+			},
+		);
 	},
 };

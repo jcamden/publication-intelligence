@@ -51,17 +51,17 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 **Next Steps:** Complete implementation, test at multiple scales
 
 ### 🟡 Phase 4: Highlight Management ([phase-4-highlight-management/](./phase-4-highlight-management/))
-**Status:** In Progress (2 of 4 tasks complete)  
+**Status:** In Progress (3 of 4 tasks complete)  
 **Summary:** UI for persisting drafts, managing highlights, linking to IndexEntries
 
 **Sub-phases:**
 - ✅ [4A: Sidebar Action Buttons](./phase-4-highlight-management/task-4a-sidebar-actions.md) - Complete
 - ✅ [4B: Mention Creation Flow](./phase-4-highlight-management/task-4b-mention-creation.md) - Complete
-- ⚪ [4C: Highlight CRUD Operations](./phase-4-highlight-management/task-4c-crud-operations.md) - Not Started
+- 🟡 [4C: Highlight CRUD Operations](./phase-4-highlight-management/task-4c-crud-operations.md) - Mostly Complete (sidebar navigation pending)
 - ⚪ [4D: IndexEntry Connection UI](./phase-4-highlight-management/task-4d-entry-connection.md) - Not Started
 
 **Dependencies:** Phase 3 completion  
-**Estimated Duration:** 1 week (4 days remaining)
+**Estimated Duration:** 1 week (2 days remaining)
 
 ### ⚪ Phase 5: Backend Integration ([phase-5-backend-integration.md](./phase-5-backend-integration.md))
 **Status:** Not Started  

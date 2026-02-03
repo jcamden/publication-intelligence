@@ -27,6 +27,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.3.12
         version: 2.3.12
+      '@pubint/vitest-config':
+        specifier: workspace:*
+        version: link:packages/vitest-config
       '@vitest/coverage-v8':
         specifier: ^4.0.18
         version: 4.0.18(@vitest/browser@4.0.18(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(vite@7.3.1(@types/node@24.10.9)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))(vitest@4.0.18))(vitest@4.0.18)
@@ -269,9 +272,15 @@ importers:
 
   packages/core:
     devDependencies:
+      '@pubint/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@24.10.9)(@vitest/browser-playwright@4.0.18)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(tsx@4.21.0)
 
   packages/events:
     devDependencies:
@@ -285,9 +294,15 @@ importers:
         specifier: workspace:*
         version: link:../core
     devDependencies:
+      '@pubint/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@24.10.9)(@vitest/browser-playwright@4.0.18)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.9)(typescript@5.9.3))(tsx@4.21.0)
 
   packages/pdf:
     dependencies:
@@ -298,12 +313,18 @@ importers:
         specifier: ^4.10.38
         version: 4.10.38
     devDependencies:
+      '@pubint/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.7
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@22.19.7)(@vitest/browser-playwright@4.0.18)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(lightningcss@1.30.2)(msw@2.12.7(@types/node@22.19.7)(typescript@5.9.3))(tsx@4.21.0)
 
   packages/storybook-config:
     devDependencies:

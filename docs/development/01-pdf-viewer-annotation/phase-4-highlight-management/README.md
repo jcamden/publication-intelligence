@@ -24,9 +24,9 @@ Draft → persistent flow with popover UI and autocomplete.
 
 ### [4C: Highlight CRUD Operations](./task-4c-crud-operations.md)
 **Duration:** 1-2 days  
-**Status:** ⚪ Not Started
+**Status:** 🟡 Mostly Complete
 
-View, edit, and delete highlights with confirmation dialogs.
+View, edit, and delete highlights with confirmation dialogs. Index type tracking implemented. Sidebar navigation pending (click mention in sidebar → scroll to highlight and show popover).
 
 ### [4D: IndexEntry Connection UI](./task-4d-entry-connection.md)
 **Duration:** 2 days  
@@ -45,10 +45,12 @@ Phase 4 complete when:
 - [x] Draft → persistent transition works
 - [x] Entry picker with hierarchy works
 - [x] All stored in React state (no backend yet)
-- [ ] "Index As" checklist for multi-type mentions
-- [ ] Highlight CRUD operations work (view, edit, delete)
-- [ ] Multi-type visual (diagonal stripes with multiple colors)
-- [ ] IndexEntry creation UI implemented
+- [x] Highlight CRUD operations work (view, edit, delete)
+- [x] Index type captured when creating mentions
+- [x] Sidebar sections filter mentions by index type
+- [ ] "Index As" checklist for multi-type mentions (optional enhancement, see task-4c-multi-type-enhancement.md)
+- [ ] Multi-type visual (diagonal stripes with multiple colors) (optional enhancement)
+- [ ] IndexEntry creation UI implemented (Task 4D)
 
 ## State Management (Phase 4)
 
@@ -67,7 +69,7 @@ const [projectIndexTypes, setProjectIndexTypes] = useState<IndexType[]>([
   { id: 'scripture', name: 'Scripture', color: '#93C5FD', ordinal: 2, visible: true },
 ]);
 
-// Mention now has index_types array
+// Mention now has indexTypes array (captured from sidebar section)
 type Mention = {
   id: string;
   pageNumber: number;
@@ -75,7 +77,7 @@ type Mention = {
   bbox: BoundingBox;
   entryId: string;
   entryLabel: string;
-  indexTypes: string[]; // ['subject', 'author']
+  indexTypes: string[]; // ['subject', 'author'] - captured from activeAction.indexType
   createdAt: Date;
 };
 ```
