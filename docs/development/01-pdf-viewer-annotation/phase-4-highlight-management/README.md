@@ -18,7 +18,7 @@ Transform draft highlights into persistent, manageable mentions linked to IndexE
 
 ### [4B: Mention Creation Flow](./task-4b-mention-creation.md)
 **Duration:** 2-3 days  
-**Status:** ⚪ Not Started
+**Status:** ✅ Complete
 
 Draft → persistent flow with popover UI and autocomplete.
 
@@ -41,14 +41,14 @@ Phase 4 complete when:
 - [x] "Select Text" and "Draw Region" buttons per section
 - [x] Transient activation (one action, auto-revert to view mode)
 - [x] Escape key cancels active action
-- [ ] Mention creation popover functional
+- [x] Mention creation popover functional
+- [x] Draft → persistent transition works
+- [x] Entry picker with hierarchy works
+- [x] All stored in React state (no backend yet)
 - [ ] "Index As" checklist for multi-type mentions
-- [ ] Draft → persistent transition works
 - [ ] Highlight CRUD operations work (view, edit, delete)
 - [ ] Multi-type visual (diagonal stripes with multiple colors)
 - [ ] IndexEntry creation UI implemented
-- [ ] Entry picker with hierarchy works
-- [ ] All stored in React state (no backend yet)
 
 ## State Management (Phase 4)
 

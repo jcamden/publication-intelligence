@@ -28,6 +28,7 @@
 		"@hello-pangea/dnd": "^18.0.1",
 		"@pubint/storybook-config": "workspace:*",
 		"@pubint/yabasic": "workspace:*",
+		"@tanstack/react-form": "^1.28.0",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-react": "^0.563.0",

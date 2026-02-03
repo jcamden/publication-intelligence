@@ -18,6 +18,11 @@ import {
 	zoomAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useHydrated } from "@/app/projects/[projectDir]/editor/_hooks/use-hydrated";
+import {
+	type BoundingBox,
+	type IndexEntry,
+	MentionCreationPopover,
+} from "../mention-creation-popover";
 import { PageBar } from "../page-bar";
 import { PageSidebar } from "../page-sidebar";
 import { ProjectBar } from "../project-bar";
@@ -51,6 +56,16 @@ import { WindowManager } from "../window-manager";
 
 type EditorProps = {
 	fileUrl: string;
+};
+
+export type Mention = {
+	id: string;
+	pageNumber: number;
+	text: string;
+	bbox: BoundingBox;
+	entryId: string;
+	entryLabel: string;
+	createdAt: Date;
 };
 
 /**
@@ -134,6 +149,26 @@ const mockHighlights: PdfHighlight[] = [
 	},
 ];
 
+/**
+ * Mock index entries for Phase 4B testing - Autocomplete data
+ *
+ * TODO Phase 5: Replace with real data from API
+ */
+const mockIndexEntries: IndexEntry[] = [
+	{ id: "1", label: "Kant, Immanuel", parentId: null },
+	{ id: "2", label: "Critique of Pure Reason", parentId: "1" },
+	{ id: "3", label: "Categorical Imperative", parentId: "1" },
+	{ id: "4", label: "Philosophy", parentId: null },
+	{ id: "5", label: "Metaphysics", parentId: "4" },
+	{ id: "6", label: "Epistemology", parentId: "4" },
+	{ id: "7", label: "Ethics", parentId: "4" },
+	{ id: "8", label: "Aristotle", parentId: null },
+	{ id: "9", label: "Nicomachean Ethics", parentId: "8" },
+	{ id: "10", label: "Plato", parentId: null },
+	{ id: "11", label: "The Republic", parentId: "10" },
+	{ id: "12", label: "Theory of Forms", parentId: "10" },
+];
+
 export const Editor = ({ fileUrl }: EditorProps) => {
 	const hydrated = useHydrated();
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
@@ -145,6 +180,10 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 		type: "select-text" | "draw-region" | null;
 		indexType: string | null;
 	}>({ type: null, indexType: null });
+
+	// Mention state management
+	const [mentions, setMentions] = useState<Mention[]>([]);
+	const [clearDraftTrigger, setClearDraftTrigger] = useState(0);
 
 	const projectCollapsed = useAtomValue(projectSidebarCollapsedAtom);
 	const pageCollapsed = useAtomValue(pageSidebarCollapsedAtom);
@@ -188,24 +227,35 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 		[],
 	);
 
-	const handleCreateDraftHighlight = useCallback(
-		(draft: { pageNumber: number; text: string; bbox: unknown }) => {
-			console.log("Draft highlight created:", {
-				page: draft.pageNumber,
+	const handleDraftConfirmed = useCallback(
+		({
+			draft,
+			entry,
+		}: {
+			draft: { pageNumber: number; text: string; bbox: BoundingBox };
+			entry: { entryId: string; entryLabel: string };
+		}) => {
+			const mention: Mention = {
+				id: crypto.randomUUID(),
+				pageNumber: draft.pageNumber,
 				text: draft.text,
-				bbox: JSON.stringify(draft.bbox),
-				indexType: activeAction.indexType,
-			});
-			// Phase 4B: Show mention creation popover
-			// Auto-revert to view mode after draft created
+				bbox: draft.bbox,
+				entryId: entry.entryId,
+				entryLabel: entry.entryLabel,
+				createdAt: new Date(),
+			};
+
+			setMentions((prev) => [...prev, mention]);
 			setActiveAction({ type: null, indexType: null });
+			setClearDraftTrigger((prev) => prev + 1);
 		},
-		[activeAction.indexType],
+		[],
 	);
 
 	const handleDraftCancelled = useCallback(() => {
 		// Auto-revert to view mode when draft is cancelled
 		setActiveAction({ type: null, indexType: null });
+		setClearDraftTrigger((prev) => prev + 1);
 	}, []);
 
 	const handlePdfVisibilityToggle = useCallback(() => {
@@ -259,6 +309,18 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 	const onlyProjectVisible = !projectCollapsed && !pdfVisible && pageCollapsed;
 	const onlyPageVisible = projectCollapsed && !pdfVisible && !pageCollapsed;
 
+	// Convert mentions to PdfHighlight format for rendering
+	const mentionHighlights: PdfHighlight[] = mentions.map((mention) => ({
+		id: mention.id,
+		pageNumber: mention.pageNumber,
+		label: mention.entryLabel,
+		text: mention.text,
+		bbox: mention.bbox,
+	}));
+
+	// Combine mock highlights with real mentions
+	const allHighlights = [...mockHighlights, ...mentionHighlights];
+
 	// Wait for hydration to complete before rendering to prevent flash of default state
 	if (!hydrated) {
 		return null;
@@ -308,7 +370,7 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 							currentPage={currentPage}
 							onPageChange={handlePageChange}
 							onLoadSuccess={handleLoadSuccess}
-							highlights={mockHighlights}
+							highlights={allHighlights}
 							onHighlightClick={(h) => {
 								alert(
 									`Highlight Clicked!\n\nLabel: ${h.label}\nText: ${h.text}\nPage: ${h.pageNumber}`,
@@ -316,8 +378,28 @@ export const Editor = ({ fileUrl }: EditorProps) => {
 							}}
 							textLayerInteractive={activeAction.type === "select-text"}
 							regionDrawingActive={activeAction.type === "draw-region"}
-							onCreateDraftHighlight={handleCreateDraftHighlight}
+							onDraftConfirmed={handleDraftConfirmed}
 							onDraftCancelled={handleDraftCancelled}
+							clearDraftTrigger={clearDraftTrigger}
+							renderDraftPopover={({
+								pageNumber,
+								text,
+								bbox,
+								onConfirm,
+								onCancel,
+							}) => (
+								<MentionCreationPopover
+									draft={{
+										pageNumber,
+										text,
+										bbox,
+										type: text ? "text" : "region",
+									}}
+									existingEntries={mockIndexEntries}
+									onAttach={onConfirm}
+									onCancel={onCancel}
+								/>
+							)}
 						/>
 					</div>
 				)}

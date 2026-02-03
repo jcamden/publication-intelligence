@@ -130,6 +130,17 @@ const generateColorFromId = (id: string): string => {
 
 ## Implementation
 
+### Architecture Notes
+
+**Use standardized form components from Task 4B:**
+
+1. **Use `FormInput`** from yaboujee for all form fields (label, aliases)
+2. **Use TanStack Form** for form state management
+3. **Use `FieldError`** from yabasic for error display
+4. **Follow existing patterns** from `MentionCreationPopover`
+
+This ensures consistent form UX across the application.
+
 ### Entry Creation Modal
 
 ```tsx
@@ -139,6 +150,36 @@ export type EntryCreationModalProps = {
   onCreate: (entry: Omit<IndexEntry, 'id'>) => IndexEntry;
   onCancel: () => void;
 };
+
+// Example form structure using FormInput:
+const form = useForm({
+  defaultValues: {
+    label: '',
+    parentId: null,
+    aliases: '',
+  },
+  onSubmit: async ({ value }) => {
+    const entry = onCreate({
+      label: value.label,
+      parentId: value.parentId,
+      metadata: {
+        aliases: value.aliases.split(',').map(s => s.trim()).filter(Boolean),
+      },
+    });
+    // ... handle success
+  },
+});
+
+// Use FormInput for each field:
+<form.Field name="label" validators={{ onSubmit: validateNonEmpty }}>
+  {(field) => (
+    <FormInput
+      field={field}
+      label="Label"
+      placeholder="Entry name"
+    />
+  )}
+</form.Field>
 ```
 
 ### Entry Picker with Hierarchy

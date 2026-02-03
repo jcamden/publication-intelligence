@@ -1,7 +1,8 @@
 # Task 4B: Mention Creation Flow
 
 **Duration:** 2-3 days  
-**Status:** ⚪ Not Started  
+**Status:** ✅ Complete  
+**Completed:** 2026-02-02  
 **Dependencies:** Task 4A completion
 
 ## Problem Statement
@@ -14,27 +15,30 @@ Currently `onCreateDraftHighlight` fires with draft data, but there's no UI to:
 ## Requirements
 
 ### Mention Creation Popover
-- [ ] Appears immediately after text selection (near selection)
-- [ ] Small, focused UI (not full modal)
-- [ ] "Quick create" path + "Advanced" option
+- [x] Appears immediately after text selection (near selection)
+- [x] Small, focused UI (not full modal)
+- [x] Supports both text selection and region drawing
+- [ ] "Advanced" option (deferred)
 
 ### Quick Create Path
-- [ ] Input: Entry label (autocomplete from existing entries)
-- [ ] Button: "Create & Attach"
-- [ ] Keyboard: `Enter` to confirm, `Escape` to cancel
-- [ ] Auto-returns to view mode after save
+- [x] Input: Entry label (autocomplete from existing entries)
+- [x] Button: "Create & Attach" (or "Attach" if existing)
+- [x] Keyboard: `Enter` to confirm, `Escape` to cancel
+- [x] Auto-returns to view mode after save
+- [x] Region name input for region drafts
 
-### Advanced Option
+### Advanced Option (Deferred)
 - [ ] Button: "More Options" → opens side panel
 - [ ] Entry creation form (if entry doesn't exist)
 - [ ] Entry hierarchy selection (parent entry)
 - [ ] Custom colors/metadata
 
 ### IndexEntry Autocomplete
-- [ ] Search existing entries by label
-- [ ] Show entry hierarchy in results (e.g., "Philosophy → Kant")
-- [ ] "Create new entry" option if no match
-- [ ] Keyboard navigation (arrow keys, enter)
+- [x] Search existing entries by label
+- [x] Show entry hierarchy in results (e.g., "Philosophy → Kant")
+- [x] "Create new entry" option if no match
+- [x] Keyboard navigation (arrow keys, enter)
+- [x] Input value persists when blurring in region mode
 
 ## UI Flow
 
@@ -71,6 +75,7 @@ type MentionDraft = {
   pageNumber: number;
   text: string;
   bbox: BoundingBox;
+  type: 'text' | 'region'; // New: distinguish text selection vs region drawing
 };
 
 type Mention = {
@@ -84,56 +89,88 @@ type Mention = {
 };
 
 const [mentions, setMentions] = useState<Mention[]>([]);
-const [draftMention, setDraftMention] = useState<MentionDraft | null>(null);
 ```
 
 **Phase 4B stores in React state only.** Phase 5 adds backend persistence.
 
 ## Implementation
 
-### New Component
+### Architecture
+
+The implementation uses a **two-component architecture**:
+
+1. **`PdfAnnotationPopover`** (in `@pubint/yaboujee`)
+   - Generic popover wrapper handling positioning logic
+   - Auto-positions next to anchor element (draft highlight)
+   - Handles viewport bounds checking
+   - Manages Escape key handling
+   - Reusable for any PDF annotation UI
+
+2. **`MentionCreationPopover`** (in `@apps/index-pdf-frontend`)
+   - Application-specific content (autocomplete, form inputs)
+   - No positioning logic (pure content component)
+   - Uses `FormInput` for standardized form fields
+   - Supports both text and region drafts
+
+### Component Signatures
 
 ```tsx
-// apps/index-pdf-frontend/src/app/projects/[projectDir]/editor/_components/mention-creation-popover/
-export type MentionCreationPopoverProps = {
-  draft: MentionDraft;
-  existingEntries: IndexEntry[]; // For autocomplete
-  onAttach: (entryId: string, entryLabel: string) => void;
+// Generic popover in yaboujee
+export type PdfAnnotationPopoverProps = {
+  anchorElement: HTMLElement | null; // Draft highlight element
+  isOpen: boolean;
   onCancel: () => void;
-  position: { x: number; y: number }; // Near selection
+  children: React.ReactNode;
+};
+
+// Application-specific content
+export type MentionCreationPopoverProps = {
+  draft: MentionDraft; // Includes type: 'text' | 'region'
+  existingEntries: IndexEntry[];
+  onAttach: ({ entryId, entryLabel }) => void;
+  onCancel: () => void;
+  // No position prop - handled by PdfAnnotationPopover
 };
 ```
 
-### Integration
+### Integration with PdfViewer
+
+`PdfViewer` now manages the popover via **render props**:
 
 ```tsx
 // In editor.tsx
-const handleCreateDraftHighlight = useCallback(
-  (draft: { pageNumber: number; text: string; bbox: BoundingBox }) => {
-    setDraftMention(draft);
-    setShowMentionPopover(true);
-    // Don't auto-return to view mode - let user complete flow
-  },
-  []
-);
-
-const handleAttachMention = useCallback(
-  (entryId: string, entryLabel: string) => {
+const handleDraftConfirmed = useCallback(
+  ({ draft, entry }: { 
+    draft: { pageNumber: number; text: string; bbox: BoundingBox };
+    entry: { entryId: string; entryLabel: string };
+  }) => {
     const mention: Mention = {
       id: crypto.randomUUID(),
-      ...draftMention!,
-      entryId,
-      entryLabel,
+      ...draft,
+      entryId: entry.entryId,
+      entryLabel: entry.entryLabel,
       createdAt: new Date(),
     };
     
     setMentions(prev => [...prev, mention]);
-    setDraftMention(null);
-    setShowMentionPopover(false);
-    setAnnotationMode('view'); // Return to view mode
+    setAnnotationMode('view');
   },
-  [draftMention]
+  []
 );
+
+// PdfViewer integration
+<PdfViewer
+  renderDraftPopover={({ pageNumber, text, bbox, onConfirm, onCancel }) => (
+    <MentionCreationPopover
+      draft={{ pageNumber, text, bbox, type: text ? 'text' : 'region' }}
+      existingEntries={mockIndexEntries}
+      onAttach={onConfirm}
+      onCancel={onCancel}
+    />
+  )}
+  onDraftConfirmed={handleDraftConfirmed}
+  // ... other props
+/>
 ```
 
 ### Autocomplete Data
@@ -169,13 +206,115 @@ const mockIndexEntries: IndexEntry[] = [
 
 ## Testing
 
-- [ ] Popover appears after text selection
-- [ ] Autocomplete suggests existing entries
-- [ ] "Create new entry" works when no match
-- [ ] Enter key submits form
-- [ ] Escape cancels and clears draft
-- [ ] Draft → persistent transition works
-- [ ] Returns to view mode after attach
+- [x] Popover appears after text selection
+- [x] Autocomplete suggests existing entries
+- [x] "Create new entry" works when no match
+- [x] Enter key submits form
+- [x] Escape cancels and clears draft
+- [x] Draft → persistent transition works
+- [x] Returns to view mode after attach
+
+## Completion Summary
+
+### Implemented Features
+
+1. **PdfAnnotationPopover Component** (`@pubint/yaboujee`)
+   - Generic positioning wrapper for PDF annotation popovers
+   - Auto-positions next to anchor element with smart bounds checking
+   - Prevents flash by hiding until position calculated
+   - Smooth fade-in transition via opacity
+   - Click-outside detection via `data-pdf-annotation-popover` attribute
+   - Reusable for any PDF annotation UI (mentions, comments, etc.)
+
+2. **FormInput Component** (`@pubint/yaboujee`)
+   - Standardized form input wrapper for TanStack Form fields
+   - Integrates with yabasic Field, FieldLabel, FieldError
+   - Automatic validation state (`data-invalid`, `aria-invalid`)
+   - Supports `hideLabel` prop for accessible hidden labels
+   - Uses structural typing for field prop (no complex generics)
+
+3. **MentionCreationPopover Component** (`mention-creation-popover.tsx`)
+   - Autocomplete input using Combobox from yabasic
+   - Search filtering for existing index entries
+   - Create new entry when no match found
+   - Hierarchical display for nested entries (Parent → Child)
+   - Keyboard support (Enter to submit, Escape to cancel)
+   - Conditional auto-focus (region name for regions, combobox for text)
+   - Smart input value preservation (prevents blur from clearing in region mode)
+
+4. **Editor State Management** (`editor.tsx`)
+   - `mentions` state for persistent highlights
+   - Draft state managed internally by `PdfViewer`
+   - No separate popover visibility state (managed by PdfViewer)
+   - No position state (handled by PdfAnnotationPopover)
+   - Mock IndexEntry data for autocomplete
+
+5. **Handlers** (`editor.tsx`)
+   - `handleDraftConfirmed` - Receives both draft and entry data, creates mention
+   - `handleDraftCancelled` - Clears action state
+   - Auto-revert to view mode after attach/cancel
+   - Simplified from previous approach (3 handlers → 2 handlers)
+
+6. **Mention Rendering**
+   - Mentions converted to PdfHighlight format
+   - Combined with mock highlights for display
+   - Rendered in PdfViewer with yellow solid color
+
+7. **Storybook Stories**
+   - `PdfAnnotationPopover` stories (generic positioning tests)
+   - `MentionCreationPopover` documentation stories
+   - Interaction tests for text selection, region drawing, entry selection
+   - Visual regression tests for UI states
+   - Shared fixtures for consistency
+   - Updated `PdfViewer` tests to cover `renderDraftPopover` callback
+
+### Technical Decisions
+
+- **Two-component architecture** - Separates positioning (`PdfAnnotationPopover`) from content (`MentionCreationPopover`) for reusability
+- **Render props pattern** - `PdfViewer` uses `renderDraftPopover` to inject custom content into generic popover
+- **Combobox from yabasic** - Reused existing UI component for consistency
+- **FormInput component** - New standardized form wrapper in yaboujee that integrates TanStack Form with yabasic Field components
+- **Auto-focus on mount** - Conditionally focuses region name input (region mode) or combobox (text mode)
+- **Create new entry inline** - No need for separate "create" flow
+- **Hierarchical display** - Shows parent → child for nested entries
+- **Smart blur handling** - Prevents popover from closing when clicking inside it; preserves custom input values in region mode
+- **Structural typing for FormInput** - Uses interface-based field prop instead of complex FieldApi generics
+
+### Key Fixes and Edge Cases
+
+1. **Popover Flash Prevention**
+   - Position initialized as `null`, not `{ x: 0, y: 0 }`
+   - Opacity starts at 0, transitions to 1 when position calculated
+   - Guard prevents rendering until anchor element available
+
+2. **Blur Handling**
+   - Text mode: Check if click is inside popover before clearing draft
+   - Region mode: Preserve custom input value when combobox blurs
+   - Uses `data-pdf-annotation-popover` attribute for click detection
+
+3. **Input Clearing Logic**
+   - Combobox clears input when existing entry selected
+   - Backspace works normally when dropdown open
+   - Custom values preserved when dropdown closed (region mode)
+   - Ref-based flag (`allowClearInputRef`) controls when clearing allowed
+
+4. **Focus Management**
+   - Region mode: Auto-focus region name input
+   - Text mode: Auto-focus combobox
+   - Conditional based on `draft.type`
+
+5. **Accessibility**
+   - FormInput supports `hideLabel` prop for visually hidden labels
+   - Adds `aria-label` when label hidden
+   - Maintains screen reader compatibility
+
+### Deferred Items
+
+- Backend persistence (Phase 5)
+- Advanced options side panel
+- Custom colors/metadata
+- Entry hierarchy selection UI
+- Collision detection for overlapping highlights
 
 ## Next Task
 

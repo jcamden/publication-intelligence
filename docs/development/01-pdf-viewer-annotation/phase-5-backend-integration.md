@@ -7,6 +7,31 @@
 
 Persist highlights to Gel database with CRUD operations and optimistic updates.
 
+## Frontend Architecture (Established in Phase 4)
+
+**The following patterns are already implemented and should be maintained:**
+
+1. **Two-Component Popover Pattern**
+   - Generic: `PdfAnnotationPopover` (yaboujee) - handles positioning, bounds checking, escape key
+   - Specific: Content components (e.g., `MentionCreationPopover`) - pure content, no positioning logic
+   - Integration: Use render props pattern with `PdfViewer` where applicable
+
+2. **Standardized Form Components**
+   - `FormInput` (yaboujee) - integrates TanStack Form with yabasic Field components
+   - `FieldError` (yabasic) - consistent error display
+   - All forms should use TanStack Form for state management
+
+3. **PdfViewer Integration**
+   - Draft state managed internally by `PdfViewer`
+   - Callbacks: `onDraftConfirmed`, `onDraftCancelled`
+   - Render props: `renderDraftPopover` for custom content
+   - No external draft state or popover visibility state needed
+
+4. **Type Considerations**
+   - `MentionDraft` includes `type: 'text' | 'region'`
+   - Structural typing preferred for reusable components (avoid complex generics)
+   - Use interface-based props for field components
+
 ## Schema Design
 
 ### IndexType (Project Configuration)

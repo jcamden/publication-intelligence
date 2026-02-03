@@ -50,18 +50,18 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 **Current Blockers:** None  
 **Next Steps:** Complete implementation, test at multiple scales
 
-### ⚪ Phase 4: Highlight Management ([phase-4-highlight-management/](./phase-4-highlight-management/))
-**Status:** Planning  
+### 🟡 Phase 4: Highlight Management ([phase-4-highlight-management/](./phase-4-highlight-management/))
+**Status:** In Progress (2 of 4 tasks complete)  
 **Summary:** UI for persisting drafts, managing highlights, linking to IndexEntries
 
 **Sub-phases:**
-- [4A: Sidebar Action Buttons](./phase-4-highlight-management/task-4a-sidebar-actions.md)
-- [4B: Mention Creation Flow](./phase-4-highlight-management/task-4b-mention-creation.md)
-- [4C: Highlight CRUD Operations](./phase-4-highlight-management/task-4c-crud-operations.md)
-- [4D: IndexEntry Connection UI](./phase-4-highlight-management/task-4d-entry-connection.md)
+- ✅ [4A: Sidebar Action Buttons](./phase-4-highlight-management/task-4a-sidebar-actions.md) - Complete
+- ✅ [4B: Mention Creation Flow](./phase-4-highlight-management/task-4b-mention-creation.md) - Complete
+- ⚪ [4C: Highlight CRUD Operations](./phase-4-highlight-management/task-4c-crud-operations.md) - Not Started
+- ⚪ [4D: IndexEntry Connection UI](./phase-4-highlight-management/task-4d-entry-connection.md) - Not Started
 
 **Dependencies:** Phase 3 completion  
-**Estimated Duration:** 1 week
+**Estimated Duration:** 1 week (4 days remaining)
 
 ### ⚪ Phase 5: Backend Integration ([phase-5-backend-integration.md](./phase-5-backend-integration.md))
 **Status:** Not Started  
@@ -125,6 +125,25 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 ### Component Boundaries
 - **yaboujee:** Generic PDF viewer components (domain-agnostic)
 - **app:** Domain-specific adapters (IndexMention ↔ PdfHighlight)
+
+### Frontend Patterns (Established in Phase 4B)
+
+**Two-Component Popover Architecture:**
+- Generic: `PdfAnnotationPopover` (yaboujee) handles positioning, bounds checking, escape key
+- Specific: Content components (e.g., `MentionCreationPopover`) are pure content, no positioning logic
+- Integration: Render props pattern with `PdfViewer.renderDraftPopover`
+
+**Standardized Form Components:**
+- `FormInput` (yaboujee) integrates TanStack Form with yabasic Field components
+- Automatic validation state handling (`data-invalid`, `aria-invalid`)
+- Supports `hideLabel` prop for accessible hidden labels
+- All forms use TanStack Form for state management
+
+**PdfViewer Integration:**
+- Draft state managed internally by `PdfViewer`
+- Callbacks: `onDraftConfirmed({ draft, entry })`, `onDraftCancelled()`
+- Render props for custom popover content
+- No external draft state or popover visibility state needed
 
 ## Success Criteria
 

@@ -8,6 +8,7 @@ import type {
 	PdfHighlight,
 } from "../../../../types/pdf-highlight";
 import { PdfHighlightLayer } from "../../../pdf-highlight-layer";
+import { PdfAnnotationPopover } from "../pdf-annotation-popover";
 
 /**
  * PDF.js Worker Configuration
@@ -52,6 +53,37 @@ export type PdfViewerProps = {
 		bbox: BoundingBox;
 	}) => void;
 	onDraftCancelled?: () => void;
+	/**
+	 * Called when user confirms a draft with entry information.
+	 * If renderDraftPopover is provided, this should be used instead of onCreateDraftHighlight.
+	 */
+	onDraftConfirmed?: (data: {
+		draft: {
+			pageNumber: number;
+			text: string;
+			bbox: BoundingBox;
+		};
+		entry: {
+			entryId: string;
+			entryLabel: string;
+		};
+	}) => void;
+	/**
+	 * When this value changes, clears the draft highlight.
+	 * Use a counter or timestamp to trigger clearing.
+	 */
+	clearDraftTrigger?: number;
+	/**
+	 * Render function for the draft annotation popover.
+	 * Called when a draft highlight exists.
+	 */
+	renderDraftPopover?: (draft: {
+		pageNumber: number;
+		text: string;
+		bbox: BoundingBox;
+		onConfirm: (data: { entryId: string; entryLabel: string }) => void;
+		onCancel: () => void;
+	}) => React.ReactNode;
 };
 
 /**
@@ -230,6 +262,9 @@ export const PdfViewer = ({
 	regionDrawingActive = false,
 	onCreateDraftHighlight,
 	onDraftCancelled,
+	onDraftConfirmed,
+	clearDraftTrigger,
+	renderDraftPopover,
 }: PdfViewerProps) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -244,6 +279,8 @@ export const PdfViewer = ({
 	const [draftHighlight, setDraftHighlight] = useState<PdfHighlight | null>(
 		null,
 	);
+	const [draftPopoverAnchor, setDraftPopoverAnchor] =
+		useState<HTMLElement | null>(null);
 
 	// Region drawing state (add-region mode)
 	const [regionDragStart, setRegionDragStart] = useState<{
@@ -410,11 +447,17 @@ export const PdfViewer = ({
 			return;
 		}
 
-		const handleSelectionEnd = () => {
+		const handleSelectionEnd = (e: MouseEvent) => {
 			if (!viewport || !pageContainerRef.current) return;
 
 			const selection = window.getSelection();
 			if (!selection || selection.isCollapsed) {
+				// Don't clear draft if clicking inside the popover
+				const target = e.target as HTMLElement;
+				const popover = document.querySelector("[data-pdf-annotation-popover]");
+				if (popover?.contains(target)) {
+					return;
+				}
 				setDraftHighlight(null);
 				return;
 			}
@@ -632,6 +675,68 @@ export const PdfViewer = ({
 		};
 	}, [draftHighlight, regionDragStart, regionDragCurrent, onDraftCancelled]);
 
+	// Clear draft when clearDraftTrigger changes
+	useEffect(() => {
+		if (clearDraftTrigger !== undefined) {
+			setDraftHighlight(null);
+			setDraftPopoverAnchor(null);
+			window.getSelection()?.removeAllRanges();
+		}
+	}, [clearDraftTrigger]);
+
+	// Find draft highlight element for popover positioning
+	useEffect(() => {
+		if (!draftHighlight) {
+			setDraftPopoverAnchor(null);
+			return;
+		}
+
+		// Wait for draft highlight to render
+		const timer = setTimeout(() => {
+			const element = document.querySelector('[data-testid="highlight-draft"]');
+			setDraftPopoverAnchor(element as HTMLElement | null);
+		}, 50);
+
+		return () => clearTimeout(timer);
+	}, [draftHighlight]);
+
+	// Handle draft popover confirmation
+	const handleDraftConfirm = ({
+		entryId,
+		entryLabel,
+	}: {
+		entryId: string;
+		entryLabel: string;
+	}) => {
+		if (!draftHighlight) return;
+
+		// Notify parent with complete data (draft + entry)
+		onDraftConfirmed?.({
+			draft: {
+				pageNumber: draftHighlight.pageNumber,
+				text: draftHighlight.text || "",
+				bbox: draftHighlight.bbox,
+			},
+			entry: {
+				entryId,
+				entryLabel,
+			},
+		});
+
+		// Clear draft
+		setDraftHighlight(null);
+		setDraftPopoverAnchor(null);
+		window.getSelection()?.removeAllRanges();
+	};
+
+	// Handle draft popover cancellation
+	const handleDraftCancel = () => {
+		setDraftHighlight(null);
+		setDraftPopoverAnchor(null);
+		window.getSelection()?.removeAllRanges();
+		onDraftCancelled?.();
+	};
+
 	const containerClasses =
 		`flex h-full w-full flex-col bg-[hsl(var(--color-neutral-100))] dark:bg-[hsl(var(--color-neutral-900))] ${className}`.trim();
 
@@ -747,6 +852,23 @@ export const PdfViewer = ({
 					</div>
 				</div>
 			</div>
+
+			{/* Draft Annotation Popover */}
+			{renderDraftPopover && draftHighlight && (
+				<PdfAnnotationPopover
+					anchorElement={draftPopoverAnchor}
+					isOpen={!!draftPopoverAnchor}
+					onCancel={handleDraftCancel}
+				>
+					{renderDraftPopover({
+						pageNumber: draftHighlight.pageNumber,
+						text: draftHighlight.text || "",
+						bbox: draftHighlight.bbox,
+						onConfirm: handleDraftConfirm,
+						onCancel: handleDraftCancel,
+					})}
+				</PdfAnnotationPopover>
+			)}
 		</div>
 	);
 };

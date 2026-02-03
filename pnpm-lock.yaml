@@ -425,6 +425,9 @@ importers:
       '@pubint/yabasic':
         specifier: workspace:*
         version: link:../yabasic
+      '@tanstack/react-form':
+        specifier: ^1.28.0
+        version: 1.28.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

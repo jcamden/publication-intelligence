@@ -93,6 +93,16 @@ const handleDeleteMention = useCallback(
 
 ## Implementation
 
+### Architecture Note
+
+**Follow the two-component pattern established in Task 4B:**
+
+1. **Reuse `PdfAnnotationPopover`** from yaboujee for positioning
+2. **Create `MentionDetailsPopover`** as pure content component
+3. **No positioning props** - `PdfAnnotationPopover` handles all positioning logic
+
+This ensures consistency across all PDF annotation popovers.
+
 ### Mention Details Popover
 
 ```tsx
@@ -102,6 +112,7 @@ export type MentionDetailsPopoverProps = {
   onEdit: (mentionId: string) => void;
   onDelete: (mentionId: string) => void;
   onClose: () => void;
+  // No position prop - handled by PdfAnnotationPopover wrapper
 };
 ```
 
@@ -109,16 +120,45 @@ export type MentionDetailsPopoverProps = {
 
 ```tsx
 // In editor.tsx
+const [selectedMention, setSelectedMention] = useState<Mention | null>(null);
+const [detailsAnchor, setDetailsAnchor] = useState<HTMLElement | null>(null);
+
 const handleHighlightClick = useCallback(
   (highlight: PdfHighlight) => {
     const mention = mentions.find(m => m.id === highlight.id);
     if (mention) {
-      setSelectedMention(mention);
-      setShowDetailsPopover(true);
+      // Find the highlight element to use as anchor
+      const highlightEl = document.querySelector(`[data-highlight-id="${highlight.id}"]`);
+      if (highlightEl instanceof HTMLElement) {
+        setDetailsAnchor(highlightEl);
+        setSelectedMention(mention);
+      }
     }
   },
   [mentions]
 );
+
+// Render with PdfAnnotationPopover wrapper
+{selectedMention && (
+  <PdfAnnotationPopover
+    anchorElement={detailsAnchor}
+    isOpen={!!detailsAnchor}
+    onCancel={() => {
+      setSelectedMention(null);
+      setDetailsAnchor(null);
+    }}
+  >
+    <MentionDetailsPopover
+      mention={selectedMention}
+      onEdit={handleEditMention}
+      onDelete={handleDeleteMention}
+      onClose={() => {
+        setSelectedMention(null);
+        setDetailsAnchor(null);
+      }}
+    />
+  </PdfAnnotationPopover>
+)}
 ```
 
 ### Delete Confirmation

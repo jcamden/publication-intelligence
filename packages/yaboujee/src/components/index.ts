@@ -3,6 +3,8 @@ export { Alert } from "./alert";
 export { DraggableSidebar, SidebarAccordionItem } from "./draggable-sidebar";
 export type { FormFooterProps } from "./form-footer";
 export { FormFooter } from "./form-footer";
+export type { FormInputProps } from "./form-input";
+export { FormInput } from "./form-input";
 export {
 	CloseButton,
 	MaximizeButton,
@@ -14,6 +16,7 @@ export { Logo } from "./logo";
 export type { ModalProps } from "./modal";
 export { Modal } from "./modal";
 export type {
+	PdfAnnotationPopoverProps,
 	PdfFileUploadProps,
 	PdfHighlightBoxProps,
 	PdfHighlightLayerProps,
@@ -22,6 +25,7 @@ export type {
 	PdfViewerToolbarProps,
 } from "./pdf";
 export {
+	PdfAnnotationPopover,
 	PdfFileUpload,
 	PdfHighlightBox,
 	PdfHighlightLayer,

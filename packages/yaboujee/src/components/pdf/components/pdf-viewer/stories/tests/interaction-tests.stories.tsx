@@ -787,3 +787,132 @@ export const ClickingOffDraftClearsDraft: StoryObj<typeof PdfViewer> = {
 		});
 	},
 };
+
+/**
+ * Tests that renderDraftPopover callback is called and renders custom content
+ */
+export const RenderDraftPopoverCallback: StoryObj<typeof PdfViewer> = {
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [draftData, setDraftData] = useState<{
+			pageNumber: number;
+			text: string;
+		} | null>(null);
+
+		return (
+			<div>
+				<PdfViewer
+					url={defaultArgs.url}
+					scale={defaultArgs.scale}
+					currentPage={page}
+					onPageChange={({ page }) => setPage(page)}
+					showTextLayer={true}
+					textLayerInteractive={true}
+					onDraftConfirmed={({ draft }) => {
+						setDraftData({
+							pageNumber: draft.pageNumber,
+							text: draft.text,
+						});
+					}}
+					renderDraftPopover={({ text, onConfirm, onCancel }) => (
+						<div data-testid="custom-popover" className="space-y-2">
+							<p className="text-sm">Custom popover content</p>
+							<p className="text-xs text-neutral-600">Text: {text}</p>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									onClick={onCancel}
+									className="rounded bg-neutral-200 px-2 py-1 text-sm"
+								>
+									Cancel
+								</button>
+								<button
+									type="button"
+									onClick={() =>
+										onConfirm({ entryId: "test", entryLabel: "Test Entry" })
+									}
+									className="rounded bg-blue-600 px-2 py-1 text-sm text-white"
+								>
+									Confirm
+								</button>
+							</div>
+						</div>
+					)}
+				/>
+				{draftData && (
+					<div data-testid="confirmed-result" className="mt-4 p-2">
+						Confirmed: Page {draftData.pageNumber}, Text: {draftData.text}
+					</div>
+				)}
+			</div>
+		);
+	},
+	play: async ({ canvasElement, step }) => {
+		await step("Wait for text layer with spans to render", async () => {
+			await waitFor(
+				async () => {
+					const textLayer = canvasElement.querySelector(".textLayer");
+					await expect(textLayer).toBeTruthy();
+
+					const textSpans = textLayer?.querySelectorAll("span");
+					await expect(textSpans?.length).toBeGreaterThan(1);
+				},
+				{ timeout: 15000 },
+			);
+		});
+
+		await step("Select some text", async () => {
+			const textLayer = canvasElement.querySelector(".textLayer");
+			if (!textLayer) throw new Error("Text layer not found");
+
+			const textSpans = textLayer.querySelectorAll("span");
+			if (textSpans.length < 2)
+				throw new Error(`Not enough text spans: found ${textSpans.length}`);
+
+			// Select text
+			const range = document.createRange();
+			range.setStart(textSpans[0].firstChild || textSpans[0], 0);
+			range.setEnd(textSpans[1].firstChild || textSpans[1], 1);
+
+			const selection = window.getSelection();
+			if (selection) {
+				selection.removeAllRanges();
+				selection.addRange(range);
+			}
+
+			// Trigger mouseup
+			const mouseUpEvent = new MouseEvent("mouseup", { bubbles: true });
+			textLayer.dispatchEvent(mouseUpEvent);
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		});
+
+		await step("Verify custom popover appears", async () => {
+			await waitFor(
+				async () => {
+					const canvas = within(canvasElement);
+					const customPopover = canvas.queryByTestId("custom-popover");
+					await expect(customPopover).toBeTruthy();
+				},
+				{ timeout: 2000 },
+			);
+		});
+
+		await step("Click confirm button in custom popover", async () => {
+			const canvas = within(canvasElement);
+			const confirmButton = canvas.getByRole("button", { name: "Confirm" });
+			await userEvent.click(confirmButton);
+		});
+
+		await step("Verify draft was confirmed", async () => {
+			await waitFor(
+				async () => {
+					const canvas = within(canvasElement);
+					const result = canvas.queryByTestId("confirmed-result");
+					await expect(result).toBeTruthy();
+				},
+				{ timeout: 2000 },
+			);
+		});
+	},
+};
