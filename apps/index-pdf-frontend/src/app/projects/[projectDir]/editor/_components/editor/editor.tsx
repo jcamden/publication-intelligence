@@ -343,6 +343,35 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 		[mentions],
 	);
 
+	const handleMentionDetailsClose = useCallback(
+		async ({
+			mentionId,
+			indexTypes,
+		}: {
+			mentionId: string;
+			indexTypes: string[];
+		}) => {
+			// NOTE: Currently updating local state immediately.
+			// Phase 5 TODO: Replace with optimistic update pattern:
+			// 1. Immediately update local state (optimistic)
+			// 2. Call backend API
+			// 3. If API fails, revert to previous state
+			// 4. If API succeeds, state is already correct
+			//
+			// This ensures UI feels instant while staying in sync with backend.
+			// await updateMentionIndexTypesMutation.mutateAsync({ id: mentionId, indexTypes });
+
+			// Simulated API call
+			await new Promise((resolve) => setTimeout(resolve, 200));
+
+			// Update local state
+			setMentions((prev) =>
+				prev.map((m) => (m.id === mentionId ? { ...m, indexTypes } : m)),
+			);
+		},
+		[],
+	);
+
 	const handleEditMention = useCallback(
 		({ mentionId }: { mentionId: string }) => {
 			// TODO: Implement edit functionality in future task
@@ -455,6 +484,9 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 		label: mention.entryLabel,
 		text: mention.text,
 		bboxes: mention.bboxes,
+		metadata: {
+			indexTypes: mention.indexTypes,
+		},
 	}));
 
 	// Combine mock highlights with real mentions
@@ -574,6 +606,9 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 				activeAction={activeAction}
 				onSelectText={handleSelectText}
 				onDrawRegion={handleDrawRegion}
+				mentions={mentions}
+				currentPage={currentPage}
+				onMentionClick={handleMentionClickFromSidebar}
 			/>
 
 			{/* Mention details popover */}
@@ -594,6 +629,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 						}}
 						onEdit={handleEditMention}
 						onDelete={handleDeleteMention}
+						onClose={handleMentionDetailsClose}
 					/>
 				</PdfAnnotationPopover>
 			)}

@@ -48,6 +48,7 @@ const renderContainer = (children: React.ReactNode) => (
 export const BasicLight: Story = {
 	globals: {
 		...defaultGlobals,
+		viewport: { value: "mobile1", isRotated: true },
 	},
 	render: () =>
 		renderContainer(
@@ -61,6 +62,7 @@ export const BasicLight: Story = {
 export const BasicDark: Story = {
 	globals: {
 		...defaultGlobals,
+		viewport: { value: "mobile1", isRotated: true },
 		theme: "dark",
 	},
 	render: () => (
@@ -84,6 +86,7 @@ export const BasicDark: Story = {
 export const HoverLight: Story = {
 	globals: {
 		...defaultGlobals,
+		viewport: { value: "mobile1", isRotated: true },
 	},
 	parameters: {
 		pseudo: {
@@ -106,6 +109,7 @@ export const HoverLight: Story = {
 export const HoverDark: Story = {
 	globals: {
 		...defaultGlobals,
+		viewport: { value: "mobile1", isRotated: true },
 		theme: "dark",
 	},
 	parameters: {
@@ -138,6 +142,7 @@ export const HoverDark: Story = {
 export const Rotated: Story = {
 	globals: {
 		...defaultGlobals,
+		viewport: { value: "mobile1", isRotated: true },
 	},
 	render: () => {
 		const rotatedHighlight: PdfHighlight = {
@@ -157,6 +162,7 @@ export const Rotated: Story = {
 export const Scaled: Story = {
 	globals: {
 		...defaultGlobals,
+		viewport: { value: "mobile2", isRotated: true },
 	},
 	render: () => (
 		<div
@@ -171,4 +177,67 @@ export const Scaled: Story = {
 			<PdfHighlightBox highlight={mockHighlight} scale={2} onClick={fn()} />
 		</div>
 	),
+};
+
+/**
+ * Two index types - Subject + Scripture (yellow/blue stripes)
+ */
+export const TwoTypes: Story = {
+	globals: {
+		...defaultGlobals,
+		viewport: { value: "mobile1", isRotated: true },
+	},
+	render: () => {
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: { indexTypes: ["subject", "scripture"] },
+		};
+		return renderContainer(
+			<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />,
+		);
+	},
+};
+
+/**
+ * Three index types - All types (yellow/green/blue stripes)
+ */
+export const ThreeTypes: Story = {
+	globals: {
+		...defaultGlobals,
+	},
+	render: () => {
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: { indexTypes: ["subject", "author", "scripture"] },
+		};
+		return renderContainer(
+			<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />,
+		);
+	},
+};
+
+/**
+ * Two types hover state (yellow/green stripes with hover)
+ */
+export const ThreeTypesHover: Story = {
+	globals: {
+		...defaultGlobals,
+	},
+	parameters: {
+		pseudo: {
+			hover: ['[data-testid="highlight-highlight-1"]'],
+		},
+	},
+	render: () => {
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: { indexTypes: ["subject", "author", "scripture"] },
+		};
+		return renderContainer(
+			<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />,
+		);
+	},
+	play: async () => {
+		await new Promise((resolve) => setTimeout(resolve, 300));
+	},
 };

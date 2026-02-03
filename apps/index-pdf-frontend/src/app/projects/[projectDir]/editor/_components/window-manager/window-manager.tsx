@@ -26,10 +26,22 @@ import { ProjectPagesContent } from "../project-sidebar/components/project-pages
 import { ProjectScriptureContent } from "../project-sidebar/components/project-scripture-content";
 import { ProjectSubjectContent } from "../project-sidebar/components/project-subject-content";
 
+type Mention = {
+	id: string;
+	pageNumber: number;
+	text: string;
+	entryLabel: string;
+	entryId: string;
+	indexTypes: string[];
+};
+
 type WindowManagerProps = {
 	activeAction: { type: string | null; indexType: string | null };
 	onSelectText: ({ indexType }: { indexType: string }) => void;
 	onDrawRegion: ({ indexType }: { indexType: string }) => void;
+	mentions: Mention[];
+	currentPage: number;
+	onMentionClick: ({ mentionId }: { mentionId: string }) => void;
 };
 
 const windowRegistry: Record<
@@ -92,6 +104,9 @@ export const WindowManager = ({
 	activeAction,
 	onSelectText,
 	onDrawRegion,
+	mentions,
+	currentPage,
+	onMentionClick,
 }: WindowManagerProps) => {
 	const windowsToRender = useAtomValue(windowsToRenderAtom);
 	const sections = useAtomValue(sectionsStateAtom);
@@ -126,7 +141,14 @@ export const WindowManager = ({
 					"page-scripture",
 				].includes(id);
 				const contentProps = needsActionProps
-					? { activeAction, onSelectText, onDrawRegion }
+					? {
+							activeAction,
+							onSelectText,
+							onDrawRegion,
+							mentions,
+							currentPage,
+							onMentionClick,
+						}
 					: {};
 
 				return (

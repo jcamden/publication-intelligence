@@ -30,6 +30,9 @@ export const EditButtonClick: Story = {
 		onDelete: ({ mentionId }) => {
 			console.log("Delete clicked:", mentionId);
 		},
+		onClose: ({ mentionId, indexTypes }) => {
+			console.log("Close with updated types:", mentionId, indexTypes);
+		},
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
@@ -57,6 +60,9 @@ export const DeleteButtonClick: Story = {
 		onDelete: ({ mentionId }) => {
 			console.log("Delete clicked:", mentionId);
 		},
+		onClose: ({ mentionId, indexTypes }) => {
+			console.log("Close with updated types:", mentionId, indexTypes);
+		},
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
@@ -83,6 +89,9 @@ export const DisplaysCorrectInformation: Story = {
 		},
 		onDelete: ({ mentionId }) => {
 			console.log("Delete clicked:", mentionId);
+		},
+		onClose: ({ mentionId, indexTypes }) => {
+			console.log("Close with updated types:", mentionId, indexTypes);
 		},
 	},
 	play: async ({ canvasElement, step }) => {
@@ -122,6 +131,9 @@ export const TruncatesLongText: Story = {
 		onDelete: ({ mentionId }) => {
 			console.log("Delete clicked:", mentionId);
 		},
+		onClose: ({ mentionId, indexTypes }) => {
+			console.log("Close with updated types:", mentionId, indexTypes);
+		},
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
@@ -129,6 +141,182 @@ export const TruncatesLongText: Story = {
 		await step("Verify text is truncated with ellipsis", async () => {
 			const textElement = canvas.getByText(/this is a very long text/i);
 			await expect(textElement.textContent).toMatch(/\.\.\."/);
+		});
+	},
+};
+
+export const SelectSingleIndexType: Story = {
+	args: {
+		mention: {
+			id: "mention-5",
+			pageNumber: 10,
+			text: "Test text",
+			entryLabel: "Test Entry",
+			entryId: "entry-5",
+			indexTypes: ["subject"],
+		},
+		onEdit: ({ mentionId }) => {
+			console.log("Edit clicked:", mentionId);
+		},
+		onDelete: ({ mentionId }) => {
+			console.log("Delete clicked:", mentionId);
+		},
+		onClose: ({ mentionId, indexTypes }) => {
+			console.log("Close with updated types:", mentionId, indexTypes);
+		},
+	},
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+
+		await step("Verify initial trigger shows Subject", async () => {
+			const selectTrigger = canvas.getByTestId("index-types-select");
+			await expect(selectTrigger.textContent).toMatch(/subject/i);
+		});
+
+		await step(
+			"Open dropdown, deselect Subject, and select Author",
+			async () => {
+				const selectTrigger = canvas.getByTestId("index-types-select");
+				await userEvent.click(selectTrigger);
+
+				const body = within(document.body);
+
+				// Deselect Subject first
+				const subjectOption = body.getByRole("option", { name: /subject/i });
+				await userEvent.click(subjectOption);
+
+				// Then select Author
+				const authorOption = body.getByRole("option", { name: /author/i });
+				await userEvent.click(authorOption);
+			},
+		);
+
+		await step("Close dropdown", async () => {
+			await userEvent.keyboard("{Escape}");
+		});
+
+		await step("Verify trigger now shows only Author", async () => {
+			const selectTrigger = canvas.getByTestId("index-types-select");
+			const triggerText = selectTrigger.textContent || "";
+			await expect(triggerText).toMatch(/author/i);
+			await expect(triggerText).not.toMatch(/subject/i);
+		});
+	},
+};
+
+export const SelectMultipleIndexTypes: Story = {
+	args: {
+		mention: {
+			id: "mention-6",
+			pageNumber: 20,
+			text: "Multi-type mention",
+			entryLabel: "Test Entry",
+			entryId: "entry-6",
+			indexTypes: ["subject"],
+		},
+		onEdit: ({ mentionId }) => {
+			console.log("Edit clicked:", mentionId);
+		},
+		onDelete: ({ mentionId }) => {
+			console.log("Delete clicked:", mentionId);
+		},
+		onClose: ({ mentionId, indexTypes }) => {
+			console.log("Close with updated types:", mentionId, indexTypes);
+		},
+	},
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+
+		await step("Open dropdown and select Author", async () => {
+			const selectTrigger = canvas.getByTestId("index-types-select");
+			await userEvent.click(selectTrigger);
+
+			const body = within(document.body);
+			const authorOption = body.getByRole("option", { name: /author/i });
+			await userEvent.click(authorOption);
+		});
+
+		await step("Select Scripture as well", async () => {
+			const body = within(document.body);
+			const scriptureOption = body.getByRole("option", { name: /scripture/i });
+			await userEvent.click(scriptureOption);
+		});
+
+		await step("Close dropdown", async () => {
+			await userEvent.keyboard("{Escape}");
+		});
+
+		await step("Verify trigger shows 3 selected items", async () => {
+			const selectTrigger = canvas.getByTestId("index-types-select");
+			const triggerText = selectTrigger.textContent || "";
+			// Should show "3 selected" or list all three
+			await expect(
+				triggerText.includes("3") ||
+					(triggerText.includes("Subject") &&
+						triggerText.includes("Author") &&
+						triggerText.includes("Scripture")),
+			).toBe(true);
+		});
+	},
+};
+
+export const DeselectIndexType: Story = {
+	args: {
+		mention: {
+			id: "mention-7",
+			pageNumber: 30,
+			text: "All types selected",
+			entryLabel: "Test Entry",
+			entryId: "entry-7",
+			indexTypes: ["subject", "author", "scripture"],
+		},
+		onEdit: ({ mentionId }) => {
+			console.log("Edit clicked:", mentionId);
+		},
+		onDelete: ({ mentionId }) => {
+			console.log("Delete clicked:", mentionId);
+		},
+		onClose: ({ mentionId, indexTypes }) => {
+			console.log("Close with updated types:", mentionId, indexTypes);
+		},
+	},
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+
+		await step("Verify initial trigger shows 3 items", async () => {
+			const selectTrigger = canvas.getByTestId("index-types-select");
+			const triggerText = selectTrigger.textContent || "";
+			await expect(
+				triggerText.includes("3") ||
+					(triggerText.includes("Subject") &&
+						triggerText.includes("Author") &&
+						triggerText.includes("Scripture")),
+			).toBe(true);
+		});
+
+		await step("Open dropdown and deselect Author", async () => {
+			const selectTrigger = canvas.getByTestId("index-types-select");
+			await userEvent.click(selectTrigger);
+
+			const body = within(document.body);
+			const authorOption = body.getByRole("option", { name: /author/i });
+			await expect(authorOption).toHaveAttribute("data-selected");
+			await userEvent.click(authorOption);
+		});
+
+		await step("Close dropdown", async () => {
+			await userEvent.keyboard("{Escape}");
+		});
+
+		await step("Verify trigger now shows 2 items", async () => {
+			const selectTrigger = canvas.getByTestId("index-types-select");
+			const triggerText = selectTrigger.textContent || "";
+			await expect(
+				triggerText.includes("2") ||
+					(triggerText.includes("Subject") &&
+						triggerText.includes("Scripture") &&
+						!triggerText.includes("Author")),
+			).toBe(true);
 		});
 	},
 };

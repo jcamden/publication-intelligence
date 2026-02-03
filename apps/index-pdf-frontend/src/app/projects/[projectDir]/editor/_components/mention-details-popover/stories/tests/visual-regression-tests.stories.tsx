@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { userEvent, within } from "@storybook/test";
 import { MentionDetailsPopover } from "../../mention-details-popover";
 
 const meta = {
@@ -32,6 +33,7 @@ export const Default: Story = {
 		mention: defaultMention,
 		onEdit: () => {},
 		onDelete: () => {},
+		onClose: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -44,6 +46,7 @@ export const DefaultDark: Story = {
 		mention: defaultMention,
 		onEdit: () => {},
 		onDelete: () => {},
+		onClose: () => {},
 	},
 	globals: {
 		theme: "dark",
@@ -64,6 +67,7 @@ export const ShortText: Story = {
 		},
 		onEdit: () => {},
 		onDelete: () => {},
+		onClose: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -83,6 +87,7 @@ export const LongText: Story = {
 		},
 		onEdit: () => {},
 		onDelete: () => {},
+		onClose: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -95,6 +100,7 @@ export const HoverEditButton: Story = {
 		mention: defaultMention,
 		onEdit: () => {},
 		onDelete: () => {},
+		onClose: () => {},
 	},
 	parameters: {
 		pseudo: {
@@ -115,6 +121,7 @@ export const HoverDeleteButton: Story = {
 		mention: defaultMention,
 		onEdit: () => {},
 		onDelete: () => {},
+		onClose: () => {},
 	},
 	parameters: {
 		pseudo: {
@@ -126,6 +133,62 @@ export const HoverDeleteButton: Story = {
 		viewport: { value: "mobile1" },
 	},
 	play: async () => {
+		await new Promise((resolve) => setTimeout(resolve, 300));
+	},
+};
+
+/**
+ * Multiselect with all three types selected
+ */
+export const ThreeTypesSelected: Story = {
+	args: {
+		mention: {
+			id: "mention-5",
+			pageNumber: 42,
+			text: "All types mention text",
+			entryLabel: "Philosophy Entry",
+			entryId: "entry-5",
+			indexTypes: ["subject", "author", "scripture"],
+		},
+		onEdit: () => {},
+		onDelete: () => {},
+		onClose: () => {},
+	},
+	globals: {
+		...defaultGlobals,
+		viewport: { value: "mobile1" },
+	},
+};
+
+/**
+ * Multiselect dropdown in open state
+ */
+export const DropdownOpen: Story = {
+	args: {
+		mention: {
+			id: "mention-6",
+			pageNumber: 42,
+			text: "Example text",
+			entryLabel: "Test Entry",
+			entryId: "entry-6",
+			indexTypes: ["subject", "author"],
+		},
+		onEdit: () => {},
+		onDelete: () => {},
+		onClose: () => {},
+	},
+	globals: {
+		...defaultGlobals,
+		viewport: { value: "mobile1" },
+	},
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		// Open the dropdown
+		const selectTrigger = canvas.getByTestId("index-types-select");
+		await userEvent.click(selectTrigger);
+
+		// Wait for dropdown animation to complete
 		await new Promise((resolve) => setTimeout(resolve, 300));
 	},
 };
