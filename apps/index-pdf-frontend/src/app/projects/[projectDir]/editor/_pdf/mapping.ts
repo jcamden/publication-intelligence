@@ -147,6 +147,32 @@ export const convertViewerToPyMuPDF = ({
 };
 
 /**
+ * Convert multiple PyMuPDF bboxes to viewer coordinates
+ */
+export const convertPyMuPDFToViewerMulti = ({
+	bboxes,
+	pageHeight,
+}: {
+	bboxes: BoundingBox[];
+	pageHeight: number;
+}): BoundingBox[] => {
+	return bboxes.map((bbox) => convertPyMuPDFToViewer({ bbox, pageHeight }));
+};
+
+/**
+ * Convert multiple viewer bboxes to PyMuPDF coordinates
+ */
+export const convertViewerToPyMuPDFMulti = ({
+	bboxes,
+	pageHeight,
+}: {
+	bboxes: BoundingBox[];
+	pageHeight: number;
+}): BoundingBox[] => {
+	return bboxes.map((bbox) => convertViewerToPyMuPDF({ bbox, pageHeight }));
+};
+
+/**
  * Check if two bounding boxes overlap (for reconciliation)
  */
 export const bboxesOverlap = ({

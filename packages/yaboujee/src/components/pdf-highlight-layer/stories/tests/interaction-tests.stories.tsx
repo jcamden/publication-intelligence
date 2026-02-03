@@ -21,14 +21,14 @@ const mockHighlights: PdfHighlight[] = [
 	{
 		id: "highlight-1",
 		pageNumber: 1,
-		bbox: { x: 50, y: 100, width: 200, height: 20 },
+		bboxes: [{ x: 50, y: 100, width: 200, height: 20 }],
 		label: "AI Concepts",
 		text: "artificial intelligence",
 	},
 	{
 		id: "highlight-2",
 		pageNumber: 1,
-		bbox: { x: 50, y: 200, width: 180, height: 20 },
+		bboxes: [{ x: 50, y: 200, width: 180, height: 20 }],
 		label: "ML Techniques",
 		text: "machine learning",
 	},
@@ -79,7 +79,7 @@ export const PageFiltering: Story = {
 			{
 				id: "highlight-3",
 				pageNumber: 2,
-				bbox: { x: 100, y: 150, width: 190, height: 20 },
+				bboxes: [{ x: 100, y: 150, width: 190, height: 20 }],
 				label: "Deep Learning",
 				text: "neural networks",
 			},

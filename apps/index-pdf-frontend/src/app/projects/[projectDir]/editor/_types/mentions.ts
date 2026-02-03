@@ -24,7 +24,7 @@ export type IndexMention = {
 	text_span: string;
 	start_offset?: number;
 	end_offset?: number;
-	bbox: BoundingBox;
+	bboxes: BoundingBox[];
 	range_type: RangeType;
 	suggested_by_llm?: boolean;
 	deleted_at?: string | null;
@@ -39,7 +39,7 @@ export type ViewerMention = {
 	id: string;
 	page_number: number;
 	text_span: string;
-	bbox: BoundingBox;
+	bboxes: BoundingBox[];
 	entryLabel: string;
 	range_type?: RangeType;
 };

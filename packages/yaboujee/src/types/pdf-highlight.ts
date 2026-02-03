@@ -9,7 +9,7 @@ export type BoundingBox = {
 export type PdfHighlight = {
 	id: string;
 	pageNumber: number;
-	bbox: BoundingBox;
+	bboxes: BoundingBox[];
 	label: string;
 	text?: string;
 	metadata?: Record<string, unknown>;

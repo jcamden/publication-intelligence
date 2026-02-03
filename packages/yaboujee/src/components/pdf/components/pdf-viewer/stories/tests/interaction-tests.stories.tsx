@@ -375,7 +375,7 @@ export const HighlightsFilteredByPage: StoryObj<typeof PdfViewer> = {
 				pageNumber: 2,
 				label: "Page 2 Highlight",
 				text: "This is on page 2",
-				bbox: { x: 100, y: 400, width: 150, height: 20 },
+				bboxes: [{ x: 100, y: 400, width: 150, height: 20 }],
 			},
 		];
 
@@ -912,6 +912,144 @@ export const RenderDraftPopoverCallback: StoryObj<typeof PdfViewer> = {
 					await expect(result).toBeTruthy();
 				},
 				{ timeout: 2000 },
+			);
+		});
+	},
+};
+
+export const MultiLineTextSelectionCreatesMultipleBboxes: StoryObj<
+	typeof PdfViewer
+> = {
+	render: () => {
+		const [page, setPage] = useState(1);
+		const [_numPages, setNumPages] = useState(0);
+		const [draftData, setDraftData] = useState<{
+			pageNumber: number;
+			text: string;
+			bboxes: unknown[];
+		} | null>(null);
+
+		return (
+			<div>
+				<PdfViewer
+					url={defaultArgs.url}
+					scale={1.25}
+					currentPage={page}
+					onPageChange={({ page }) => setPage(page)}
+					onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+					showTextLayer={true}
+					textLayerInteractive={true}
+					onCreateDraftHighlight={(draft) => setDraftData(draft)}
+				/>
+				{draftData && (
+					<div
+						data-testid="draft-data"
+						data-bbox-count={draftData.bboxes.length}
+					/>
+				)}
+			</div>
+		);
+	},
+	play: async ({ canvasElement, step }) => {
+		await step("Wait for text layer to render", async () => {
+			await waitFor(
+				async () => {
+					const textLayer = canvasElement.querySelector(".textLayer");
+					await expect(textLayer).toBeTruthy();
+					const textSpans = textLayer?.querySelectorAll("span");
+					await expect(textSpans?.length).toBeGreaterThan(5);
+				},
+				{ timeout: 10000 },
+			);
+		});
+
+		await step("Select text across multiple lines/spans", async () => {
+			// Wait extra time for PDF to fully stabilize
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+
+			const textLayer = canvasElement.querySelector(".textLayer");
+			if (!textLayer) throw new Error("Text layer not found");
+
+			const textSpans = textLayer.querySelectorAll("span");
+			if (textSpans.length < 5) {
+				throw new Error(
+					`Not enough text spans: need 5, found ${textSpans.length}`,
+				);
+			}
+
+			// Select across 5 spans to ensure we get multiple lines
+			// (PDF text layers often have many spans per line)
+			const range = document.createRange();
+			range.setStart(textSpans[0].firstChild || textSpans[0], 0);
+
+			// Set end to middle of the 5th span to ensure we get actual content
+			const lastSpan = textSpans[4];
+			const textLength = lastSpan.textContent?.length || 1;
+			range.setEnd(
+				lastSpan.firstChild || lastSpan,
+				Math.max(1, Math.floor(textLength / 2)),
+			);
+
+			const selection = window.getSelection();
+			selection?.removeAllRanges();
+			selection?.addRange(range);
+
+			// Wait for selection to be applied
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// Trigger mouseup event to simulate selection end
+			const mouseupEvent = new MouseEvent("mouseup", {
+				bubbles: true,
+				cancelable: true,
+			});
+			document.dispatchEvent(mouseupEvent);
+
+			// Wait for draft to be created
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+
+		await step("Wait for draft highlight boxes to appear", async () => {
+			await waitFor(
+				async () => {
+					const canvas = within(canvasElement);
+					const highlightLayer = canvas.getByTestId("pdf-highlight-layer");
+					const draftHighlights = highlightLayer.querySelectorAll(
+						"[data-testid='highlight-draft']",
+					);
+					await expect(draftHighlights.length).toBeGreaterThan(0);
+				},
+				{ timeout: 3000 },
+			);
+		});
+
+		await step("Verify draft data contains multiple bboxes", async () => {
+			await waitFor(
+				async () => {
+					const canvas = within(canvasElement);
+					const draftDataElement = canvas.queryByTestId("draft-data");
+					await expect(draftDataElement).toBeTruthy();
+
+					const bboxCount = draftDataElement?.getAttribute("data-bbox-count");
+					const count = Number(bboxCount);
+					// Multi-line/multi-span selection should create multiple bboxes
+					await expect(count).toBeGreaterThanOrEqual(2);
+				},
+				{ timeout: 2000 },
+			);
+		});
+
+		await step("Verify multiple highlight boxes are rendered", async () => {
+			await waitFor(
+				async () => {
+					const canvas = within(canvasElement);
+					const highlightLayer = canvas.getByTestId("pdf-highlight-layer");
+					const draftHighlights = highlightLayer.querySelectorAll(
+						"[data-testid='highlight-draft']",
+					);
+					// Should have multiple boxes for multi-line selection
+					await expect(draftHighlights.length).toBeGreaterThanOrEqual(2);
+				},
+				{ timeout: 3000 },
 			);
 		});
 	},

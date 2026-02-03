@@ -69,7 +69,7 @@ export type Mention = {
 	id: string;
 	pageNumber: number;
 	text: string;
-	bbox: BoundingBox;
+	bboxes: BoundingBox[];
 	entryId: string;
 	entryLabel: string;
 	indexTypes: string[]; // ['subject', 'author', 'scripture']
@@ -98,28 +98,28 @@ const mockHighlights: PdfHighlight[] = [
 		pageNumber: 1,
 		label: "Top-Left Corner",
 		text: "Should be in top-left corner",
-		bbox: { x: 20, y: 772, width: 100, height: 15 }, // Near top (792-20=772)
+		bboxes: [{ x: 20, y: 772, width: 100, height: 15 }], // Near top (792-20=772)
 	},
 	{
 		id: "top-right",
 		pageNumber: 1,
 		label: "Top-Right Corner",
 		text: "Should be in top-right corner",
-		bbox: { x: 492, y: 772, width: 100, height: 15 }, // Near right edge (612-120=492)
+		bboxes: [{ x: 492, y: 772, width: 100, height: 15 }], // Near right edge (612-120=492)
 	},
 	{
 		id: "bottom-left",
 		pageNumber: 1,
 		label: "Bottom-Left Corner",
 		text: "Should be in bottom-left corner",
-		bbox: { x: 20, y: 20, width: 100, height: 15 }, // Near bottom
+		bboxes: [{ x: 20, y: 20, width: 100, height: 15 }], // Near bottom
 	},
 	{
 		id: "bottom-right",
 		pageNumber: 1,
 		label: "Bottom-Right Corner",
 		text: "Should be in bottom-right corner",
-		bbox: { x: 492, y: 20, width: 100, height: 15 },
+		bboxes: [{ x: 492, y: 20, width: 100, height: 15 }],
 	},
 	// EDGES - MIDPOINTS
 	{
@@ -127,28 +127,28 @@ const mockHighlights: PdfHighlight[] = [
 		pageNumber: 1,
 		label: "Left Edge Middle",
 		text: "Should be on left edge, vertically centered",
-		bbox: { x: 20, y: 388, width: 80, height: 15 }, // 792/2 = 396, minus half height
+		bboxes: [{ x: 20, y: 388, width: 80, height: 15 }], // 792/2 = 396, minus half height
 	},
 	{
 		id: "right-middle",
 		pageNumber: 1,
 		label: "Right Edge Middle",
 		text: "Should be on right edge, vertically centered",
-		bbox: { x: 512, y: 388, width: 80, height: 15 }, // 612-100=512
+		bboxes: [{ x: 512, y: 388, width: 80, height: 15 }], // 612-100=512
 	},
 	{
 		id: "top-center",
 		pageNumber: 1,
 		label: "Top Edge Center",
 		text: "Should be at top, horizontally centered",
-		bbox: { x: 256, y: 772, width: 100, height: 15 }, // 612/2 - 50 = 256
+		bboxes: [{ x: 256, y: 772, width: 100, height: 15 }], // 612/2 - 50 = 256
 	},
 	{
 		id: "bottom-center",
 		pageNumber: 1,
 		label: "Bottom Edge Center",
 		text: "Should be at bottom, horizontally centered",
-		bbox: { x: 256, y: 20, width: 100, height: 15 },
+		bboxes: [{ x: 256, y: 20, width: 100, height: 15 }],
 	},
 	// CENTER
 	{
@@ -156,7 +156,7 @@ const mockHighlights: PdfHighlight[] = [
 		pageNumber: 1,
 		label: "Dead Center",
 		text: "Should be in the absolute center of the page",
-		bbox: { x: 256, y: 388, width: 100, height: 15 }, // (612/2 - 50, 792/2 - 7.5)
+		bboxes: [{ x: 256, y: 388, width: 100, height: 15 }], // (612/2 - 50, 792/2 - 7.5)
 	},
 ];
 
@@ -259,7 +259,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 			draft,
 			entry,
 		}: {
-			draft: { pageNumber: number; text: string; bbox: BoundingBox };
+			draft: { pageNumber: number; text: string; bboxes: BoundingBox[] };
 			entry: { entryId: string; entryLabel: string; regionName?: string };
 		}) => {
 			// Capture which index type this mention was created from
@@ -274,7 +274,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 			//   entryId: entry.entryId,
 			//   pageNumber: draft.pageNumber,
 			//   text: mentionText,
-			//   bbox: draft.bbox,
+			//   bboxes: draft.bboxes,
 			//   indexTypes: [indexType],
 			// });
 
@@ -286,7 +286,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 				id: crypto.randomUUID(), // In Phase 5: comes from server
 				pageNumber: draft.pageNumber,
 				text: mentionText, // Use regionName for regions, draft.text for text selections
-				bbox: draft.bbox,
+				bboxes: draft.bboxes,
 				entryId: entry.entryId,
 				entryLabel: entry.entryLabel,
 				indexTypes: [indexType], // Created from this index type
@@ -454,7 +454,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 		pageNumber: mention.pageNumber,
 		label: mention.entryLabel,
 		text: mention.text,
-		bbox: mention.bbox,
+		bboxes: mention.bboxes,
 	}));
 
 	// Combine mock highlights with real mentions
@@ -519,7 +519,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 							renderDraftPopover={({
 								pageNumber,
 								text,
-								bbox,
+								bboxes,
 								onConfirm,
 								onCancel,
 							}) => (
@@ -527,7 +527,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 									draft={{
 										pageNumber,
 										text,
-										bbox,
+										bboxes,
 										type: text ? "text" : "region",
 									}}
 									existingEntries={mockIndexEntries}

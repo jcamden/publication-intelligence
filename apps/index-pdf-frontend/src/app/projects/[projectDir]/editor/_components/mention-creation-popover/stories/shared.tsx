@@ -3,14 +3,14 @@ import type { IndexEntry, MentionDraft } from "../mention-creation-popover";
 export const mockDraft: MentionDraft = {
 	pageNumber: 1,
 	text: "This is a selected text that will be turned into a mention. It might be quite long and needs to be truncated in the UI.",
-	bbox: { x: 100, y: 200, width: 300, height: 40 },
+	bboxes: [{ x: 100, y: 200, width: 300, height: 40 }],
 	type: "text",
 };
 
 export const mockRegionDraft: MentionDraft = {
 	pageNumber: 1,
 	text: "",
-	bbox: { x: 100, y: 200, width: 300, height: 200 },
+	bboxes: [{ x: 100, y: 200, width: 300, height: 200 }],
 	type: "region",
 };
 

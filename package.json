@@ -23,6 +23,7 @@
 		"vrt:frontend": "pnpm --filter @pubint/storybook-vrt vrt:frontend",
 		"vrt:frontend:ui": "pnpm --filter @pubint/storybook-vrt vrt:frontend:ui",
 		"vrt:frontend:update": "pnpm --filter @pubint/storybook-vrt vrt:frontend:update",
+		"vrt:clean": "pnpm --filter @pubint/storybook-vrt clean:yaboujee && pnpm --filter @pubint/storybook-vrt clean:frontend",
 		"test:e2e": "pnpm --filter @pubint/index-pdf-frontend test:e2e",
 		"test:e2e:ui": "pnpm --filter @pubint/index-pdf-frontend test:e2e:ui",
 		"gel:ui": "pnpm --filter @pubint/db-gel exec gel ui",

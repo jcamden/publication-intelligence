@@ -23,7 +23,7 @@ export type BoundingBox = {
 export type MentionDraft = {
 	pageNumber: number;
 	text: string;
-	bbox: BoundingBox;
+	bboxes: BoundingBox[];
 	type: "text" | "region";
 };
 

@@ -33,7 +33,7 @@ export const ViewerHighlightLayer = ({
 	const highlights: PdfHighlight[] = mentions.map((m) => ({
 		id: m.id,
 		pageNumber: m.page_number,
-		bbox: m.bbox,
+		bboxes: m.bboxes,
 		label: m.entryLabel,
 		text: m.text_span,
 		metadata: { rangeType: m.range_type },

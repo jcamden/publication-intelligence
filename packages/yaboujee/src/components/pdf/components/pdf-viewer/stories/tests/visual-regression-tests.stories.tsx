@@ -1,8 +1,13 @@
+import { defaultGlobals } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn, waitFor } from "@storybook/test";
 import { useState } from "react";
 import { PdfViewer } from "../../pdf-viewer";
-import { defaultArgs, mockHighlights } from "../shared";
+import {
+	defaultArgs,
+	mockHighlights,
+	selectAcrossMultipleSpans,
+} from "../shared";
 
 export default {
 	title: "Components/PDF/PdfViewer/tests/Visual Regression Tests",
@@ -18,56 +23,10 @@ export default {
 	},
 } satisfies Meta<typeof PdfViewer>;
 
-export const DefaultLight: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={defaultArgs.scale}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-			/>
-		);
-	},
-	parameters: {
-		theme: "light",
-	},
-};
-
-export const DefaultDark: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={defaultArgs.scale}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-			/>
-		);
-	},
-	parameters: {
-		backgrounds: { default: "dark" },
-		theme: "dark",
-	},
-};
-
 export const TextLayerDefaultScale: StoryObj<typeof PdfViewer> = {
 	globals: {
-		viewport: undefined,
+		...defaultGlobals,
+		viewport: { value: "mobile1" },
 	},
 	render: () => {
 		const [page, setPage] = useState(1);
@@ -76,7 +35,7 @@ export const TextLayerDefaultScale: StoryObj<typeof PdfViewer> = {
 		return (
 			<PdfViewer
 				url={defaultArgs.url}
-				scale={1.25}
+				scale={0.5}
 				currentPage={page}
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -114,154 +73,10 @@ export const TextLayerDefaultScale: StoryObj<typeof PdfViewer> = {
 	},
 };
 
-export const TextLayerSmallScale: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={0.75}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				showTextLayer={true}
-				textLayerInteractive={true}
-			/>
-		);
-	},
-	play: async ({ canvasElement }) => {
-		await waitFor(
-			async () => {
-				const textLayer = canvasElement.querySelector(".textLayer");
-				if (!textLayer) throw new Error("Text layer not found");
-				const textSpans = textLayer.querySelectorAll("span");
-				if (textSpans.length === 0) throw new Error("Text layer has no spans");
-			},
-			{ timeout: 5000 },
-		);
-
-		const textLayer = canvasElement.querySelector(".textLayer") as HTMLElement;
-		if (textLayer) {
-			const selection = window.getSelection();
-			const range = document.createRange();
-			range.selectNodeContents(textLayer);
-			selection?.removeAllRanges();
-			selection?.addRange(range);
-		}
-	},
-	parameters: {
-		theme: "light",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
-
-export const TextLayerLargeScale: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={2.0}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				showTextLayer={true}
-				textLayerInteractive={true}
-			/>
-		);
-	},
-	play: async ({ canvasElement }) => {
-		await waitFor(
-			async () => {
-				const textLayer = canvasElement.querySelector(".textLayer");
-				if (!textLayer) throw new Error("Text layer not found");
-				const textSpans = textLayer.querySelectorAll("span");
-				if (textSpans.length === 0) throw new Error("Text layer has no spans");
-			},
-			{ timeout: 5000 },
-		);
-
-		const textLayer = canvasElement.querySelector(".textLayer") as HTMLElement;
-		if (textLayer) {
-			const selection = window.getSelection();
-			const range = document.createRange();
-			range.selectNodeContents(textLayer);
-			selection?.removeAllRanges();
-			selection?.addRange(range);
-		}
-	},
-	parameters: {
-		theme: "light",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
-
-export const TextLayerDefaultScaleDark: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				showTextLayer={true}
-				textLayerInteractive={true}
-			/>
-		);
-	},
-	play: async ({ canvasElement }) => {
-		await waitFor(
-			async () => {
-				const textLayer = canvasElement.querySelector(".textLayer");
-				if (!textLayer) throw new Error("Text layer not found");
-				const textSpans = textLayer.querySelectorAll("span");
-				if (textSpans.length === 0) throw new Error("Text layer has no spans");
-			},
-			{ timeout: 5000 },
-		);
-
-		const textLayer = canvasElement.querySelector(".textLayer") as HTMLElement;
-		if (textLayer) {
-			const selection = window.getSelection();
-			const range = document.createRange();
-			range.selectNodeContents(textLayer);
-			selection?.removeAllRanges();
-			selection?.addRange(range);
-		}
-	},
-	parameters: {
-		backgrounds: { default: "dark" },
-		theme: "dark",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
-
 export const TextLayerDisabled: StoryObj<typeof PdfViewer> = {
 	globals: {
-		viewport: undefined,
+		...defaultGlobals,
+		viewport: { value: "mobile1" },
 	},
 	render: () => {
 		const [page, setPage] = useState(1);
@@ -270,7 +85,7 @@ export const TextLayerDisabled: StoryObj<typeof PdfViewer> = {
 		return (
 			<PdfViewer
 				url={defaultArgs.url}
-				scale={1.25}
+				scale={0.5}
 				currentPage={page}
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -314,65 +129,10 @@ export const TextLayerDisabled: StoryObj<typeof PdfViewer> = {
 	},
 };
 
-export const WithHighlightsDefaultScale: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={mockHighlights}
-				onHighlightClick={fn()}
-			/>
-		);
-	},
-	parameters: {
-		theme: "light",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
-
-export const WithHighlightsSmallScale: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={0.75}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={mockHighlights}
-				onHighlightClick={fn()}
-			/>
-		);
-	},
-	parameters: {
-		theme: "light",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
-
 export const WithHighlightsLargeScale: StoryObj<typeof PdfViewer> = {
 	globals: {
-		viewport: undefined,
+		...defaultGlobals,
+		viewport: { value: "tablet" },
 	},
 	render: () => {
 		const [page, setPage] = useState(1);
@@ -381,7 +141,7 @@ export const WithHighlightsLargeScale: StoryObj<typeof PdfViewer> = {
 		return (
 			<PdfViewer
 				url={defaultArgs.url}
-				scale={2.0}
+				scale={1}
 				currentPage={page}
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -392,35 +152,6 @@ export const WithHighlightsLargeScale: StoryObj<typeof PdfViewer> = {
 	},
 	parameters: {
 		theme: "light",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
-
-export const WithHighlightsDark: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={mockHighlights}
-				onHighlightClick={fn()}
-			/>
-		);
-	},
-	parameters: {
-		backgrounds: { default: "dark" },
-		theme: "dark",
 		chromatic: {
 			delay: 3000,
 		},
@@ -430,7 +161,8 @@ export const WithHighlightsDark: StoryObj<typeof PdfViewer> = {
 export const HighlightsLayeredAboveTextLayerHover: StoryObj<typeof PdfViewer> =
 	{
 		globals: {
-			viewport: undefined,
+			...defaultGlobals,
+			viewport: { value: "mobile1" },
 		},
 		render: () => {
 			const [page, setPage] = useState(1);
@@ -439,7 +171,7 @@ export const HighlightsLayeredAboveTextLayerHover: StoryObj<typeof PdfViewer> =
 			return (
 				<PdfViewer
 					url={defaultArgs.url}
-					scale={1.25}
+					scale={0.5}
 					currentPage={page}
 					onPageChange={({ page }) => setPage(page)}
 					onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -490,160 +222,12 @@ export const HighlightsLayeredAboveTextLayerHover: StoryObj<typeof PdfViewer> =
 		},
 	};
 
-export const HighlightsLayeredAboveTextLayerHoverDark: StoryObj<
-	typeof PdfViewer
-> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={mockHighlights}
-				onHighlightClick={fn()}
-				showTextLayer={true}
-				textLayerInteractive={false}
-			/>
-		);
-	},
-	parameters: {
-		backgrounds: { default: "dark" },
-		theme: "dark",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-	play: async ({ canvasElement }) => {
-		await waitFor(
-			async () => {
-				const textLayer = canvasElement.querySelector(".textLayer");
-				if (!textLayer) throw new Error("Text layer not found");
-				const textSpans = textLayer.querySelectorAll("span");
-				if (textSpans.length === 0) throw new Error("Text layer has no spans");
-			},
-			{ timeout: 5000 },
-		);
-
-		await waitFor(
-			async () => {
-				const centerHighlight = canvasElement.querySelector(
-					'[data-testid="highlight-center"]',
-				);
-				if (!centerHighlight) throw new Error("Center highlight not found");
-			},
-			{ timeout: 5000 },
-		);
-
-		const centerHighlight = canvasElement.querySelector(
-			'[data-testid="highlight-center"]',
-		);
-		if (centerHighlight) {
-			centerHighlight.classList.add("pseudo-hover");
-		}
-
-		await new Promise((resolve) => setTimeout(resolve, 500));
-	},
-};
-
 // Phase 3: Draft highlight visual tests
-
-export const DraftTextHighlight: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		// Include a draft highlight in the highlights array
-		const highlightsWithDraft = [
-			...mockHighlights,
-			{
-				id: "draft",
-				pageNumber: 1,
-				label: "Draft Selection",
-				text: "Selected text preview",
-				bbox: { x: 150, y: 350, width: 200, height: 30 },
-				metadata: { isDraft: true },
-			},
-		];
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={highlightsWithDraft}
-				showTextLayer={true}
-				textLayerInteractive={true}
-				onHighlightClick={fn()}
-			/>
-		);
-	},
-	parameters: {
-		theme: "light",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
-
-export const DraftTextHighlightDark: StoryObj<typeof PdfViewer> = {
-	globals: {
-		viewport: undefined,
-	},
-	render: () => {
-		const [page, setPage] = useState(1);
-		const [_numPages, setNumPages] = useState(0);
-
-		const highlightsWithDraft = [
-			...mockHighlights,
-			{
-				id: "draft",
-				pageNumber: 1,
-				label: "Draft Selection",
-				text: "Selected text preview",
-				bbox: { x: 150, y: 350, width: 200, height: 30 },
-				metadata: { isDraft: true },
-			},
-		];
-
-		return (
-			<PdfViewer
-				url={defaultArgs.url}
-				scale={1.25}
-				currentPage={page}
-				onPageChange={({ page }) => setPage(page)}
-				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={highlightsWithDraft}
-				showTextLayer={true}
-				textLayerInteractive={true}
-				onHighlightClick={fn()}
-			/>
-		);
-	},
-	parameters: {
-		backgrounds: { default: "dark" },
-		theme: "dark",
-		chromatic: {
-			delay: 3000,
-		},
-	},
-};
 
 export const DraftRegionHighlight: StoryObj<typeof PdfViewer> = {
 	globals: {
-		viewport: undefined,
+		...defaultGlobals,
+		viewport: { value: "mobile1" },
 	},
 	render: () => {
 		const [page, setPage] = useState(1);
@@ -656,7 +240,7 @@ export const DraftRegionHighlight: StoryObj<typeof PdfViewer> = {
 				pageNumber: 1,
 				label: "Draft Region",
 				text: "", // No text for region
-				bbox: { x: 250, y: 250, width: 150, height: 100 },
+				bboxes: [{ x: 250, y: 250, width: 150, height: 100 }],
 				metadata: { isDraft: true },
 			},
 		];
@@ -664,7 +248,7 @@ export const DraftRegionHighlight: StoryObj<typeof PdfViewer> = {
 		return (
 			<PdfViewer
 				url={defaultArgs.url}
-				scale={1.25}
+				scale={0.5}
 				currentPage={page}
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
@@ -682,44 +266,59 @@ export const DraftRegionHighlight: StoryObj<typeof PdfViewer> = {
 	},
 };
 
-export const DraftRegionHighlightDark: StoryObj<typeof PdfViewer> = {
+export const MultiLineDraftHighlight: StoryObj<typeof PdfViewer> = {
 	globals: {
-		viewport: undefined,
+		...defaultGlobals,
+		viewport: { value: "mobile1" },
 	},
 	render: () => {
 		const [page, setPage] = useState(1);
 		const [_numPages, setNumPages] = useState(0);
 
-		const highlightsWithDraft = [
-			...mockHighlights,
-			{
-				id: "draft",
-				pageNumber: 1,
-				label: "Draft Region",
-				text: "",
-				bbox: { x: 250, y: 250, width: 150, height: 100 },
-				metadata: { isDraft: true },
-			},
-		];
-
 		return (
 			<PdfViewer
 				url={defaultArgs.url}
-				scale={1.25}
+				scale={0.5}
 				currentPage={page}
 				onPageChange={({ page }) => setPage(page)}
 				onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-				highlights={highlightsWithDraft}
-				regionDrawingActive={true}
+				highlights={mockHighlights}
+				showTextLayer={true}
+				textLayerInteractive={true}
+				onCreateDraftHighlight={fn()}
 				onHighlightClick={fn()}
 			/>
 		);
 	},
+	play: async ({ canvasElement }) => {
+		// Wait for text layer to render
+		await waitFor(
+			async () => {
+				const textLayer = canvasElement.querySelector(".textLayer");
+				const textSpans = textLayer?.querySelectorAll("span");
+				if (!textSpans || textSpans.length < 5) {
+					throw new Error("Text layer not ready or not enough spans");
+				}
+			},
+			{ timeout: 10000 },
+		);
+
+		// Select across multiple spans to create multi-bbox draft
+		await selectAcrossMultipleSpans({ canvasElement, spanCount: 5 });
+
+		// Trigger mouseup to create draft
+		const mouseupEvent = new MouseEvent("mouseup", {
+			bubbles: true,
+			cancelable: true,
+		});
+		document.dispatchEvent(mouseupEvent);
+
+		// Wait for draft to be created and rendered
+		await new Promise((resolve) => setTimeout(resolve, 500));
+	},
 	parameters: {
-		backgrounds: { default: "dark" },
-		theme: "dark",
 		chromatic: {
-			delay: 3000,
+			delay: 500,
 		},
 	},
 };

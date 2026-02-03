@@ -50,7 +50,7 @@ export type PdfViewerProps = {
 	onCreateDraftHighlight?: (draft: {
 		pageNumber: number;
 		text: string;
-		bbox: BoundingBox;
+		bboxes: BoundingBox[];
 	}) => void;
 	onDraftCancelled?: () => void;
 	/**
@@ -61,7 +61,7 @@ export type PdfViewerProps = {
 		draft: {
 			pageNumber: number;
 			text: string;
-			bbox: BoundingBox;
+			bboxes: BoundingBox[];
 		};
 		entry: {
 			entryId: string;
@@ -81,7 +81,7 @@ export type PdfViewerProps = {
 	renderDraftPopover?: (draft: {
 		pageNumber: number;
 		text: string;
-		bbox: BoundingBox;
+		bboxes: BoundingBox[];
 		onConfirm: (data: {
 			entryId: string;
 			entryLabel: string;
@@ -136,7 +136,9 @@ const convertHighlightsForPage = ({
 		.filter((h) => h.pageNumber === pageNumber)
 		.map((h) => ({
 			...h,
-			bbox: convertBboxToViewport({ bbox: h.bbox, viewport }),
+			bboxes: (h.bboxes || []).map((bbox) =>
+				convertBboxToViewport({ bbox, viewport }),
+			),
 		}));
 };
 
@@ -178,11 +180,10 @@ const convertDomRectToPdf = ({
 };
 
 /**
- * Converts multiple DOM rects (from wrapped text) to a single PDF bbox
- * MVP: Union all rects into one bounding box
- * Future: Support multi-bbox highlights for precise line wrapping
+ * Converts multiple DOM rects (from wrapped text) to an array of PDF bboxes
+ * Each line of selected text gets its own bounding box for accurate multi-line highlighting
  */
-const convertSelectionToPdfBbox = ({
+const convertSelectionToPdfBboxes = ({
 	domRects,
 	viewport,
 	pageContainer,
@@ -190,28 +191,18 @@ const convertSelectionToPdfBbox = ({
 	domRects: DOMRect[];
 	viewport: pdfjsLib.PageViewport;
 	pageContainer: HTMLElement;
-}): BoundingBox => {
+}): BoundingBox[] => {
 	if (domRects.length === 0) {
 		throw new Error("No rects provided for selection");
 	}
 
-	// Convert all rects to PDF space
-	const pdfBboxes = domRects.map((rect) =>
-		convertDomRectToPdf({ domRect: rect, viewport, pageContainer }),
-	);
-
-	// Union into single bbox
-	const minX = Math.min(...pdfBboxes.map((b) => b.x));
-	const minY = Math.min(...pdfBboxes.map((b) => b.y));
-	const maxX = Math.max(...pdfBboxes.map((b) => b.x + b.width));
-	const maxY = Math.max(...pdfBboxes.map((b) => b.y + b.height));
-
-	return {
-		x: minX,
-		y: minY,
-		width: maxX - minX,
-		height: maxY - minY,
-	};
+	// Filter out empty rects (browser sometimes returns zero-width/height rects at line breaks)
+	// Then convert all valid rects to PDF space
+	return domRects
+		.filter((rect) => rect.width > 0 && rect.height > 0)
+		.map((rect) =>
+			convertDomRectToPdf({ domRect: rect, viewport, pageContainer }),
+		);
 };
 
 /**
@@ -487,7 +478,7 @@ export const PdfViewer = ({
 
 			try {
 				// Convert to page-relative coordinates and then to PDF user space
-				const pdfBbox = convertSelectionToPdfBbox({
+				const pdfBboxes = convertSelectionToPdfBboxes({
 					domRects,
 					viewport: viewport,
 					pageContainer: pageContainerRef.current,
@@ -496,7 +487,7 @@ export const PdfViewer = ({
 				const draft: PdfHighlight = {
 					id: "draft",
 					pageNumber: currentPage,
-					bbox: pdfBbox,
+					bboxes: pdfBboxes,
 					label: "Draft Selection",
 					text: selectedText,
 					metadata: { isDraft: true },
@@ -506,7 +497,7 @@ export const PdfViewer = ({
 				onCreateDraftHighlight?.({
 					pageNumber: currentPage,
 					text: selectedText,
-					bbox: pdfBbox,
+					bboxes: pdfBboxes,
 				});
 			} catch (err) {
 				console.error("Failed to create draft highlight:", err);
@@ -612,7 +603,7 @@ export const PdfViewer = ({
 				const draft: PdfHighlight = {
 					id: "draft",
 					pageNumber: currentPage,
-					bbox: pdfBbox,
+					bboxes: [pdfBbox], // Region is always a single rectangle
 					label: "Draft Region",
 					text: "", // No text for region highlights
 					metadata: { isDraft: true },
@@ -622,7 +613,7 @@ export const PdfViewer = ({
 				onCreateDraftHighlight?.({
 					pageNumber: currentPage,
 					text: "",
-					bbox: pdfBbox,
+					bboxes: [pdfBbox],
 				});
 
 				// Clear drag state
@@ -722,7 +713,7 @@ export const PdfViewer = ({
 			draft: {
 				pageNumber: draftHighlight.pageNumber,
 				text: draftHighlight.text || "",
-				bbox: draftHighlight.bbox,
+				bboxes: draftHighlight.bboxes,
 			},
 			entry: {
 				entryId,
@@ -871,7 +862,7 @@ export const PdfViewer = ({
 					{renderDraftPopover({
 						pageNumber: draftHighlight.pageNumber,
 						text: draftHighlight.text || "",
-						bbox: draftHighlight.bbox,
+						bboxes: draftHighlight.bboxes,
 						onConfirm: handleDraftConfirm,
 						onCancel: handleDraftCancel,
 					})}

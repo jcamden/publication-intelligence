@@ -704,11 +704,12 @@ module default {
     start_offset: int32;
     end_offset: int32;
     
-    # Bounding box for PDF.js visual alignment
+    # Bounding boxes for PDF.js visual alignment
     # Structured type ensures predictable fields for highlighting
     # Coordinates in PDF points (1/72 inch), origin at top-left
     # More robust than text offsets for visual highlighting
-    bbox: BoundingBox;
+    # Multi-line selections create multiple bounding boxes (one per line)
+    multi bboxes: BoundingBox;
     
     required created_at: datetime {
       default := datetime_current();

@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>;
 const mockHighlight: PdfHighlight = {
 	id: "highlight-1",
 	pageNumber: 1,
-	bbox: { x: 50, y: 50, width: 200, height: 30 },
+	bboxes: [{ x: 50, y: 50, width: 200, height: 30 }],
 	label: "Example Highlight",
 	text: "This is highlighted text",
 };
@@ -68,7 +68,7 @@ export const Rotated: Story = {
 	render: () => {
 		const rotatedHighlight: PdfHighlight = {
 			...mockHighlight,
-			bbox: { ...mockHighlight.bbox, rotation: 15 },
+			bboxes: [{ ...mockHighlight.bboxes[0], rotation: 15 }],
 		};
 
 		return (
@@ -100,21 +100,21 @@ export const MultipleHighlights: Story = {
 			{
 				id: "highlight-1",
 				pageNumber: 1,
-				bbox: { x: 50, y: 50, width: 150, height: 30 },
+				bboxes: [{ x: 50, y: 50, width: 150, height: 30 }],
 				label: "First",
 				text: "First highlight",
 			},
 			{
 				id: "highlight-2",
 				pageNumber: 1,
-				bbox: { x: 100, y: 70, width: 180, height: 30 },
+				bboxes: [{ x: 100, y: 70, width: 180, height: 30 }],
 				label: "Second",
 				text: "Second highlight",
 			},
 			{
 				id: "highlight-3",
 				pageNumber: 1,
-				bbox: { x: 50, y: 120, width: 200, height: 30 },
+				bboxes: [{ x: 50, y: 120, width: 200, height: 30 }],
 				label: "Third",
 				text: "Third highlight",
 			},

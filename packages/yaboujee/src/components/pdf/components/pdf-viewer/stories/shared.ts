@@ -4,7 +4,7 @@ import type { PdfViewerProps } from "../pdf-viewer";
 
 export const defaultArgs: Pick<PdfViewerProps, "url" | "scale"> = {
 	url: "/sample.pdf",
-	scale: 1.25,
+	scale: 0.5,
 };
 
 /**
@@ -18,21 +18,21 @@ export const mockHighlights: PdfHighlight[] = [
 		pageNumber: 1,
 		label: "Top-Left Corner",
 		text: "Should be in top-left corner",
-		bbox: { x: 20, y: 772, width: 100, height: 15 },
+		bboxes: [{ x: 20, y: 772, width: 100, height: 15 }],
 	},
 	{
 		id: "top-right",
 		pageNumber: 1,
 		label: "Top-Right Corner",
 		text: "Should be in top-right corner",
-		bbox: { x: 492, y: 772, width: 100, height: 15 },
+		bboxes: [{ x: 492, y: 772, width: 100, height: 15 }],
 	},
 	{
 		id: "center",
 		pageNumber: 1,
 		label: "Center",
 		text: "Should be in the center of the page",
-		bbox: { x: 256, y: 388, width: 100, height: 15 },
+		bboxes: [{ x: 256, y: 388, width: 100, height: 15 }],
 	},
 ];
 
@@ -125,6 +125,57 @@ export const selectFirstTextSpan = async ({
 
 	const range = document.createRange();
 	range.selectNodeContents(firstSpan);
+	const selection = window.getSelection();
+	selection?.removeAllRanges();
+	selection?.addRange(range);
+
+	// Wait for selection to be applied
+	await new Promise((resolve) => setTimeout(resolve, 100));
+};
+
+/**
+ * Create a text selection across multiple spans (simulating multi-line selection)
+ * Used to test multi-bbox highlight creation
+ *
+ * @param spanCount - Number of spans to select across (must be >= 2)
+ * @returns Promise that resolves when selection is created
+ */
+export const selectAcrossMultipleSpans = async ({
+	canvasElement,
+	spanCount = 2,
+}: {
+	canvasElement: HTMLElement;
+	spanCount?: number;
+}): Promise<void> => {
+	if (spanCount < 2) {
+		throw new Error("spanCount must be at least 2 for multi-line selection");
+	}
+
+	await waitForTextLayer({ canvasElement });
+
+	// Wait for text layer to be fully rendered
+	await new Promise((resolve) => setTimeout(resolve, 500));
+
+	const textLayer = canvasElement.querySelector(".textLayer");
+	if (!textLayer) {
+		throw new Error("Text layer not found");
+	}
+
+	const textSpans = textLayer.querySelectorAll("span");
+	if (textSpans.length < spanCount) {
+		throw new Error(
+			`Not enough text spans: need ${spanCount}, found ${textSpans.length}`,
+		);
+	}
+
+	// Select from start of first span to end of last span
+	const range = document.createRange();
+	range.setStart(textSpans[0].firstChild || textSpans[0], 0);
+	range.setEnd(
+		textSpans[spanCount - 1].firstChild || textSpans[spanCount - 1],
+		textSpans[spanCount - 1].textContent?.length || 1,
+	);
+
 	const selection = window.getSelection();
 	selection?.removeAllRanges();
 	selection?.addRange(range);

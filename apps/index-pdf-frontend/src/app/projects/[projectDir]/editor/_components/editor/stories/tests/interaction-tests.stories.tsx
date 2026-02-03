@@ -18,7 +18,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-1",
 		entryLabel: "Test Entry 1",
 		indexTypes: ["subject"],
-		bbox: { x: 20, y: 772, width: 100, height: 15 },
+		bboxes: [{ x: 20, y: 772, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-01"),
 	},
 	{
@@ -28,7 +28,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-2",
 		entryLabel: "Test Entry 2",
 		indexTypes: ["author"],
-		bbox: { x: 256, y: 388, width: 100, height: 15 },
+		bboxes: [{ x: 256, y: 388, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-02"),
 	},
 	{
@@ -38,7 +38,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-3",
 		entryLabel: "Test Entry 3",
 		indexTypes: ["scripture"],
-		bbox: { x: 256, y: 5, width: 100, height: 15 },
+		bboxes: [{ x: 256, y: 5, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-03"),
 	},
 	{
@@ -48,7 +48,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-4",
 		entryLabel: "Test Entry 4",
 		indexTypes: ["subject"],
-		bbox: { x: 256, y: 772, width: 100, height: 15 },
+		bboxes: [{ x: 256, y: 772, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-04"),
 	},
 	{
@@ -58,7 +58,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-5",
 		entryLabel: "Test Entry 5",
 		indexTypes: ["author"],
-		bbox: { x: 20, y: 388, width: 100, height: 15 },
+		bboxes: [{ x: 20, y: 388, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-05"),
 	},
 	{
@@ -68,7 +68,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-6",
 		entryLabel: "Test Entry 6",
 		indexTypes: ["scripture"],
-		bbox: { x: 492, y: 388, width: 100, height: 15 },
+		bboxes: [{ x: 492, y: 388, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-06"),
 	},
 ];

@@ -7,6 +7,10 @@
 	"scripts": {
 		"generate:yaboujee": "tsx scripts/generate-visual-tests.ts --package yaboujee",
 		"generate:frontend": "tsx scripts/generate-visual-tests.ts --package index-pdf-frontend",
+		"clean:yaboujee": "tsx scripts/clean-orphaned-snapshots.ts --package yaboujee",
+		"clean:yaboujee:dry": "tsx scripts/clean-orphaned-snapshots.ts --package yaboujee --dry-run",
+		"clean:frontend": "tsx scripts/clean-orphaned-snapshots.ts --package index-pdf-frontend",
+		"clean:frontend:dry": "tsx scripts/clean-orphaned-snapshots.ts --package index-pdf-frontend --dry-run",
 		"test:yaboujee": "PACKAGE=yaboujee playwright test",
 		"test:yaboujee:ui": "PACKAGE=yaboujee playwright test --ui",
 		"test:yaboujee:update": "PACKAGE=yaboujee playwright test --update-snapshots",
