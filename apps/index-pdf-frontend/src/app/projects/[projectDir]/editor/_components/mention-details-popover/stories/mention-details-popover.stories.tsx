@@ -1,6 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { MentionDetailsPopover } from "../mention-details-popover";
 
+const mockIndexEntries = [
+	{ id: "entry-1", label: "Critique of Pure Reason", parentId: "parent-1" },
+	{ id: "parent-1", label: "Kant", parentId: null },
+	{ id: "entry-2", label: "Philosophy", parentId: null },
+	{ id: "entry-3", label: "Theory of Forms", parentId: "parent-3" },
+	{ id: "parent-3", label: "The Republic", parentId: "parent-2" },
+	{ id: "parent-2", label: "Plato", parentId: null },
+	{ id: "entry-4", label: "Very Long Grandchild Entry", parentId: "parent-5" },
+	{ id: "parent-5", label: "Very Long Child Entry", parentId: "parent-4" },
+	{ id: "parent-4", label: "Very Long Parent Entry", parentId: null },
+	{ id: "entry-5", label: "Aristotle", parentId: null },
+	{ id: "entry-6", label: "Nicomachean Ethics", parentId: "entry-5" },
+];
+
 const meta = {
 	title: "Projects/[ProjectDir]/Editor/MentionDetailsPopover",
 	component: MentionDetailsPopover,
@@ -15,12 +29,35 @@ const meta = {
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
 			indexTypes: ["subject"],
+			type: "text" as const,
 		},
-		onEdit: ({ mentionId }) => {
-			console.log("Edit clicked:", mentionId);
-		},
-		onDelete: ({ mentionId }) => {
+		existingEntries: mockIndexEntries,
+		onDelete: ({ mentionId }: { mentionId: string }) => {
 			console.log("Delete clicked:", mentionId);
+		},
+		onClose: ({
+			mentionId,
+			indexTypes,
+			entryId,
+			entryLabel,
+			text,
+		}: {
+			mentionId: string;
+			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+		}) => {
+			console.log("Close:", {
+				mentionId,
+				indexTypes,
+				entryId,
+				entryLabel,
+				text,
+			});
+		},
+		onCancel: () => {
+			console.log("Cancel clicked");
 		},
 	},
 } satisfies Meta<typeof MentionDetailsPopover>;
@@ -39,6 +76,7 @@ export const ShortText: Story = {
 			entryLabel: "Philosophy",
 			entryId: "entry-2",
 			indexTypes: ["subject"],
+			type: "text" as const,
 		},
 	},
 };
@@ -52,6 +90,7 @@ export const LongText: Story = {
 			entryLabel: "Plato → The Republic → Theory of Forms",
 			entryId: "entry-3",
 			indexTypes: ["subject", "author"],
+			type: "text" as const,
 		},
 	},
 };
@@ -66,6 +105,21 @@ export const LongEntryLabel: Story = {
 				"Very Long Parent Entry → Very Long Child Entry → Very Long Grandchild Entry",
 			entryId: "entry-4",
 			indexTypes: ["scripture"],
+			type: "text" as const,
+		},
+	},
+};
+
+export const RegionMention: Story = {
+	args: {
+		mention: {
+			id: "mention-5",
+			pageNumber: 15,
+			text: "Figure 3.2: Neural Network Architecture",
+			entryLabel: "Aristotle",
+			entryId: "entry-5",
+			indexTypes: ["subject"],
+			type: "region" as const,
 		},
 	},
 };

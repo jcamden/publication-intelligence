@@ -2,6 +2,16 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { MentionDetailsPopover } from "../../mention-details-popover";
 
+const mockIndexEntries = [
+	{ id: "entry-1", label: "Critique of Pure Reason", parentId: "parent-1" },
+	{ id: "parent-1", label: "Kant", parentId: null },
+	{ id: "entry-2", label: "Philosophy", parentId: null },
+	{ id: "entry-3", label: "The Republic", parentId: "parent-2" },
+	{ id: "parent-2", label: "Plato", parentId: null },
+	{ id: "entry-5", label: "Philosophy Entry", parentId: null },
+	{ id: "entry-6", label: "Test Entry", parentId: null },
+];
+
 const meta = {
 	title:
 		"Projects/[ProjectDir]/Editor/MentionDetailsPopover/tests/Visual Regression Tests",
@@ -26,14 +36,16 @@ const defaultMention = {
 	entryLabel: "Kant → Critique of Pure Reason",
 	entryId: "entry-1",
 	indexTypes: ["subject"],
+	type: "text" as const,
 };
 
 export const Default: Story = {
 	args: {
 		mention: defaultMention,
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -44,9 +56,10 @@ export const Default: Story = {
 export const DefaultDark: Story = {
 	args: {
 		mention: defaultMention,
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	globals: {
 		theme: "dark",
@@ -64,10 +77,12 @@ export const ShortText: Story = {
 			entryLabel: "Philosophy",
 			entryId: "entry-2",
 			indexTypes: ["author"],
+			type: "text" as const,
 		},
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -84,10 +99,12 @@ export const LongText: Story = {
 			entryLabel: "Plato → The Republic → Theory of Forms",
 			entryId: "entry-3",
 			indexTypes: ["subject", "author"],
+			type: "text" as const,
 		},
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -98,9 +115,10 @@ export const LongText: Story = {
 export const HoverEditButton: Story = {
 	args: {
 		mention: defaultMention,
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	parameters: {
 		pseudo: {
@@ -119,9 +137,10 @@ export const HoverEditButton: Story = {
 export const HoverDeleteButton: Story = {
 	args: {
 		mention: defaultMention,
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	parameters: {
 		pseudo: {
@@ -149,10 +168,12 @@ export const ThreeTypesSelected: Story = {
 			entryLabel: "Philosophy Entry",
 			entryId: "entry-5",
 			indexTypes: ["subject", "author", "scripture"],
+			type: "text" as const,
 		},
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -172,10 +193,12 @@ export const DropdownOpen: Story = {
 			entryLabel: "Test Entry",
 			entryId: "entry-6",
 			indexTypes: ["subject", "author"],
+			type: "text" as const,
 		},
-		onEdit: () => {},
+		existingEntries: mockIndexEntries,
 		onDelete: () => {},
 		onClose: () => {},
+		onCancel: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -183,6 +206,13 @@ export const DropdownOpen: Story = {
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
+
+		// Enter Edit mode first
+		const editButton = canvas.getByRole("button", { name: /^edit$/i });
+		await userEvent.click(editButton);
+
+		// Wait for Edit mode transition
+		await new Promise((resolve) => setTimeout(resolve, 100));
 
 		// Open the dropdown
 		const selectTrigger = canvas.getByTestId("index-types-select");

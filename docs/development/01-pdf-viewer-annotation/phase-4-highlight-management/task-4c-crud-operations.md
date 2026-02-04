@@ -1,7 +1,7 @@
 # Task 4C: Highlight CRUD Operations
 
 **Duration:** 1-2 days  
-**Status:** 🟡 Mostly Complete (Sidebar navigation pending)  
+**Status:** ✅ Complete  
 **Dependencies:** Task 4B completion
 
 ## Requirements
@@ -15,9 +15,9 @@
   - [Edit] [Delete] buttons
 
 ### Sidebar Navigation
-- [ ] Click mention in page sidebar → Show popover anchored to highlight on PDF
-- [ ] Scroll highlight into view if off-screen
-- [ ] Popover appears next to the highlight (same as direct click)
+- [x] Click mention in page sidebar → Show popover anchored to highlight on PDF
+- [x] Scroll highlight into view if off-screen
+- [x] Popover appears next to the highlight (same as direct click)
 - Note: Page sidebar only shows mentions for current page, so no page navigation needed
 
 ### Edit Operation

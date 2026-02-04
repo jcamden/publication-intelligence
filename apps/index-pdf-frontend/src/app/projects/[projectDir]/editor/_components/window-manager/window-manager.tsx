@@ -17,6 +17,7 @@ import { PageAuthorContent } from "../page-sidebar/components/page-author-conten
 import { PageBiblioContent } from "../page-sidebar/components/page-biblio-content";
 import { PageContextsContent } from "../page-sidebar/components/page-contexts-content";
 import { PageInfoContent } from "../page-sidebar/components/page-info-content";
+import { PagePagesContent } from "../page-sidebar/components/page-pages-content";
 import { PageScriptureContent } from "../page-sidebar/components/page-scripture-content";
 import { PageSubjectContent } from "../page-sidebar/components/page-subject-content";
 import { ProjectAuthorContent } from "../project-sidebar/components/project-author-content";
@@ -33,6 +34,7 @@ type Mention = {
 	entryLabel: string;
 	entryId: string;
 	indexTypes: string[];
+	type: "text" | "region";
 };
 
 type WindowManagerProps = {
@@ -74,6 +76,7 @@ const windowRegistry: Record<
 		component: ProjectContextsContent,
 	},
 	"page-info": { title: "Page Info", component: PageInfoContent },
+	"page-pages": { title: "Page Pages", component: PagePagesContent },
 	"page-subject": {
 		title: "Page Subject Index",
 		component: PageSubjectContent,

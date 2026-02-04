@@ -1,13 +1,23 @@
 "use client";
 
 import {
+	Combobox,
+	ComboboxContent,
+	ComboboxEmpty,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+} from "@pubint/yabasic/components/ui/combobox";
+import { Input } from "@pubint/yabasic/components/ui/input";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@pubint/yabasic/components/ui/select";
-import { useEffect, useState } from "react";
+import { clsx } from "clsx";
+import { useRef, useState } from "react";
 
 export type Mention = {
 	id: string;
@@ -16,19 +26,42 @@ export type Mention = {
 	entryLabel: string;
 	entryId: string;
 	indexTypes: string[];
+	type: "text" | "region";
+};
+
+export type IndexEntry = {
+	id: string;
+	label: string;
+	parentId: string | null;
 };
 
 export type MentionDetailsPopoverProps = {
 	mention: Mention;
-	onEdit: ({ mentionId }: { mentionId: string }) => void;
+	existingEntries: IndexEntry[];
 	onDelete: ({ mentionId }: { mentionId: string }) => void;
 	onClose: ({
 		mentionId,
 		indexTypes,
+		entryId,
+		entryLabel,
+		text,
 	}: {
 		mentionId: string;
 		indexTypes: string[];
+		entryId?: string;
+		entryLabel?: string;
+		text?: string;
 	}) => void;
+	onCancel: () => void;
+};
+
+type SavedFormState = {
+	text: string;
+	entryId: string;
+	entryLabel: string;
+	indexTypes: string[];
+	selectedEntry: IndexEntry | null;
+	inputValue: string;
 };
 
 const AVAILABLE_INDEX_TYPES = [
@@ -44,7 +77,7 @@ const AVAILABLE_INDEX_TYPES = [
  * Allows user to edit the linked IndexEntry or delete the mention.
  *
  * ARCHITECTURE:
- * - Manages local state for index types while editing
+ * - Manages local state for index types and entry selection while editing
  * - Saves changes when popover closes via onClose callback
  * - This allows user to make multiple changes before committing
  *
@@ -53,70 +86,295 @@ const AVAILABLE_INDEX_TYPES = [
  */
 export const MentionDetailsPopover = ({
 	mention,
-	onEdit,
+	existingEntries,
 	onDelete,
 	onClose,
+	onCancel,
 }: MentionDetailsPopoverProps) => {
-	// Local state for editing index types
+	// Mode state
+	const [mode, setMode] = useState<"view" | "edit">("view");
+
+	// Local state for editing
+	const [localText, setLocalText] = useState(mention.text);
 	const [localIndexTypes, setLocalIndexTypes] = useState<string[]>(
 		mention.indexTypes,
 	);
 
+	// Local state for entry selection
+	const initialEntry = existingEntries.find((e) => e.id === mention.entryId);
+	const [selectedEntry, setSelectedEntry] = useState<IndexEntry | null>(
+		initialEntry ?? null,
+	);
+	const [inputValue, setInputValue] = useState(initialEntry?.label ?? "");
+	const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+	const allowClearInputRef = useRef(false);
+
+	// Saved form state for Cancel functionality
+	const [savedFormState, setSavedFormState] = useState<SavedFormState | null>(
+		null,
+	);
+
 	const truncatedText =
-		mention.text.length > 100
-			? `${mention.text.substring(0, 100)}...`
-			: mention.text;
+		localText.length > 100 ? `${localText.substring(0, 100)}...` : localText;
+
+	const formatIndexTypes = (types: string[]) => {
+		return types
+			.map(
+				(type) =>
+					AVAILABLE_INDEX_TYPES.find((t) => t.value === type)?.label || type,
+			)
+			.join(", ");
+	};
 
 	const handleIndexTypesChange = (value: string[] | string | null) => {
 		const newTypes = Array.isArray(value) ? value : value ? [value] : [];
 		setLocalIndexTypes(newTypes);
 	};
 
-	// Save changes when unmounting (popover closing)
-	useEffect(() => {
-		return () => {
-			// Only call onClose if index types actually changed
-			if (
-				JSON.stringify(localIndexTypes.sort()) !==
-				JSON.stringify(mention.indexTypes.sort())
-			) {
-				onClose({
-					mentionId: mention.id,
-					indexTypes: localIndexTypes,
-				});
-			}
-		};
-	}, [localIndexTypes, mention.id, mention.indexTypes, onClose]);
+	const handleEntryValueChange = (entry: IndexEntry | null) => {
+		setSelectedEntry(entry);
+		if (entry) {
+			setIsComboboxOpen(false);
+			// Explicitly clear the input when an item is selected
+			allowClearInputRef.current = true;
+			setInputValue("");
+		}
+	};
 
+	const handleComboboxOpenChange = (open: boolean) => {
+		setIsComboboxOpen(open);
+		// When dropdown closes, mark that we should preserve custom input values
+		if (!open && !selectedEntry && inputValue.trim()) {
+			allowClearInputRef.current = false;
+		}
+	};
+
+	const handleInputValueChange = (value: string) => {
+		// Only prevent clearing if:
+		// 1. We're trying to set empty string
+		// 2. We haven't explicitly allowed clearing (via selection)
+		// 3. The dropdown is closed (blur scenario)
+		// 4. We have existing input
+		if (
+			value === "" &&
+			!allowClearInputRef.current &&
+			!isComboboxOpen &&
+			inputValue.trim()
+		) {
+			return;
+		}
+
+		// Reset the flag after consuming it
+		if (allowClearInputRef.current) {
+			allowClearInputRef.current = false;
+		}
+
+		setInputValue(value);
+	};
+
+	const handleEnterEditMode = () => {
+		// Save current state before entering edit mode
+		setSavedFormState({
+			text: localText,
+			entryId: mention.entryId,
+			entryLabel: mention.entryLabel,
+			indexTypes: [...localIndexTypes],
+			selectedEntry,
+			inputValue,
+		});
+		setMode("edit");
+	};
+
+	const handleCancel = () => {
+		// Restore saved state
+		if (savedFormState) {
+			setLocalText(savedFormState.text);
+			setLocalIndexTypes(savedFormState.indexTypes);
+			setSelectedEntry(savedFormState.selectedEntry);
+			setInputValue(savedFormState.inputValue);
+		}
+		setMode("view");
+	};
+
+	const handleSave = () => {
+		const indexTypesChanged =
+			JSON.stringify(localIndexTypes.sort()) !==
+			JSON.stringify(mention.indexTypes.sort());
+		const entryChanged = selectedEntry?.id !== mention.entryId;
+		const textChanged = localText !== mention.text;
+
+		// Only call onClose if something actually changed
+		if (indexTypesChanged || entryChanged || textChanged) {
+			onClose({
+				mentionId: mention.id,
+				indexTypes: localIndexTypes,
+				...(entryChanged && selectedEntry
+					? {
+							entryId: selectedEntry.id,
+							entryLabel: selectedEntry.label,
+						}
+					: {}),
+				...(textChanged ? { text: localText } : {}),
+			});
+		}
+		setMode("view");
+	};
+
+	if (mode === "view") {
+		return (
+			<div className="space-y-3">
+				<div>
+					<div className="space-y-3 text-sm">
+						<div>
+							<span className="text-neutral-500 dark:text-neutral-400">
+								{mention.type === "text" ? "Text: " : "Region: "}
+							</span>
+							<br />
+							<span
+								className={clsx(
+									"text-neutral-900 dark:text-neutral-100",
+									mention.type === "text" && "italic",
+								)}
+							>
+								{truncatedText}
+							</span>
+						</div>
+
+						<div>
+							<span className="text-neutral-500 dark:text-neutral-400">
+								Entry:{" "}
+							</span>
+							<span className="text-neutral-900 dark:text-neutral-100">
+								{mention.entryLabel}
+							</span>
+						</div>
+
+						<div>
+							<span className="text-neutral-500 dark:text-neutral-400">
+								Index:{" "}
+							</span>
+							<span className="text-neutral-900 dark:text-neutral-100">
+								{formatIndexTypes(localIndexTypes) || "None"}
+							</span>
+						</div>
+
+						<div>
+							<span className="text-neutral-500 dark:text-neutral-400">
+								Page:{" "}
+							</span>
+							<span className="text-neutral-900 dark:text-neutral-100">
+								{mention.pageNumber}
+							</span>
+						</div>
+					</div>
+				</div>
+
+				<div className="flex gap-2 justify-end pt-2 border-t border-neutral-200 dark:border-neutral-700">
+					<button
+						type="button"
+						data-testid="edit-button"
+						onClick={handleEnterEditMode}
+						className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
+					>
+						Edit
+					</button>
+					<button
+						type="button"
+						data-testid="close-button"
+						onClick={onCancel}
+						className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
+					>
+						Close
+					</button>
+				</div>
+			</div>
+		);
+	}
+
+	// Edit mode
 	return (
 		<div className="space-y-3">
 			<div>
-				<h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-					Highlight Details
-				</h3>
-
-				<div className="space-y-2 text-sm">
+				<div className="space-y-3 text-sm">
 					<div>
-						<span className="text-neutral-600 dark:text-neutral-400">
-							Text:{" "}
+						<span className="text-neutral-500 dark:text-neutral-400 text-sm mb-1 block">
+							{mention.type === "text" ? "Text:" : "Region:"}
 						</span>
-						<span className="text-neutral-900 dark:text-neutral-100">
-							"{truncatedText}"
-						</span>
+						{mention.type === "region" ? (
+							<Input
+								value={localText}
+								onChange={(e) => setLocalText(e.target.value)}
+								placeholder="Enter region description..."
+								data-testid="region-text-input"
+							/>
+						) : (
+							<span
+								className={clsx(
+									"text-neutral-900 dark:text-neutral-100 italic",
+								)}
+							>
+								{truncatedText}
+							</span>
+						)}
 					</div>
 
 					<div>
-						<span className="text-neutral-600 dark:text-neutral-400">
-							Entry:{" "}
+						<span className="text-neutral-500 dark:text-neutral-400 text-sm mb-1 block">
+							Entry:
 						</span>
-						<span className="text-neutral-900 dark:text-neutral-100 font-medium">
-							{mention.entryLabel}
-						</span>
+						<Combobox
+							items={existingEntries.map((e) => e.label)}
+							value={selectedEntry?.label ?? null}
+							onValueChange={(label) => {
+								const entry = existingEntries.find((e) => e.label === label);
+								handleEntryValueChange(entry ?? null);
+							}}
+							inputValue={inputValue}
+							onInputValueChange={handleInputValueChange}
+							open={isComboboxOpen}
+							onOpenChange={handleComboboxOpenChange}
+						>
+							<ComboboxInput
+								placeholder="Search entries..."
+								className="w-full"
+								data-testid="entry-combobox"
+							/>
+							<ComboboxContent>
+								<ComboboxEmpty>
+									{inputValue
+										? "No matching entries"
+										: "Type to search entries"}
+								</ComboboxEmpty>
+								<ComboboxList>
+									{(label) => {
+										if (!label) return null;
+
+										const entry = existingEntries.find(
+											(e) => e.label === label,
+										);
+										if (!entry) return null;
+
+										const parent = existingEntries.find(
+											(e) => e.id === entry.parentId,
+										);
+										const displayLabel = parent
+											? `${parent.label} → ${entry.label}`
+											: entry.label;
+
+										return (
+											<ComboboxItem key={entry.id} value={label}>
+												{displayLabel}
+											</ComboboxItem>
+										);
+									}}
+								</ComboboxList>
+							</ComboboxContent>
+						</Combobox>
 					</div>
 
 					<div>
-						<span className="text-neutral-600 dark:text-neutral-400 text-sm mb-1 block">
-							Index As:
+						<span className="text-neutral-500 dark:text-neutral-400 text-sm mb-1 block">
+							Index:
 						</span>
 						<Select
 							multiple
@@ -142,7 +400,7 @@ export const MentionDetailsPopover = ({
 					</div>
 
 					<div>
-						<span className="text-neutral-600 dark:text-neutral-400">
+						<span className="text-neutral-500 dark:text-neutral-400">
 							Page:{" "}
 						</span>
 						<span className="text-neutral-900 dark:text-neutral-100">
@@ -152,15 +410,7 @@ export const MentionDetailsPopover = ({
 				</div>
 			</div>
 
-			<div className="flex gap-2 justify-end pt-2 border-t border-neutral-200 dark:border-neutral-700">
-				<button
-					type="button"
-					data-testid="edit-button"
-					onClick={() => onEdit({ mentionId: mention.id })}
-					className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
-				>
-					Edit Entry
-				</button>
+			<div className="flex gap-2 justify-between pt-2 border-t border-neutral-200 dark:border-neutral-700">
 				<button
 					type="button"
 					data-testid="delete-button"
@@ -169,6 +419,24 @@ export const MentionDetailsPopover = ({
 				>
 					Delete
 				</button>
+				<div className="flex gap-2">
+					<button
+						type="button"
+						data-testid="cancel-button"
+						onClick={handleCancel}
+						className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						data-testid="save-button"
+						onClick={handleSave}
+						className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+					>
+						Save
+					</button>
+				</div>
 			</div>
 		</div>
 	);

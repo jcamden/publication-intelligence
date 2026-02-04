@@ -4,10 +4,9 @@ import type { DropResult } from "@hello-pangea/dnd";
 import { DraggableSidebar } from "@pubint/yaboujee/components/draggable-sidebar";
 import { useAtom, useAtomValue } from "jotai";
 import {
-	BookMarked,
 	BookOpen,
+	File,
 	FolderTree,
-	Info,
 	type LucideIcon,
 	Tags,
 	User,
@@ -22,9 +21,8 @@ import {
 	updateSectionAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { PageAuthorContent } from "./components/page-author-content";
-import { PageBiblioContent } from "./components/page-biblio-content";
 import { PageContextsContent } from "./components/page-contexts-content";
-import { PageInfoContent } from "./components/page-info-content";
+import { PagePagesContent } from "./components/page-pages-content";
 import { PageScriptureContent } from "./components/page-scripture-content";
 import { PageSubjectContent } from "./components/page-subject-content";
 
@@ -35,6 +33,7 @@ export type MentionData = {
 	entryLabel: string;
 	entryId: string;
 	indexTypes: string[];
+	type: "text" | "region";
 };
 
 type PageSidebarProps = {
@@ -110,13 +109,6 @@ export const PageSidebar = ({
 	const getMentionsForType = (indexType: string) =>
 		mentionsOnPage.filter((m) => m.indexTypes.includes(indexType));
 
-	const actionProps = {
-		activeAction,
-		onSelectText,
-		onDrawRegion,
-		onMentionClick,
-	};
-
 	const sectionMetadata: Partial<
 		Record<
 			SectionId,
@@ -124,59 +116,89 @@ export const PageSidebar = ({
 				title: string;
 				icon: LucideIcon;
 				content: React.ComponentType;
+				actionButtons?: {
+					indexType: string;
+					activeAction: { type: string | null; indexType: string | null };
+					onSelectText: ({ indexType }: { indexType: string }) => void;
+					onDrawRegion: ({ indexType }: { indexType: string }) => void;
+				};
 			}
 		>
 	> = {
-		"page-info": {
-			title: "Page Info",
-			icon: Info,
-			content: PageInfoContent,
+		"page-pages": {
+			title: "Page",
+			icon: File,
+			content: PagePagesContent,
 		},
 		"page-subject": {
 			title: "Page Subject Index",
 			icon: Tags,
 			content: () => (
 				<PageSubjectContent
-					{...actionProps}
 					mentions={getMentionsForType("subject")}
+					onMentionClick={onMentionClick}
 				/>
 			),
+			actionButtons: {
+				indexType: "subject",
+				activeAction,
+				onSelectText,
+				onDrawRegion,
+			},
 		},
 		"page-author": {
 			title: "Page Author Index",
 			icon: User,
 			content: () => (
 				<PageAuthorContent
-					{...actionProps}
 					mentions={getMentionsForType("author")}
+					onMentionClick={onMentionClick}
 				/>
 			),
+			actionButtons: {
+				indexType: "author",
+				activeAction,
+				onSelectText,
+				onDrawRegion,
+			},
 		},
 		"page-scripture": {
 			title: "Page Scripture Index",
 			icon: BookOpen,
 			content: () => (
 				<PageScriptureContent
-					{...actionProps}
 					mentions={getMentionsForType("scripture")}
+					onMentionClick={onMentionClick}
 				/>
 			),
-		},
-		"page-biblio": {
-			title: "Page Bibliography",
-			icon: BookMarked,
-			content: PageBiblioContent,
+			actionButtons: {
+				indexType: "scripture",
+				activeAction,
+				onSelectText,
+				onDrawRegion,
+			},
 		},
 		"page-contexts": {
 			title: "Page Contexts",
 			icon: FolderTree,
-			content: PageContextsContent,
+			content: () => (
+				<PageContextsContent
+					mentions={getMentionsForType("context")}
+					onMentionClick={onMentionClick}
+				/>
+			),
+			actionButtons: {
+				indexType: "context",
+				activeAction,
+				onSelectText,
+				onDrawRegion,
+			},
 		},
 	};
 
-	const visibleSections = sectionOrder.filter(
-		(id) => sections.get(id)?.visible && !sections.get(id)?.popped,
-	);
+	const visibleSections = sectionOrder
+		.filter((id) => sections.get(id)?.visible && !sections.get(id)?.popped)
+		.reverse();
 
 	return (
 		<DraggableSidebar

@@ -10,6 +10,7 @@ export type SectionId =
 	| "project-biblio"
 	| "project-contexts"
 	| "page-info"
+	| "page-pages"
 	| "page-subject"
 	| "page-author"
 	| "page-scripture"
@@ -36,13 +37,11 @@ const initialSections = new Map<SectionId, SectionState>([
 	["project-subject", { visible: true, popped: false }], // visible by default
 	["project-author", { visible: false, popped: false }],
 	["project-scripture", { visible: false, popped: false }],
-	["project-biblio", { visible: false, popped: false }],
 	["project-contexts", { visible: false, popped: false }],
-	["page-info", { visible: false, popped: false }],
+	["page-pages", { visible: false, popped: false }],
 	["page-subject", { visible: true, popped: false }], // visible by default
 	["page-author", { visible: false, popped: false }],
 	["page-scripture", { visible: false, popped: false }],
-	["page-biblio", { visible: false, popped: false }],
 	["page-contexts", { visible: false, popped: false }],
 ]);
 
@@ -103,18 +102,16 @@ export const pageAccordionExpandedAtom = atomWithStorage<string[]>(
 const defaultProjectOrder: SectionId[] = [
 	"project-pages",
 	"project-contexts",
-	"project-biblio",
+	"project-subject",
 	"project-author",
 	"project-scripture",
-	"project-subject",
 ];
 const defaultPageOrder: SectionId[] = [
-	"page-info",
-	"page-contexts",
-	"page-biblio",
-	"page-author",
 	"page-scripture",
+	"page-author",
 	"page-subject",
+	"page-contexts",
+	"page-pages",
 ];
 
 export const projectSectionOrderAtom = atomWithStorage<SectionId[]>(

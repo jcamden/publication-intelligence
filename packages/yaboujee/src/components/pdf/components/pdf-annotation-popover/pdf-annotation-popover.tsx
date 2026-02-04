@@ -101,6 +101,45 @@ export const PdfAnnotationPopover = ({
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen, onCancel]);
 
+	// Focus popover when it opens
+	useEffect(() => {
+		if (isOpen && popoverRef.current) {
+			popoverRef.current.focus();
+		}
+	}, [isOpen]);
+
+	// Handle click outside to close
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleClickOutside = (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+
+			// Don't close if clicking inside the popover
+			if (popoverRef.current?.contains(target)) {
+				return;
+			}
+
+			// Don't close if clicking inside a portaled element (like Select dropdown)
+			if (
+				target.closest('[role="listbox"]') ||
+				target.closest('[role="menu"]') ||
+				target.closest("[data-radix-popper-content-wrapper]") ||
+				target.closest("[data-radix-select-content]")
+			) {
+				return;
+			}
+
+			// Clicking outside - close the popover
+			onCancel();
+		};
+
+		// Use capture phase to handle clicks before they bubble
+		document.addEventListener("mousedown", handleClickOutside, true);
+		return () =>
+			document.removeEventListener("mousedown", handleClickOutside, true);
+	}, [isOpen, onCancel]);
+
 	// Don't render until we have an anchor element to position against
 	if (!isOpen || !anchorElement) return null;
 
@@ -108,7 +147,9 @@ export const PdfAnnotationPopover = ({
 		<div
 			ref={popoverRef}
 			data-pdf-annotation-popover
-			className="fixed z-50 rounded-lg bg-white shadow-2xl ring-1 ring-black/10 dark:bg-neutral-800 dark:ring-white/20 p-4 w-80 transition-opacity duration-100"
+			role="dialog"
+			tabIndex={-1}
+			className="fixed z-50 rounded-lg bg-white shadow-2xl ring-1 ring-black/10 dark:bg-neutral-800 dark:ring-white/20 p-4 w-80 transition-opacity duration-100 outline-none"
 			style={{
 				top: position?.y ?? 0,
 				left: position?.x ?? 0,

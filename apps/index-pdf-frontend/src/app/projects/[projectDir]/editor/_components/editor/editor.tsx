@@ -73,6 +73,7 @@ export type Mention = {
 	entryId: string;
 	entryLabel: string;
 	indexTypes: string[]; // ['subject', 'author', 'scripture']
+	type: "text" | "region";
 	createdAt: Date;
 };
 
@@ -242,14 +243,26 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 
 	const handleSelectText = useCallback(
 		({ indexType }: { indexType: string }) => {
-			setActiveAction({ type: "select-text", indexType });
+			setActiveAction((current) => {
+				// Toggle off if already active for this indexType
+				if (current.type === "select-text" && current.indexType === indexType) {
+					return { type: null, indexType: null };
+				}
+				return { type: "select-text", indexType };
+			});
 		},
 		[],
 	);
 
 	const handleDrawRegion = useCallback(
 		({ indexType }: { indexType: string }) => {
-			setActiveAction({ type: "draw-region", indexType });
+			setActiveAction((current) => {
+				// Toggle off if already active for this indexType
+				if (current.type === "draw-region" && current.indexType === indexType) {
+					return { type: null, indexType: null };
+				}
+				return { type: "draw-region", indexType };
+			});
 		},
 		[],
 	);
@@ -290,6 +303,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 				entryId: entry.entryId,
 				entryLabel: entry.entryLabel,
 				indexTypes: [indexType], // Created from this index type
+				type: entry.regionName ? "region" : "text", // Determine type based on regionName presence
 				createdAt: new Date(), // In Phase 5: comes from server
 			};
 
@@ -335,6 +349,14 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 					`[data-testid="highlight-${mentionId}"]`,
 				);
 				if (highlightEl instanceof HTMLElement) {
+					// Scroll into view if off-screen
+					highlightEl.scrollIntoView({
+						behavior: "smooth",
+						block: "center",
+						inline: "nearest",
+					});
+
+					// Show popover (same as direct click)
 					setDetailsAnchor(highlightEl);
 					setSelectedMention(mention);
 				}
@@ -347,9 +369,15 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 		async ({
 			mentionId,
 			indexTypes,
+			entryId,
+			entryLabel,
+			text,
 		}: {
 			mentionId: string;
 			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
 		}) => {
 			// NOTE: Currently updating local state immediately.
 			// Phase 5 TODO: Replace with optimistic update pattern:
@@ -366,19 +394,17 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 
 			// Update local state
 			setMentions((prev) =>
-				prev.map((m) => (m.id === mentionId ? { ...m, indexTypes } : m)),
+				prev.map((m) =>
+					m.id === mentionId
+						? {
+								...m,
+								indexTypes,
+								...(entryId && entryLabel ? { entryId, entryLabel } : {}),
+								...(text !== undefined ? { text } : {}),
+							}
+						: m,
+				),
 			);
-		},
-		[],
-	);
-
-	const handleEditMention = useCallback(
-		({ mentionId }: { mentionId: string }) => {
-			// TODO: Implement edit functionality in future task
-			// For now, just close the details popover
-			console.log("Edit mention:", mentionId);
-			setSelectedMention(null);
-			setDetailsAnchor(null);
 		},
 		[],
 	);
@@ -626,10 +652,12 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 							entryLabel: selectedMention.entryLabel,
 							entryId: selectedMention.entryId,
 							indexTypes: selectedMention.indexTypes,
+							type: selectedMention.type,
 						}}
-						onEdit={handleEditMention}
+						existingEntries={mockIndexEntries}
 						onDelete={handleDeleteMention}
 						onClose={handleMentionDetailsClose}
+						onCancel={handleCloseDetailsPopover}
 					/>
 				</PdfAnnotationPopover>
 			)}

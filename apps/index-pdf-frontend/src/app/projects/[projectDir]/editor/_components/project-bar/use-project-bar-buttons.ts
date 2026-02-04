@@ -3,7 +3,6 @@
 import type { StyledToggleButton } from "@pubint/yaboujee";
 import { useAtom, useAtomValue } from "jotai";
 import {
-	Book,
 	BookOpen,
 	ChevronRight,
 	File,
@@ -82,11 +81,6 @@ export const useProjectBarButtons = (): {
 			name: "projectContexts",
 			icon: Filter as LucideIcon,
 			tooltip: "Project Contexts",
-		},
-		"project-biblio": {
-			name: "projectBiblio",
-			icon: Book as LucideIcon,
-			tooltip: "Project Bibliography",
 		},
 		"project-author": {
 			name: "projectAuthors",

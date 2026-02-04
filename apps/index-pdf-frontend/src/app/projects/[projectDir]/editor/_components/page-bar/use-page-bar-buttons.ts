@@ -3,11 +3,10 @@
 import type { StyledToggleButton } from "@pubint/yaboujee";
 import { useAtom, useAtomValue } from "jotai";
 import {
-	Book,
 	BookOpen,
 	ChevronLeft,
+	File,
 	Filter,
-	Info,
 	type LucideIcon,
 	Tag,
 	User,
@@ -73,20 +72,15 @@ export const usePageBarButtons = (): {
 	const sectionMetadata: Partial<
 		Record<SectionId, { name: string; icon: LucideIcon; tooltip: string }>
 	> = {
-		"page-info": {
-			name: "pageInfo",
-			icon: Info as LucideIcon,
-			tooltip: "Page Info",
+		"page-pages": {
+			name: "pagePages",
+			icon: File as LucideIcon,
+			tooltip: "Page",
 		},
 		"page-contexts": {
 			name: "pageContexts",
 			icon: Filter as LucideIcon,
 			tooltip: "Page Contexts",
-		},
-		"page-biblio": {
-			name: "pageBiblio",
-			icon: Book as LucideIcon,
-			tooltip: "Page Bibliography",
 		},
 		"page-author": {
 			name: "pageAuthors",

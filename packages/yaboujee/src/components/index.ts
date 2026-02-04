@@ -35,6 +35,8 @@ export {
 } from "./pdf";
 export type { SidebarPanelProps } from "./sidebar-panel";
 export { SidebarPanel } from "./sidebar-panel";
+export type { StyledButtonProps } from "./styled-button";
+export { StyledButton } from "./styled-button";
 export type { StyledIconButtonProps } from "./styled-icon-button";
 export { StyledIconButton } from "./styled-icon-button";
 export type {

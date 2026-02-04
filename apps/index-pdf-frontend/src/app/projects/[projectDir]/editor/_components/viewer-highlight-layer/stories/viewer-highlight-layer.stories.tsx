@@ -29,6 +29,7 @@ const mockMentions: ViewerMention[] = [
 		bboxes: [{ x: 50, y: 100, width: 200, height: 20 }],
 		entryLabel: "AI Concepts",
 		range_type: "exact",
+		type: "text",
 	},
 	{
 		id: "mention-2",
@@ -37,6 +38,7 @@ const mockMentions: ViewerMention[] = [
 		bboxes: [{ x: 50, y: 200, width: 180, height: 20 }],
 		entryLabel: "ML Techniques",
 		range_type: "exact",
+		type: "text",
 	},
 	{
 		id: "mention-3",
@@ -45,6 +47,7 @@ const mockMentions: ViewerMention[] = [
 		bboxes: [{ x: 100, y: 150, width: 190, height: 20 }],
 		entryLabel: "Deep Learning",
 		range_type: "exact",
+		type: "text",
 	},
 ];
 

@@ -44,7 +44,9 @@ export const DeleteMentionDialog = ({
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
-					<AlertDialogAction onClick={handleConfirm}>Delete</AlertDialogAction>
+					<AlertDialogAction className={"bg-red-400"} onClick={handleConfirm}>
+						Delete
+					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>

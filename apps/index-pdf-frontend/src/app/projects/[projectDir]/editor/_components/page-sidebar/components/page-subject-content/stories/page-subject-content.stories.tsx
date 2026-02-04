@@ -22,6 +22,7 @@ const mockMentions = [
 		entryLabel: "Philosophy → Kant",
 		entryId: "entry-1",
 		indexTypes: ["subject"],
+		type: "text" as const,
 	},
 	{
 		id: "2",
@@ -30,14 +31,12 @@ const mockMentions = [
 		entryLabel: "Philosophy → Heidegger",
 		entryId: "entry-2",
 		indexTypes: ["subject"],
+		type: "text" as const,
 	},
 ];
 
 export const Default: Story = {
 	args: {
-		activeAction: { type: null, indexType: null },
-		onSelectText: fn(),
-		onDrawRegion: fn(),
 		mentions: mockMentions,
 		onMentionClick: fn(),
 	},

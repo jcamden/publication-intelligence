@@ -28,6 +28,7 @@ const mockMentions = [
 		entryLabel: "Philosophy → Kant",
 		entryId: "entry-1",
 		indexTypes: ["subject"],
+		type: "text" as const,
 	},
 	{
 		id: "2",
@@ -36,6 +37,7 @@ const mockMentions = [
 		entryLabel: "Author → Immanuel Kant",
 		entryId: "entry-2",
 		indexTypes: ["author"],
+		type: "text" as const,
 	},
 ];
 

@@ -308,6 +308,11 @@ const mockIndexEntries: IndexEntry[] = [
    - Adds `aria-label` when label hidden
    - Maintains screen reader compatibility
 
+6. **Storybook Layout**
+   - All stories use `layout: "padded"` instead of `"centered"`
+   - No decorator needed (component is pure content, not positioned)
+   - Prevents overflow issues since `MentionCreationPopover` has no positioning logic
+
 ### Deferred Items
 
 - Backend persistence (Phase 5)

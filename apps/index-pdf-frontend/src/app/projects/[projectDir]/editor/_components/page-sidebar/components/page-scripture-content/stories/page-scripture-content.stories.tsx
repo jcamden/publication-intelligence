@@ -22,6 +22,7 @@ const mockMentions = [
 		entryLabel: "Scripture → Matthew 5:3",
 		entryId: "entry-1",
 		indexTypes: ["scripture"],
+		type: "text" as const,
 	},
 	{
 		id: "2",
@@ -30,14 +31,12 @@ const mockMentions = [
 		entryLabel: "Scripture → John 3:16",
 		entryId: "entry-2",
 		indexTypes: ["scripture"],
+		type: "text" as const,
 	},
 ];
 
 export const Default: Story = {
 	args: {
-		activeAction: { type: null, indexType: null },
-		onSelectText: fn(),
-		onDrawRegion: fn(),
 		mentions: mockMentions,
 		onMentionClick: fn(),
 	},

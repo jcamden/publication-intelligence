@@ -11,10 +11,18 @@ import type { LucideIcon } from "lucide-react";
 import type React from "react";
 import { SidebarAccordionItem } from "./components/sidebar-accordion-item";
 
+type ActionButtons = {
+	indexType: string;
+	activeAction: { type: string | null; indexType: string | null };
+	onSelectText: ({ indexType }: { indexType: string }) => void;
+	onDrawRegion: ({ indexType }: { indexType: string }) => void;
+};
+
 type SectionMetadata = {
 	title: string;
 	icon: LucideIcon;
 	content: React.ComponentType;
+	actionButtons?: ActionButtons;
 };
 
 type DraggableSidebarProps<TSectionId extends string> = {
@@ -56,6 +64,17 @@ export const DraggableSidebar = <TSectionId extends string>({
 									if (!meta) return null;
 
 									const Content = meta.content;
+									const isExpanded = expandedItems.includes(sectionId);
+
+									const handleToggle = () => {
+										if (isExpanded) {
+											onExpandedChange(
+												expandedItems.filter((id) => id !== sectionId),
+											);
+										} else {
+											onExpandedChange([...expandedItems, sectionId]);
+										}
+									};
 
 									return (
 										<Draggable
@@ -76,6 +95,9 @@ export const DraggableSidebar = <TSectionId extends string>({
 														dragHandleProps={provided.dragHandleProps}
 														index={index}
 														side={side}
+														actionButtons={meta.actionButtons}
+														isExpanded={isExpanded}
+														onToggle={handleToggle}
 													>
 														<Content />
 													</SidebarAccordionItem>

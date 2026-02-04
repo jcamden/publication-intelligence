@@ -247,7 +247,7 @@ const convertSelectionToPdfBboxes = ({
  */
 export const PdfViewer = ({
 	url,
-	scale = 1.75,
+	scale = 1.25,
 	currentPage = 1,
 	onLoadSuccess,
 	className = "",

@@ -149,6 +149,11 @@ module default {
     passim        # Scattered throughout, no specific range
   >;
   
+  scalar type MentionType extending enum<
+    text,         # Text selection mention
+    region        # Region/area mention
+  >;
+  
   scalar type ExportFormat extending enum<
     book_index,   # Traditional back-of-book index format
     json,         # Structured JSON export
@@ -688,6 +693,11 @@ module default {
     # Range type (type-safe enum)
     required range_type: MentionRangeType {
       default := MentionRangeType.single_page;
+    };
+    
+    # Mention type: text selection vs region
+    required mention_type: MentionType {
+      default := MentionType.text;
     };
     
     # LLM provenance: which LLM run suggested this mention (if any)

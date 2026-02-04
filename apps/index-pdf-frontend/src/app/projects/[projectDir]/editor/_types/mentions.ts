@@ -26,6 +26,7 @@ export type IndexMention = {
 	end_offset?: number;
 	bboxes: BoundingBox[];
 	range_type: RangeType;
+	mention_type: "text" | "region";
 	suggested_by_llm?: boolean;
 	deleted_at?: string | null;
 	created_at: string;
@@ -42,6 +43,7 @@ export type ViewerMention = {
 	bboxes: BoundingBox[];
 	entryLabel: string;
 	range_type?: RangeType;
+	type: "text" | "region";
 };
 
 /**
@@ -51,6 +53,7 @@ export type DraftMention = {
 	page_number: number;
 	text_span: string;
 	bboxes: BoundingBox[];
+	type: "text" | "region";
 	/**
 	 * Optional anchor data for reconciling with canonical text later.
 	 * Can store: normalized text, nearby atom IDs, confidence metadata, etc.

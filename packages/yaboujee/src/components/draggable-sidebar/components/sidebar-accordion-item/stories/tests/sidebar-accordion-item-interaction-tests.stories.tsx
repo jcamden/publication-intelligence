@@ -36,6 +36,14 @@ export const PopButtonClick: Story = {
 	render: () => {
 		const handlePop = fn();
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
@@ -43,6 +51,8 @@ export const PopButtonClick: Story = {
 					{...defaultSidebarAccordionItemArgs}
 					onPop={handlePop}
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>
@@ -64,6 +74,14 @@ export const PopButtonClick: Story = {
 export const AccordionTrigger: Story = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>([]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<div>
@@ -71,6 +89,8 @@ export const AccordionTrigger: Story = {
 					<SidebarAccordionItem
 						{...defaultSidebarAccordionItemArgs}
 						dragHandleProps={mockDragHandleProps}
+						isExpanded={isExpanded}
+						onToggle={toggleExpanded}
 					>
 						<div data-testid="content">{sampleContent()}</div>
 					</SidebarAccordionItem>
@@ -98,12 +118,22 @@ export const AccordionTrigger: Story = {
 export const DragHandlePresence: Story = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
 				<SidebarAccordionItem
 					{...defaultSidebarAccordionItemArgs}
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>
@@ -125,6 +155,14 @@ export const DragHandlePresence: Story = {
 export const DragHandleStopPropagation: Story = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>([]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<div>
@@ -132,6 +170,8 @@ export const DragHandleStopPropagation: Story = {
 					<SidebarAccordionItem
 						{...defaultSidebarAccordionItemArgs}
 						dragHandleProps={mockDragHandleProps}
+						isExpanded={isExpanded}
+						onToggle={toggleExpanded}
 					>
 						{sampleContent()}
 					</SidebarAccordionItem>

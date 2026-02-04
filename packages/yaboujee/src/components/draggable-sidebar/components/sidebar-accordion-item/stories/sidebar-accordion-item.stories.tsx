@@ -91,6 +91,14 @@ export default meta;
 export const LeftSide: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
@@ -98,6 +106,8 @@ export const LeftSide: StoryObj<typeof SidebarAccordionItem> = {
 					{...defaultSidebarAccordionItemArgs}
 					side="left"
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>
@@ -120,6 +130,14 @@ export const LeftSide: StoryObj<typeof SidebarAccordionItem> = {
 export const RightSide: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
@@ -127,6 +145,8 @@ export const RightSide: StoryObj<typeof SidebarAccordionItem> = {
 					{...defaultSidebarAccordionItemArgs}
 					side="right"
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>
@@ -149,12 +169,22 @@ export const RightSide: StoryObj<typeof SidebarAccordionItem> = {
 export const Collapsed: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>([]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
 				<SidebarAccordionItem
 					{...defaultSidebarAccordionItemArgs}
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>
@@ -176,6 +206,14 @@ export const Collapsed: StoryObj<typeof SidebarAccordionItem> = {
 export const FirstItem: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
@@ -183,6 +221,8 @@ export const FirstItem: StoryObj<typeof SidebarAccordionItem> = {
 					{...defaultSidebarAccordionItemArgs}
 					index={0}
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>
@@ -204,6 +244,14 @@ export const FirstItem: StoryObj<typeof SidebarAccordionItem> = {
 export const NonFirstItem: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
@@ -211,6 +259,8 @@ export const NonFirstItem: StoryObj<typeof SidebarAccordionItem> = {
 					{...defaultSidebarAccordionItemArgs}
 					index={1}
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>
@@ -243,6 +293,14 @@ export const MultipleItems: StoryObj<typeof SidebarAccordionItem> = {
 					index={0}
 					side="left"
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={expanded.includes("pages")}
+					onToggle={() => {
+						setExpanded((prev) =>
+							prev.includes("pages")
+								? prev.filter((v) => v !== "pages")
+								: [...prev, "pages"],
+						);
+					}}
 				>
 					<div style={{ padding: "12px" }}>
 						<p>Pages content here</p>
@@ -257,6 +315,14 @@ export const MultipleItems: StoryObj<typeof SidebarAccordionItem> = {
 					index={1}
 					side="left"
 					dragHandleProps={mockDragHandleProps}
+					isExpanded={expanded.includes("tags")}
+					onToggle={() => {
+						setExpanded((prev) =>
+							prev.includes("tags")
+								? prev.filter((v) => v !== "tags")
+								: [...prev, "tags"],
+						);
+					}}
 				>
 					<div style={{ padding: "12px" }}>
 						<p>Tags content here</p>
@@ -280,12 +346,22 @@ export const MultipleItems: StoryObj<typeof SidebarAccordionItem> = {
 export const WithoutDragHandle: StoryObj<typeof SidebarAccordionItem> = {
 	render: () => {
 		const [expanded, setExpanded] = useState<string[]>(["test-section"]);
+		const isExpanded = expanded.includes("test-section");
+		const toggleExpanded = () => {
+			setExpanded((prev) =>
+				prev.includes("test-section")
+					? prev.filter((v) => v !== "test-section")
+					: [...prev, "test-section"],
+			);
+		};
 
 		return (
 			<Accordion value={expanded} onValueChange={setExpanded}>
 				<SidebarAccordionItem
 					{...defaultSidebarAccordionItemArgs}
 					dragHandleProps={null}
+					isExpanded={isExpanded}
+					onToggle={toggleExpanded}
 				>
 					{sampleContent()}
 				</SidebarAccordionItem>

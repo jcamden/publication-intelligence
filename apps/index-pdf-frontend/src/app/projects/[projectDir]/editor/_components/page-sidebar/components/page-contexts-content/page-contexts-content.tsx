@@ -1,9 +1,24 @@
 "use client";
 
-export const PageContextsContent = () => {
+import { PageSectionContent } from "../page-section-content/page-section-content";
+
+type MentionData = {
+	id: string;
+	text: string;
+	entryLabel: string;
+	type: "text" | "region";
+};
+
+type PageContextsContentProps = {
+	mentions: MentionData[];
+	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
+};
+
+export const PageContextsContent = ({
+	mentions,
+	onMentionClick,
+}: PageContextsContentProps) => {
 	return (
-		<div className="text-sm text-[hsl(var(--color-text-muted))]">
-			Page contexts will go here
-		</div>
+		<PageSectionContent mentions={mentions} onMentionClick={onMentionClick} />
 	);
 };

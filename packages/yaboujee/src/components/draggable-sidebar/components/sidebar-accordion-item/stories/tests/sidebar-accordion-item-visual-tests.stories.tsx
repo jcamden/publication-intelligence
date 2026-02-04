@@ -32,6 +32,12 @@ const AllVariantsRender = () => {
 		"right-expanded",
 	]);
 
+	const createToggle = (value: string) => () => {
+		setExpanded((prev) =>
+			prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+		);
+	};
+
 	return (
 		<div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
 			<div>
@@ -54,6 +60,8 @@ const AllVariantsRender = () => {
 							index={0}
 							side="left"
 							dragHandleProps={mockDragHandleProps}
+							isExpanded={expanded.includes("left-expanded")}
+							onToggle={createToggle("left-expanded")}
 						>
 							{sampleContent()}
 						</SidebarAccordionItem>
@@ -81,6 +89,8 @@ const AllVariantsRender = () => {
 							index={0}
 							side="left"
 							dragHandleProps={mockDragHandleProps}
+							isExpanded={expanded.includes("left-collapsed")}
+							onToggle={createToggle("left-collapsed")}
 						>
 							{sampleContent()}
 						</SidebarAccordionItem>
@@ -108,6 +118,8 @@ const AllVariantsRender = () => {
 							index={0}
 							side="right"
 							dragHandleProps={mockDragHandleProps}
+							isExpanded={expanded.includes("right-expanded")}
+							onToggle={createToggle("right-expanded")}
 						>
 							{sampleContent()}
 						</SidebarAccordionItem>
@@ -135,6 +147,8 @@ const AllVariantsRender = () => {
 							index={0}
 							side="right"
 							dragHandleProps={mockDragHandleProps}
+							isExpanded={expanded.includes("right-collapsed")}
+							onToggle={createToggle("right-collapsed")}
 						>
 							{sampleContent()}
 						</SidebarAccordionItem>
@@ -162,6 +176,8 @@ const AllVariantsRender = () => {
 							index={0}
 							side="left"
 							dragHandleProps={mockDragHandleProps}
+							isExpanded={expanded.includes("first")}
+							onToggle={createToggle("first")}
 						>
 							{sampleContent()}
 						</SidebarAccordionItem>
@@ -173,6 +189,8 @@ const AllVariantsRender = () => {
 							index={1}
 							side="left"
 							dragHandleProps={mockDragHandleProps}
+							isExpanded={expanded.includes("second")}
+							onToggle={createToggle("second")}
 						>
 							{sampleContent()}
 						</SidebarAccordionItem>
@@ -196,6 +214,8 @@ const AllVariantsRender = () => {
 							{...defaultSidebarAccordionItemArgs}
 							value="no-drag"
 							dragHandleProps={null}
+							isExpanded={expanded.includes("no-drag")}
+							onToggle={createToggle("no-drag")}
 						>
 							{sampleContent()}
 						</SidebarAccordionItem>

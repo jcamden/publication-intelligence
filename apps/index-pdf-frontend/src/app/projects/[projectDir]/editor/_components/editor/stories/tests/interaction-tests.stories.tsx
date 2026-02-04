@@ -18,6 +18,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-1",
 		entryLabel: "Test Entry 1",
 		indexTypes: ["subject"],
+		type: "text" as const,
 		bboxes: [{ x: 20, y: 772, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-01"),
 	},
@@ -28,6 +29,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-2",
 		entryLabel: "Test Entry 2",
 		indexTypes: ["author"],
+		type: "text" as const,
 		bboxes: [{ x: 256, y: 388, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-02"),
 	},
@@ -38,6 +40,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-3",
 		entryLabel: "Test Entry 3",
 		indexTypes: ["scripture"],
+		type: "text" as const,
 		bboxes: [{ x: 256, y: 5, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-03"),
 	},
@@ -48,6 +51,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-4",
 		entryLabel: "Test Entry 4",
 		indexTypes: ["subject"],
+		type: "text" as const,
 		bboxes: [{ x: 256, y: 772, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-04"),
 	},
@@ -58,6 +62,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-5",
 		entryLabel: "Test Entry 5",
 		indexTypes: ["author"],
+		type: "text" as const,
 		bboxes: [{ x: 20, y: 388, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-05"),
 	},
@@ -68,6 +73,7 @@ const MOCK_MENTIONS: Mention[] = [
 		entryId: "entry-6",
 		entryLabel: "Test Entry 6",
 		indexTypes: ["scripture"],
+		type: "text" as const,
 		bboxes: [{ x: 492, y: 388, width: 100, height: 15 }],
 		createdAt: new Date("2024-01-06"),
 	},
@@ -110,7 +116,10 @@ const clickHighlightAndWaitForPopover = async ({
 	await step("Wait for details popover", async () => {
 		await waitFor(
 			async () => {
-				const popover = within(document.body).getByText(/highlight details/i);
+				// Wait for the popover dialog to appear (MentionDetailsPopover has role="dialog")
+				const popover = within(document.body).getByRole("dialog", {
+					hidden: true,
+				});
 				await expect(popover).toBeInTheDocument();
 			},
 			{ timeout: 2000 },
@@ -156,11 +165,12 @@ export const ClickHighlightShowsDetails: Story = {
 		await step("Verify popover shows mention information", async () => {
 			const body = within(document.body);
 			await expect(body.getByText(/Should be top center/i)).toBeInTheDocument();
+			// In View mode, the popover has Edit and Close buttons
 			await expect(
-				body.getByRole("button", { name: /edit entry/i }),
+				body.getByRole("button", { name: /^edit$/i }),
 			).toBeInTheDocument();
 			await expect(
-				body.getByRole("button", { name: /delete/i }),
+				body.getByRole("button", { name: /close/i }),
 			).toBeInTheDocument();
 		});
 	},
@@ -178,21 +188,24 @@ export const EditButtonOpensHandler: Story = {
 			step,
 		});
 
-		await step("Click Edit Entry button", async () => {
+		await step("Click Edit button", async () => {
 			const body = within(document.body);
-			const editButton = body.getByRole("button", { name: /edit entry/i });
+			const editButton = body.getByRole("button", { name: /^edit$/i });
 			await userEvent.click(editButton);
 		});
 
-		await step("Verify popover closes", async () => {
-			await waitFor(
-				async () => {
-					const body = within(document.body);
-					const popover = body.queryByText(/highlight details/i);
-					expect(popover).not.toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
+		await step("Verify entered Edit mode", async () => {
+			const body = within(document.body);
+			// In Edit mode, should see Delete, Cancel, and Save buttons
+			await expect(
+				body.getByRole("button", { name: /^delete$/i }),
+			).toBeInTheDocument();
+			await expect(
+				body.getByRole("button", { name: /cancel/i }),
+			).toBeInTheDocument();
+			await expect(
+				body.getByRole("button", { name: /save/i }),
+			).toBeInTheDocument();
 		});
 	},
 };
@@ -207,6 +220,12 @@ export const DeleteHighlightFlow: Story = {
 			canvas,
 			highlightId: "highlight-mention-bottom-center",
 			step,
+		});
+
+		await step("Enter Edit mode", async () => {
+			const body = within(document.body);
+			const editButton = body.getByRole("button", { name: /^edit$/i });
+			await userEvent.click(editButton);
 		});
 
 		await step("Click Delete button", async () => {
@@ -263,6 +282,12 @@ export const CancelDeletion: Story = {
 			canvas,
 			highlightId: "highlight-mention-bottom-center",
 			step,
+		});
+
+		await step("Enter Edit mode", async () => {
+			const body = within(document.body);
+			const editButton = body.getByRole("button", { name: /^edit$/i });
+			await userEvent.click(editButton);
 		});
 
 		await step("Click Delete button", async () => {
@@ -328,7 +353,7 @@ export const EscapeKeyClosesPopover: Story = {
 			await waitFor(
 				async () => {
 					const body = within(document.body);
-					const popover = body.queryByText(/highlight details/i);
+					const popover = body.queryByRole("dialog", { hidden: true });
 					expect(popover).not.toBeInTheDocument();
 				},
 				{ timeout: 2000 },
@@ -354,6 +379,12 @@ export const DeleteKeyShortcut: Story = {
 			canvas,
 			highlightId: "highlight-mention-bottom-center",
 			step,
+		});
+
+		await step("Enter Edit mode", async () => {
+			const body = within(document.body);
+			const editButton = body.getByRole("button", { name: /^edit$/i });
+			await userEvent.click(editButton);
 		});
 
 		await step("Press Delete key", async () => {

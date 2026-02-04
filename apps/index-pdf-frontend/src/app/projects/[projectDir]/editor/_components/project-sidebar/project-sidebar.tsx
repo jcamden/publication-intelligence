@@ -4,7 +4,6 @@ import type { DropResult } from "@hello-pangea/dnd";
 import { DraggableSidebar } from "@pubint/yaboujee/components/draggable-sidebar";
 import { useAtom, useAtomValue } from "jotai";
 import {
-	BookMarked,
 	BookOpen,
 	File,
 	FolderTree,
@@ -22,7 +21,6 @@ import {
 	updateSectionAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { ProjectAuthorContent } from "./components/project-author-content";
-import { ProjectBiblioContent } from "./components/project-biblio-content";
 import { ProjectContextsContent } from "./components/project-contexts-content";
 import { ProjectPagesContent } from "./components/project-pages-content";
 import { ProjectScriptureContent } from "./components/project-scripture-content";
@@ -107,11 +105,6 @@ export const ProjectSidebar = () => {
 			title: "Project Scripture Index",
 			icon: BookOpen,
 			content: ProjectScriptureContent,
-		},
-		"project-biblio": {
-			title: "Project Bibliography",
-			icon: BookMarked,
-			content: ProjectBiblioContent,
 		},
 		"project-contexts": {
 			title: "Project Contexts",
