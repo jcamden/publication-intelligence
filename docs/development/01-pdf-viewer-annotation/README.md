@@ -15,7 +15,7 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 
 ## Phases
 
-### ✅ Phase 1: Text Layer ([phase-1-text-layer.md](./phase-1-text-layer.md))
+### ✅ Phase 1: Text Layer ([phase-1-text-layer/](./phase-1-text-layer/))
 **Status:** Complete  
 **Summary:** Implemented selectable text layer using PDF.js TextLayer API
 
@@ -24,7 +24,7 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 - Viewport ref for coordinate conversions
 - Page container ref for bounds checking
 
-### ✅ Phase 2: Highlight Rendering ([phase-2-highlight-rendering.md](./phase-2-highlight-rendering.md))
+### ✅ Phase 2: Highlight Rendering ([phase-2-highlight-rendering/](./phase-2-highlight-rendering/))
 **Status:** Complete  
 **Summary:** Integrated PdfHighlightLayer with PDF→DOM coordinate conversion
 
@@ -34,7 +34,7 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 - Per-page filtering and viewport-based conversion
 - Click handlers for highlight interactions
 
-### ✅ Phase 3: Selection Capture ([phase-3-selection-capture.md](./phase-3-selection-capture.md))
+### ✅ Phase 3: Selection Capture ([phase-3-selection-capture/](./phase-3-selection-capture/))
 **Status:** Complete (needs Phase 4 refactoring)  
 **Completed:** Commit b88f38a (Feb 2, 2026)  
 **Summary:** Text selection and region drawing → draft highlights with coordinate conversion
@@ -63,15 +63,20 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 **Dependencies:** Phase 3 completion  
 **Estimated Duration:** 1 week (2 days remaining)
 
-### ⚪ Phase 5: Backend Integration ([phase-5-backend-integration.md](./phase-5-backend-integration.md))
+### ⚪ Phase 5: Backend Integration ([phase-5-backend-integration/](./phase-5-backend-integration/))
 **Status:** Not Started  
 **Summary:** Persist highlights to database, CRUD API integration
 
-**Deliverables:**
-- IndexMention Gel schema (with multi-type support)
-- IndexEntry Gel schema (typed)
-- Context Gel schema
-- tRPC CRUD endpoints
+**Sub-Tasks:**
+- [5A: Schema Migration & IndexType Backend](./phase-5-backend-integration/task-5a-schema-migration.md) - 2-3 days
+- [5B: IndexEntry Backend](./phase-5-backend-integration/task-5b-index-entry-backend.md) - 2 days
+- [5C: IndexMention Backend](./phase-5-backend-integration/task-5c-index-mention-backend.md) - 2-3 days
+- [5D: Optimistic Updates & Error Handling](./phase-5-backend-integration/task-5d-optimistic-updates.md) - 1-2 days
+
+**Key Deliverables:**
+- IndexType, IndexEntry, IndexMention schemas with multi-type support
+- Context schema for Phase 6
+- tRPC CRUD endpoints with optimistic updates
 - Application adapter (IndexMention ↔ PdfHighlight)
 - Optimistic updates
 - Error handling
@@ -79,7 +84,7 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 **Dependencies:** Phase 4 completion  
 **Estimated Duration:** 3-4 days
 
-### ⚪ Phase 6: Context System ([phase-6-context-system.md](./phase-6-context-system.md))
+### ⚪ Phase 6: Context System ([phase-6-context-system/](./phase-6-context-system/))
 **Status:** Not Started  
 **Summary:** Draw regions for ignore/page-number contexts, apply to pages
 
@@ -94,7 +99,7 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 **Dependencies:** Phase 4 completion  
 **Estimated Duration:** 4-5 days
 
-### ⚪ Phase 7: Page Numbering System ([phase-7-page-numbering.md](./phase-7-page-numbering.md))
+### ⚪ Phase 7: Page Numbering System ([phase-7-page-numbering/](./phase-7-page-numbering/))
 **Status:** Not Started  
 **Summary:** Multi-layer page numbering with context extraction and overrides
 

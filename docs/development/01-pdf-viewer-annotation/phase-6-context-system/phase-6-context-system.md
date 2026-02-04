@@ -22,13 +22,21 @@ Implement region-based context system for marking areas to ignore during text ex
 - **Purpose:** Exclude regions from text extraction
 - **Logic:** If text atom bbox is 100% within ignore context bbox → ignore it
 - **Use cases:** Headers, footers, captions, marginal notes, page numbers (if not indexing them)
-- **Default color:** Red (#FCA5A5)
+- **Default color:** Red (#FCA5A5) - user customizable per context
 
 ### 2. Page Number Context
 - **Purpose:** Auto-extract text to establish canonical page number
 - **Logic:** Extract text within bbox, parse as page number
 - **Use cases:** Roman numerals, alternating corners, custom pagination
-- **Default color:** Purple (#C4B5FD)
+- **Default color:** Purple (#C4B5FD) - user customizable per context
+
+**Color Customization:**
+
+Context colors are independent of index type colors. Each context can have its own custom color:
+- Default assignment when creating context (Red for ignore, Purple for page-number)
+- User can override via color picker in context creation/edit modal
+- Color changes affect context rendering on PDF (background fill)
+- Useful for distinguishing multiple contexts of same type (e.g., header vs footer ignore contexts)
 
 ## Page Configuration Options
 
@@ -211,7 +219,10 @@ Contexts can be applied to pages using these modes:
 - Layered below mentions (z-index)
 - Semi-transparent fill (20% opacity)
 - Dashed border (2px)
-- Color per context (not per type, user-configurable)
+- **Color per context** (each context has its own color, independent of type)
+  - Different ignore contexts can have different colors
+  - Useful for visual distinction (e.g., header=red, footer=orange)
+  - Not tied to index type colors (completely separate system)
 
 ### Hover State
 - Increase opacity to 40%
@@ -296,4 +307,4 @@ type Context {
 
 ## Next Phase
 
-[Phase 7: Page Numbering System](./phase-7-page-numbering.md) uses page number contexts to extract and display canonical page numbers.
+[Phase 7: Page Numbering System](../phase-7-page-numbering/) uses page number contexts to extract and display canonical page numbers.

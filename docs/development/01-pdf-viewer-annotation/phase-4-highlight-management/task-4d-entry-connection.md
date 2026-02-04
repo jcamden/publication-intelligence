@@ -12,6 +12,41 @@ Currently mentions reference IndexEntries by ID, but we need UI to:
 3. Show entry hierarchy (parent/child)
 4. Visualize entry→mention relationships
 
+## Key Data Model Decisions
+
+### Separate Entries Per Index Type
+**Decision:** Each IndexEntry belongs to exactly ONE index type. If "Kant" appears in both Subject and Author indexes, create two separate entries.
+
+**Rationale:**
+- Enables different hierarchies per index (Kant under "Philosophy" in Subject vs "German Authors" in Author)
+- Simplifies queries and data model
+- Each entry has clear ownership and context
+
+### Colors From Index Types, Not Entries
+**Decision:** Highlight colors derived from `mention.index_types` array (which references IndexType configurations), not from individual entries.
+
+**Rationale:**
+- Users configure colors at index type level (yellow for Subject, blue for Author)
+- All Subject highlights are yellow, regardless of which specific entry
+- Multi-type mentions use diagonal stripes with multiple index type colors
+- Simpler mental model and more consistent UI
+
+### Entry Creation in Two Locations
+**Decision:** Primary location is project sidebar (per index type section). Secondary location is during mention creation (quick create).
+
+**Rationale:**
+- Project sidebar: Full featured entry management with hierarchy
+- Mention creation: Quick workflow without leaving context
+- Both maintain clear index type context
+
+### Autocomplete Exact Match Only
+**Decision:** Only auto-populate entry field when highlighted text EXACTLY matches entry label or alias (case-insensitive).
+
+**Rationale:**
+- Prevents incorrect assumptions (partial matches could be wrong)
+- User maintains control over entry selection
+- Clear, predictable behavior
+
 ## Requirements
 
 ### IndexEntry Data Structure (Frontend)
@@ -19,9 +54,9 @@ Currently mentions reference IndexEntries by ID, but we need UI to:
 ```tsx
 type IndexEntry = {
   id: string;
+  indexType: string; // 'subject' | 'author' | 'scripture' - Entry belongs to ONE index type
   label: string; // "Kant, Immanuel"
-  parentId: string | null; // For hierarchy
-  color?: string; // For visual grouping
+  parentId: string | null; // For hierarchy within same index type
   metadata?: {
     aliases?: string[]; // "Kant, I."
     sortKey?: string; // For alphabetization
@@ -29,26 +64,61 @@ type IndexEntry = {
 };
 ```
 
+**Design Decision: Separate Entries Per Index Type**
+
+If the same concept appears in multiple indexes (e.g., "Kant, Immanuel" in both Subject and Author), create separate IndexEntry records:
+- One Subject entry: `{ id: 'uuid-1', indexType: 'subject', label: 'Kant, Immanuel' }`
+- One Author entry: `{ id: 'uuid-2', indexType: 'author', label: 'Kant, Immanuel' }`
+
+**Rationale:**
+- Allows different hierarchies per index type (Kant under "Philosophy" in Subject, under "German Authors" in Author)
+- Simplifies queries (filter entries by index type)
+- Clearer data model (each entry belongs to exactly one index)
+- Mentions link to entries via `mention.index_types` array
+
 ### Entry Creation Form
-- [ ] Triggered from mention creation autocomplete ("Create new entry")
+
+**Primary Location:** Project sidebar, within each index type section (Subject, Author, Scripture, Contexts)
+
+**Secondary Location:** During mention creation (quick create from autocomplete)
+
+- [ ] Triggered from:
+  - Project sidebar: "Create Entry" button in index type section
+  - Mention creation: Autocomplete "Create new entry" option
 - [ ] Fields:
+  - Index Type (pre-filled based on context)
   - Label (required)
-  - Parent entry (optional, for hierarchy)
+  - Parent entry (optional, for hierarchy within same index type)
   - Aliases (optional, comma-separated)
-- [ ] Validation: Label must be unique
-- [ ] Auto-generate ID and color
+- [ ] Validation: Label must be unique within index type
+- [ ] Auto-generate ID
 
 ### Entry Picker
+
+**Context-Aware:** Only shows entries for the current index type (determined by active sidebar section or mention context)
+
 - [ ] Search/filter entries by label
-- [ ] Show hierarchy (indent child entries)
+- [ ] Filtered to current index type only
+- [ ] Show hierarchy (indent child entries within same index type)
 - [ ] Show mention count per entry
 - [ ] Create new entry inline
+- [ ] Hierarchy managed in project sidebar (drag-drop, parent selection)
 
-### Visual Entry Grouping
-- [ ] Highlights colored by IndexEntry (not all yellow)
-- [ ] Color generated from entry.id hash
-- [ ] Consistent colors across pages
-- [ ] Optional: User can customize color
+### Visual Highlight Colors
+
+**Colors derived from index types, not entries**
+
+- [ ] Highlight colors determined by `mention.index_types` array
+- [ ] Each index type has configurable color (defaults: yellow=Subject, blue=Author, green=Scripture, custom colors for additional types)
+- [ ] Single-type mentions: Use solid color from that index type
+- [ ] Multi-type mentions: Display with diagonal stripes (multiple colors) - see [task-4c-multi-type-enhancement.md](./task-4c-multi-type-enhancement.md)
+- [ ] Consistent colors across pages (tied to index type configuration)
+- [ ] User can customize index type colors in project settings
+- [ ] Default color assignment: First 4 index types get red, yellow, green, blue; additional types get generated colors
+
+**Color Customization UI:**
+- Project settings: Edit index type colors
+- Context settings: Custom colors per context (independent of index type colors)
 
 ## UI Mockup
 
@@ -96,6 +166,36 @@ type IndexEntry = {
 └─────────────────────────────────────┘
 ```
 
+## Entry Hierarchy Management
+
+**Location:** Project sidebar, within each index type section
+
+**Features:**
+- [ ] Drag-and-drop to reorder entries
+- [ ] Drag-and-drop to change parent (indent/outdent)
+- [ ] Parent selection dropdown in entry edit form
+- [ ] Visual indentation shows hierarchy
+- [ ] Collapse/expand parent entries
+- [ ] Hierarchy is per-index-type (Subject hierarchy separate from Author hierarchy)
+
+**UI Pattern:**
+```
+Subject Index
+  └─ Philosophy (parent)
+      ├─ Kant, Immanuel (child)
+      ├─ Hegel, G.W.F. (child)
+      └─ Ancient Philosophy (child/parent)
+          ├─ Plato (grandchild)
+          └─ Aristotle (grandchild)
+  └─ Science (parent)
+      └─ Physics (child)
+```
+
+**Implementation:**
+- Tree structure maintained per index type
+- `parentId` references another entry in same index type only
+- No cross-index-type parents (Subject entry cannot be parent of Author entry)
+
 ## State Management
 
 ### IndexEntry State
@@ -117,14 +217,27 @@ const handleCreateEntry = useCallback(
 );
 ```
 
-### Color Generation
+### Index Type Color Configuration
 
 ```tsx
-const generateColorFromId = (id: string): string => {
-  // Hash string to hue (0-360)
-  const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const hue = hash % 360;
-  return `hsl(${hue}, 70%, 50%)`; // Saturated colors
+type IndexType = {
+  id: string;
+  name: string; // 'subject', 'author', 'scripture'
+  color: string; // Hex color, user-customizable
+  ordinal: number; // For default color assignment
+  visible: boolean;
+};
+
+// Default color assignment based on ordinal
+const DEFAULT_COLORS = ['#FCD34D', '#93C5FD', '#86EFAC', '#FCA5A5']; // Yellow, Blue, Green, Red
+
+const assignDefaultColor = (ordinal: number): string => {
+  if (ordinal < DEFAULT_COLORS.length) {
+    return DEFAULT_COLORS[ordinal];
+  }
+  // Generate color for additional index types
+  const hue = (ordinal * 137) % 360; // Golden angle distribution
+  return `hsl(${hue}, 70%, 50%)`;
 };
 ```
 
@@ -195,12 +308,19 @@ export type EntryPickerProps = {
 };
 ```
 
-### Highlight Color by Entry
+### Highlight Color by Index Type
 
 ```tsx
-// Map mentions to highlights with entry colors
+// Map mentions to highlights with index type colors
 const highlights: PdfHighlight[] = mentions.map(mention => {
   const entry = indexEntries.find(e => e.id === mention.entryId);
+  
+  // Get colors for all index types this mention belongs to
+  const colors = mention.indexTypes.map(typeName => {
+    const indexType = projectIndexTypes.find(t => t.name === typeName);
+    return indexType?.color || '#FCD34D'; // Fallback to yellow
+  });
+  
   return {
     id: mention.id,
     pageNumber: mention.pageNumber,
@@ -209,23 +329,55 @@ const highlights: PdfHighlight[] = mentions.map(mention => {
     text: mention.text,
     metadata: {
       entryId: mention.entryId,
-      color: entry?.color || '#FCD34D', // Default yellow
+      indexTypes: mention.indexTypes,
+      colors: colors, // Array of colors for multi-type rendering
+      // If single type: colors[0] for solid background
+      // If multi-type: colors array for diagonal stripes
     },
   };
 });
 
-// In PdfHighlightBox, use metadata.color for background
+// In PdfHighlightBox:
+// - Single type: Use solid background with colors[0]
+// - Multi-type: Use CSS gradient for diagonal stripes with colors array
 ```
 
 ## Integration with Mention Flow
 
 **Updated flow:**
 1. User selects text → draft highlight
-2. Autocomplete suggests existing entries
-3. If no match → "Create new entry" option
-4. If "Create new entry" → Opens entry creation modal
-5. After entry created → Auto-attaches to mention
-6. Mention now colored by entry
+2. **Smart autocomplete:**
+   - Check if highlighted text exactly matches an entry label or alias (case-insensitive)
+   - If exact match found: Auto-populate entry field (user can still change)
+   - If no exact match: Leave entry field empty, show all entries for current index type
+3. User searches/selects entry from autocomplete dropdown
+4. If no suitable entry exists → "Create new entry" option
+5. If "Create new entry" → Opens entry creation modal
+6. After entry created → Auto-attaches to mention
+7. Mention now colored by index type (from mention.indexTypes)
+
+**Autocomplete Behavior:**
+```tsx
+const checkExactMatch = (highlightedText: string, entries: IndexEntry[]): IndexEntry | null => {
+  const normalized = highlightedText.trim().toLowerCase();
+  
+  return entries.find(entry => {
+    // Check label
+    if (entry.label.toLowerCase() === normalized) return true;
+    
+    // Check aliases
+    const aliases = entry.metadata?.aliases || [];
+    return aliases.some(alias => alias.toLowerCase() === normalized);
+  }) || null;
+};
+
+// On draft creation:
+const exactMatch = checkExactMatch(draft.text, entriesForCurrentIndexType);
+if (exactMatch) {
+  setSelectedEntry(exactMatch);
+  setInputValue(exactMatch.label);
+}
+```
 
 ## Testing
 
@@ -242,4 +394,11 @@ After this task, Phase 4 is complete. See [Phase 4 README](./README.md) for comp
 
 ## Next Phase
 
-[Phase 5: Backend Integration](../phase-5-backend-integration.md)
+[Phase 5: Backend Integration](../phase-5-backend-integration/)
+
+**Important:** The design decisions documented here require schema changes. See [Task 5A: Schema Migration](../phase-5-backend-integration/task-5a-schema-migration.md) for:
+- New IndexType table
+- IndexEntry.index_type field (breaking change)
+- IndexMention.index_types array
+- Context table for ignore/page-number regions
+- Migration strategy and testing requirements

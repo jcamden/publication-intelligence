@@ -36,4 +36,4 @@ Implemented selectable text layer using PDF.js TextLayer API for future text sel
 
 ## Next Phase
 
-Phase 2 added highlight rendering using the viewport ref. See [phase-2-highlight-rendering.md](./phase-2-highlight-rendering.md).
+Phase 2 added highlight rendering using the viewport ref. See [phase-2-highlight-rendering](../../phase-2-highlight-rendering/).

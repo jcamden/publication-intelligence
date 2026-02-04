@@ -62,4 +62,4 @@ This validated our architecture for Phase 3's reverse conversion (DOM → PDF).
 
 ## Next Phase
 
-Phase 3 implements the reverse conversion for selection capture. See [phase-3-selection-capture.md](./phase-3-selection-capture.md).
+Phase 3 implements the reverse conversion for selection capture. See [phase-3-selection-capture](../../phase-3-selection-capture/).

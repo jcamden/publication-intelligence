@@ -11,11 +11,13 @@ docs/development/
 │
 ├── 01-pdf-viewer-annotation/          # Epic 1
 │   ├── README.md                      # Epic overview
-│   ├── phase-1-text-layer.md         # ✅ Complete
-│   ├── phase-2-highlight-rendering.md # ✅ Complete
-│   ├── phase-3-selection-capture.md   # 🟡 In Progress
-│   ├── phase-4-highlight-management.md # ⚪ Not Started (detailed)
-│   └── phase-5-backend-integration.md # ⚪ Not Started
+│   ├── phase-1-text-layer/            # ✅ Complete
+│   ├── phase-2-highlight-rendering/   # ✅ Complete
+│   ├── phase-3-selection-capture/     # ✅ Complete
+│   ├── phase-4-highlight-management/  # ✅ Complete (directory with sub-tasks)
+│   ├── phase-5-backend-integration/   # ⚪ Not Started (directory with sub-tasks)
+│   ├── phase-6-context-system/        # ⚪ Not Started
+│   └── phase-7-page-numbering/        # ⚪ Not Started
 │
 ├── 02-concept-detection/              # Epic 2
 │   ├── README.md
@@ -154,7 +156,7 @@ What comes after this.
 Use relative links to reference related docs:
 
 ```markdown
-See [phase-3-selection-capture.md](./phase-3-selection-capture.md)
+See [Phase 3](./phase-3-selection-capture/)
 See [Epic 2](../02-concept-detection/README.md)
 See [Architecture](../../architecture/component-architecture.md)
 ```
