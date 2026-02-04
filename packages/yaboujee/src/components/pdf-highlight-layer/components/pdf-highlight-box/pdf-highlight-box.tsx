@@ -2,29 +2,33 @@
 
 import type { PdfHighlight } from "../../../../types";
 
-const INDEX_TYPE_COLORS: Record<string, string> = {
-	subject: "#FCD34D",
-	author: "#86EFAC",
-	scripture: "#93C5FD",
-};
-
-const getColorForType = (indexType: string): string => {
-	return INDEX_TYPE_COLORS[indexType] || "#FCD34D"; // Default to yellow
-};
-
-const getHighlightStyle = (indexTypes?: string[]) => {
-	if (!indexTypes || indexTypes.length === 0) {
-		// No index types: use default yellow
-		return { backgroundColor: "#FCD34D" };
+/**
+ * Get highlight style based on colors array from metadata
+ * Colors are determined by IndexType configuration (passed from parent)
+ */
+const getHighlightStyle = ({
+	colors,
+	isDraft = false,
+}: {
+	colors?: string[];
+	isDraft?: boolean;
+}): React.CSSProperties => {
+	if (isDraft) {
+		// Draft highlights handled by Tailwind classes
+		return {};
 	}
 
-	if (indexTypes.length === 1) {
-		// Single type: solid color
-		return { backgroundColor: getColorForType(indexTypes[0]) };
+	if (!colors || colors.length === 0) {
+		// Fallback to yellow OKLCH if no colors provided
+		return { backgroundColor: "oklch(0.80 0.20 60)" };
 	}
 
-	// Multi-type: diagonal stripes
-	const colors = indexTypes.map(getColorForType);
+	if (colors.length === 1) {
+		// Single color: solid background
+		return { backgroundColor: colors[0] };
+	}
+
+	// Multiple colors: diagonal stripes
 	const stripeWidth = 100 / colors.length;
 
 	const gradientStops = colors
@@ -56,9 +60,9 @@ export const PdfHighlightBox = ({
 }: PdfHighlightBoxProps) => {
 	const { bboxes, label, text, metadata } = highlight;
 	const isDraft = metadata?.isDraft === true;
-	const indexTypes = metadata?.indexTypes as string[] | undefined;
+	const colors = metadata?.colors as string[] | undefined;
 
-	const highlightStyle = getHighlightStyle(indexTypes);
+	const highlightStyle = getHighlightStyle({ colors, isDraft });
 
 	return (
 		<>
@@ -68,7 +72,7 @@ export const PdfHighlightBox = ({
 					type="button"
 					className={`pointer-events-auto absolute cursor-pointer rounded-sm p-0 transition-opacity ${
 						isDraft
-							? "border-2 border-dashed border-blue-500 bg-blue-400/30 hover:bg-blue-400/50 dark:border-blue-400 dark:bg-blue-500/40 dark:hover:bg-blue-500/60"
+							? "border-2 border-dashed border-gray-500 bg-gray-400/30 hover:bg-gray-400/50 dark:border-gray-400 dark:bg-gray-500/40 dark:hover:bg-gray-500/60"
 							: "border-0 opacity-30 hover:opacity-50"
 					}`}
 					style={{

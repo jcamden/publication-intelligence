@@ -5,6 +5,7 @@ import {
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import type { PdfHighlight } from "../../../../../../types";
+import { mapIndexTypesToColors } from "../../../../../../utils/index-type-colors";
 import { PdfHighlightBox } from "../../pdf-highlight-box";
 
 const meta: Meta<typeof PdfHighlightBox> = {
@@ -180,7 +181,7 @@ export const Scaled: Story = {
 };
 
 /**
- * Two index types - Subject + Scripture (yellow/blue stripes)
+ * Two index types - Subject + Scripture (blue/green stripes)
  */
 export const TwoTypes: Story = {
 	globals: {
@@ -188,9 +189,13 @@ export const TwoTypes: Story = {
 		viewport: { value: "mobile1", isRotated: true },
 	},
 	render: () => {
+		const indexTypes = ["subject", "scripture"] as const;
 		const highlight: PdfHighlight = {
 			...mockHighlight,
-			metadata: { indexTypes: ["subject", "scripture"] },
+			metadata: {
+				indexTypes: [...indexTypes],
+				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+			},
 		};
 		return renderContainer(
 			<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />,
@@ -199,16 +204,20 @@ export const TwoTypes: Story = {
 };
 
 /**
- * Three index types - All types (yellow/green/blue stripes)
+ * Three index types - Subject + Author + Scripture (blue/orange/green stripes)
  */
 export const ThreeTypes: Story = {
 	globals: {
 		...defaultGlobals,
 	},
 	render: () => {
+		const indexTypes = ["subject", "author", "scripture"] as const;
 		const highlight: PdfHighlight = {
 			...mockHighlight,
-			metadata: { indexTypes: ["subject", "author", "scripture"] },
+			metadata: {
+				indexTypes: [...indexTypes],
+				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+			},
 		};
 		return renderContainer(
 			<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />,
@@ -217,7 +226,7 @@ export const ThreeTypes: Story = {
 };
 
 /**
- * Two types hover state (yellow/green stripes with hover)
+ * Three types hover state (blue/orange/green stripes with hover)
  */
 export const ThreeTypesHover: Story = {
 	globals: {
@@ -229,9 +238,13 @@ export const ThreeTypesHover: Story = {
 		},
 	},
 	render: () => {
+		const indexTypes = ["subject", "author", "scripture"] as const;
 		const highlight: PdfHighlight = {
 			...mockHighlight,
-			metadata: { indexTypes: ["subject", "author", "scripture"] },
+			metadata: {
+				indexTypes: [...indexTypes],
+				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+			},
 		};
 		return renderContainer(
 			<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />,

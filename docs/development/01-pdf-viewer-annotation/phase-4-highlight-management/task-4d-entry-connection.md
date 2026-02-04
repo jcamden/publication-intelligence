@@ -1,8 +1,12 @@
 # Task 4D: IndexEntry Connection UI
 
 **Duration:** 2 days  
-**Status:** ⚪ Not Started  
+**Status:** ✅ COMPLETE (Implemented Feb 3, 2026)  
 **Dependencies:** Task 4C completion
+
+> **✅ COMPLETED:** See [TASK-4D-COMPLETION.md](./TASK-4D-COMPLETION.md) for full implementation summary.
+
+> **Implementation Plan:** See [task-4d-implementation-plan.md](./task-4d-implementation-plan.md) for detailed breakdown into 6 subtasks (4D-1 through 4D-6).
 
 ## Problem Statement
 

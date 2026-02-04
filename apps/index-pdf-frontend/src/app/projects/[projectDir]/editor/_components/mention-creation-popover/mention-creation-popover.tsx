@@ -1,17 +1,14 @@
 "use client";
 
-import {
-	Combobox,
-	ComboboxContent,
-	ComboboxEmpty,
-	ComboboxInput,
-	ComboboxItem,
-	ComboboxList,
-} from "@pubint/yabasic/components/ui/combobox";
 import { FieldError } from "@pubint/yabasic/components/ui/field";
 import { FormInput } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
-import { useEffect, useRef, useState } from "react";
+import { useAtom, useAtomValue } from "jotai";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { indexEntriesAtom, mentionsAtom } from "../../_atoms/editor-atoms";
+import { findEntryByText } from "../../_utils/index-entry-utils";
+import { EntryCreationModal } from "../entry-creation-modal";
+import { EntryPicker } from "../entry-picker";
 
 export type BoundingBox = {
 	x: number;
@@ -27,15 +24,9 @@ export type MentionDraft = {
 	type: "text" | "region";
 };
 
-export type IndexEntry = {
-	id: string;
-	label: string;
-	parentId: string | null;
-};
-
 type MentionCreationPopoverProps = {
 	draft: MentionDraft;
-	existingEntries: IndexEntry[];
+	indexType: string; // NEW: Current index type context
 	onAttach: ({
 		entryId,
 		entryLabel,
@@ -63,17 +54,28 @@ const validateNonEmpty = ({ value }: { value: string }) => {
 
 export const MentionCreationPopover = ({
 	draft,
-	existingEntries,
+	indexType,
 	onAttach,
 	onCancel,
 }: MentionCreationPopoverProps) => {
-	const [selectedValue, setSelectedValue] = useState<IndexEntry | null>(null);
+	const [indexEntries, setIndexEntries] = useAtom(indexEntriesAtom);
+	const mentions = useAtomValue(mentionsAtom);
+
+	const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+	const [selectedEntryLabel, setSelectedEntryLabel] = useState<string | null>(
+		null,
+	);
 	const [inputValue, setInputValue] = useState("");
-	const [isOpen, setIsOpen] = useState(false);
 	const [entryError, setEntryError] = useState<string | null>(null);
-	const comboboxInputRef = useRef<HTMLInputElement>(null);
+	const [entryModalOpen, setEntryModalOpen] = useState(false);
+	const [entryModalPrefill, setEntryModalPrefill] = useState("");
 	const regionNameInputRef = useRef<HTMLInputElement>(null);
-	const allowClearInputRef = useRef(false);
+
+	// Filter entries to current index type
+	const entriesForType = useMemo(
+		() => indexEntries.filter((e) => e.indexType === indexType),
+		[indexEntries, indexType],
+	);
 
 	const form = useForm({
 		defaultValues: {
@@ -84,13 +86,28 @@ export const MentionCreationPopover = ({
 		},
 	});
 
+	// Smart autocomplete: Check for exact match on mount
+	useEffect(() => {
+		if (!draft.text) return;
+
+		const exactMatch = findEntryByText({
+			entries: entriesForType,
+			text: draft.text,
+		});
+
+		if (exactMatch) {
+			setSelectedEntryId(exactMatch.id);
+			setSelectedEntryLabel(exactMatch.label);
+			setInputValue(exactMatch.label);
+		}
+	}, [draft.text, entriesForType]);
+
 	useEffect(() => {
 		// Focus the appropriate field based on draft type
 		if (draft.type === "region") {
 			regionNameInputRef.current?.focus();
-		} else {
-			comboboxInputRef.current?.focus();
 		}
+		// Note: EntryPicker doesn't expose focus ref, so we can't auto-focus it
 	}, [draft.type]);
 
 	// Re-add escape key handler for standalone usage (tests)
@@ -108,60 +125,7 @@ export const MentionCreationPopover = ({
 	const truncatedText =
 		draft.text.length > 60 ? `${draft.text.substring(0, 60)}...` : draft.text;
 
-	const isNewEntry = !selectedValue && inputValue.trim();
-	const buttonText = isNewEntry ? "Create & Attach" : "Attach";
-
-	// Check if there are matching entries for the current input
-	const hasMatchingEntries = inputValue
-		? existingEntries.some((e) =>
-				e.label.toLowerCase().includes(inputValue.toLowerCase()),
-			)
-		: existingEntries.length > 0;
-
-	const handleValueChange = (value: IndexEntry | null) => {
-		setSelectedValue(value);
-		setEntryError(null);
-		if (value) {
-			setIsOpen(false);
-			// Explicitly clear the input when an item is selected
-			allowClearInputRef.current = true;
-			setInputValue("");
-		}
-	};
-
-	const handleOpenChange = (open: boolean) => {
-		setIsOpen(open);
-		// When dropdown closes, mark that we should preserve custom input values
-		if (!open && !selectedValue && inputValue.trim()) {
-			allowClearInputRef.current = false;
-		}
-	};
-
-	const handleInputValueChange = (value: string) => {
-		// Only prevent clearing if:
-		// 1. We're trying to set empty string
-		// 2. We haven't explicitly allowed clearing (via selection)
-		// 3. The dropdown is closed (blur scenario)
-		// 4. We have existing input
-		if (
-			value === "" &&
-			!allowClearInputRef.current &&
-			!isOpen &&
-			inputValue.trim()
-		) {
-			return;
-		}
-
-		// Reset the flag after consuming it
-		if (allowClearInputRef.current) {
-			allowClearInputRef.current = false;
-		}
-
-		setInputValue(value);
-		if (value.trim()) {
-			setEntryError(null);
-		}
-	};
+	const buttonText = "Attach";
 
 	const handleSubmit = () => {
 		let hasErrors = false;
@@ -179,9 +143,15 @@ export const MentionCreationPopover = ({
 			}
 		}
 
-		// Validate entry selection/input
-		if (!selectedValue && (!inputValue || !inputValue.trim())) {
-			setEntryError("Please select or enter an entry");
+		// Validate entry selection
+		if (!selectedEntryId) {
+			if (inputValue.trim()) {
+				setEntryError(
+					"Please select an entry or press Enter to create a new one",
+				);
+			} else {
+				setEntryError("Please select or create an entry");
+			}
 			hasErrors = true;
 		}
 
@@ -193,29 +163,20 @@ export const MentionCreationPopover = ({
 		const regionName =
 			draft.type === "region" ? form.state.values.regionName : undefined;
 
-		if (selectedValue) {
-			onAttach({
-				entryId: selectedValue.id,
-				entryLabel: selectedValue.label,
-				regionName,
-			});
-		} else if (inputValue.trim()) {
-			const newEntryId = crypto.randomUUID();
-			onAttach({
-				entryId: newEntryId,
-				entryLabel: inputValue.trim(),
-				regionName,
-			});
+		if (!selectedEntryId || !selectedEntryLabel) {
+			throw new Error("Entry ID and label are required");
 		}
+
+		onAttach({
+			entryId: selectedEntryId,
+			entryLabel: selectedEntryLabel,
+			regionName,
+		});
 	};
 
 	const handleFormSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-
-		// Allow form submission when dropdown is closed
-		if (!isOpen) {
-			handleSubmit();
-		}
+		handleSubmit();
 	};
 
 	return (
@@ -255,68 +216,23 @@ export const MentionCreationPopover = ({
 
 			<form onSubmit={handleFormSubmit}>
 				<div className="mb-3">
-					<Combobox
-						items={existingEntries.map((e) => e.label)}
-						value={selectedValue?.label ?? null}
-						onValueChange={(label) => {
-							const entry = existingEntries.find((e) => e.label === label);
-							handleValueChange(entry ?? null);
+					<EntryPicker
+						indexType={indexType}
+						entries={indexEntries}
+						mentions={mentions}
+						onValueChange={(id, label) => {
+							setSelectedEntryId(id);
+							setSelectedEntryLabel(label);
+							setEntryError(null);
+						}}
+						onCreateNew={(label) => {
+							setEntryModalPrefill(label);
+							setEntryModalOpen(true);
 						}}
 						inputValue={inputValue}
-						onInputValueChange={handleInputValueChange}
-						open={isOpen}
-						onOpenChange={handleOpenChange}
-					>
-						<ComboboxInput
-							ref={comboboxInputRef}
-							placeholder="Search or create..."
-							className="w-full"
-							onKeyDown={(e) => {
-								if (e.key === "Enter") {
-									// If dropdown is closed, submit the form
-									if (!isOpen) {
-										e.preventDefault();
-										handleSubmit();
-									}
-									// If dropdown is open with no matches, close and submit
-									else if (!hasMatchingEntries && inputValue.trim()) {
-										e.preventDefault();
-										setIsOpen(false);
-										setTimeout(() => handleSubmit(), 50);
-									}
-									// Otherwise let combobox handle it (selection)
-								}
-							}}
-						/>
-						<ComboboxContent>
-							<ComboboxEmpty>
-								{inputValue
-									? `Press enter to create entry for "${inputValue}"`
-									: "Type to search entries"}
-							</ComboboxEmpty>
-							<ComboboxList>
-								{(label) => {
-									if (!label) return null;
-
-									const entry = existingEntries.find((e) => e.label === label);
-									if (!entry) return null;
-
-									const parent = existingEntries.find(
-										(e) => e.id === entry.parentId,
-									);
-									const displayLabel = parent
-										? `${parent.label} → ${entry.label}`
-										: entry.label;
-
-									return (
-										<ComboboxItem key={entry.id} value={label}>
-											{displayLabel}
-										</ComboboxItem>
-									);
-								}}
-							</ComboboxList>
-						</ComboboxContent>
-					</Combobox>
+						onInputValueChange={setInputValue}
+						placeholder="Search or create..."
+					/>
 					{entryError && <FieldError errors={[{ message: entryError }]} />}
 				</div>
 
@@ -337,6 +253,31 @@ export const MentionCreationPopover = ({
 					</button>
 				</div>
 			</form>
+
+			<EntryCreationModal
+				open={entryModalOpen}
+				onClose={() => {
+					setEntryModalOpen(false);
+					setEntryModalPrefill("");
+				}}
+				indexType={indexType}
+				existingEntries={entriesForType}
+				prefillLabel={entryModalPrefill}
+				onCreate={(entry) => {
+					const newEntry = {
+						...entry,
+						id: crypto.randomUUID(),
+					};
+					setIndexEntries((prev) => [...prev, newEntry]);
+
+					// Auto-select the new entry
+					setSelectedEntryId(newEntry.id);
+					setSelectedEntryLabel(newEntry.label);
+					setInputValue(newEntry.label);
+
+					return newEntry;
+				}}
+			/>
 		</>
 	);
 };

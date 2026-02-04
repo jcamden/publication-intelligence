@@ -10,3 +10,51 @@
 @source "../";
 @source "../../../packages/yaboujee/src";
 @source "../../../packages/yabasic/src";
+
+/* Index type colors - dynamically injected via JavaScript */
+/* These CSS variables are set by the color configuration system */
+@theme {
+	--color-author: var(--color-author, oklch(0.75 0.15 30));
+	--color-author-100: var(--color-author-100, oklch(0.9 0.15 30));
+	--color-author-200: var(--color-author-200, oklch(0.85 0.15 30));
+	--color-author-300: var(--color-author-300, oklch(0.8 0.15 30));
+	--color-author-400: var(--color-author-400, oklch(0.75 0.15 30));
+	--color-author-500: var(--color-author-500, oklch(0.7 0.15 30));
+	--color-author-600: var(--color-author-600, oklch(0.65 0.15 30));
+	--color-author-700: var(--color-author-700, oklch(0.6 0.15 30));
+	--color-author-800: var(--color-author-800, oklch(0.55 0.15 30));
+	--color-author-900: var(--color-author-900, oklch(0.5 0.15 30));
+
+	--color-subject: var(--color-subject, oklch(0.75 0.15 230));
+	--color-subject-100: var(--color-subject-100, oklch(0.9 0.15 230));
+	--color-subject-200: var(--color-subject-200, oklch(0.85 0.15 230));
+	--color-subject-300: var(--color-subject-300, oklch(0.8 0.15 230));
+	--color-subject-400: var(--color-subject-400, oklch(0.75 0.15 230));
+	--color-subject-500: var(--color-subject-500, oklch(0.7 0.15 230));
+	--color-subject-600: var(--color-subject-600, oklch(0.65 0.15 230));
+	--color-subject-700: var(--color-subject-700, oklch(0.6 0.15 230));
+	--color-subject-800: var(--color-subject-800, oklch(0.55 0.15 230));
+	--color-subject-900: var(--color-subject-900, oklch(0.5 0.15 230));
+
+	--color-scripture: var(--color-scripture, oklch(0.75 0.15 120));
+	--color-scripture-100: var(--color-scripture-100, oklch(0.9 0.15 120));
+	--color-scripture-200: var(--color-scripture-200, oklch(0.85 0.15 120));
+	--color-scripture-300: var(--color-scripture-300, oklch(0.8 0.15 120));
+	--color-scripture-400: var(--color-scripture-400, oklch(0.75 0.15 120));
+	--color-scripture-500: var(--color-scripture-500, oklch(0.7 0.15 120));
+	--color-scripture-600: var(--color-scripture-600, oklch(0.65 0.15 120));
+	--color-scripture-700: var(--color-scripture-700, oklch(0.6 0.15 120));
+	--color-scripture-800: var(--color-scripture-800, oklch(0.55 0.15 120));
+	--color-scripture-900: var(--color-scripture-900, oklch(0.5 0.15 120));
+
+	--color-context: var(--color-context, oklch(0.75 0.15 340));
+	--color-context-100: var(--color-context-100, oklch(0.9 0.15 340));
+	--color-context-200: var(--color-context-200, oklch(0.85 0.15 340));
+	--color-context-300: var(--color-context-300, oklch(0.8 0.15 340));
+	--color-context-400: var(--color-context-400, oklch(0.75 0.15 340));
+	--color-context-500: var(--color-context-500, oklch(0.7 0.15 340));
+	--color-context-600: var(--color-context-600, oklch(0.65 0.15 340));
+	--color-context-700: var(--color-context-700, oklch(0.6 0.15 340));
+	--color-context-800: var(--color-context-800, oklch(0.55 0.15 340));
+	--color-context-900: var(--color-context-900, oklch(0.5 0.15 340));
+}

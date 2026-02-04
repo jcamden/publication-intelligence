@@ -1,7 +1,9 @@
+import { defaultGlobals } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { MentionCreationPopover } from "../../mention-creation-popover";
-import { mockDraft, mockIndexEntries, mockRegionDraft } from "../shared";
+import { mockDraft, mockRegionDraft } from "../shared";
+import { TestDecorator } from "../test-decorator";
 
 const meta = {
 	title:
@@ -15,23 +17,16 @@ const meta = {
 			focus: false,
 		},
 	},
+	decorators: [TestDecorator],
 } satisfies Meta<typeof MentionCreationPopover>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const defaultGlobals = {
-	theme: "light" as const,
-	viewport: undefined as
-		| { value: string; isRotated?: boolean }
-		| string
-		| undefined,
-};
-
 export const Default: Story = {
 	args: {
 		draft: mockDraft,
-		existingEntries: mockIndexEntries,
+		indexType: "subject",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -59,17 +54,25 @@ export const WithSearchResults: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const input = canvas.getByPlaceholderText("Search or create...");
+		await userEvent.clear(input);
 		await userEvent.type(input, "Phil", { delay: 10 });
 		await new Promise((resolve) => setTimeout(resolve, 300));
 	},
 };
 
 export const WithSearchResultsDark: Story = {
-	...WithSearchResults,
+	args: Default.args,
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
 		viewport: { value: "mobile1" },
+	},
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		const input = canvas.getByPlaceholderText("Search or create...");
+		await userEvent.clear(input);
+		await userEvent.type(input, "Phil", { delay: 10 });
+		await new Promise((resolve) => setTimeout(resolve, 300));
 	},
 };
 
@@ -82,6 +85,7 @@ export const NoResults: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const input = canvas.getByPlaceholderText("Search or create...");
+		await userEvent.clear(input);
 		await userEvent.type(input, "Nonexistent", { delay: 10 });
 		await new Promise((resolve) => setTimeout(resolve, 300));
 	},
@@ -90,7 +94,7 @@ export const NoResults: Story = {
 export const RegionDraft: Story = {
 	args: {
 		draft: mockRegionDraft,
-		existingEntries: mockIndexEntries,
+		indexType: "subject",
 		onAttach: () => {},
 		onCancel: () => {},
 	},

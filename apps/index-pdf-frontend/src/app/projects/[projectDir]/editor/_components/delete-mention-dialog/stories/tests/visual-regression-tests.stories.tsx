@@ -1,3 +1,4 @@
+import { defaultGlobals } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { DeleteMentionDialog } from "../../delete-mention-dialog";
 
@@ -12,11 +13,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof DeleteMentionDialog>;
-
-const defaultGlobals = {
-	theme: "light" as const,
-	backgrounds: { value: "light" },
-};
 
 export const Default: Story = {
 	args: {

@@ -1,5 +1,7 @@
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
+import type { ColorConfig } from "../_types/color-config";
+import { DEFAULT_COLOR_CONFIG } from "../_types/color-config";
 
 // Section IDs
 export type SectionId =
@@ -221,3 +223,87 @@ export const activeResponsiveSectionAtom = atom<SectionId | null>(null);
 export const currentPageAtom = atomWithStorage("pdf-current-page", 1);
 export const totalPagesAtom = atom(0); // Not persisted - recalculated on load
 export const zoomAtom = atomWithStorage("pdf-zoom", 1.7);
+
+// IndexEntry and IndexType atoms (not persisted - document-specific)
+// These are initialized in the Editor component with mock data
+// TODO Phase 5: Replace with tRPC query data
+export const indexTypesAtom = atom<
+	Array<{
+		id: string;
+		name: string;
+		label: string;
+		color: string;
+		ordinal: number;
+		visible: boolean;
+	}>
+>([]);
+
+export const indexEntriesAtom = atom<
+	Array<{
+		id: string;
+		indexType: string;
+		label: string;
+		parentId: string | null;
+		metadata?: {
+			aliases?: string[];
+			sortKey?: string;
+		};
+	}>
+>([]);
+
+export const mentionsAtom = atom<
+	Array<{
+		id: string;
+		pageNumber: number;
+		text: string;
+		bboxes: Array<{
+			x: number;
+			y: number;
+			width: number;
+			height: number;
+		}>;
+		entryId: string;
+		entryLabel: string;
+		indexTypes: string[];
+		type: "text" | "region";
+		createdAt: Date;
+	}>
+>([]);
+
+// Color configuration for index types (persisted)
+// Migration: Old format had { hue, chroma, lightness }, new format is just { hue }
+export const colorConfigAtom = atomWithStorage<ColorConfig>(
+	"color-config",
+	DEFAULT_COLOR_CONFIG,
+	{
+		getItem: (key, initialValue) => {
+			const stored = localStorage.getItem(key);
+			if (!stored) return initialValue;
+			try {
+				const parsed = JSON.parse(stored);
+				// Migrate old format to new format by extracting only hue
+				const migrated: ColorConfig = {
+					author: {
+						hue: parsed.author?.hue ?? DEFAULT_COLOR_CONFIG.author.hue,
+					},
+					subject: {
+						hue: parsed.subject?.hue ?? DEFAULT_COLOR_CONFIG.subject.hue,
+					},
+					scripture: {
+						hue: parsed.scripture?.hue ?? DEFAULT_COLOR_CONFIG.scripture.hue,
+					},
+					context: {
+						hue: parsed.context?.hue ?? DEFAULT_COLOR_CONFIG.context.hue,
+					},
+				};
+				return migrated;
+			} catch {
+				return initialValue;
+			}
+		},
+		setItem: (key, value) => {
+			localStorage.setItem(key, JSON.stringify(value));
+		},
+		removeItem: (key) => localStorage.removeItem(key),
+	},
+);

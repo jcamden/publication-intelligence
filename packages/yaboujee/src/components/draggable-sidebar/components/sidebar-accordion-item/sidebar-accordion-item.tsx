@@ -78,15 +78,19 @@ export const SidebarAccordionItem = ({
 			type = "author";
 		} else if (value.includes("scripture")) {
 			type = "scripture";
+		} else if (value.includes("context")) {
+			type = "context";
 		}
 
 		switch (type) {
 			case "subject":
-				return "bg-yellow-100/50 dark:bg-yellow-600/20";
+				return "bg-subject-200 dark:bg-subject-700";
 			case "author":
-				return "bg-blue-100/50 dark:bg-blue-800/20";
+				return "bg-author-200 dark:bg-author-700";
 			case "scripture":
-				return "bg-green-100/50 dark:bg-green-800/20";
+				return "bg-scripture-200 dark:bg-scripture-700";
+			case "context":
+				return "bg-context-200 dark:bg-context-700";
 			default:
 				return "bg-neutral-100/50";
 		}

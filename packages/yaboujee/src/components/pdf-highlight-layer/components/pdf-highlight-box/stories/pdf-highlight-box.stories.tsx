@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import type { PdfHighlight } from "../../../../../types";
+import { mapIndexTypesToColors } from "../../../../../utils/index-type-colors";
 import { PdfHighlightBox } from "../pdf-highlight-box";
 
 const meta: Meta<typeof PdfHighlightBox> = {
@@ -138,6 +139,154 @@ export const MultipleHighlights: Story = {
 						onClick={fn()}
 					/>
 				))}
+			</div>
+		);
+	},
+};
+
+/**
+ * Single index type - Subject (OKLCH blue)
+ */
+export const SingleTypeSubject: Story = {
+	render: () => {
+		const indexTypes = ["subject"] as const;
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: {
+				indexTypes: [...indexTypes],
+				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+			},
+		};
+
+		return (
+			<div
+				style={{
+					position: "relative",
+					width: "400px",
+					height: "200px",
+					border: "1px solid #ccc",
+					background: "#f5f5f5",
+				}}
+			>
+				<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />
+			</div>
+		);
+	},
+};
+
+/**
+ * Single index type - Author (OKLCH orange)
+ */
+export const SingleTypeAuthor: Story = {
+	render: () => {
+		const indexTypes = ["author"] as const;
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: {
+				indexTypes: [...indexTypes],
+				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+			},
+		};
+
+		return (
+			<div
+				style={{
+					position: "relative",
+					width: "400px",
+					height: "200px",
+					border: "1px solid #ccc",
+					background: "#f5f5f5",
+				}}
+			>
+				<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />
+			</div>
+		);
+	},
+};
+
+/**
+ * Multi-type: Subject + Author (Blue + Orange diagonal stripes)
+ */
+export const MultiTypeSubjectAuthor: Story = {
+	render: () => {
+		const indexTypes = ["subject", "author"] as const;
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: {
+				indexTypes: [...indexTypes],
+				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+			},
+		};
+
+		return (
+			<div
+				style={{
+					position: "relative",
+					width: "400px",
+					height: "200px",
+					border: "1px solid #ccc",
+					background: "#f5f5f5",
+				}}
+			>
+				<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />
+			</div>
+		);
+	},
+};
+
+/**
+ * Multi-type: Three types (Subject + Author + Scripture diagonal stripes)
+ */
+export const MultiTypeThreeTypes: Story = {
+	render: () => {
+		const indexTypes = ["subject", "author", "scripture"] as const;
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: {
+				indexTypes: [...indexTypes],
+				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+			},
+		};
+
+		return (
+			<div
+				style={{
+					position: "relative",
+					width: "400px",
+					height: "200px",
+					border: "1px solid #ccc",
+					background: "#f5f5f5",
+				}}
+			>
+				<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />
+			</div>
+		);
+	},
+};
+
+/**
+ * Draft highlight (gray dashed border)
+ */
+export const Draft: Story = {
+	render: () => {
+		const highlight: PdfHighlight = {
+			...mockHighlight,
+			metadata: {
+				isDraft: true,
+			},
+		};
+
+		return (
+			<div
+				style={{
+					position: "relative",
+					width: "400px",
+					height: "200px",
+					border: "1px solid #ccc",
+					background: "#f5f5f5",
+				}}
+			>
+				<PdfHighlightBox highlight={highlight} scale={1} onClick={fn()} />
 			</div>
 		);
 	},

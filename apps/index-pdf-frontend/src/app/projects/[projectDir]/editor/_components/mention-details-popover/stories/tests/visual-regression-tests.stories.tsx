@@ -1,3 +1,4 @@
+import { defaultGlobals } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { MentionDetailsPopover } from "../../mention-details-popover";
@@ -23,11 +24,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof MentionDetailsPopover>;
-
-const defaultGlobals = {
-	theme: "light" as const,
-	backgrounds: { value: "light" },
-};
 
 const defaultMention = {
 	id: "mention-1",

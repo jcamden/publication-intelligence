@@ -9,9 +9,13 @@ import {
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import {
+	colorConfigAtom,
 	currentPageAtom,
+	indexEntriesAtom,
+	indexTypesAtom,
 	MIN_PDF_WIDTH,
 	MIN_SIDEBAR_WIDTH,
+	mentionsAtom,
 	pageSidebarCollapsedAtom,
 	pageSidebarWidthAtom,
 	pdfSectionLastWidthAtom,
@@ -22,10 +26,14 @@ import {
 	zoomAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useHydrated } from "@/app/projects/[projectDir]/editor/_hooks/use-hydrated";
+import { mockIndexEntries } from "../../_mocks/index-entries";
+import { mockIndexTypes } from "../../_mocks/index-types";
+import type { IndexTypeName } from "../../_types/color-config";
+import { formatOklch } from "../../_types/color-config";
+import { ColorConfigProvider } from "../color-config-provider";
 import { DeleteMentionDialog } from "../delete-mention-dialog";
 import {
 	type BoundingBox,
-	type IndexEntry,
 	MentionCreationPopover,
 } from "../mention-creation-popover";
 import { MentionDetailsPopover } from "../mention-details-popover";
@@ -162,24 +170,9 @@ const mockHighlights: PdfHighlight[] = [
 ];
 
 /**
- * Mock index entries for Phase 4B testing - Autocomplete data
- *
- * TODO Phase 5: Replace with real data from API
+ * Mock index entries and types are imported from _mocks/
+ * TODO Phase 5: Replace with real data from tRPC API
  */
-const mockIndexEntries: IndexEntry[] = [
-	{ id: "1", label: "Kant, Immanuel", parentId: null },
-	{ id: "2", label: "Critique of Pure Reason", parentId: "1" },
-	{ id: "3", label: "Categorical Imperative", parentId: "1" },
-	{ id: "4", label: "Philosophy", parentId: null },
-	{ id: "5", label: "Metaphysics", parentId: "4" },
-	{ id: "6", label: "Epistemology", parentId: "4" },
-	{ id: "7", label: "Ethics", parentId: "4" },
-	{ id: "8", label: "Aristotle", parentId: null },
-	{ id: "9", label: "Nicomachean Ethics", parentId: "8" },
-	{ id: "10", label: "Plato", parentId: null },
-	{ id: "11", label: "The Republic", parentId: "10" },
-	{ id: "12", label: "Theory of Forms", parentId: "10" },
-];
 
 export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 	const hydrated = useHydrated();
@@ -193,16 +186,36 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 		indexType: string | null;
 	}>({ type: null, indexType: null });
 
-	// Mention state management
+	// IndexType and IndexEntry state management via Jotai atoms
 	// Phase 5 TODO: Replace with tRPC query
-	// const mentionsQuery = trpc.mention.listByDocument.useQuery({ documentId });
-	// const mentions = mentionsQuery.data ?? [];
-	//
-	// Current Phase 4 behavior:
-	// - Mentions can be initialized for testing (initialMentions prop)
-	// - handleDraftConfirmed simulates API call, then adds to state
-	// - In Phase 5, this will be replaced with real API + optimistic updates
-	const [mentions, setMentions] = useState<Mention[]>(initialMentions);
+	// const indexTypesQuery = trpc.indexType.list.useQuery({ projectId });
+	// const indexEntriesQuery = trpc.indexEntry.list.useQuery({ projectId });
+	const [indexTypes, setIndexTypes] = useAtom(indexTypesAtom);
+	const [indexEntries, setIndexEntries] = useAtom(indexEntriesAtom);
+	const [mentions, setMentions] = useAtom(mentionsAtom);
+	const colorConfig = useAtomValue(colorConfigAtom);
+
+	// Initialize atoms with mock data on mount (only if not already set)
+	useEffect(() => {
+		if (indexTypes.length === 0) {
+			setIndexTypes(mockIndexTypes);
+		}
+		if (indexEntries.length === 0) {
+			setIndexEntries(mockIndexEntries);
+		}
+		if (mentions.length === 0 && initialMentions.length > 0) {
+			setMentions(initialMentions);
+		}
+	}, [
+		indexTypes.length,
+		indexEntries.length,
+		mentions.length,
+		initialMentions,
+		setIndexTypes,
+		setIndexEntries,
+		setMentions,
+	]);
+
 	const [clearDraftTrigger, setClearDraftTrigger] = useState(0);
 
 	// Mention details popover state
@@ -314,7 +327,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 			setActiveAction({ type: null, indexType: null });
 			setClearDraftTrigger((prev) => prev + 1);
 		},
-		[activeAction.indexType],
+		[activeAction.indexType, setMentions],
 	);
 
 	const handleDraftCancelled = useCallback(() => {
@@ -406,7 +419,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 				),
 			);
 		},
-		[],
+		[setMentions],
 	);
 
 	const handleDeleteMention = useCallback(
@@ -432,7 +445,7 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 		// Remove mention after server confirms deletion
 		setMentions((prev) => prev.filter((m) => m.id !== mentionToDelete));
 		setMentionToDelete(null);
-	}, [mentionToDelete]);
+	}, [mentionToDelete, setMentions]);
 
 	const handleCloseDetailsPopover = useCallback(() => {
 		setSelectedMention(null);
@@ -504,16 +517,39 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 	const onlyPageVisible = projectCollapsed && !pdfVisible && !pageCollapsed;
 
 	// Convert mentions to PdfHighlight format for rendering
-	const mentionHighlights: PdfHighlight[] = mentions.map((mention) => ({
-		id: mention.id,
-		pageNumber: mention.pageNumber,
-		label: mention.entryLabel,
-		text: mention.text,
-		bboxes: mention.bboxes,
-		metadata: {
-			indexTypes: mention.indexTypes,
-		},
-	}));
+	const mentionHighlights: PdfHighlight[] = mentions.map((mention) => {
+		// Map mention.indexTypes to OKLCH colors from colorConfig
+		const colors = mention.indexTypes
+			.map((typeName) => {
+				// Get the configured hue for this index type
+				const typeColor = colorConfig[typeName as IndexTypeName];
+				if (!typeColor) return null;
+
+				// Generate OKLCH color with programmatic lightness/chroma for highlights
+				// Using lighter, more saturated values for better visibility on PDF
+				return formatOklch({
+					hue: typeColor.hue,
+					chroma: 0.2, // Slightly more saturated than base for visibility
+					lightness: 0.8, // Lighter for better contrast on PDF
+				});
+			})
+			.filter((color): color is string => color !== null);
+
+		return {
+			id: mention.id,
+			pageNumber: mention.pageNumber,
+			label: mention.entryLabel,
+			text: mention.text,
+			bboxes: mention.bboxes,
+			metadata: {
+				indexTypes: mention.indexTypes,
+				colors:
+					colors.length > 0
+						? colors
+						: [formatOklch({ hue: 60, chroma: 0.2, lightness: 0.8 })], // Fallback to yellow
+			},
+		};
+	});
 
 	// Combine mock highlights with real mentions
 	const allHighlights = [...mockHighlights, ...mentionHighlights];
@@ -524,150 +560,152 @@ export const Editor = ({ fileUrl, initialMentions = [] }: EditorProps) => {
 	}
 
 	return (
-		<div className="relative h-full w-full flex flex-col">
-			{/* Fixed top bar row - all three bars in one row */}
-			<div className="flex-shrink-0 flex justify-between items-center p-1 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
-				<ProjectBar />
-				<PdfViewerToolbar
-					currentPage={currentPage}
-					totalPages={totalPages}
-					zoom={zoom}
-					onPageChange={handlePageChange}
-					onZoomChange={handleZoomChange}
-					pdfVisible={pdfVisible}
-					onPdfVisibilityToggle={handlePdfVisibilityToggle}
-					showPdfToggle={true}
-				/>
-				<PageBar />
-			</div>
-
-			{/* Resizable sections row */}
-			<div className="flex-1 flex min-h-0">
-				{/* Project sidebar - always rendered, transitions to 0 width when collapsed */}
-				{onlyProjectVisible ? (
-					<div className="flex-1 min-w-0">
-						<ProjectSidebar />
-					</div>
-				) : (
-					<ResizableSidebar
-						side="left"
-						widthAtom={projectSidebarWidthAtom}
-						isCollapsed={projectCollapsed}
-					>
-						<ProjectSidebar />
-					</ResizableSidebar>
-				)}
-
-				{/* PDF section - conditional */}
-				{pdfVisible && (
-					<div className="flex-1 min-w-0 h-full relative">
-						<PdfViewer
-							url={fileUrl}
-							scale={zoom}
-							currentPage={currentPage}
-							onPageChange={handlePageChange}
-							onLoadSuccess={handleLoadSuccess}
-							highlights={allHighlights}
-							onHighlightClick={handleHighlightClick}
-							textLayerInteractive={activeAction.type === "select-text"}
-							regionDrawingActive={activeAction.type === "draw-region"}
-							onDraftConfirmed={handleDraftConfirmed}
-							onDraftCancelled={handleDraftCancelled}
-							clearDraftTrigger={clearDraftTrigger}
-							renderDraftPopover={({
-								pageNumber,
-								text,
-								bboxes,
-								onConfirm,
-								onCancel,
-							}) => (
-								<MentionCreationPopover
-									draft={{
-										pageNumber,
-										text,
-										bboxes,
-										type: text ? "text" : "region",
-									}}
-									existingEntries={mockIndexEntries}
-									onAttach={onConfirm}
-									onCancel={onCancel}
-								/>
-							)}
-						/>
-					</div>
-				)}
-
-				{/* Page sidebar - always rendered, transitions to 0 width when collapsed */}
-				{onlyPageVisible ? (
-					<div className="flex-1 min-w-0">
-						<PageSidebar
-							activeAction={activeAction}
-							onSelectText={handleSelectText}
-							onDrawRegion={handleDrawRegion}
-							mentions={mentions}
-							currentPage={currentPage}
-							onMentionClick={handleMentionClickFromSidebar}
-						/>
-					</div>
-				) : (
-					<ResizableSidebar
-						side="right"
-						widthAtom={pageSidebarWidthAtom}
-						isCollapsed={pageCollapsed}
-					>
-						<PageSidebar
-							activeAction={activeAction}
-							onSelectText={handleSelectText}
-							onDrawRegion={handleDrawRegion}
-							mentions={mentions}
-							currentPage={currentPage}
-							onMentionClick={handleMentionClickFromSidebar}
-						/>
-					</ResizableSidebar>
-				)}
-			</div>
-
-			{/* Windows overlay */}
-			<WindowManager
-				activeAction={activeAction}
-				onSelectText={handleSelectText}
-				onDrawRegion={handleDrawRegion}
-				mentions={mentions}
-				currentPage={currentPage}
-				onMentionClick={handleMentionClickFromSidebar}
-			/>
-
-			{/* Mention details popover */}
-			{selectedMention && detailsAnchor && (
-				<PdfAnnotationPopover
-					anchorElement={detailsAnchor}
-					isOpen={!!detailsAnchor}
-					onCancel={handleCloseDetailsPopover}
-				>
-					<MentionDetailsPopover
-						mention={{
-							id: selectedMention.id,
-							pageNumber: selectedMention.pageNumber,
-							text: selectedMention.text,
-							entryLabel: selectedMention.entryLabel,
-							entryId: selectedMention.entryId,
-							indexTypes: selectedMention.indexTypes,
-							type: selectedMention.type,
-						}}
-						existingEntries={mockIndexEntries}
-						onDelete={handleDeleteMention}
-						onClose={handleMentionDetailsClose}
-						onCancel={handleCloseDetailsPopover}
+		<ColorConfigProvider>
+			<div className="relative h-full w-full flex flex-col">
+				{/* Fixed top bar row - all three bars in one row */}
+				<div className="flex-shrink-0 flex justify-between items-center p-1 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+					<ProjectBar />
+					<PdfViewerToolbar
+						currentPage={currentPage}
+						totalPages={totalPages}
+						zoom={zoom}
+						onPageChange={handlePageChange}
+						onZoomChange={handleZoomChange}
+						pdfVisible={pdfVisible}
+						onPdfVisibilityToggle={handlePdfVisibilityToggle}
+						showPdfToggle={true}
 					/>
-				</PdfAnnotationPopover>
-			)}
+					<PageBar />
+				</div>
 
-			{/* Delete confirmation dialog */}
-			<DeleteMentionDialog
-				isOpen={showDeleteConfirm}
-				onOpenChange={({ open }) => setShowDeleteConfirm(open)}
-				onConfirm={handleConfirmDelete}
-			/>
-		</div>
+				{/* Resizable sections row */}
+				<div className="flex-1 flex min-h-0">
+					{/* Project sidebar - always rendered, transitions to 0 width when collapsed */}
+					{onlyProjectVisible ? (
+						<div className="flex-1 min-w-0">
+							<ProjectSidebar />
+						</div>
+					) : (
+						<ResizableSidebar
+							side="left"
+							widthAtom={projectSidebarWidthAtom}
+							isCollapsed={projectCollapsed}
+						>
+							<ProjectSidebar />
+						</ResizableSidebar>
+					)}
+
+					{/* PDF section - conditional */}
+					{pdfVisible && (
+						<div className="flex-1 min-w-0 h-full relative">
+							<PdfViewer
+								url={fileUrl}
+								scale={zoom}
+								currentPage={currentPage}
+								onPageChange={handlePageChange}
+								onLoadSuccess={handleLoadSuccess}
+								highlights={allHighlights}
+								onHighlightClick={handleHighlightClick}
+								textLayerInteractive={activeAction.type === "select-text"}
+								regionDrawingActive={activeAction.type === "draw-region"}
+								onDraftConfirmed={handleDraftConfirmed}
+								onDraftCancelled={handleDraftCancelled}
+								clearDraftTrigger={clearDraftTrigger}
+								renderDraftPopover={({
+									pageNumber,
+									text,
+									bboxes,
+									onConfirm,
+									onCancel,
+								}) => (
+									<MentionCreationPopover
+										draft={{
+											pageNumber,
+											text,
+											bboxes,
+											type: text ? "text" : "region",
+										}}
+										indexType={activeAction.indexType || "subject"}
+										onAttach={onConfirm}
+										onCancel={onCancel}
+									/>
+								)}
+							/>
+						</div>
+					)}
+
+					{/* Page sidebar - always rendered, transitions to 0 width when collapsed */}
+					{onlyPageVisible ? (
+						<div className="flex-1 min-w-0">
+							<PageSidebar
+								activeAction={activeAction}
+								onSelectText={handleSelectText}
+								onDrawRegion={handleDrawRegion}
+								mentions={mentions}
+								currentPage={currentPage}
+								onMentionClick={handleMentionClickFromSidebar}
+							/>
+						</div>
+					) : (
+						<ResizableSidebar
+							side="right"
+							widthAtom={pageSidebarWidthAtom}
+							isCollapsed={pageCollapsed}
+						>
+							<PageSidebar
+								activeAction={activeAction}
+								onSelectText={handleSelectText}
+								onDrawRegion={handleDrawRegion}
+								mentions={mentions}
+								currentPage={currentPage}
+								onMentionClick={handleMentionClickFromSidebar}
+							/>
+						</ResizableSidebar>
+					)}
+				</div>
+
+				{/* Windows overlay */}
+				<WindowManager
+					activeAction={activeAction}
+					onSelectText={handleSelectText}
+					onDrawRegion={handleDrawRegion}
+					mentions={mentions}
+					currentPage={currentPage}
+					onMentionClick={handleMentionClickFromSidebar}
+				/>
+
+				{/* Mention details popover */}
+				{selectedMention && detailsAnchor && (
+					<PdfAnnotationPopover
+						anchorElement={detailsAnchor}
+						isOpen={!!detailsAnchor}
+						onCancel={handleCloseDetailsPopover}
+					>
+						<MentionDetailsPopover
+							mention={{
+								id: selectedMention.id,
+								pageNumber: selectedMention.pageNumber,
+								text: selectedMention.text,
+								entryLabel: selectedMention.entryLabel,
+								entryId: selectedMention.entryId,
+								indexTypes: selectedMention.indexTypes,
+								type: selectedMention.type,
+							}}
+							existingEntries={mockIndexEntries}
+							onDelete={handleDeleteMention}
+							onClose={handleMentionDetailsClose}
+							onCancel={handleCloseDetailsPopover}
+						/>
+					</PdfAnnotationPopover>
+				)}
+
+				{/* Delete confirmation dialog */}
+				<DeleteMentionDialog
+					isOpen={showDeleteConfirm}
+					onOpenChange={({ open }) => setShowDeleteConfirm(open)}
+					onConfirm={handleConfirmDelete}
+				/>
+			</div>
+		</ColorConfigProvider>
 	);
 };

@@ -4,9 +4,11 @@ import {
 } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { awaitHighlights } from "@/test-helpers/interaction-steps";
 import type { Mention } from "../../editor";
 import { Editor } from "../../editor";
 import { SAMPLE_PDF_URL } from "../shared";
+import { TestDecorator } from "../test-decorator";
 
 // Mock mentions with unique IDs to avoid conflicts with mockHighlights
 // These use "mention-" prefix to distinguish them from the mockHighlights in Editor
@@ -79,24 +81,6 @@ const MOCK_MENTIONS: Mention[] = [
 	},
 ];
 
-const awaitHighlights = async ({
-	canvas,
-}: {
-	canvas: ReturnType<typeof within>;
-}) => {
-	// Wait for highlights to render at 50% zoom
-	await waitFor(
-		async () => {
-			const highlightLayer = canvas.getByTestId("pdf-highlight-layer");
-			const highlights = highlightLayer.querySelectorAll(
-				"[data-testid^='highlight-']",
-			);
-			await expect(highlights.length).toBeGreaterThan(0);
-		},
-		{ timeout: 10000 },
-	);
-};
-
 // Shared helper: Click a highlight and wait for details popover
 const clickHighlightAndWaitForPopover = async ({
 	canvas,
@@ -135,6 +119,7 @@ const meta: Meta<typeof Editor> = {
 		...interactionTestConfig,
 		layout: "fullscreen",
 	},
+	decorators: [TestDecorator],
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
 		initialMentions: MOCK_MENTIONS,

@@ -155,12 +155,20 @@ const parseStoryFile = ({ filePath }: { filePath: string }): StoryInfo => {
 					globals.theme = themeMatch[1];
 				}
 
-				// Extract viewport.value (handles nested object)
+				// Extract viewport.value (handles nested object with optional isRotated)
 				const viewportMatch = globalsStr.match(
-					/viewport:\s*\{\s*value:\s*["']([^"']+)["']\s*\}/,
+					/viewport:\s*\{\s*value:\s*["']([^"']+)["']/,
 				);
 				if (viewportMatch) {
 					globals["viewport.value"] = viewportMatch[1];
+				}
+
+				// Extract viewport.isRotated if present
+				const isRotatedMatch = globalsStr.match(
+					/viewport:\s*\{[^}]*isRotated:\s*(true|false)/,
+				);
+				if (isRotatedMatch && isRotatedMatch[1] === "true") {
+					globals["viewport.isRotated"] = true;
 				}
 			} catch (e) {
 				// If parsing fails, continue without globals
@@ -228,12 +236,20 @@ const parseStoryFile = ({ filePath }: { filePath: string }): StoryInfo => {
 								globals.theme = themeMatch[1];
 							}
 
-							// Extract viewport.value
+							// Extract viewport.value (handles optional isRotated)
 							const viewportMatch = globalsStr.match(
-								/viewport:\s*\{\s*value:\s*["']([^"']+)["']\s*\}/,
+								/viewport:\s*\{\s*value:\s*["']([^"']+)["']/,
 							);
 							if (viewportMatch) {
 								globals["viewport.value"] = viewportMatch[1];
+							}
+
+							// Extract viewport.isRotated if present
+							const isRotatedMatch = globalsStr.match(
+								/viewport:\s*\{[^}]*isRotated:\s*(true|false)/,
+							);
+							if (isRotatedMatch && isRotatedMatch[1] === "true") {
+								globals["viewport.isRotated"] = true;
 							}
 						} catch (e) {
 							console.warn(
@@ -296,9 +312,18 @@ const generatePlaywrightTest = ({
 
 			// Check if viewport needs to be set
 			const viewportValue = globals?.["viewport.value"] as string | undefined;
-			const viewportSetup = viewportValue
-				? `\n\t\tawait page.setViewportSize({ width: ${VIEWPORT_SIZES[viewportValue]?.width || 375}, height: ${VIEWPORT_SIZES[viewportValue]?.height || 667} });`
-				: "";
+			const isRotated = globals?.["viewport.isRotated"] as boolean | undefined;
+
+			let viewportSetup = "";
+			if (viewportValue) {
+				const size = VIEWPORT_SIZES[viewportValue] || {
+					width: 375,
+					height: 667,
+				};
+				const width = isRotated ? size.height : size.width;
+				const height = isRotated ? size.width : size.height;
+				viewportSetup = `\n\t\tawait page.setViewportSize({ width: ${width}, height: ${height} });`;
+			}
 
 			return `	test("${exportName}", async ({ page }) => {${viewportSetup}
 		await page.goto(
