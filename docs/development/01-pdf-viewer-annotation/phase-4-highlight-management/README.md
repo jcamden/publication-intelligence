@@ -70,9 +70,9 @@ Phase 4 complete when:
 ## Optional Enhancements
 
 ### [Task 4E: Migrate PDF Popover to shadcn](./task-4e-migrate-pdf-popover.md)
-**Status:** ⚪ Not Started (Optional)
+**Status:** ✅ Complete (Already using Base UI)
 
-Refactor custom `PdfAnnotationPopover` to use shadcn `Popover` component for consistency. Not required for Phase 4 completion or Phase 5 to proceed. Current implementation is working well.
+Upon review, this task was already complete. The `PdfAnnotationPopover` already uses `@base-ui/react/popover` directly, which is the same primitive that shadcn's Popover uses. The component provides a clean wrapper with PDF-specific defaults while using the standard Base UI primitives.
 
 ## State Management (Phase 4)
 

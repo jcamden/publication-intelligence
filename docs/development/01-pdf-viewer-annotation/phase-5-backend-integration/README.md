@@ -10,46 +10,60 @@ Persist mentions, entries, and index types to Gel database with CRUD operations 
 
 ## Key Data Model Summary
 
-### Index Types → Entries → Mentions Relationship
+### Addon-Based Access Model
 
-1. **IndexType** (Project-level configuration)
-   - Defines available index types (Subject, Author, Scripture, custom)
-   - Each has customizable color (defaults: yellow, blue, green, red)
-   - Ordinal determines order and default color assignment
+**User purchases index type addons → Project enables index types → Entries & Mentions use those types**
 
-2. **IndexEntry** (Content items, one per index type)
-   - Each entry belongs to exactly ONE index type (`index_type` field)
+1. **IndexTypeDefinition** (System-wide catalog)
+   - Defines available index types (Subject, Author, Scripture, Bibliography, etc.)
+   - Each has default color and description
+   - Managed by system, rarely changes
+
+2. **UserIndexTypeAddon** (User's purchased addons)
+   - Junction table: which users have access to which index types
+   - Managed by payment system (Stripe webhooks)
+   - Users can only see/use index types they have addons for
+
+3. **ProjectIndexType** (Project's enabled types with customization)
+   - Projects enable index types the owner has addons for
+   - Each has project-specific color and ordinal customization
+   - Access control: Collaborators without addon cannot see this index type
+
+4. **IndexEntry** (Content items, one per index type)
+   - Each entry belongs to exactly ONE project index type (`project_index_type` field)
    - Same concept in multiple indexes = separate entry records
    - Parent/child hierarchy within same index type only
    - Example: "Kant" in Subject index is separate from "Kant" in Author index
+   - Access: User needs addon to see/create entries in that index type
 
-3. **IndexMention** (Highlights with multi-type support)
+5. **IndexMention** (Highlights with multi-type support)
    - Links to one entry via `entry` field
-   - Belongs to one or more index types via `index_types` array
+   - Belongs to one or more project index types via `project_index_types` relationship
    - Highlight color(s) derived from index types, not entry
    - Multi-type mentions render with diagonal stripes
+   - Access: User can see mention if they have addon for ANY of its types
 
-**Important:** A mention links to exactly ONE entry, even when tagged with multiple index types. The linked entry's index_type determines the "primary" classification, while the mention's index_types array determines which index sections display it and which colors to show.
+**Collaborative Projects:** Users only see index types they have addons for. If User A has Subject+Author addons but User B has only Subject addon, User B sees only Subject sections/mentions in the project. No error messages - unavailable types are simply invisible.
 
 ## Sub-Tasks
 
-### [5A: Schema Migration & IndexType Backend](./task-5a-schema-migration.md)
+### [5A: Schema Migration & Index Type Backend](./task-5a-schema-migration.md)
 **Duration:** 2-3 days  
 **Status:** ⚪ Not Started
 
-Schema changes (IndexType, IndexEntry.index_type, IndexMention.index_types, Context). Migration scripts. IndexType CRUD endpoints. The critical breaking change work.
+Schema changes (IndexTypeDefinition, UserIndexTypeAddon, ProjectIndexType, IndexEntry.project_index_type, IndexMention.project_index_types, Context). Addon-based access control. No migration needed (fresh start). CRUD endpoints for enabling/disabling index types in projects.
 
 ### [5B: IndexEntry Backend](./task-5b-index-entry-backend.md)
 **Duration:** 2 days  
 **Status:** ⚪ Not Started
 
-IndexEntry CRUD operations, hierarchy management, search/autocomplete, exact match detection.
+IndexEntry CRUD operations, hierarchy management, search/autocomplete, exact match detection. Filtered by user's accessible project index types.
 
 ### [5C: IndexMention Backend](./task-5c-index-mention-backend.md)
 **Duration:** 2-3 days  
 **Status:** ⚪ Not Started
 
-IndexMention CRUD with multi-type support, page filtering, bulk operations for "Index As" feature.
+IndexMention CRUD with multi-type support, page filtering, bulk operations for "Index As" feature. Validates user has addons for all selected types.
 
 ### [5D: Optimistic Updates & Error Handling](./task-5d-optimistic-updates.md)
 **Duration:** 1-2 days  
@@ -60,18 +74,20 @@ React Query optimistic updates, error handling, retry logic, loading states, sta
 ## Completion Criteria
 
 Phase 5 complete when:
-- [x] Schema migration completed successfully (no data loss)
-- [x] IndexType CRUD working
-- [x] IndexEntry CRUD working (with index_type filtering)
-- [x] IndexMention CRUD working (with multi-type support)
-- [x] Parent/child hierarchy constraints enforced
-- [x] Entry search and exact match working
-- [x] Optimistic updates smooth (no flicker)
-- [x] Error handling graceful (retry, rollback)
-- [x] Local state replaced with tRPC queries
-- [x] Context schema ready for Phase 6
-- [x] All breaking changes tested and documented
-- [x] Performance acceptable (< 200ms for operations)
+- [ ] Schema created (IndexTypeDefinition, UserIndexTypeAddon, ProjectIndexType, etc.)
+- [ ] Default addon grants working (all users get Subject, Author, Scripture)
+- [ ] ProjectIndexType CRUD working (enable/disable/reorder)
+- [ ] Addon access control working (users only see types they have access to)
+- [ ] IndexEntry CRUD working (filtered by accessible types)
+- [ ] IndexMention CRUD working (multi-type support, addon validation)
+- [ ] Parent/child hierarchy constraints enforced
+- [ ] Entry search and exact match working
+- [ ] Optimistic updates smooth (no flicker)
+- [ ] Error handling graceful (retry, rollback)
+- [ ] Local state replaced with tRPC queries
+- [ ] Context schema ready for Phase 6
+- [ ] Collaborative access tested (users with different addons)
+- [ ] Performance acceptable (< 200ms for operations)
 
 ## Frontend Architecture (Established in Phase 4)
 

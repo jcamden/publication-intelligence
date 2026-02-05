@@ -17,22 +17,32 @@ Implement critical schema changes (IndexType, IndexEntry.index_type, IndexMentio
 
 ## Key Design Decisions Driving Schema Changes
 
-### 1. IndexEntry Per Index Type
+### 1. Addon-Based Index Type Access
+**Decision:** Index types (Subject, Author, Scripture, etc.) are separate addons that users purchase. Users can only enable index types they have purchased addons for. In collaborative projects, users without an addon cannot see or interact with that index type at all.
+
+**Reason:** Enables flexible monetization, clear feature gating, and prevents confusion when collaborators have different addon sets.
+
+### 2. Global Index Type Definitions
+**Decision:** System-wide catalog of available index types via `IndexTypeDefinition` table. Projects reference these definitions via `ProjectIndexType` junction table.
+
+**Reason:** Centralized addon management, consistent naming/defaults across projects, easier to add new index types system-wide.
+
+### 3. IndexEntry Per Index Type
 **Decision:** Each IndexEntry belongs to exactly ONE index type. Same concept in multiple indexes = separate entries.
 
 **Reason:** Enables different hierarchies per index, simpler queries, clearer ownership.
 
-### 2. Colors From Index Types
-**Decision:** Highlight colors derived from IndexType configuration, not from individual entries.
+### 4. Colors From Index Types
+**Decision:** Highlight colors derived from ProjectIndexType configuration, not from individual entries.
 
-**Reason:** User configures colors at index type level. All Subject highlights are yellow, regardless of specific entry.
+**Reason:** User configures colors at project-level index type. All Subject highlights are yellow, regardless of specific entry.
 
-### 3. Multi-Type Mentions
+### 5. Multi-Type Mentions
 **Decision:** Mentions can belong to multiple index types via `index_types` array.
 
-**Reason:** A single highlight can be tagged for Subject AND Author (diagonal stripes with both colors).
+**Reason:** A single highlight can be tagged for Subject AND Author (diagonal stripes with both colors). But user must have addons for all selected types.
 
-### 4. Context System
+### 6. Context System
 **Decision:** Separate Context entities for ignore/page-number regions, independent color customization.
 
 **Reason:** Different purpose than mentions/entries. Need per-context colors, not tied to index types.
@@ -41,45 +51,176 @@ Implement critical schema changes (IndexType, IndexEntry.index_type, IndexMentio
 
 ## Required Schema Changes
 
-### 1. Add IndexType Table ⚠️ **NEW TABLE**
+### 1. Add IndexTypeDefinition Table ⚠️ **NEW TABLE**
+
+**Location:** Early in schema, before User relationships
+
+```edgeql
+# ============================================================================
+# IndexTypeDefinition - System-wide catalog of available index types
+# ============================================================================
+#
+# Defines all possible index types that can be purchased as addons.
+# These are seeded by system and rarely change.
+#
+# Examples:
+# - subject (default_color=#FCD34D yellow)
+# - author (default_color=#93C5FD blue)
+# - scripture (default_color=#86EFAC green)
+# - bibliography (default_color=#FCA5A5 red)
+
+type IndexTypeDefinition {
+  # Unique identifier (e.g., 'subject', 'author', 'scripture')
+  required name: str {
+    constraint exclusive;
+  };
+  
+  # Display name for UI (e.g., 'Subject', 'Author', 'Scripture')
+  required display_name: str;
+  
+  # Default color for new projects
+  required default_color: str {
+    constraint regexp(r'^#[0-9A-Fa-f]{6}$');
+  };
+  
+  # Description for addon marketplace
+  description: str;
+  
+  # Default ordinal for new projects
+  required default_ordinal: int16;
+  
+  required created_at: datetime {
+    default := datetime_current();
+  };
+  
+  # System-managed, no soft delete
+  # To disable: remove from marketplace, don't delete definition
+  
+  # Relationships
+  multi user_addons := .<index_type_definition[is UserIndexTypeAddon];
+  multi project_usages := .<definition[is ProjectIndexType];
+}
+```
+
+**Initial Seed Data:**
+```edgeql
+INSERT IndexTypeDefinition {
+  name := 'subject',
+  display_name := 'Subject',
+  default_color := '#FCD34D',
+  description := 'Index subjects, topics, and concepts',
+  default_ordinal := 0
+};
+INSERT IndexTypeDefinition {
+  name := 'author',
+  display_name := 'Author',
+  default_color := '#93C5FD',
+  description := 'Index authors and contributors',
+  default_ordinal := 1
+};
+INSERT IndexTypeDefinition {
+  name := 'scripture',
+  display_name := 'Scripture',
+  default_color := '#86EFAC',
+  description := 'Index biblical references and citations',
+  default_ordinal := 2
+};
+INSERT IndexTypeDefinition {
+  name := 'bibliography',
+  display_name := 'Bibliography',
+  default_color := '#FCA5A5',
+  description := 'Index bibliographic references',
+  default_ordinal := 3
+};
+```
+
+---
+
+### 2. Add UserIndexTypeAddon Table ⚠️ **NEW TABLE**
+
+**Location:** After IndexTypeDefinition, relates to User
+
+```edgeql
+# ============================================================================
+# UserIndexTypeAddon - User's purchased index type addons
+# ============================================================================
+#
+# Junction table tracking which users have purchased which index type addons.
+# Users can only enable index types in projects if they have the addon.
+#
+# Addon purchase/management happens outside this system (Stripe, etc.)
+# This table reflects current entitlements.
+
+type UserIndexTypeAddon {
+  required user: User {
+    on target delete delete source;
+  };
+  
+  required index_type_definition: IndexTypeDefinition {
+    on target delete delete source;
+  };
+  
+  # When addon was granted
+  required granted_at: datetime {
+    default := datetime_current();
+  };
+  
+  # Optional expiration (null = permanent/lifetime)
+  expires_at: datetime;
+  
+  # Computed properties
+  property is_active := not exists .expires_at or .expires_at > datetime_current();
+  property is_expired := exists .expires_at and .expires_at <= datetime_current();
+  
+  # Constraints
+  constraint exclusive on ((.user, .index_type_definition));
+  
+  # Access control: user can see their own addons
+  access policy user_access
+    allow all
+    using (.user = global current_user);
+}
+```
+
+**Migration Notes:**
+- Grant default addons (subject, author, scripture) to all existing users
+- Future: webhook from payment system adds/removes addon records
+
+---
+
+### 3. Add ProjectIndexType Table ⚠️ **NEW TABLE** (replaces old IndexType)
 
 **Location:** After Project, before IndexEntry
 
 ```edgeql
 # ============================================================================
-# IndexType - Project-level index configuration
+# ProjectIndexType - Project's enabled index types with customization
 # ============================================================================
 #
-# Defines available index types for a project (Subject, Author, Scripture, etc.)
-# Each type has customizable color and visibility settings.
+# Projects can enable index types that the user has purchased addons for.
+# Each enabled index type can be customized per-project (color, visibility, order).
 #
-# Default index types created with new projects:
-# - Subject (ordinal=0, color=#FCD34D yellow)
-# - Author (ordinal=1, color=#93C5FD blue)
-# - Scripture (ordinal=2, color=#86EFAC green)
-#
-# Users can add custom index types, customize colors, and reorder.
+# Access control: Users without the addon cannot see this index type in the project.
 
-type IndexType {
+type ProjectIndexType {
   required project: Project {
     on target delete delete source;
   };
   
-  # Type name (e.g., 'subject', 'author', 'scripture', 'bibliography')
-  # Unique per project
-  required name: str;
+  # Reference to system-wide definition
+  required definition: IndexTypeDefinition {
+    on target delete delete source;
+  };
   
-  # Display order and default color assignment
-  # 0 = first index type (yellow), 1 = second (blue), etc.
+  # Project-specific customization
   required ordinal: int16;
   
-  # Hex color for highlights of this index type
-  # User-customizable, affects all mentions tagged with this type
+  # Project-specific color (can override default)
   required color: str {
     constraint regexp(r'^#[0-9A-Fa-f]{6}$');
   };
   
-  # Visibility toggle (hide/show in UI)
+  # Visibility toggle (hide/show in UI for this project)
   required visible: bool {
     default := true;
   };
@@ -93,32 +234,44 @@ type IndexType {
   deleted_at: datetime;
   
   # Relationships
-  multi entries := .<index_type[is IndexEntry];
+  multi entries := .<project_index_type[is IndexEntry];
   
   # Computed properties
   property entry_count := count(.entries filter not exists .deleted_at);
   property is_deleted := exists .deleted_at;
+  property name := .definition.name;
+  property display_name := .definition.display_name;
   
   # Constraints
-  constraint exclusive on ((.project, .name)) except (exists .deleted_at);
+  constraint exclusive on ((.project, .definition)) except (exists .deleted_at);
   constraint exclusive on ((.project, .ordinal)) except (exists .deleted_at);
   
-  # Access control: inherit from project
-  access policy project_access
+  # Access control: Project members who have the addon can see this
+  access policy addon_access
     allow all
-    using (.project.can_access);
+    using (
+      e.op(
+        .project.can_access,
+        'and',
+        e.op(
+          .definition,
+          'in',
+          global current_user.index_type_addons.index_type_definition
+        )
+      )
+    );
 }
 ```
 
 **Migration Notes:**
-- Create default index types for existing projects (Subject, Author, Scripture)
-- Assign default colors based on ordinal
+- No migration needed (fresh start)
+- When user creates project, auto-enable index types they have addons for
 
 ---
 
-### 2. Update IndexEntry Table ⚠️ **BREAKING CHANGE**
+### 4. Update IndexEntry Table
 
-**Add `index_type` field and parent constraint:**
+**Add `project_index_type` field and parent constraint:**
 
 ```edgeql
 type IndexEntry {
@@ -126,10 +279,10 @@ type IndexEntry {
     on target delete delete source;
   };
   
-  # NEW: Index type this entry belongs to
+  # NEW: Project index type this entry belongs to
   # Each entry belongs to exactly ONE index type
   # Example: "Kant" in Subject is separate from "Kant" in Author
-  required index_type: IndexType {
+  required project_index_type: ProjectIndexType {
     on target delete delete source;
   };
   
@@ -143,79 +296,91 @@ type IndexEntry {
   
   # ... existing timestamps and relationships ...
   
-  # NEW CONSTRAINT: Parent must have same index_type
+  # NEW CONSTRAINT: Parent must have same project_index_type
   constraint expression on (
-    not exists .parent or .parent.index_type = .index_type
+    not exists .parent or .parent.project_index_type = .project_index_type
   ) {
-    errmessage := "Parent entry must have the same index_type";
+    errmessage := "Parent entry must have the same project_index_type";
   };
   
-  # Update slug uniqueness to be per index_type
-  constraint exclusive on ((.project, .index_type, .slug)) {
+  # Update slug uniqueness to be per project_index_type
+  constraint exclusive on ((.project, .project_index_type, .slug)) {
     # Slug uniqueness per project AND index type
     # "kant_immanuel" can exist in both Subject and Author
   };
   
-  # ... existing access policies ...
+  # Access control: inherit from project_index_type (which checks addon)
+  access policy addon_access
+    allow all
+    using (.project_index_type in accessible(ProjectIndexType));
 }
 ```
 
 **Migration Strategy:**
-1. Add `index_type` field as optional first
-2. Create default IndexTypes for existing projects
-3. Assign all existing entries to "Subject" index type (or prompt user)
-4. Make `index_type` required
-5. Update application code to filter entries by index_type
+- No migration needed (fresh start, no existing data)
+- All new entries created with required project_index_type
 
 **Data Impact:**
-- **BREAKING:** Existing entries need index_type assignment
-- Need migration script to assign default type
-- May need user input for ambiguous cases
+- None (no existing data to migrate)
 
 ---
 
-### 3. Update IndexMention Table
+### 5. Update IndexMention Table
 
-**Add `index_types` array field:**
+**Add `project_index_types` relationship:**
 
 ```edgeql
 type IndexMention {
   # ... existing fields (document, entry, page, page_number, etc.) ...
   
-  # NEW: Index types this mention is tagged with
-  # Multi-type support: ['subject', 'author']
+  # NEW: Project index types this mention is tagged with
+  # Multi-type support: mention can appear in multiple index sections
   # Determines which sidebar sections show this mention
   # Determines highlight colors (single type = solid, multi-type = stripes)
-  required multi index_types: str {
-    default := {'subject'}; # Default to subject if not specified
+  required multi project_index_types: ProjectIndexType {
+    on target delete allow;  # If index type deleted, mention remains with other types
   };
   
   # ... rest of existing fields ...
   
   # NEW CONSTRAINT: At least one index type
   constraint expression on (
-    count(.index_types) > 0
+    count(.project_index_types) > 0
   ) {
-    errmessage := "Mention must have at least one index type";
+    errmessage := "Mention must have at least one project_index_type";
   };
   
-  # ... existing constraints and access policies ...
+  # NEW CONSTRAINT: User must have addon for all selected types
+  # Enforced in application layer during creation/update
+  
+  # Access control: User can see mention if they have addon for ANY of its types
+  access policy addon_access
+    allow select
+    using (
+      e.op(
+        count(
+          .project_index_types filter 
+            .definition in global current_user.index_type_addons.index_type_definition
+        ),
+        '>',
+        0
+      )
+    )
+    allow insert, update, delete
+    using (.document.project.can_access);
 }
 ```
 
 **Migration Strategy:**
-1. Add `index_types` field with default value
-2. Existing mentions automatically get `index_types = ['subject']`
-3. Update application code to use array instead of single value
-4. Add UI for multi-type tagging (Phase 4C enhancement)
+- No migration needed (fresh start)
+- Application validates user has addons for all selected types
 
 **Data Impact:**
-- **Non-breaking:** Default value makes migration safe
-- Existing data preserved, all mentions default to Subject
+- None (no existing data)
 
 ---
 
-### 4. Add Context Table ⚠️ **NEW TABLE**
+### 6. Add Context Table ⚠️ **NEW TABLE**
 
 **Location:** After IndexMention, before Event
 
@@ -306,7 +471,7 @@ type Context {
 
 ---
 
-### 5. Update DocumentPage Table (Phase 7)
+### 7. Update DocumentPage Table (Phase 7)
 
 **Add multi-layer page numbering fields:**
 
@@ -357,7 +522,7 @@ type DocumentPage {
 
 ---
 
-### 6. Update Project Table (Phase 7)
+### 8. Update Project Table (Phase 7)
 
 **Add page numbering override fields:**
 
@@ -393,16 +558,17 @@ type Project {
 
 ### Phase 5 (Backend Integration)
 
-- [ ] **Critical:** Create IndexType table
-- [ ] **Critical:** Add index_type field to IndexEntry (BREAKING)
-- [ ] **Critical:** Add index_types array to IndexMention
+- [ ] **Critical:** Create IndexTypeDefinition table with seed data
+- [ ] **Critical:** Create UserIndexTypeAddon table
+- [ ] **Critical:** Create ProjectIndexType table
+- [ ] **Critical:** Update IndexEntry with project_index_type field
+- [ ] **Critical:** Update IndexMention with project_index_types relationship
 - [ ] **Critical:** Create Context table
-- [ ] Create migration script for existing data:
-  - [ ] Create default IndexTypes for all projects
-  - [ ] Assign all existing IndexEntries to Subject index type
-  - [ ] Assign all existing IndexMentions `index_types = ['subject']`
-- [ ] Update application code to use new fields
-- [ ] Update tRPC endpoints to handle index types
+- [ ] Grant default addons to existing users:
+  - [ ] Grant 'subject', 'author', 'scripture' addons to all users
+  - [ ] Can be done via admin script or during user signup
+- [ ] Update application code to check addon access
+- [ ] Update tRPC endpoints to validate addon ownership
 
 ### Phase 7 (Page Numbering)
 
@@ -415,106 +581,167 @@ type Project {
 
 ## Breaking Changes Summary
 
-### ⚠️ IndexEntry.index_type (Required Field)
+**Good news:** No breaking changes needed since we're starting fresh with no production data.
 
-**Impact:** All existing entries need type assignment
+### ⚠️ New Required Tables
 
-**Migration Path:**
-1. Add field as optional
-2. Backfill with "Subject" default (or prompt user)
-3. Make field required
-4. Update all entry creation code
-
-### ⚠️ IndexEntry Slug Uniqueness
-
-**Impact:** Slug constraint changes from per-project to per-project-per-type
+**Impact:** Fresh schema, clean slate
 
 **Migration Path:**
-1. Check for duplicate slugs across would-be-separate indexes
-2. Rename duplicates if found
-3. Update constraint
+1. Create all new tables
+2. Seed IndexTypeDefinition with standard types
+3. Grant default addons to all users during signup
+4. No data migration needed
 
 ---
 
-## Non-Breaking Changes
+## Addon Access Model
 
-### ✅ IndexMention.index_types
+### How It Works
 
-**Impact:** None - has default value
+1. **System defines available index types** via `IndexTypeDefinition`
+2. **Users purchase addons** (tracked in `UserIndexTypeAddon`)
+3. **Projects enable types** the owner has access to (`ProjectIndexType`)
+4. **Collaborators see only types they have addons for**
 
-**Migration:** Automatic via default value
+### Collaborative Project Rules
 
-### ✅ Context Table
+**Scenario:** User A has Subject+Author addons, User B has only Subject addon
 
-**Impact:** None - new table
+**In shared project with Subject and Author enabled:**
+- User A sees both Subject and Author sections/mentions
+- User B sees only Subject section/mentions
+- User B cannot create Author mentions
+- User B cannot see entries in Author index
+- No error messages about Author - it's simply invisible to User B
 
-**Migration:** None needed
+### Frontend Implications
 
-### ✅ DocumentPage Page Numbering Fields
+```tsx
+// Fetch only index types user has access to
+const { data: projectIndexTypes } = trpc.projectIndexType.list.useQuery({
+  projectId,
+});
+// Backend automatically filters based on user's addons
 
-**Impact:** None - all optional fields
+// Sidebar only shows sections for accessible index types
+{projectIndexTypes.map(indexType => (
+  <IndexSection key={indexType.id} indexType={indexType} />
+))}
 
-**Migration:** None needed until Phase 7
+// Entry picker only shows entries from accessible index types
+// Multi-type tagging only offers types user has access to
+```
 
----
-
----
-
-## IndexType tRPC Endpoints
-
-After schema migration, implement IndexType management endpoints.
-
-### Router: `indexType`
+### Backend Validation
 
 ```typescript
-// apps/index-pdf-backend/src/routers/index-type.router.ts
+// Creating an entry requires user to have the addon
+create: protectedProcedure
+  .input(z.object({
+    projectId: z.string().uuid(),
+    projectIndexTypeId: z.string().uuid(),
+    label: z.string(),
+    // ...
+  }))
+  .mutation(async ({ input, ctx }) => {
+    // EdgeDB access policy handles this automatically
+    // If user doesn't have addon, projectIndexType query returns empty
+    const result = await ctx.db.query(/* insert entry */);
+    // Result will be null if user lacks addon access
+    if (!result) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You do not have access to this index type'
+      });
+    }
+    return result;
+  });
+```
 
-export const indexTypeRouter = router({
-  // List all index types for project
+---
+
+---
+
+## ProjectIndexType tRPC Endpoints
+
+After schema migration, implement ProjectIndexType management endpoints.
+
+### Router: `projectIndexType`
+
+```typescript
+// apps/index-pdf-backend/src/routers/project-index-type.router.ts
+
+export const projectIndexTypeRouter = router({
+  // List project's enabled index types (filtered by user's addons)
   list: protectedProcedure
     .input(z.object({ projectId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      return await ctx.db.query(e.select(e.IndexType, (indexType) => ({
-        ...e.IndexType['*'],
+      // EdgeDB access policy automatically filters to types user has addons for
+      return await ctx.db.query(e.select(e.ProjectIndexType, (pit) => ({
+        ...e.ProjectIndexType['*'],
+        definition: {
+          name: true,
+          display_name: true,
+          description: true,
+        },
         entry_count: true,
         filter: e.op(
-          e.op(indexType.project.id, '=', e.uuid(input.projectId)),
+          e.op(pit.project.id, '=', e.uuid(input.projectId)),
           'and',
-          e.op('not', e.op('exists', indexType.deleted_at))
+          e.op('not', e.op('exists', pit.deleted_at))
         ),
-        order_by: indexType.ordinal,
+        order_by: pit.ordinal,
       })));
     }),
   
-  // Create new index type
-  create: protectedProcedure
-    .input(z.object({
-      projectId: z.string().uuid(),
-      name: z.string().min(1).max(50),
-      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-      ordinal: z.number().int().min(0),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      // Validate unique name per project
-      // Create IndexType
-      // Return created type
+  // List available index type definitions user can add to project
+  listAvailable: protectedProcedure
+    .input(z.object({ projectId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      // Return definitions user has addons for that aren't yet enabled in project
+      return await ctx.db.query(/* ... */);
     }),
   
-  // Update index type (name, color, visibility)
+  // Enable an index type for project (user must have addon)
+  enable: protectedProcedure
+    .input(z.object({
+      projectId: z.string().uuid(),
+      definitionId: z.string().uuid(),
+      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+      ordinal: z.number().int().min(0).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // 1. Verify user has addon for this definition
+      const userHasAddon = await ctx.db.query(/* check UserIndexTypeAddon */);
+      if (!userHasAddon) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have access to this index type'
+        });
+      }
+      
+      // 2. Get default color/ordinal from definition if not provided
+      const definition = await ctx.db.query(/* fetch IndexTypeDefinition */);
+      
+      // 3. Create ProjectIndexType
+      return await ctx.db.query(/* insert ProjectIndexType */);
+    }),
+  
+  // Update project index type (color, visibility, ordinal)
   update: protectedProcedure
     .input(z.object({
       id: z.string().uuid(),
-      name: z.string().min(1).max(50).optional(),
       color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
       visible: z.boolean().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Validate ownership
-      // Update fields
-      // Return updated type
+      // EdgeDB access policy validates user has addon
+      // Update customization fields only (not definition reference)
+      return await ctx.db.query(/* update ProjectIndexType */);
     }),
   
-  // Reorder index types (change ordinals)
+  // Reorder project index types (change ordinals)
   reorder: protectedProcedure
     .input(z.object({
       projectId: z.string().uuid(),
@@ -524,17 +751,58 @@ export const indexTypeRouter = router({
       })),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Bulk update ordinals
-      // Used for drag-drop reordering in UI
+      // Bulk update ordinals for drag-drop reordering
+      // Only reorders types user has access to
     }),
   
-  // Delete index type (soft delete)
-  delete: protectedProcedure
+  // Disable index type in project (soft delete)
+  disable: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      // Validate ownership
-      // Check if entries exist (warn user or cascade)
-      // Set deleted_at timestamp
+      // Check if entries exist (warn user)
+      // Set deleted_at timestamp (doesn't remove addon)
+      // User can re-enable later
+    }),
+});
+
+// Also need addon management endpoints (separate router)
+export const indexTypeAddonRouter = router({
+  // List user's purchased addons
+  listUserAddons: protectedProcedure
+    .query(async ({ ctx }) => {
+      return await ctx.db.query(e.select(e.UserIndexTypeAddon, (addon) => ({
+        ...e.UserIndexTypeAddon['*'],
+        index_type_definition: {
+          name: true,
+          display_name: true,
+          description: true,
+          default_color: true,
+        },
+        filter: e.op(addon.user, '=', e.global.current_user),
+      })));
+    }),
+  
+  // Admin: Grant addon to user (called by payment webhook)
+  grantAddon: adminProcedure
+    .input(z.object({
+      userId: z.string().uuid(),
+      indexTypeDefinitionId: z.string().uuid(),
+      expiresAt: z.date().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Insert UserIndexTypeAddon record
+      // Called by Stripe webhook or admin panel
+    }),
+  
+  // Admin: Revoke addon from user
+  revokeAddon: adminProcedure
+    .input(z.object({
+      userId: z.string().uuid(),
+      indexTypeDefinitionId: z.string().uuid(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Delete UserIndexTypeAddon record
+      // User loses access to index type in all projects
     }),
 });
 ```
@@ -547,37 +815,77 @@ export const indexTypeRouter = router({
 export const IndexTypesSettings = () => {
   const { projectId } = useProject();
   
-  // Query index types
-  const { data: indexTypes, isLoading } = trpc.indexType.list.useQuery({
+  // Query enabled index types (automatically filtered by user's addons)
+  const { data: enabledTypes, isLoading } = trpc.projectIndexType.list.useQuery({
+    projectId,
+  });
+  
+  // Query available index types user can enable
+  const { data: availableTypes } = trpc.projectIndexType.listAvailable.useQuery({
     projectId,
   });
   
   // Mutations
-  const createType = trpc.indexType.create.useMutation({
+  const enableType = trpc.projectIndexType.enable.useMutation({
     onSuccess: () => {
-      utils.indexType.list.invalidate({ projectId });
+      utils.projectIndexType.list.invalidate({ projectId });
+      utils.projectIndexType.listAvailable.invalidate({ projectId });
     },
   });
   
-  const updateType = trpc.indexType.update.useMutation({
+  const updateType = trpc.projectIndexType.update.useMutation({
     onSuccess: () => {
-      utils.indexType.list.invalidate({ projectId });
+      utils.projectIndexType.list.invalidate({ projectId });
     },
   });
   
-  const reorderTypes = trpc.indexType.reorder.useMutation({
+  const reorderTypes = trpc.projectIndexType.reorder.useMutation({
     onSuccess: () => {
-      utils.indexType.list.invalidate({ projectId });
+      utils.projectIndexType.list.invalidate({ projectId });
     },
   });
   
-  // UI: List with color pickers, visibility toggles, drag-drop reorder
-  // Create new type button with modal
-  // Edit/delete actions per type
+  const disableType = trpc.projectIndexType.disable.useMutation({
+    onSuccess: () => {
+      utils.projectIndexType.list.invalidate({ projectId });
+      utils.projectIndexType.listAvailable.invalidate({ projectId });
+    },
+  });
   
   return (
     <div>
-      {/* Index type management UI */}
+      {/* Enabled index types: color pickers, visibility toggles, drag-drop reorder */}
+      <section>
+        <h2>Enabled Index Types</h2>
+        {enabledTypes?.map(type => (
+          <IndexTypeRow key={type.id} type={type} />
+        ))}
+      </section>
+      
+      {/* Available types user can enable */}
+      <section>
+        <h2>Available Index Types</h2>
+        <p>You have access to these index types. Enable them for this project.</p>
+        {availableTypes?.map(def => (
+          <AvailableTypeRow 
+            key={def.id} 
+            definition={def}
+            onEnable={() => enableType.mutate({ 
+              projectId, 
+              definitionId: def.id 
+            })}
+          />
+        ))}
+      </section>
+      
+      {/* Link to addon marketplace */}
+      <section>
+        <h2>Get More Index Types</h2>
+        <p>Purchase additional index type addons to expand your indexing capabilities.</p>
+        <Button asChild>
+          <a href="/addons/marketplace">Browse Addons</a>
+        </Button>
+      </section>
     </div>
   );
 };
