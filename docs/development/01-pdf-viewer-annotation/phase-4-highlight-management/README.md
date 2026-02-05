@@ -30,9 +30,9 @@ View, edit, and delete highlights with confirmation dialogs. Index type tracking
 
 ### [4D: IndexEntry Connection UI](./task-4d-entry-connection.md)
 **Duration:** 2 days  
-**Status:** ⚪ Not Started
+**Status:** ✅ Complete (Feb 3, 2026)
 
-Entry creation modal, picker with hierarchy, and color-coded highlights.
+Entry creation modal, picker with hierarchy, and color-coded highlights. All 6 core subtasks complete. Optional Task 4D-7 (migrate PDF popover to shadcn) deferred.
 
 ## Completion Criteria
 
@@ -59,9 +59,20 @@ Phase 4 complete when:
 - [x] Tooltips on icon-only buttons
 - [x] Index type background colors for visual distinction
 - [x] Component abstractions (MentionButton, PageSectionContent)
-- [ ] "Index As" checklist for multi-type mentions (deferred - optional enhancement, see task-4c-multi-type-enhancement.md)
-- [ ] Multi-type visual (diagonal stripes with multiple colors) (deferred - optional enhancement)
-- [ ] IndexEntry creation UI implemented (deferred to Task 4D)
+- [x] "Index As" checklist for multi-type mentions (implemented in Task 4C)
+- [x] Multi-type visual (diagonal stripes with multiple colors) (implemented in Task 4C)
+- [x] IndexEntry creation UI implemented (completed Task 4D)
+- [x] Entry picker with hierarchy and search (Task 4D)
+- [x] Smart autocomplete with exact-match detection (Task 4D)
+- [x] Configurable index type colors (Task 4D)
+- [x] Entry trees in project sidebar (Task 4D)
+
+## Optional Enhancements
+
+### [Task 4E: Migrate PDF Popover to shadcn](./task-4e-migrate-pdf-popover.md)
+**Status:** ⚪ Not Started (Optional)
+
+Refactor custom `PdfAnnotationPopover` to use shadcn `Popover` component for consistency. Not required for Phase 4 completion or Phase 5 to proceed. Current implementation is working well.
 
 ## State Management (Phase 4)
 

@@ -1,8 +1,10 @@
-# Task 4D-7: Migrate PDF Annotation Popover to shadcn
+# Task 4E: Migrate PDF Annotation Popover to shadcn
 
 **Duration:** 2 hours  
-**Status:** ⚪ Not Started  
-**Dependencies:** Task 4D-5 completion (color configuration using shadcn popovers)
+**Status:** ⚪ Not Started (Optional Enhancement)  
+**Dependencies:** Task 4D completion (particularly 4D-5 color configuration using shadcn popovers)
+
+**Note:** This is an optional code quality improvement to standardize on shadcn components. It is not required for Phase 4 completion or Phase 5 to proceed. The custom `PdfAnnotationPopover` implementation is working well and can be migrated later if needed.
 
 ## Goal
 
@@ -346,3 +348,4 @@ After this task completes, evaluate whether the migration was successful:
 - [Task 4D-5: Color Configuration](./task-4d-5-color-configuration.md) - Uses shadcn Popover successfully
 - [Task 4D-2: Entry Creation Modal](./task-4d-2-entry-creation-modal.md) - Uses shadcn Dialog
 - [Task 4D-3: Entry Picker](./task-4d-3-entry-picker.md) - Uses shadcn Select (nested portal case)
+- [Task 4D: IndexEntry Connection UI](./task-4d-entry-connection.md) - Parent task

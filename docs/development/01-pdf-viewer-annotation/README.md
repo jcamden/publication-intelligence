@@ -50,21 +50,32 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 **Current Blockers:** None  
 **Next Steps:** Complete implementation, test at multiple scales
 
-### 🟡 Phase 4: Highlight Management ([phase-4-highlight-management/](./phase-4-highlight-management/))
-**Status:** In Progress (3 of 4 tasks complete)  
+### ✅ Phase 4: Highlight Management ([phase-4-highlight-management/](./phase-4-highlight-management/))
+**Status:** Complete (Feb 3, 2026)  
 **Summary:** UI for persisting drafts, managing highlights, linking to IndexEntries
 
 **Sub-phases:**
 - ✅ [4A: Sidebar Action Buttons](./phase-4-highlight-management/task-4a-sidebar-actions.md) - Complete
 - ✅ [4B: Mention Creation Flow](./phase-4-highlight-management/task-4b-mention-creation.md) - Complete
-- 🟡 [4C: Highlight CRUD Operations](./phase-4-highlight-management/task-4c-crud-operations.md) - Mostly Complete (sidebar navigation pending)
-- ⚪ [4D: IndexEntry Connection UI](./phase-4-highlight-management/task-4d-entry-connection.md) - Not Started
+- ✅ [4C: Highlight CRUD Operations](./phase-4-highlight-management/task-4c-crud-operations.md) - Complete
+- ✅ [4D: IndexEntry Connection UI](./phase-4-highlight-management/task-4d-entry-connection.md) - Complete (optional 4D-7 deferred)
+
+**Deliverables:**
+- Sidebar action buttons (per index type)
+- Mention creation popover with entry picker
+- Entry creation modal with hierarchy
+- Smart autocomplete (exact-match detection)
+- Multi-type mentions with diagonal stripes
+- Configurable index type colors
+- Entry trees in project sidebar
+- View/Edit mode for mentions
+- Sidebar navigation to highlights
 
 **Dependencies:** Phase 3 completion  
-**Estimated Duration:** 1 week (2 days remaining)
+**Actual Duration:** ~2 weeks
 
 ### ⚪ Phase 5: Backend Integration ([phase-5-backend-integration/](./phase-5-backend-integration/))
-**Status:** Not Started  
+**Status:** Ready to Start  
 **Summary:** Persist highlights to database, CRUD API integration
 
 **Sub-Tasks:**
@@ -81,8 +92,8 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 - Optimistic updates
 - Error handling
 
-**Dependencies:** Phase 4 completion  
-**Estimated Duration:** 3-4 days
+**Dependencies:** Phase 4 completion ✅  
+**Estimated Duration:** 7-10 days
 
 ### ⚪ Phase 6: Context System ([phase-6-context-system/](./phase-6-context-system/))
 **Status:** Not Started  
@@ -156,11 +167,11 @@ Epic 1 complete when:
 - ✅ User can select text and draw regions
 - ✅ User can create mentions for different index types
 - ✅ User can mark mentions as multiple types (diagonal stripes)
-- ✅ User can create ignore contexts (exclude from extraction)
-- ✅ User can create page number contexts (auto-extract page numbers)
-- ✅ User can configure contexts to apply to multiple pages
-- ✅ Page numbering system works (4 layers with overrides)
-- ✅ Mentions and contexts persist to database
+- ⚪ User can create ignore contexts (exclude from extraction)
+- ⚪ User can create page number contexts (auto-extract page numbers)
+- ⚪ User can configure contexts to apply to multiple pages
+- ⚪ Page numbering system works (4 layers with overrides)
+- ⚪ Mentions and contexts persist to database
 - ✅ Highlights render correctly at all zoom levels
 - ✅ User can edit/delete mentions and contexts
 - ✅ Round-trip coordinate conversion is accurate (±1pt)
