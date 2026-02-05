@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createAuthenticatedClient } from "../../db/client";
 import type { createTestUser } from "../../test/factories";
 import { createTestUser as _createTestUser } from "../../test/factories";
+import { FAKE_UUID } from "../../test/mocks";
 import {
 	closeTestServer,
 	createTestServer,
@@ -555,14 +556,12 @@ describe("Project Security & Authorization", () => {
 		it("should return same 404 for non-existent project ID", async () => {
 			const user = await createTestUser();
 
-			const fakeId = "00000000-0000-0000-0000-000000000000";
-
 			const response = await asUser({
 				user,
 				operation: async (request) =>
 					request.inject({
 						method: "GET",
-						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: fakeId }))}`,
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: FAKE_UUID }))}`,
 					}),
 			});
 
@@ -669,7 +668,6 @@ describe("Project Security & Authorization", () => {
 			});
 
 			const existingId = JSON.parse(createResponse.body).result.data.id;
-			const nonExistentId = "00000000-0000-0000-0000-000000000000";
 
 			// Get status codes for both
 			const existingResponse = await asUser({
@@ -686,7 +684,7 @@ describe("Project Security & Authorization", () => {
 				operation: async (request) =>
 					request.inject({
 						method: "GET",
-						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: nonExistentId }))}`,
+						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: FAKE_UUID }))}`,
 					}),
 			});
 

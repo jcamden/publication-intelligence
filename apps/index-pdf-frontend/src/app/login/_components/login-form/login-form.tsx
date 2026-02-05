@@ -1,5 +1,6 @@
 "use client";
 
+import { emailValidator, passwordValidator } from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import {
 	Field,
@@ -15,8 +16,8 @@ import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { trpc } from "@/app/_common/_utils/trpc";
 
 const signInSchema = z.object({
-	email: z.string().email("Please enter a valid email address"),
-	password: z.string().min(8, "Password must be at least 8 characters"),
+	email: emailValidator,
+	password: passwordValidator,
 });
 
 export const LoginForm = () => {

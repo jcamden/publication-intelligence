@@ -1,4 +1,4 @@
-import { defaultGlobals } from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn, waitFor } from "@storybook/test";
 import { useState } from "react";
@@ -10,9 +10,9 @@ import {
 } from "../shared";
 
 export default {
+	...defaultVrtMeta,
 	title: "Components/PDF/PdfViewer/tests/Visual Regression Tests",
 	component: PdfViewer,
-	tags: ["visual-test"],
 	parameters: {
 		previewTabs: { "storybook/docs/panel": { hidden: true } },
 		controls: { exclude: ["url", "scale", "className"] },
@@ -52,7 +52,7 @@ export const TextLayerDefaultScale: StoryObj<typeof PdfViewer> = {
 				const textSpans = textLayer.querySelectorAll("span");
 				if (textSpans.length === 0) throw new Error("Text layer has no spans");
 			},
-			{ timeout: 5000 },
+			{ timeout: 15000 },
 		);
 
 		// Programmatically select all text

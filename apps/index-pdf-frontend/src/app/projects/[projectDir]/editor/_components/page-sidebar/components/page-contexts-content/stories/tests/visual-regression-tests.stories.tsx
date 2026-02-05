@@ -1,19 +1,16 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { PageContextsContent } from "../../page-contexts-content";
 
 const meta: Meta<typeof PageContextsContent> = {
+	...defaultVrtMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/PageSidebar/PageContextsContent/tests/Visual Regression Tests",
 	component: PageContextsContent,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

@@ -66,8 +66,8 @@ export default defineConfig({
 	// Snapshot directory in parent of tests directory
 	snapshotPathTemplate: `./suites/${PACKAGE}/__snapshots__/{testFilePath}/{arg}{ext}`,
 	webServer: {
-		// Start the appropriate Storybook server
-		command: `cd ../../${packageLocation}/${PACKAGE} && pnpm storybook`,
+		// Start the appropriate Storybook server with VRT config
+		command: `cd ../../${packageLocation}/${PACKAGE} && pnpm storybook:vrt`,
 		url: STORYBOOK_URL,
 		reuseExistingServer: !process.env.CI,
 		timeout: 120 * 1000,

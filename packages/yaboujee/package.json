@@ -19,6 +19,7 @@
 		"test:interaction": "vitest run --config=vitest.storybook.config.ts && tsx ../../scripts/format-interaction-test-results.ts test-results/interaction-tests.json test-results/interaction-summary.md || tsx ../../scripts/format-interaction-test-results.ts test-results/interaction-tests.json test-results/interaction-summary.md",
 		"test:interaction:watch": "vitest --config=vitest.storybook.config.ts --watch",
 		"storybook": "storybook dev -p 6007",
+		"storybook:vrt": "storybook dev -p 6007 --config-dir .storybook-vrt",
 		"build-storybook": "storybook build"
 	},
 	"dependencies": {

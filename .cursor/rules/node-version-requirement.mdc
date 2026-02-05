@@ -1,0 +1,40 @@
+---
+description: Ensure correct Node.js version is active before running pnpm commands
+alwaysApply: true
+---
+
+# Node.js Version Requirement
+
+This project requires Node.js version 23. Before running any pnpm commands, you must activate the correct Node version using nvm.
+
+## Required Setup
+
+Always run `nvm use 23` before executing pnpm commands:
+
+```bash
+# ✅ GOOD - Activate Node 23 first
+nvm use 23
+pnpm install
+
+# ✅ GOOD - Chain commands
+nvm use 23 && pnpm add some-package
+
+# ❌ BAD - Running pnpm without activating Node 23
+pnpm install
+```
+
+## Why This Matters
+
+- Ensures consistent Node.js version across development environments
+- Prevents version-related dependency issues
+- Required for proper package installation and script execution
+
+## Reminder Pattern
+
+When instructing the user to run pnpm commands, always include the nvm setup:
+
+```
+Please run:
+nvm use 23
+pnpm add package-name
+```

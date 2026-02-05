@@ -1,18 +1,18 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "@storybook/test";
 import { SelectionPopover } from "../../selection-popover";
 import { SelectionPopoverWrapper } from "../shared";
 
 const meta: Meta<typeof SelectionPopover> = {
+	...defaultInteractionTestMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/SelectionPopover/tests/Interaction Tests",
 	component: SelectionPopover,
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "centered",
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;
@@ -33,11 +33,11 @@ export const CreateMentionClick: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
+	play: async ({ canvasElement: _canvasElement, step }) => {
+		const body = within(document.body);
 
 		await step("Click create mention button", async () => {
-			const createButton = canvas.getByRole("button", {
+			const createButton = body.getByRole("button", {
 				name: /create mention/i,
 			});
 			await expect(createButton).toBeVisible();
@@ -62,12 +62,17 @@ export const CancelClick: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
+	play: async ({ canvasElement: _canvasElement, step }) => {
+		const body = within(document.body);
 
 		await step("Click cancel button", async () => {
-			const cancelButton = canvas.getByRole("button", { name: /cancel/i });
-			await expect(cancelButton).toBeVisible();
+			const cancelButton = body.getByRole("button", { name: /cancel/i });
+			await waitFor(
+				async () => {
+					await expect(cancelButton).toBeVisible();
+				},
+				{ timeout: 500 },
+			);
 			await expect(cancelButton).toBeEnabled();
 			await userEvent.click(cancelButton);
 		});
@@ -88,12 +93,12 @@ export const DisabledDuringCreation: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
+	play: async ({ canvasElement: _canvasElement, step }) => {
+		const body = within(document.body);
 
 		await step("Verify buttons are disabled during creation", async () => {
-			const createButton = canvas.getByRole("button", { name: /creating/i });
-			const cancelButton = canvas.getByRole("button", { name: /cancel/i });
+			const createButton = body.getByRole("button", { name: /creating/i });
+			const cancelButton = body.getByRole("button", { name: /cancel/i });
 
 			await expect(createButton).toBeDisabled();
 			await expect(cancelButton).toBeDisabled();
@@ -117,15 +122,20 @@ export const TextTruncation: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
+	play: async ({ canvasElement: _canvasElement, step }) => {
+		const body = within(document.body);
 
 		await step("Verify text is truncated with ellipsis", async () => {
 			// Query for the popover's text preview which includes quotes
-			const textPreview = canvas.getByText(
+			const textPreview = body.getByText(
 				/"This is a very long text selection that should be truncated \.\.\./,
 			);
-			await expect(textPreview).toBeVisible();
+			await waitFor(
+				async () => {
+					await expect(textPreview).toBeVisible();
+				},
+				{ timeout: 500 },
+			);
 		});
 	},
 };

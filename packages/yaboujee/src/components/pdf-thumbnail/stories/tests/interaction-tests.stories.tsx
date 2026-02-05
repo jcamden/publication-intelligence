@@ -1,27 +1,15 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
+import { createMockPdfFile } from "../../../pdf/test-helpers/mock-factories";
 import { PdfThumbnail } from "../../pdf-thumbnail";
 
-const createMockPdfFile = (name = "sample.pdf") => {
-	const pdfContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-%%EOF`;
-
-	return new File([pdfContent], name, { type: "application/pdf" });
-};
-
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/PdfThumbnail/tests/Interaction Tests",
 	component: PdfThumbnail,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 	},
 } satisfies Meta<typeof PdfThumbnail>;
 

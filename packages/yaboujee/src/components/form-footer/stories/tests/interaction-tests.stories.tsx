@@ -1,15 +1,15 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { FormFooter } from "../../form-footer";
 import { longTextVariant } from "../shared";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/FormFooter/tests/Interaction Tests",
 	component: FormFooter,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 	},
 } satisfies Meta<typeof FormFooter>;
 

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestUser } from "../../test/factories";
+import { FAKE_UUID } from "../../test/mocks";
 import {
 	closeTestServer,
 	createTestServer,
@@ -130,11 +131,9 @@ describe("Project API (Integration)", () => {
 		});
 
 		it("should return 404 for non-existent project", async () => {
-			const fakeId = "00000000-0000-0000-0000-000000000000";
-
 			const response = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: fakeId }))}`,
+				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: FAKE_UUID }))}`,
 			});
 
 			expect(response.statusCode).toBe(404);

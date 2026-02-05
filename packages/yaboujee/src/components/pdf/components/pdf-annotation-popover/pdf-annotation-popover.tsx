@@ -1,6 +1,7 @@
 "use client";
 
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import { POPOVER_ANIMATION_CLASSES } from "../../../../constants/popover-classes";
 
 export type PdfAnnotationPopoverProps = {
 	/** The element to position relative to (usually the draft highlight) */
@@ -49,7 +50,7 @@ export const PdfAnnotationPopover = ({
 					<PopoverPrimitive.Popup
 						data-pdf-annotation-popover
 						role="dialog"
-						className="bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 flex flex-col gap-2.5 rounded-lg p-4 text-sm shadow-2xl ring-1 duration-100 z-50 w-80 origin-(--transform-origin) outline-hidden"
+						className={`${POPOVER_ANIMATION_CLASSES} w-80 p-4 shadow-2xl`}
 					>
 						{children}
 					</PopoverPrimitive.Popup>

@@ -1,14 +1,14 @@
 import {
 	defaultGlobals,
-	interactionTestConfig,
+	defaultInteractionTestMeta,
 } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import { awaitHighlights } from "@/test-helpers/interaction-steps";
 import type { Mention } from "../../editor";
 import { Editor } from "../../editor";
 import { SAMPLE_PDF_URL } from "../shared";
-import { TestDecorator } from "../test-decorator";
 
 // Mock mentions with unique IDs to avoid conflicts with mockHighlights
 // These use "mention-" prefix to distinguish them from the mockHighlights in Editor
@@ -112,11 +112,11 @@ const clickHighlightAndWaitForPopover = async ({
 };
 
 const meta: Meta<typeof Editor> = {
+	...defaultInteractionTestMeta,
 	title: "Projects/[ProjectDir]/Editor/tests/Interaction Tests",
 	component: Editor,
-	tags: ["test:interaction"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "fullscreen",
 	},
 	decorators: [TestDecorator],

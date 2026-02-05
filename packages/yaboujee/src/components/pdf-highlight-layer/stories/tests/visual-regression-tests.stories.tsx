@@ -1,20 +1,17 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import type { PdfHighlight } from "../../../../types";
 import { PdfHighlightLayer } from "../../pdf-highlight-layer";
 
 const meta: Meta<typeof PdfHighlightLayer> = {
+	...defaultVrtMeta,
 	title: "Components/PDF/PdfHighlightLayer/tests/Visual Regression Tests",
 	component: PdfHighlightLayer,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

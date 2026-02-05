@@ -1,8 +1,5 @@
 import type { DropResult } from "@hello-pangea/dnd";
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FileText, Tag, User } from "lucide-react";
 import { useState } from "react";
@@ -26,12 +23,12 @@ const sectionMetadata = {
 };
 
 const meta: Meta<typeof DraggableSidebar> = {
+	...defaultVrtMeta,
 	title: "Components/DraggableSidebar/tests/Visual Regression Tests",
 	component: DraggableSidebar,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

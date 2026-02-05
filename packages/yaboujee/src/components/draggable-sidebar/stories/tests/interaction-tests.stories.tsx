@@ -1,4 +1,5 @@
 import type { DropResult } from "@hello-pangea/dnd";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { FileText, Tag, User } from "lucide-react";
@@ -18,12 +19,12 @@ const sectionMetadata = {
 };
 
 const meta: Meta<typeof DraggableSidebar> = {
+	...defaultInteractionTestMeta,
 	title: "Components/DraggableSidebar/tests/Interaction Tests",
 	component: DraggableSidebar,
 	parameters: {
 		layout: "padded",
 	},
-	tags: ["test:interaction"],
 	decorators: [
 		(Story) => (
 			<div

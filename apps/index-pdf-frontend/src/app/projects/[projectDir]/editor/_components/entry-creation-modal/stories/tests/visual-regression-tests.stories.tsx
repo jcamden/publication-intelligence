@@ -1,10 +1,11 @@
-import { defaultGlobals } from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, waitFor, within } from "@storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import { EntryCreationModal } from "../../entry-creation-modal";
 
 const meta: Meta<typeof EntryCreationModal> = {
+	...defaultVrtMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/EntryCreationModal/tests/Visual Regression Tests",
 	component: EntryCreationModal,

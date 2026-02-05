@@ -1,17 +1,14 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { LoginForm } from "../../login-form";
 
 export default {
+	...defaultVrtMeta,
 	title: "Login/LoginForm/tests/Visual Regression Tests",
 	component: LoginForm,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
 	decorators: [

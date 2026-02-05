@@ -1,8 +1,9 @@
-import { defaultGlobals } from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { DeleteMentionDialog } from "../../delete-mention-dialog";
 
 const meta = {
+	...defaultVrtMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/DeleteMentionDialog/tests/Visual Regression Tests",
 	component: DeleteMentionDialog,

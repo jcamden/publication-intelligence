@@ -1,14 +1,14 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { CreateProjectModal } from "../../create-project-modal";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Projects/CreateProjectModal/tests/Interaction Tests",
 	component: CreateProjectModal,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "centered",
 	},
 } satisfies Meta<typeof CreateProjectModal>;

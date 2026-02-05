@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createAuthenticatedClient } from "../../db/client";
 import { createTestProject, createTestUser } from "../../test/factories";
+import { FAKE_UUID } from "../../test/mocks";
 import * as projectService from "./project.service";
 
 // ============================================================================
@@ -148,12 +149,10 @@ describe("Project Service", () => {
 		});
 
 		it("should throw TRPCError NOT_FOUND for non-existent project", async () => {
-			const fakeId = "00000000-0000-0000-0000-000000000000";
-
 			await expect(
 				projectService.getProjectById({
 					gelClient,
-					projectId: fakeId,
+					projectId: FAKE_UUID,
 					userId: "test-user-id",
 					requestId: "test-request",
 				}),

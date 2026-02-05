@@ -1,4 +1,4 @@
-import { defaultGlobals } from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { MentionDetailsPopover } from "../../mention-details-popover";
@@ -14,6 +14,7 @@ const mockIndexEntries = [
 ];
 
 const meta = {
+	...defaultVrtMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/MentionDetailsPopover/tests/Visual Regression Tests",
 	component: MentionDetailsPopover,

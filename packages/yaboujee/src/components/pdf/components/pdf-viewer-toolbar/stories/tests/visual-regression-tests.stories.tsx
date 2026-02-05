@@ -1,18 +1,15 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { PdfViewerToolbar } from "../../pdf-viewer-toolbar";
 import { defaultArgs } from "../shared";
 
 const meta: Meta<typeof PdfViewerToolbar> = {
+	...defaultVrtMeta,
 	title: "Components/PDF/PdfViewerToolbar/tests/Visual Regression Tests",
 	component: PdfViewerToolbar,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
-	tags: ["visual-regression"],
 	args: defaultArgs,
 };
 

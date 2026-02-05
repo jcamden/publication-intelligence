@@ -1,17 +1,14 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { PdfFileUpload } from "../../pdf-file-upload";
 
 export default {
+	...defaultVrtMeta,
 	title: "Components/PdfFileUpload/tests/Visual Regression Tests",
 	component: PdfFileUpload,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
 } satisfies Meta<typeof PdfFileUpload>;

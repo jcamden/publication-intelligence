@@ -1,4 +1,4 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
@@ -6,11 +6,11 @@ import { useState } from "react";
 import { Modal } from "../../modal";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/Modal/tests/Interaction Tests",
 	component: Modal,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 	},
 } satisfies Meta<typeof Modal>;
 

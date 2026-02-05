@@ -1,3 +1,4 @@
+import type { LogContext } from "@pubint/core";
 import pino from "pino";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -33,12 +34,7 @@ export const logger = pino({
 	},
 });
 
-export type LogContext = {
-	requestId?: string;
-	userId?: string;
-	error?: Error | unknown;
-	metadata?: Record<string, unknown>;
-};
+export type { LogContext };
 
 export const logEvent = ({
 	event,

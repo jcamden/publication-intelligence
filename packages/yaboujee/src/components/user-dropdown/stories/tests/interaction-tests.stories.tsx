@@ -1,15 +1,15 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { UserDropdown } from "../../user-dropdown";
 import { defaultHandlers, defaultUser } from "../shared";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/UserDropdown/tests/Interaction Tests",
 	component: UserDropdown,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 	},
 } satisfies Meta<typeof UserDropdown>;
 

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestUser } from "../../test/factories";
+import { FAKE_UUID } from "../../test/mocks";
 import {
 	closeTestServer,
 	createTestServer,
@@ -194,7 +195,7 @@ describe("SourceDocument API (Integration)", () => {
 		});
 
 		it("should return 404 for non-existent project", async () => {
-			const fakeProjectId = "00000000-0000-0000-0000-000000000000";
+			const fakeProjectId = FAKE_UUID;
 
 			const pdfContent = "%PDF-1.4\ntest";
 			const boundary = "----Boundary404";
@@ -329,7 +330,7 @@ describe("SourceDocument API (Integration)", () => {
 		});
 
 		it("should return 404 for non-existent document", async () => {
-			const fakeId = "00000000-0000-0000-0000-000000000000";
+			const fakeId = FAKE_UUID;
 
 			const response = await authenticatedRequest.inject({
 				method: "GET",

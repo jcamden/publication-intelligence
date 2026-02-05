@@ -1,5 +1,6 @@
 "use client";
 
+import { emailValidator, passwordValidator } from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import {
 	Field,
@@ -16,8 +17,8 @@ import { trpc } from "@/app/_common/_utils/trpc";
 
 const signUpSchema = z.object({
 	name: z.string().optional(),
-	email: z.string().email("Please enter a valid email address"),
-	password: z.string().min(8, "Password must be at least 8 characters"),
+	email: emailValidator,
+	password: passwordValidator,
 });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;

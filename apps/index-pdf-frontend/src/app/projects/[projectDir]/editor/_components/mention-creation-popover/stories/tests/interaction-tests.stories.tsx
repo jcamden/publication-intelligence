@@ -1,12 +1,14 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { useState } from "react";
+import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import type { MentionDraft } from "../../mention-creation-popover";
 import { MentionCreationPopover } from "../../mention-creation-popover";
 import { mockDraft, mockDraftNoMatch, mockRegionDraft } from "../shared";
-import { TestDecorator } from "../test-decorator";
 
 const meta = {
+	...defaultInteractionTestMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/MentionCreationPopover/tests/Interaction Tests",
 	component: MentionCreationPopover,

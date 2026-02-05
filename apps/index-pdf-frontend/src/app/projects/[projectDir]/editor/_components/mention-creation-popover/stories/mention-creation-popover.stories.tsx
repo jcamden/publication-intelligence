@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import type { MentionDraft } from "../mention-creation-popover";
 import { MentionCreationPopover } from "../mention-creation-popover";
-import { TestDecorator } from "./test-decorator";
 
 const meta = {
 	title:

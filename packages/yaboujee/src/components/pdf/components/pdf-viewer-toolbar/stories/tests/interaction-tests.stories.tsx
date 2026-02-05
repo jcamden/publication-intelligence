@@ -1,3 +1,4 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { useState } from "react";
@@ -5,12 +6,12 @@ import { PdfViewerToolbar } from "../../pdf-viewer-toolbar";
 import { defaultArgs } from "../shared";
 
 const meta: Meta<typeof PdfViewerToolbar> = {
+	...defaultInteractionTestMeta,
 	title: "Components/PDF/PdfViewerToolbar/tests/Interaction Tests",
 	component: PdfViewerToolbar,
 	parameters: {
 		layout: "centered",
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;

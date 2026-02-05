@@ -1,11 +1,12 @@
-import { defaultGlobals } from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
+import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import { MentionCreationPopover } from "../../mention-creation-popover";
 import { mockDraft, mockRegionDraft } from "../shared";
-import { TestDecorator } from "../test-decorator";
 
 const meta = {
+	...defaultVrtMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/MentionCreationPopover/tests/Visual Regression Tests",
 	component: MentionCreationPopover,

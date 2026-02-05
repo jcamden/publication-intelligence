@@ -1,3 +1,4 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { useState } from "react";
@@ -5,12 +6,12 @@ import { StyledToggleButtonGroup } from "../../styled-toggle-button-group";
 import { createMockStyledButtons } from "../shared";
 
 const meta: Meta<typeof StyledToggleButtonGroup> = {
+	...defaultInteractionTestMeta,
 	title: "Components/StyledToggleButtonGroup/tests/Interaction Tests",
 	component: StyledToggleButtonGroup,
 	parameters: {
 		layout: "centered",
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;

@@ -1,3 +1,4 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, waitFor, within } from "@storybook/test";
 import { useEffect, useState } from "react";
@@ -5,9 +6,9 @@ import { PdfViewer } from "../../pdf-viewer";
 import { defaultArgs, mockHighlights } from "../shared";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/PDF/PdfViewer/tests/Interaction Tests",
 	component: PdfViewer,
-	tags: ["interaction-test"],
 	parameters: {
 		previewTabs: { "storybook/docs/panel": { hidden: true } },
 		controls: {
@@ -890,8 +891,8 @@ export const RenderDraftPopoverCallback: StoryObj<typeof PdfViewer> = {
 		await step("Verify custom popover appears", async () => {
 			await waitFor(
 				async () => {
-					const canvas = within(canvasElement);
-					const customPopover = canvas.queryByTestId("custom-popover");
+					const body = within(document.body);
+					const customPopover = body.queryByTestId("custom-popover");
 					await expect(customPopover).toBeTruthy();
 				},
 				{ timeout: 2000 },
@@ -899,8 +900,8 @@ export const RenderDraftPopoverCallback: StoryObj<typeof PdfViewer> = {
 		});
 
 		await step("Click confirm button in custom popover", async () => {
-			const canvas = within(canvasElement);
-			const confirmButton = canvas.getByRole("button", { name: "Confirm" });
+			const body = within(document.body);
+			const confirmButton = body.getByRole("button", { name: "Confirm" });
 			await userEvent.click(confirmButton);
 		});
 

@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { createAuthenticatedClient } from "../../db/client";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestProject, createTestUser } from "../../test/factories";
+import { createTestPdfBuffer, FAKE_UUID } from "../../test/mocks";
 import * as sourceDocumentService from "./sourceDocument.service";
 
 // ============================================================================
@@ -26,9 +27,10 @@ describe("SourceDocument Service", () => {
 				title: "Upload Test",
 			});
 
-			const pdfBuffer = Buffer.from(
-				"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\nxref\n0 2\ntrailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n%%EOF",
-			);
+			const pdfBuffer = createTestPdfBuffer({
+				content:
+					"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\nxref\n0 2\ntrailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n%%EOF",
+			});
 
 			const document = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -67,7 +69,7 @@ describe("SourceDocument Service", () => {
 				title: "Filename Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\nminimal pdf");
+			const pdfBuffer = createTestPdfBuffer({ content: "minimal pdf" });
 
 			const document = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -141,7 +143,7 @@ describe("SourceDocument Service", () => {
 				title: "Hash Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\ntest content");
+			const pdfBuffer = createTestPdfBuffer({ content: "test content" });
 
 			const document = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -168,7 +170,7 @@ describe("SourceDocument Service", () => {
 				title: "Event Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\nevent test");
+			const pdfBuffer = createTestPdfBuffer({ content: "event test" });
 
 			const document = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -204,14 +206,13 @@ describe("SourceDocument Service", () => {
 		});
 
 		it("should reject upload to non-existent project", async () => {
-			const fakeProjectId = "00000000-0000-0000-0000-000000000000";
-			const pdfBuffer = Buffer.from("%PDF-1.4\ntest");
+			const pdfBuffer = createTestPdfBuffer({ content: "test" });
 
 			await expect(
 				sourceDocumentService.uploadSourceDocument({
 					gelClient,
 					storageService: localFileStorage,
-					projectId: fakeProjectId,
+					projectId: FAKE_UUID,
 					file: {
 						buffer: pdfBuffer,
 						filename: "test.pdf",
@@ -231,7 +232,7 @@ describe("SourceDocument Service", () => {
 				title: "List Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\nlist test");
+			const pdfBuffer = createTestPdfBuffer({ content: "list test" });
 
 			const doc1 = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -283,7 +284,7 @@ describe("SourceDocument Service", () => {
 				title: "Delete List Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\ndelete test");
+			const pdfBuffer = createTestPdfBuffer({ content: "delete test" });
 
 			const document = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -326,7 +327,7 @@ describe("SourceDocument Service", () => {
 				title: "Get Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\nget test");
+			const pdfBuffer = createTestPdfBuffer({ content: "get test" });
 
 			const created = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -356,12 +357,10 @@ describe("SourceDocument Service", () => {
 		});
 
 		it("should throw NOT_FOUND for non-existent document", async () => {
-			const fakeId = "00000000-0000-0000-0000-000000000000";
-
 			await expect(
 				sourceDocumentService.getSourceDocumentById({
 					gelClient,
-					documentId: fakeId,
+					documentId: FAKE_UUID,
 					userId: testUser.userId,
 					requestId: "test-request",
 				}),
@@ -379,7 +378,7 @@ describe("SourceDocument Service", () => {
 				title: "Delete Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\ndelete test");
+			const pdfBuffer = createTestPdfBuffer({ content: "delete test" });
 
 			const document = await sourceDocumentService.uploadSourceDocument({
 				gelClient,
@@ -426,7 +425,7 @@ describe("SourceDocument Service", () => {
 				title: "Delete Event Test",
 			});
 
-			const pdfBuffer = Buffer.from("%PDF-1.4\ndelete event test");
+			const pdfBuffer = createTestPdfBuffer({ content: "delete event test" });
 
 			const document = await sourceDocumentService.uploadSourceDocument({
 				gelClient,

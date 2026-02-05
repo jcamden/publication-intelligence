@@ -1,16 +1,13 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { DeleteProjectDialog } from "../../delete-project-dialog";
 
 export default {
+	...defaultVrtMeta,
 	title: "Projects/DeleteProjectDialog/tests/Visual Regression Tests",
 	component: DeleteProjectDialog,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
 } satisfies Meta<typeof DeleteProjectDialog>;

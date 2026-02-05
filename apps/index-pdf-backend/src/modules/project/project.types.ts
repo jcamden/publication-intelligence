@@ -1,3 +1,4 @@
+import { projectDirValidator, titleValidator } from "@pubint/core";
 import { z } from "zod";
 
 // ============================================================================
@@ -5,23 +6,18 @@ import { z } from "zod";
 // ============================================================================
 
 export const CreateProjectSchema = z.object({
-	title: z.string().min(1, "Title is required").max(500),
+	title: titleValidator,
 	description: z.string().max(2000).optional(),
-	project_dir: z
-		.string()
+	project_dir: projectDirValidator
 		.min(1, "Project directory is required")
-		.max(100)
-		.regex(
-			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-			"Project directory must be lowercase letters, numbers, and hyphens only (e.g., my-project)",
-		),
+		.max(100),
 	workspace: z.string().uuid().optional(),
 });
 
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
 
 export const UpdateProjectSchema = z.object({
-	title: z.string().min(1).max(500).optional(),
+	title: titleValidator.optional(),
 	description: z.string().max(2000).optional().nullable(),
 	workspace: z.string().uuid().optional().nullable(),
 });

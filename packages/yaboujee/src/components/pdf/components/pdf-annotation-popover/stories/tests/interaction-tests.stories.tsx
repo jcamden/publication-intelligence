@@ -1,12 +1,13 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { useEffect, useRef, useState } from "react";
 import { PdfAnnotationPopover } from "../../pdf-annotation-popover";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/PDF/PdfAnnotationPopover/tests/Interaction Tests",
 	component: PdfAnnotationPopover,
-	tags: ["interaction-test"],
 	parameters: {
 		previewTabs: { "storybook/docs/panel": { hidden: true } },
 		layout: "fullscreen",
@@ -76,11 +77,12 @@ export const EscapeKeyClosesPopover: Story = {
 	render: () => <InteractiveWrapper />,
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
+		const body = within(document.body);
 
 		await step("Wait for popover to be visible", async () => {
 			await waitFor(
 				async () => {
-					const popover = canvas.getByText("Popover content");
+					const popover = body.getByText("Popover content");
 					await expect(popover).toBeInTheDocument();
 				},
 				{ timeout: 2000 },
@@ -110,11 +112,12 @@ export const CancelButtonClosesPopover: Story = {
 	render: () => <InteractiveWrapper />,
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
+		const body = within(document.body);
 
 		await step("Wait for popover to be visible", async () => {
 			await waitFor(
 				async () => {
-					const popover = canvas.getByText("Popover content");
+					const popover = body.getByText("Popover content");
 					await expect(popover).toBeInTheDocument();
 				},
 				{ timeout: 2000 },
@@ -122,7 +125,7 @@ export const CancelButtonClosesPopover: Story = {
 		});
 
 		await step("Click cancel button", async () => {
-			const cancelButton = canvas.getByRole("button", { name: "Cancel" });
+			const cancelButton = body.getByRole("button", { name: "Cancel" });
 			await userEvent.click(cancelButton);
 		});
 
@@ -178,11 +181,12 @@ export const PopoverPositionsCorrectly: Story = {
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
+		const body = within(document.body);
 
 		await step("Wait for popover to be visible", async () => {
 			await waitFor(
 				async () => {
-					const popover = canvas.getByTestId("popover-content");
+					const popover = body.getByTestId("popover-content");
 					await expect(popover).toBeInTheDocument();
 				},
 				{ timeout: 2000 },
@@ -191,10 +195,10 @@ export const PopoverPositionsCorrectly: Story = {
 
 		await step("Verify popover is positioned near anchor", async () => {
 			const anchor = canvas.getByTestId("anchor");
-			const popoverContent = canvas.getByTestId("popover-content");
+			const popoverContent = body.getByTestId("popover-content");
 
-			// Get the popover container (parent of popover-content)
-			const popover = popoverContent.closest(".fixed");
+			// Get the popover container - Base UI uses data-pdf-annotation-popover
+			const popover = popoverContent.closest("[data-pdf-annotation-popover]");
 
 			if (!popover) {
 				throw new Error("Popover container not found");

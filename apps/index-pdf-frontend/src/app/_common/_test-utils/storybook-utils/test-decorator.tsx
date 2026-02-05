@@ -5,9 +5,9 @@ import {
 	indexEntriesAtom,
 	indexTypesAtom,
 	mentionsAtom,
-} from "../../../_atoms/editor-atoms";
-import { mockIndexEntries } from "../../../_mocks/index-entries";
-import { mockIndexTypes } from "../../../_mocks/index-types";
+} from "../../../projects/[projectDir]/editor/_atoms/editor-atoms";
+import { mockIndexEntries } from "../../../projects/[projectDir]/editor/_mocks/index-entries";
+import { mockIndexTypes } from "../../../projects/[projectDir]/editor/_mocks/index-types";
 
 const HydrateAtoms = ({ children }: { children: ReactNode }) => {
 	useHydrateAtoms([
@@ -18,6 +18,10 @@ const HydrateAtoms = ({ children }: { children: ReactNode }) => {
 	return <>{children}</>;
 };
 
+/**
+ * Shared test decorator for editor components
+ * Hydrates Jotai atoms with mock data for testing
+ */
 export const TestDecorator = (Story: () => ReactNode) => {
 	return (
 		<Provider>

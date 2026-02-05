@@ -1,18 +1,15 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { SidebarPanel } from "../../sidebar-panel";
 import { defaultSidebarPanelArgs } from "../shared";
 
 const meta: Meta<typeof SidebarPanel> = {
+	...defaultVrtMeta,
 	title: "Components/SidebarPanel/tests/Visual Regression Tests",
 	component: SidebarPanel,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

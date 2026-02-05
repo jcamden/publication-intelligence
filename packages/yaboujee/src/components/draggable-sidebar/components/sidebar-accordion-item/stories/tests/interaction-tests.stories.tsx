@@ -1,3 +1,4 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Accordion } from "@pubint/yabasic/components/ui/accordion";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within } from "@storybook/test";
@@ -10,13 +11,13 @@ import {
 } from "../shared";
 
 const meta: Meta<typeof SidebarAccordionItem> = {
+	...defaultInteractionTestMeta,
 	title:
 		"Components/DraggableSidebar/SidebarAccordionItem/tests/Interaction Tests",
 	component: SidebarAccordionItem,
 	parameters: {
 		layout: "padded",
 	},
-	tags: ["test:interaction"],
 	decorators: [
 		(Story) => (
 			<div style={{ width: "300px", border: "1px solid #ddd" }}>

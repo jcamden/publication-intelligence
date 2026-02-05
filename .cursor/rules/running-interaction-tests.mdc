@@ -1,0 +1,49 @@
+---
+description: Requirements for AI agent to run Storybook interaction tests
+alwaysApply: true
+---
+
+# Running Interaction Tests
+
+## Environment Requirements
+
+To run interaction tests, the AI agent needs:
+
+1. **Node 23**: Activate with `nvm use 23`
+2. **System Playwright browsers**: Set `PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright`
+3. **Unrestricted permissions**: Use `required_permissions: ["all"]` in Shell tool
+
+## Commands
+
+**Frontend tests:**
+```bash
+nvm use 23 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction:frontend
+```
+
+**Yaboujee (component library) tests:**
+```bash
+nvm use 23 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction:yaboujee
+```
+
+**Both:**
+```bash
+nvm use 23 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction
+```
+
+## Checking Results
+
+After running tests, read the interaction summaries:
+- `apps/index-pdf-frontend/test-results/interaction-summary.md`
+- `packages/yaboujee/test-results/interaction-summary.md`
+
+These summaries provide:
+- Pass/fail status
+- Test suite and test counts
+- Detailed error messages with DOM snapshots for failures
+
+## Why This Setup
+
+- **Node 23**: Project requires Node 23 per package.json engines field
+- **Browser path**: Prevents Playwright from trying to install browsers in sandbox cache
+- **Full permissions**: Allows access to system-installed Playwright browsers
+- **No watch mode**: Tests auto-format results to markdown summaries for easy review

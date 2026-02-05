@@ -1,16 +1,14 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { ProjectNavbar } from "../../project-navbar";
 
 const meta: Meta<typeof ProjectNavbar> = {
+	...defaultVrtMeta,
 	title: "Projects/ProjectNavbar/tests/Visual Regression Tests",
 	component: ProjectNavbar,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "fullscreen",
 		nextjs: {
 			appDirectory: true,
@@ -19,7 +17,6 @@ const meta: Meta<typeof ProjectNavbar> = {
 			},
 		},
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

@@ -1,3 +1,4 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { MentionDetailsPopover } from "../../mention-details-popover";
@@ -15,6 +16,7 @@ const mockIndexEntries = [
 ];
 
 const meta = {
+	...defaultInteractionTestMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/MentionDetailsPopover/tests/Interaction Tests",
 	component: MentionDetailsPopover,

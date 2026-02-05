@@ -6,7 +6,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	plugins: [
 		storybookTest({
-			configDir: ".storybook",
+			configDir: ".storybook-interaction",
 		}),
 	],
 	test: {
@@ -22,7 +22,7 @@ export default defineConfig({
 			headless: true,
 			instances: [{ browser: "chromium" }],
 		},
-		setupFiles: ["./.storybook/vitest.setup.ts"],
+		setupFiles: ["./.storybook-interaction/vitest.setup.ts"],
 		coverage: {
 			...jsdomConfig.coverage,
 			exclude: [

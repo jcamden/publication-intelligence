@@ -1,3 +1,4 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within } from "@storybook/test";
 import { Eye, Plus } from "lucide-react";
@@ -9,12 +10,12 @@ import {
 } from "../shared";
 
 const meta: Meta<typeof StyledIconButton> = {
+	...defaultInteractionTestMeta,
 	title: "Components/StyledIconButton/tests/Interaction Tests",
 	component: StyledIconButton,
 	parameters: {
 		layout: "centered",
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;

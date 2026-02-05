@@ -1,16 +1,13 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Logo } from "../../logo";
 
 export default {
+	...defaultVrtMeta,
 	title: "Components/Logo/tests/Visual Regression Tests",
 	component: Logo,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
 } satisfies Meta<typeof Logo>;
 

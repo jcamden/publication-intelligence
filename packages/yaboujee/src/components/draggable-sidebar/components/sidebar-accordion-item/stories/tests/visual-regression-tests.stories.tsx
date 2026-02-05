@@ -1,7 +1,4 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import { Accordion } from "@pubint/yabasic/components/ui/accordion";
 import type { Meta, StoryObj } from "@storybook/react";
 import { FileText, Tag } from "lucide-react";
@@ -14,13 +11,13 @@ import {
 } from "../shared";
 
 const meta: Meta<typeof SidebarAccordionItem> = {
+	...defaultVrtMeta,
 	title:
 		"Components/DraggableSidebar/SidebarAccordionItem/tests/Visual Regression Tests",
 	component: SidebarAccordionItem,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

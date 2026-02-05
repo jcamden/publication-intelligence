@@ -1,35 +1,12 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
-import type { Mention } from "../../../editor/editor";
+import { mockMentions } from "../../../../_mocks/mentions";
 import { EntryTree } from "../../entry-tree";
 
-const mockMentions: Mention[] = [
-	{
-		id: "m1",
-		pageNumber: 1,
-		text: "Philosophy reference",
-		bboxes: [{ x: 100, y: 100, width: 200, height: 20 }],
-		entryId: "entry-subject-1",
-		entryLabel: "Philosophy",
-		indexTypes: ["subject"],
-		type: "text",
-		createdAt: new Date(),
-	},
-	{
-		id: "m2",
-		pageNumber: 1,
-		text: "Kant reference",
-		bboxes: [{ x: 100, y: 150, width: 200, height: 20 }],
-		entryId: "entry-subject-3",
-		entryLabel: "Kant, Immanuel",
-		indexTypes: ["subject"],
-		type: "text",
-		createdAt: new Date(),
-	},
-];
-
 const meta: Meta<typeof EntryTree> = {
+	...defaultInteractionTestMeta,
 	title: "Projects/[ProjectDir]/Editor/EntryTree/tests/Interaction Tests",
 	component: EntryTree,
 	parameters: {

@@ -1,17 +1,14 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Editor } from "../../editor";
 import { SAMPLE_PDF_URL } from "../shared";
 
 const meta: Meta<typeof Editor> = {
+	...defaultVrtMeta,
 	title: "Projects/[ProjectDir]/Editor/tests/Visual Regression Tests",
 	component: Editor,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "fullscreen",
 	},
 };

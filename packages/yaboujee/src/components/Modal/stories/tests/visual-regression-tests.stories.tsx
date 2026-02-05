@@ -1,18 +1,15 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { Modal } from "../../modal";
 
 export default {
+	...defaultVrtMeta,
 	title: "Components/Modal/tests/Visual Regression Tests",
 	component: Modal,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
 } satisfies Meta<typeof Modal>;
 

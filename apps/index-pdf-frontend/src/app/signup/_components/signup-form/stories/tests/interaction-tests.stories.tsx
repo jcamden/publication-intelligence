@@ -1,14 +1,14 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { SignupForm } from "../../signup-form";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Signup/SignupForm/tests/Interaction Tests",
 	component: SignupForm,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "centered",
 	},
 	decorators: [

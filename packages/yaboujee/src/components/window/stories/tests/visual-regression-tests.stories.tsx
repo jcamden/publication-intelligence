@@ -1,18 +1,15 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Window } from "../../window";
 
 const meta: Meta<typeof Window> = {
+	...defaultVrtMeta,
 	title: "Components/Window/tests/Visual Regression Tests",
 	component: Window,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "fullscreen",
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

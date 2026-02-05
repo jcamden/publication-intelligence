@@ -1,19 +1,16 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Eye, Plus, Settings, Zap } from "lucide-react";
 import { StyledIconButton } from "../../styled-icon-button";
 import { defaultStyledIconButtonArgs } from "../shared";
 
 const meta: Meta<typeof StyledIconButton> = {
+	...defaultVrtMeta,
 	title: "Components/StyledIconButton/tests/Visual Regression Tests",
 	component: StyledIconButton,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

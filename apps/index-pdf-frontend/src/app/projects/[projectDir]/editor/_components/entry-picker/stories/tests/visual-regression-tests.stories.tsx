@@ -1,4 +1,4 @@
-import { defaultGlobals } from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { mockIndexEntries } from "../../../../_mocks/index-entries";
@@ -20,6 +20,7 @@ const mockMentions: Mention[] = [
 ];
 
 const meta: Meta<typeof EntryPicker> = {
+	...defaultVrtMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/EntryPicker/tests/Visual Regression Tests",
 	component: EntryPicker,

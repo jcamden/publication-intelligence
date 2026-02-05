@@ -18,6 +18,7 @@
 		"test:interaction": "vitest run --config=vitest.storybook.config.ts && tsx ../../scripts/format-interaction-test-results.ts test-results/interaction-tests.json test-results/interaction-summary.md || tsx ../../scripts/format-interaction-test-results.ts test-results/interaction-tests.json test-results/interaction-summary.md",
 		"test:interaction:watch": "vitest --config=vitest.storybook.config.ts --watch",
 		"storybook": "storybook dev -p 6006",
+		"storybook:vrt": "storybook dev -p 6006 --config-dir .storybook-vrt",
 		"build-storybook": "storybook build",
 		"test:e2e": "playwright test --config=playwright/e2e/e2e.config.ts",
 		"test:e2e:ui": "playwright test --config=playwright/e2e/e2e.config.ts --ui"

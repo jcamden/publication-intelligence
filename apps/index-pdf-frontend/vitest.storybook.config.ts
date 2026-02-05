@@ -9,7 +9,7 @@ export default defineConfig({
 	plugins: [
 		react(),
 		storybookTest({
-			configDir: ".storybook",
+			configDir: ".storybook-interaction",
 		}),
 	],
 	optimizeDeps: {
@@ -35,7 +35,7 @@ export default defineConfig({
 			headless: true,
 			instances: [{ browser: "chromium" }],
 		},
-		setupFiles: ["./.storybook/vitest.setup.ts"],
+		setupFiles: ["./.storybook-interaction/vitest.setup.ts"],
 	},
 	resolve: {
 		alias: {

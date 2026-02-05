@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { appRouter } from "../../routers/index";
+import { createMockContext, createMockUser } from "../../test/mocks";
 import * as userService from "./user.service";
-
-const createMockContext = (overrides = {}) => ({
-	requestId: "test-request-id",
-	authToken: "mock-auth-token",
-	...overrides,
-});
 
 describe("user router", () => {
 	describe("deleteAccount", () => {
@@ -23,11 +18,7 @@ describe("user router", () => {
 		});
 
 		it("should succeed when authenticated", async () => {
-			const mockUser = {
-				id: "00000000-0000-0000-0000-000000000001",
-				email: "test@example.com",
-				name: "Test User",
-			};
+			const mockUser = createMockUser();
 
 			// Mock the service layer to avoid real database calls
 			vi.spyOn(userService, "deleteUserWithIdentity").mockResolvedValue(

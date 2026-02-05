@@ -1,13 +1,14 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, waitFor, within } from "@storybook/test";
 import { ProjectNavbar } from "../../project-navbar";
 
 const meta: Meta<typeof ProjectNavbar> = {
+	...defaultInteractionTestMeta,
 	title: "Projects/ProjectNavbar/tests/Interaction Tests",
 	component: ProjectNavbar,
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "fullscreen",
 		nextjs: {
 			appDirectory: true,
@@ -16,7 +17,6 @@ const meta: Meta<typeof ProjectNavbar> = {
 			},
 		},
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;

@@ -1,9 +1,11 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import { EntryCreationModal } from "../../entry-creation-modal";
 
 const meta: Meta<typeof EntryCreationModal> = {
+	...defaultInteractionTestMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/EntryCreationModal/tests/Interaction Tests",
 	component: EntryCreationModal,

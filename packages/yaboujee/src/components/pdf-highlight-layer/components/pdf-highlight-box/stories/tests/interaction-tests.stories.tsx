@@ -1,17 +1,17 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within } from "@storybook/test";
 import type { PdfHighlight } from "../../../../../../types";
 import { PdfHighlightBox } from "../../pdf-highlight-box";
 
 const meta: Meta<typeof PdfHighlightBox> = {
+	...defaultInteractionTestMeta,
 	title: "Components/PDF/PdfHighlightBox/tests/Interaction Tests",
 	component: PdfHighlightBox,
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "centered",
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestUser } from "../../test/factories";
+import { FAKE_UUID } from "../../test/mocks";
 import {
 	closeTestServer,
 	createTestServer,
@@ -209,7 +210,7 @@ describe("Source Document Download API (Integration)", () => {
 		});
 
 		it("should return 404 when document does not exist", async () => {
-			const fakeDocumentId = "00000000-0000-0000-0000-000000000000";
+			const fakeDocumentId = FAKE_UUID;
 
 			const downloadResponse = await server.inject({
 				method: "GET",

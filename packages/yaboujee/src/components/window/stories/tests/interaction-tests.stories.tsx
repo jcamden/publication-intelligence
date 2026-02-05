@@ -1,15 +1,16 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { Window } from "../../window";
 
 const meta: Meta<typeof Window> = {
+	...defaultInteractionTestMeta,
 	title: "Components/Window/tests/Interaction Tests",
 	component: Window,
 	parameters: {
 		layout: "fullscreen",
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;

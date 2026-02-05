@@ -1,14 +1,14 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { ProjectCard } from "../../project-card";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Projects/ProjectList/ProjectCard/tests/Interaction Tests",
 	component: ProjectCard,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "centered",
 	},
 } satisfies Meta<typeof ProjectCard>;

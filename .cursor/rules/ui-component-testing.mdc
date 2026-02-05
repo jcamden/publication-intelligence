@@ -9,8 +9,18 @@ alwaysApply: true
 
 - **Stories:** `{component}.stories.tsx` - Documentation/interactive stories
 - **Tests:** Nested in `stories/tests/`:
-  - `interaction-tests.stories.tsx` - User interaction tests
-  - `visual-regression-tests.stories.tsx` - Screenshot tests with pseudo-states
+ - `interaction-tests.stories.tsx` - User interaction tests (Vitest)
+ - `visual-regression-tests.stories.tsx` - Screenshot tests with pseudo-states (Playwright VRT)
+
+## Storybook Configurations
+
+Each package has **three** Storybook configurations:
+
+1. **`.storybook/`** - Main config with ALL stories for browsing in Storybook UI
+2. **`.storybook-interaction/`** - Only `interaction-tests.stories.tsx` files for Vitest
+3. **`.storybook-vrt/`** - Only `visual-regression-tests.stories.tsx` files for Playwright VRT
+
+The separation is achieved via the `stories` field in `main.ts`, not via tags.
 
 ## Testing Library Query Priority
 
@@ -45,6 +55,32 @@ export const MyTest: Story = {
 ```
 
 **Note:** `step` is provided by Storybook's play function context, not imported from `@storybook/test`.
+
+## Default Meta Configurations
+
+Always use the exported default meta configurations from `@pubint/storybook-config`:
+
+```typescript
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
+
+export default {
+	...defaultInteractionTestMeta,
+	title: "...",
+	component: MyComponent,
+} satisfies Meta<typeof MyComponent>;
+```
+
+```typescript
+import { defaultVrtMeta } from "@pubint/storybook-config";
+
+export default {
+	...defaultVrtMeta,
+	title: "...",
+	component: MyComponent,
+} satisfies Meta<typeof MyComponent>;
+```
+
+These provide standardized parameters. No tags needed - story filtering is handled by the three separate Storybook configs.
 
 ## Shared Code Patterns
 
@@ -93,11 +129,15 @@ export default {
 - Use controls/args for interactivity
 
 **Interaction Tests:**
+- File: `**/tests/interaction-tests.stories.tsx`
+- Tag: `tags: ["interaction-test"]` (REQUIRED in meta config)
 - Strictly test user interactions (clicks, typing, keyboard navigation)
 - Use `play` functions with `step()` wrapping
 - Assert behavioral outcomes, not just rendering
 
 **Visual Regression Tests:**
+- File: `**/tests/visual-regression-tests.stories.tsx`
+- Tag: `tags: ["visual-test"]` (REQUIRED in meta config)
 - Minimal stories capturing visual states
 - Trigger pseudo-states (focus, hover, disabled) for untested components
 - Use `storybook-addon-pseudo-states` for hover/focus/active states

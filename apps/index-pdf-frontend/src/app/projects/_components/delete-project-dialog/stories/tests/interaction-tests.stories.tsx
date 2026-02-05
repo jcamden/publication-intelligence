@@ -1,14 +1,14 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { DeleteProjectDialog } from "../../delete-project-dialog";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Projects/DeleteProjectDialog/tests/Interaction Tests",
 	component: DeleteProjectDialog,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 		layout: "centered",
 	},
 } satisfies Meta<typeof DeleteProjectDialog>;

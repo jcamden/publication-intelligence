@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { appRouter } from "../../routers/index";
-
-const createMockContext = (overrides = {}) => ({
-	requestId: "test-request-id",
-	authToken: "mock-auth-token",
-	...overrides,
-});
+import { createMockContext, createMockUser } from "../../test/mocks";
 
 describe("auth router", () => {
 	describe("signUp", () => {
@@ -53,11 +48,7 @@ describe("auth router", () => {
 		});
 
 		it("should return user when authenticated", async () => {
-			const mockUser = {
-				id: "test-id",
-				email: "test@example.com",
-				name: "Test User",
-			};
+			const mockUser = createMockUser({ id: "test-id" });
 
 			const caller = appRouter.createCaller(
 				createMockContext({
@@ -80,11 +71,7 @@ describe("auth router", () => {
 		it("should succeed when authenticated", async () => {
 			const caller = appRouter.createCaller(
 				createMockContext({
-					user: {
-						id: "test-id",
-						email: "test@example.com",
-						name: "Test User",
-					},
+					user: createMockUser({ id: "test-id" }),
 				}),
 			);
 

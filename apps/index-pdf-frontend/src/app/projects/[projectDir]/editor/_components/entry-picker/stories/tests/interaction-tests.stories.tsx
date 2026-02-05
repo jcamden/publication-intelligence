@@ -1,3 +1,4 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { mockIndexEntries } from "../../../../_mocks/index-entries";
@@ -19,6 +20,7 @@ const mockMentions: Mention[] = [
 ];
 
 const meta: Meta<typeof EntryPicker> = {
+	...defaultInteractionTestMeta,
 	title: "Projects/[ProjectDir]/Editor/EntryPicker/tests/Interaction Tests",
 	component: EntryPicker,
 	parameters: {

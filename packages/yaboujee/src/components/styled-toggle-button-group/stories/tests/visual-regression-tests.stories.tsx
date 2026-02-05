@@ -1,18 +1,15 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { StyledToggleButtonGroup } from "../../styled-toggle-button-group";
 import { createMockStyledButtons } from "../shared";
 
 const meta: Meta<typeof StyledToggleButtonGroup> = {
+	...defaultVrtMeta,
 	title: "Components/StyledToggleButtonGroup/tests/Visual Regression Tests",
 	component: StyledToggleButtonGroup,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

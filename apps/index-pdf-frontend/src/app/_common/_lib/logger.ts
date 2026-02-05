@@ -1,11 +1,4 @@
-type LogLevel = "info" | "warn" | "error" | "debug";
-
-type LogContext = {
-	userId?: string;
-	requestId?: string;
-	error?: Error | unknown;
-	metadata?: Record<string, unknown>;
-};
+import type { LogContext, LogLevel } from "@pubint/core";
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 

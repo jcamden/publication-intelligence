@@ -1,18 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { createMockPdfFile } from "../../pdf/test-helpers/mock-factories";
 import { PdfThumbnail } from "../pdf-thumbnail";
-
-const createMockPdfFile = (name = "sample.pdf") => {
-	const pdfContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-%%EOF`;
-
-	return new File([pdfContent], name, { type: "application/pdf" });
-};
 
 const meta = {
 	title: "Components/PdfThumbnail",

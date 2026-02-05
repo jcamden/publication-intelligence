@@ -1,3 +1,4 @@
+import { emailValidator, passwordValidator } from "@pubint/core";
 import { z } from "zod";
 
 // ============================================================================
@@ -5,16 +6,16 @@ import { z } from "zod";
 // ============================================================================
 
 export const SignUpSchema = z.object({
-	email: z.string().email(),
-	password: z.string().min(8),
+	email: emailValidator,
+	password: passwordValidator,
 	name: z.string().optional(),
 });
 
 export type SignUpInput = z.infer<typeof SignUpSchema>;
 
 export const SignInSchema = z.object({
-	email: z.string().email(),
-	password: z.string(),
+	email: emailValidator,
+	password: passwordValidator,
 });
 
 export type SignInInput = z.infer<typeof SignInSchema>;

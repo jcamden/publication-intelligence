@@ -1,17 +1,14 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Alert } from "../../alert";
 import { AllVariantsStack } from "../shared";
 
 export default {
+	...defaultVrtMeta,
 	title: "Components/Alert/tests/Visual Regression Tests",
 	component: Alert,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
 } satisfies Meta<typeof Alert>;
 

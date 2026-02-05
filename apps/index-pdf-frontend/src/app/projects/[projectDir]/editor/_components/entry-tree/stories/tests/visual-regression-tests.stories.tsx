@@ -1,4 +1,4 @@
-import { defaultGlobals } from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import type { Mention } from "../../../editor/editor";
@@ -19,6 +19,7 @@ const mockMentions: Mention[] = [
 ];
 
 const meta: Meta<typeof EntryTree> = {
+	...defaultVrtMeta,
 	title: "Projects/[ProjectDir]/Editor/EntryTree/tests/Visual Regression Tests",
 	component: EntryTree,
 	parameters: {

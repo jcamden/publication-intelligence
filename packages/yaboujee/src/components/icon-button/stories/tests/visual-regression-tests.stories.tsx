@@ -1,7 +1,4 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import {
 	CloseButton,
@@ -17,11 +14,11 @@ import {
 } from "../shared";
 
 const meta: Meta = {
+	...defaultVrtMeta,
 	title: "Components/IconButton/tests/Visual Regression Tests",
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

@@ -1,16 +1,13 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ProjectCard } from "../../project-card";
 
 export default {
+	...defaultVrtMeta,
 	title: "Projects/ProjectList/ProjectCard/tests/Visual Regression Tests",
 	component: ProjectCard,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
 	decorators: [

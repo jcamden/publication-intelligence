@@ -1,21 +1,18 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { SelectionPopover } from "../../selection-popover";
 import { SelectionPopoverWrapper } from "../shared";
 
 const meta: Meta<typeof SelectionPopover> = {
+	...defaultVrtMeta,
 	title:
 		"Projects/[ProjectDir]/Editor/SelectionPopover/tests/Visual Regression Tests",
 	component: SelectionPopover,
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
-	tags: ["visual-regression"],
 };
 
 export default meta;

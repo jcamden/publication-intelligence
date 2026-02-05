@@ -1,14 +1,14 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { Logo } from "../../logo";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/Logo/tests/Interaction Tests",
 	component: Logo,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 	},
 } satisfies Meta<typeof Logo>;
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FAKE_UUID } from "../../test/mocks";
 import { localFileStorage } from "./local-file-storage";
 
 // ============================================================================
@@ -47,7 +48,7 @@ describe("LocalFileStorage", () => {
 	});
 
 	it("should return null for non-existent files", async () => {
-		const fakeKey = "00000000-0000-0000-0000-000000000000.pdf";
+		const fakeKey = `${FAKE_UUID}.pdf`;
 
 		const file = await localFileStorage.getFile({ storageKey: fakeKey });
 		expect(file).toBeNull();
@@ -82,7 +83,7 @@ describe("LocalFileStorage", () => {
 	});
 
 	it("should not throw when deleting non-existent file", async () => {
-		const fakeKey = "00000000-0000-0000-0000-000000000000.pdf";
+		const fakeKey = `${FAKE_UUID}.pdf`;
 
 		await expect(
 			localFileStorage.deleteFile({ storageKey: fakeKey }),

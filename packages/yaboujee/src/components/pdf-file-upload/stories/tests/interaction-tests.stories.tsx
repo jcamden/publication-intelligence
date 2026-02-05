@@ -1,15 +1,15 @@
-import { interactionTestConfig } from "@pubint/storybook-config";
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { PdfFileUpload } from "../../pdf-file-upload";
 
 export default {
+	...defaultInteractionTestMeta,
 	title: "Components/PdfFileUpload/tests/Interaction Tests",
 	component: PdfFileUpload,
-	tags: ["interaction-test"],
 	parameters: {
-		...interactionTestConfig,
+		...defaultInteractionTestMeta.parameters,
 	},
 } satisfies Meta<typeof PdfFileUpload>;
 

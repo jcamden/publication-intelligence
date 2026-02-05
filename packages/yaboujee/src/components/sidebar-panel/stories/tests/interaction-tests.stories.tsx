@@ -1,15 +1,16 @@
+import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within } from "@storybook/test";
 import { SidebarPanel } from "../../sidebar-panel";
 import { SIDEBAR_PANEL_TEST_IDS } from "../shared";
 
 const meta: Meta<typeof SidebarPanel> = {
+	...defaultInteractionTestMeta,
 	title: "Components/SidebarPanel/tests/Interaction Tests",
 	component: SidebarPanel,
 	parameters: {
 		layout: "centered",
 	},
-	tags: ["test:interaction"],
 };
 
 export default meta;

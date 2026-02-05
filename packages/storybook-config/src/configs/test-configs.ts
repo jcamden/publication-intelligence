@@ -30,3 +30,19 @@ export const visualRegressionTestConfig: Parameters = {
 	previewTabs: { "storybook/docs/panel": { hidden: true } },
 	controls: { disable: true },
 };
+
+/**
+ * Default meta configuration for interaction test files
+ * No tags needed - filtered by separate Storybook config (.storybook-interaction)
+ */
+export const defaultInteractionTestMeta = {
+	parameters: interactionTestConfig,
+};
+
+/**
+ * Default meta configuration for visual regression test files
+ * No tags needed - runs via separate Playwright VRT command
+ */
+export const defaultVrtMeta = {
+	parameters: visualRegressionTestConfig,
+};

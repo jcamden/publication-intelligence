@@ -1,17 +1,14 @@
-import {
-	defaultGlobals,
-	visualRegressionTestConfig,
-} from "@pubint/storybook-config";
+import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { CreateProjectModal } from "../../create-project-modal";
 
 export default {
+	...defaultVrtMeta,
 	title: "Projects/CreateProjectModal/tests/Visual Regression Tests",
 	component: CreateProjectModal,
-	tags: ["visual-regression"],
 	parameters: {
-		...visualRegressionTestConfig,
+		...defaultVrtMeta.parameters,
 		layout: "fullscreen",
 	},
 } satisfies Meta<typeof CreateProjectModal>;
