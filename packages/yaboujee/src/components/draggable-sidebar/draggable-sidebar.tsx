@@ -7,6 +7,7 @@ import {
 	type DropResult,
 } from "@hello-pangea/dnd";
 import { Accordion } from "@pubint/yabasic/components/ui/accordion";
+import { ScrollArea } from "@pubint/yabasic/components/ui/scroll-area";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
 import { SidebarAccordionItem } from "./components/sidebar-accordion-item";
@@ -47,8 +48,8 @@ export const DraggableSidebar = <TSectionId extends string>({
 	side,
 }: DraggableSidebarProps<TSectionId>) => {
 	return (
-		<div
-			className={`h-full overflow-y-auto ${side === "left" ? "border-r" : "border-l"} border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 w-full`}
+		<ScrollArea
+			className={`h-full ${side === "left" ? "border-r" : "border-l"} border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 w-full`}
 		>
 			<DragDropContext onDragEnd={onDragEnd}>
 				<Droppable droppableId={droppableId}>
@@ -112,6 +113,6 @@ export const DraggableSidebar = <TSectionId extends string>({
 					)}
 				</Droppable>
 			</DragDropContext>
-		</div>
+		</ScrollArea>
 	);
 };

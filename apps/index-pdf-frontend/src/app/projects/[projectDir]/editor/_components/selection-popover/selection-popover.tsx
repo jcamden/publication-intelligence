@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import { Button } from "@pubint/yabasic/components/ui/button";
 
 type SelectionPopoverProps = {
 	anchorEl: HTMLElement;
@@ -25,55 +26,50 @@ export const SelectionPopover = ({
 	isCreating,
 	selectedText,
 }: SelectionPopoverProps) => {
-	const [position, setPosition] = useState<{ top: number; left: number }>({
-		top: 0,
-		left: 0,
-	});
-
-	useEffect(() => {
-		if (!anchorEl) return;
-
-		const rect = anchorEl.getBoundingClientRect();
-		setPosition({
-			top: rect.bottom + window.scrollY + 8,
-			left: rect.left + window.scrollX + rect.width / 2,
-		});
-	}, [anchorEl]);
-
 	const truncatedText =
 		selectedText.length > 60
 			? `${selectedText.substring(0, 60)}...`
 			: selectedText;
 
 	return (
-		<div
-			className="fixed z-50 -translate-x-1/2 rounded-lg bg-white p-3 shadow-2xl ring-1 ring-black/10 dark:bg-neutral-800 dark:ring-white/20"
-			style={{
-				top: position.top,
-				left: position.left,
-			}}
-		>
-			<div className="mb-2 max-w-xs text-xs text-neutral-600 dark:text-neutral-400">
-				"{truncatedText}"
-			</div>
-			<div className="flex gap-2">
-				<button
-					type="button"
-					onClick={onCreateMention}
-					disabled={isCreating}
-					className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+		<PopoverPrimitive.Root open={true}>
+			<PopoverPrimitive.Portal>
+				<PopoverPrimitive.Positioner
+					anchor={anchorEl}
+					side="bottom"
+					sideOffset={8}
+					className="isolate z-50"
 				>
-					{isCreating ? "Creating..." : "Create Mention"}
-				</button>
-				<button
-					type="button"
-					onClick={onCancel}
-					disabled={isCreating}
-					className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
-				>
-					Cancel
-				</button>
-			</div>
-		</div>
+					<PopoverPrimitive.Popup
+						data-slot="popover-content"
+						className="bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 flex flex-col gap-2.5 rounded-lg p-2.5 text-sm shadow-md ring-1 duration-100 z-50 w-auto origin-(--transform-origin) outline-hidden"
+					>
+						<div className="mb-2 max-w-xs text-xs text-muted-foreground">
+							"{truncatedText}"
+						</div>
+						<div className="flex gap-2">
+							<Button
+								type="button"
+								onClick={onCreateMention}
+								disabled={isCreating}
+								variant="default"
+								size="sm"
+							>
+								{isCreating ? "Creating..." : "Create Mention"}
+							</Button>
+							<Button
+								type="button"
+								onClick={onCancel}
+								disabled={isCreating}
+								variant="outline"
+								size="sm"
+							>
+								Cancel
+							</Button>
+						</div>
+					</PopoverPrimitive.Popup>
+				</PopoverPrimitive.Positioner>
+			</PopoverPrimitive.Portal>
+		</PopoverPrimitive.Root>
 	);
 };

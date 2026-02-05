@@ -7,7 +7,7 @@ import {
 	FieldLabel,
 } from "@pubint/yabasic/components/ui/field";
 import { Input } from "@pubint/yabasic/components/ui/input";
-import { Alert, FormFooter } from "@pubint/yaboujee";
+import { Alert, AlertDescription, FormFooter } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -128,7 +128,11 @@ export const LoginForm = () => {
 					)}
 				</form.Field>
 
-				{apiError && <Alert variant="error">{apiError.message}</Alert>}
+				{apiError && (
+					<Alert variant="error">
+						<AlertDescription>{apiError.message}</AlertDescription>
+					</Alert>
+				)}
 
 				<Button type="submit" disabled={isLoading} className="w-full">
 					{isLoading ? "Loading..." : "Sign In"}

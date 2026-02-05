@@ -1,5 +1,6 @@
 "use client";
 
+import { ScrollArea } from "@pubint/yabasic/components/ui/scroll-area";
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
@@ -791,7 +792,7 @@ export const PdfViewer = ({
 	return (
 		<div className={containerClasses}>
 			{/* PDF Canvas */}
-			<div ref={scrollContainerRef} className="flex-1 overflow-auto pt-4">
+			<ScrollArea viewportRef={scrollContainerRef} className="flex-1 pt-4">
 				<div className="mx-auto w-fit rounded-lg bg-[hsl(var(--color-background))] shadow-lg">
 					<div ref={pageContainerRef} className="relative">
 						<canvas ref={canvasRef} className="block" />
@@ -850,7 +851,7 @@ export const PdfViewer = ({
 						)}
 					</div>
 				</div>
-			</div>
+			</ScrollArea>
 
 			{/* Draft Annotation Popover */}
 			{renderDraftPopover && draftHighlight && (

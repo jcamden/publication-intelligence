@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@pubint/yabasic/components/ui/button";
 import { FieldError } from "@pubint/yabasic/components/ui/field";
 import { FormInput } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
@@ -237,20 +238,17 @@ export const MentionCreationPopover = ({
 				</div>
 
 				<div className="flex gap-2 justify-end">
-					<button
-						type="button"
-						onClick={onCancel}
-						className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
-					>
+					<Button type="button" onClick={onCancel} variant="outline" size="sm">
 						Cancel
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
 						onClick={handleSubmit}
-						className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+						variant="default"
+						size="sm"
 					>
 						{buttonText}
-					</button>
+					</Button>
 				</div>
 			</form>
 

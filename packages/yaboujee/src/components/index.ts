@@ -1,5 +1,5 @@
-export type { AlertProps } from "./alert";
-export { Alert } from "./alert";
+export type { AlertProps, AlertVariant } from "./alert";
+export { Alert, AlertAction, AlertDescription, AlertTitle } from "./alert";
 export { DraggableSidebar, SidebarAccordionItem } from "./draggable-sidebar";
 export type { FormFooterProps } from "./form-footer";
 export { FormFooter } from "./form-footer";

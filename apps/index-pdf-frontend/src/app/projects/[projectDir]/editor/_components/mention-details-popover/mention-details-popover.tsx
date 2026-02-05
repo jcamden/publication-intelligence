@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@pubint/yabasic/components/ui/button";
 import {
 	Combobox,
 	ComboboxContent,
@@ -270,22 +271,24 @@ export const MentionDetailsPopover = ({
 				</div>
 
 				<div className="flex gap-2 justify-end pt-2 border-t border-neutral-200 dark:border-neutral-700">
-					<button
+					<Button
 						type="button"
 						data-testid="edit-button"
 						onClick={handleEnterEditMode}
-						className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
+						variant="outline"
+						size="sm"
 					>
 						Edit
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
 						data-testid="close-button"
 						onClick={onCancel}
-						className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
+						variant="outline"
+						size="sm"
 					>
 						Close
-					</button>
+					</Button>
 				</div>
 			</div>
 		);
@@ -411,31 +414,34 @@ export const MentionDetailsPopover = ({
 			</div>
 
 			<div className="flex gap-2 justify-between pt-2 border-t border-neutral-200 dark:border-neutral-700">
-				<button
+				<Button
 					type="button"
 					data-testid="delete-button"
 					onClick={() => onDelete({ mentionId: mention.id })}
-					className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+					variant="destructive"
+					size="sm"
 				>
 					Delete
-				</button>
+				</Button>
 				<div className="flex gap-2">
-					<button
+					<Button
 						type="button"
 						data-testid="cancel-button"
 						onClick={handleCancel}
-						className="rounded border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-700"
+						variant="outline"
+						size="sm"
 					>
 						Cancel
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
 						data-testid="save-button"
 						onClick={handleSave}
-						className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+						variant="default"
+						size="sm"
 					>
 						Save
-					</button>
+					</Button>
 				</div>
 			</div>
 		</div>
