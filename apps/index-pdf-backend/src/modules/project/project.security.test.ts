@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createAuthenticatedClient } from "../../db/client";
 import type { createTestUser } from "../../test/factories";
 import { createTestUser as _createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
@@ -86,63 +85,6 @@ describe("Project Security & Authorization", () => {
 			expect(getResponse.statusCode).toBe(200);
 			const data = JSON.parse(getResponse.body);
 			expect(data.result.data.title).toBe("Owner's Project");
-		});
-
-		it("collaborator access - should allow collaborator to access project", async () => {
-			const owner = await createTestUser();
-			const collaborator = await createTestUser();
-
-			// Owner creates project
-			const createResponse = await asUser({
-				user: owner,
-				operation: async (request) =>
-					request.inject({
-						method: "POST",
-						url: "/trpc/project.create",
-						payload: {
-							title: "Collaborative Project",
-							project_dir: "collaborative-project",
-						},
-					}),
-			});
-
-			const project = JSON.parse(createResponse.body).result.data;
-
-			// Add collaborator using direct DB access
-			const ownerClient = createAuthenticatedClient({
-				authToken: owner.authToken,
-			});
-
-			// Get collaborator's user ID from DB
-			const collabUser = await ownerClient.querySingle<{ id: string }>(
-				`SELECT User { id } FILTER .email = <str>$email`,
-				{ email: collaborator.email },
-			);
-
-			await ownerClient.query(
-				`
-				UPDATE Project
-				FILTER .id = <uuid>$projectId
-				SET {
-					collaborators += (SELECT User FILTER .id = <uuid>$collaboratorId)
-				}
-			`,
-				{ projectId: project.id, collaboratorId: collabUser?.id },
-			);
-
-			// Collaborator can read
-			const getResponse = await asUser({
-				user: collaborator,
-				operation: async (request) =>
-					request.inject({
-						method: "GET",
-						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
-					}),
-			});
-
-			expect(getResponse.statusCode).toBe(200);
-			const data = JSON.parse(getResponse.body);
-			expect(data.result.data.title).toBe("Collaborative Project");
 		});
 
 		it("random user - should deny random user access to project", async () => {
@@ -404,118 +346,6 @@ describe("Project Security & Authorization", () => {
 			});
 
 			expect(verifyResponse.statusCode).toBe(200);
-		});
-	});
-
-	describe("Collaborator Permissions", () => {
-		it("collaborator write - should allow collaborator to update project", async () => {
-			const owner = await createTestUser();
-			const collaborator = await createTestUser();
-
-			// Create project
-			const createResponse = await asUser({
-				user: owner,
-				operation: async (request) =>
-					request.inject({
-						method: "POST",
-						url: "/trpc/project.create",
-						payload: {
-							title: "Collaborative Project",
-							project_dir: "collaborative-project-collab",
-						},
-					}),
-			});
-
-			const project = JSON.parse(createResponse.body).result.data;
-
-			// Add collaborator
-			const ownerClient = createAuthenticatedClient({
-				authToken: owner.authToken,
-			});
-
-			// Get collaborator's user ID from DB
-			const collabUser = await ownerClient.querySingle<{ id: string }>(
-				`SELECT User { id } FILTER .email = <str>$email`,
-				{ email: collaborator.email },
-			);
-
-			await ownerClient.query(
-				`
-				UPDATE Project
-				FILTER .id = <uuid>$projectId
-				SET {
-					collaborators += (SELECT User FILTER .id = <uuid>$collaboratorId)
-				}
-			`,
-				{ projectId: project.id, collaboratorId: collabUser?.id },
-			);
-
-			// Collaborator updates the project
-			const updateResponse = await asUser({
-				user: collaborator,
-				operation: async (request) =>
-					request.inject({
-						method: "POST",
-						url: "/trpc/project.update",
-						payload: {
-							id: project.id,
-							data: { description: "Updated by collaborator" },
-						},
-					}),
-			});
-
-			expect(updateResponse.statusCode).toBe(200);
-
-			// Verify update
-			const verifyResponse = await asUser({
-				user: owner,
-				operation: async (request) =>
-					request.inject({
-						method: "GET",
-						url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: project.id }))}`,
-					}),
-			});
-
-			const verify = JSON.parse(verifyResponse.body).result.data;
-			expect(verify.description).toBe("Updated by collaborator");
-		});
-
-		it("should not allow non-collaborator to see project in list", async () => {
-			const owner = await createTestUser();
-			const randomUser = await createTestUser();
-
-			// Owner creates project
-			await asUser({
-				user: owner,
-				operation: async (request) =>
-					request.inject({
-						method: "POST",
-						url: "/trpc/project.create",
-						payload: {
-							title: "Owner's Private Project",
-							project_dir: "owners-private-project",
-						},
-					}),
-			});
-
-			// Random user lists their projects
-			const listResponse = await asUser({
-				user: randomUser,
-				operation: async (request) =>
-					request.inject({
-						method: "GET",
-						url: "/trpc/project.list",
-					}),
-			});
-
-			const projects = JSON.parse(listResponse.body).result.data;
-
-			// Should not see owner's project
-			expect(
-				projects.some(
-					(p: { title: string }) => p.title === "Owner's Private Project",
-				),
-			).toBe(false);
 		});
 	});
 

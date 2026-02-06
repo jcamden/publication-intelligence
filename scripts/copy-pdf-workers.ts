@@ -12,11 +12,9 @@
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { getWorkspaceRoot } from "./workspace-utils.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const rootDir = join(__dirname, "..");
+const rootDir = getWorkspaceRoot();
 
 type CopyTarget = {
 	source: string;

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
@@ -20,6 +20,10 @@ describe("SourceDocument API (Integration)", () => {
 
 	beforeAll(async () => {
 		server = await createTestServer();
+	});
+
+	beforeEach(async () => {
+		// Recreate user before each test (afterEach cleanup deletes all data)
 		testUser = await createTestUser();
 		authenticatedRequest = makeAuthenticatedRequest({
 			server,
@@ -30,8 +34,6 @@ describe("SourceDocument API (Integration)", () => {
 	afterAll(async () => {
 		await closeTestServer(server);
 	});
-
-	// Note: Test data cleanup handled by branch reset
 
 	describe("POST /projects/:projectId/source-documents/upload", () => {
 		it("should upload PDF via multipart/form-data", async () => {

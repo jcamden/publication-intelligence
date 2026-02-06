@@ -1,6 +1,6 @@
 # Publication Intelligence Backend
 
-Production-grade backend API for the Publication Intelligence platform. Built with Fastify, tRPC, and Gel (EdgeDB).
+Production-grade backend API for the Publication Intelligence platform. Built with Fastify, tRPC, PostgreSQL, and Drizzle ORM.
 
 ## Architecture
 
@@ -9,18 +9,20 @@ src/
 ├── modules/               # Domain modules
 │   └── project/
 │       ├── project.types.ts      # DTOs and domain types
-│       ├── project.repo.ts       # Data layer (edgeql-js)
+│       ├── project.repo.ts       # Data layer (Drizzle ORM)
 │       ├── project.service.ts    # Business logic
 │       ├── project.router.ts     # API layer (tRPC)
 │       ├── project.service.test.ts       # Domain tests
 │       └── project.integration.test.ts   # API tests
 ├── routers/              # tRPC route aggregation
 ├── auth/                 # Authentication utilities
-├── db/                   # Database client setup
+├── db/                   # Database client and schemas
+│   ├── client.ts         # PostgreSQL client + RLS wrapper
+│   └── schema/           # Drizzle table definitions + RLS policies
 ├── events/               # Domain event emitter
 ├── middleware/           # Request middleware
 ├── test/                 # Test infrastructure
-│   ├── setup.ts          # Test database config
+│   ├── setup.ts          # PGLite test database config
 │   ├── factories.ts      # Test data generators
 │   ├── server-harness.ts # HTTP test utilities
 │   └── *.test.ts         # Shared integration tests
@@ -32,11 +34,11 @@ src/
 
 - **Web Framework**: Fastify 5.x (high-performance HTTP)
 - **API Layer**: tRPC 11.x (type-safe RPC)
-- **Database**: Gel (EdgeDB) 2.x (graph-relational DB)
-- **Query Builder**: edgeql-js (type-safe queries)
+- **Database**: PostgreSQL 17+ with Row-Level Security (RLS)
+- **ORM**: Drizzle ORM (type-safe query builder)
 - **Validation**: Zod 4.x (schema validation)
 - **Logging**: Pino (structured JSON logging)
-- **Testing**: Vitest (fast unit/integration tests)
+- **Testing**: Vitest + PGLite (in-memory PostgreSQL for tests)
 
 ## Getting Started
 
@@ -44,22 +46,20 @@ src/
 
 - Node.js 23+
 - pnpm 10+
-- Gel (EdgeDB) running locally
+- PostgreSQL 17+ (Docker or local)
 
 ### Installation
 
 ```bash
 # Install dependencies
+nvm use 23
 pnpm install
 
-# Start Gel database
-pnpm gel:ui
+# Setup database
+createdb publication_intelligence
 
 # Run migrations
-pnpm gel:migrate:apply
-
-# Generate edgeql-js query builder
-pnpm gel:generate
+pnpm db:migrate
 ```
 
 ### Development
@@ -185,11 +185,11 @@ pnpm vitest src/modules/project/project.service.test.ts
 
 ### Test Structure
 
-- **Domain Tests** (`*.service.test.ts`) - Business logic with real database
+- **Domain Tests** (`*.service.test.ts`) - Business logic with PGLite in-memory DB
 - **Integration Tests** (`*.integration.test.ts`) - Full HTTP stack
 - **Contract Tests** (future) - tRPC schema validation
 
-All tests use real Gel database with isolated test data. No mocking unless absolutely necessary.
+All tests use PGLite (in-memory PostgreSQL) for fast, isolated testing. No external database required. See `TESTING.md` for details.
 
 ## Logging
 
@@ -233,27 +233,25 @@ await eventEmitter.emit({
 });
 ```
 
-Events are also persisted to Gel's `Event` table for queryable history.
+Events are also persisted to PostgreSQL's `events` table for queryable history.
 
 See `.cursor/rules/event-emission.mdc` for standards.
 
 ## Database Migrations
 
 ```bash
-# Create new migration
-pnpm gel:migrate
+# Generate migration after schema changes
+pnpm db:generate
+pnpm db:generate --name=feature_x  # with custom name
 
 # Apply migrations
-pnpm gel:migrate:apply
-
-# Check migration status
-pnpm gel:status
-
-# Open Gel UI
-pnpm gel:ui
+pnpm db:migrate
 
 # Reset database (destructive!)
-pnpm gel:reset
+pnpm db:reset
+
+# Open Drizzle Studio (database browser)
+pnpm db:studio
 ```
 
 ## Environment Variables
@@ -265,7 +263,11 @@ HOST=0.0.0.0
 NODE_ENV=development
 
 # Database
-GEL_AUTH_URL=http://localhost:10702/db/main/ext/auth
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/publication_intelligence
+
+# JWT Authentication
+JWT_SECRET=dev-secret-change-in-production
+JWT_EXPIRES_IN=7d
 
 # Logging
 LOG_LEVEL=info
@@ -284,16 +286,16 @@ All errors follow tRPC error codes:
 ## Design Principles
 
 1. **Layered Architecture** - Routes → Services → Repositories → Database
-2. **Type Safety** - End-to-end TypeScript with edgeql-js
+2. **Type Safety** - End-to-end TypeScript with Drizzle ORM
 3. **Domain-Driven** - Business logic separate from infrastructure
-4. **Testable** - Real database tests, minimal mocking
+4. **Testable** - PGLite in-memory tests, minimal mocking
 5. **Observable** - Structured logs, domain events, request tracing
-6. **Secure** - Gel access policies, auth middleware, input validation
+6. **Secure** - PostgreSQL RLS policies, JWT auth, input validation
 
 ## Project Structure Conventions
 
 - **Types** (`*.types.ts`) - DTOs, domain types, Zod schemas
-- **Repository** (`*.repo.ts`) - Database queries only (edgeql-js)
+- **Repository** (`*.repo.ts`) - Database queries only (Drizzle)
 - **Service** (`*.service.ts`) - Business logic, orchestration
 - **Router** (`*.router.ts`) - tRPC procedures, HTTP layer
 - **Tests** (`*.test.ts`) - Domain/unit tests
@@ -303,7 +305,7 @@ All errors follow tRPC error codes:
 
 1. Write tests first (TDD preferred)
 2. Follow existing patterns (repo → service → router)
-3. Use edgeql-js for all database queries
+3. Use Drizzle ORM for all database queries
 4. Log domain events with `logEvent`
 5. Emit events with `eventEmitter`
 6. Run `pnpm typecheck` before committing
@@ -312,18 +314,18 @@ All errors follow tRPC error codes:
 ## Troubleshooting
 
 ### Server won't start
-- Check Gel is running: `pnpm gel:ui`
-- Verify migrations applied: `pnpm gel:migrate:apply`
+- Check PostgreSQL is running: `psql -l`
+- Verify migrations applied: `pnpm db:migrate`
 - Check port 3001 is available
 
 ### Tests failing
-- Ensure Gel is running
-- Check auth endpoint: `http://localhost:10702/db/main/ext/auth`
-- Clear test data if needed
+- Tests use PGLite (no external DB needed)
+- Check for schema changes: run `pnpm db:generate && pnpm db:migrate`
+- Clear test isolation issues: restart test runner
 
 ### Type errors
-- Regenerate types: `pnpm gel:generate`
-- Run typecheck: `pnpm typecheck`
+- Update Drizzle schema types: `pnpm typecheck`
+- Regenerate migrations: `pnpm db:generate`
 
 ## License
 

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
 import {
@@ -12,13 +12,17 @@ import {
 // API / Integration Tests
 // ============================================================================
 
-describe("Project API (Integration)", () => {
+describe.sequential("Project API (Integration)", () => {
 	let server: FastifyInstance;
 	let testUser: Awaited<ReturnType<typeof createTestUser>>;
 	let authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
 
 	beforeAll(async () => {
 		server = await createTestServer();
+	});
+
+	beforeEach(async () => {
+		// Recreate user before each test (afterEach cleanup deletes all data)
 		testUser = await createTestUser();
 		authenticatedRequest = makeAuthenticatedRequest({
 			server,
@@ -29,8 +33,6 @@ describe("Project API (Integration)", () => {
 	afterAll(async () => {
 		await closeTestServer(server);
 	});
-
-	// Note: Test data cleanup handled by branch reset (see reset-test-branch.sh)
 
 	describe("POST /trpc/project.create", () => {
 		it("should create project via HTTP", async () => {

@@ -1,10 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { createAuthenticatedClient } from "../../db/client";
 import { localFileStorage } from "../../infrastructure/storage";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
-import { verifyGelToken } from "../auth/verify-token";
+import { verifyToken } from "../auth/auth.service";
 import * as sourceDocumentRepo from "./sourceDocument.repo";
 
 // ============================================================================
@@ -43,21 +42,19 @@ export const registerDownloadRoutes = async (
 					return reply.code(401).send({ error: "Unauthorized" });
 				}
 
-				const verification = await verifyGelToken({
-					authToken,
-					requestId: request.id,
-				});
-
-				if (!verification.valid || !verification.user) {
+				let userId: string;
+				try {
+					const payload = verifyToken({ token: authToken });
+					userId = payload.sub;
+				} catch (_error) {
 					return reply.code(401).send({ error: "Invalid token" });
 				}
 
 				const { documentId } = request.params as DownloadRouteParams;
-				const gelClient = createAuthenticatedClient({ authToken });
 
 				const document = await sourceDocumentRepo.getSourceDocumentById({
-					gelClient,
 					documentId,
+					userId,
 				});
 
 				const foundDocument = requireFound(document);
@@ -71,7 +68,7 @@ export const registerDownloadRoutes = async (
 						event: "source_document.file_not_found",
 						context: {
 							requestId: request.id,
-							userId: verification.user.id,
+							userId,
 							metadata: {
 								documentId,
 								storage_key: foundDocument.storage_key,
@@ -85,7 +82,7 @@ export const registerDownloadRoutes = async (
 					event: "source_document.file_downloaded",
 					context: {
 						requestId: request.id,
-						userId: verification.user.id,
+						userId,
 						metadata: {
 							documentId,
 							file_name: foundDocument.file_name,

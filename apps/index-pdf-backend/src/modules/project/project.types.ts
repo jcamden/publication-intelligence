@@ -11,7 +11,6 @@ export const CreateProjectSchema = z.object({
 	project_dir: projectDirValidator
 		.min(1, "Project directory is required")
 		.max(100),
-	workspace: z.string().uuid().optional(),
 });
 
 export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
@@ -19,7 +18,6 @@ export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
 export const UpdateProjectSchema = z.object({
 	title: titleValidator.optional(),
 	description: z.string().max(2000).optional().nullable(),
-	workspace: z.string().uuid().optional().nullable(),
 });
 
 export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
@@ -33,9 +31,7 @@ export type Project = {
 	title: string;
 	description: string | null;
 	project_dir: string;
-	workspace: { id: string } | null;
 	owner: { id: string; email: string };
-	collaborators: Array<{ id: string; email: string }>;
 	created_at: Date;
 	updated_at: Date | null;
 	deleted_at: Date | null;

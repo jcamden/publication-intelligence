@@ -1,13 +1,7 @@
-import path from "node:path";
 import { nodeConfig } from "@pubint/vitest-config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-	resolve: {
-		alias: {
-			"@gel": path.resolve(__dirname, "../../db/gel/generated/index.ts"),
-		},
-	},
 	test: {
 		...nodeConfig,
 		include: ["src/**/*.{test,spec}.{js,ts}"],

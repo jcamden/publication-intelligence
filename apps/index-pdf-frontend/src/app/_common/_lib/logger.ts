@@ -1,6 +1,7 @@
 import type { LogContext, LogLevel } from "@pubint/core";
+import { env } from "../../../env";
 
-const isDevelopment = process.env.NODE_ENV !== "production";
+const isDevelopment = env.NODE_ENV !== "production";
 
 const formatLog = ({
 	level,
@@ -15,7 +16,7 @@ const formatLog = ({
 		timestamp: new Date().toISOString(),
 		level,
 		service: "index-pdf-frontend",
-		env: process.env.NODE_ENV ?? "development",
+		env: env.NODE_ENV,
 		event,
 		...context,
 	};

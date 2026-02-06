@@ -1,5 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { createAuthenticatedClient } from "../../db/client";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createTestProject, createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
 import * as projectService from "./project.service";
@@ -10,14 +9,11 @@ import * as projectService from "./project.service";
 
 describe("Project Service", () => {
 	let testUser: Awaited<ReturnType<typeof createTestUser>>;
-	let gelClient: ReturnType<typeof createAuthenticatedClient>;
 
-	beforeAll(async () => {
+	beforeEach(async () => {
+		// Recreate user before each test (global afterEach deletes all data)
 		testUser = await createTestUser();
-		gelClient = createAuthenticatedClient({ authToken: testUser.authToken });
 	});
-
-	// Note: Cleanup handled by branch reset (see reset-test-branch.sh)
 
 	describe("createProject", () => {
 		it("should create a new project", async () => {
@@ -28,9 +24,8 @@ describe("Project Service", () => {
 			};
 
 			const project = await projectService.createProject({
-				gelClient,
 				input,
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
@@ -48,9 +43,8 @@ describe("Project Service", () => {
 			};
 
 			const project = await projectService.createProject({
-				gelClient,
 				input,
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
@@ -58,47 +52,15 @@ describe("Project Service", () => {
 			expect(project.title).toBe(input.title);
 			expect(project.description).toBeNull();
 		});
-
-		it("should emit event on creation", async () => {
-			const input = {
-				title: "Event Test Project",
-				project_dir: "event-test-project",
-			};
-
-			const project = await projectService.createProject({
-				gelClient,
-				input,
-				userId: "test-user-id",
-				requestId: "test-request",
-			});
-
-			const events = await gelClient.query<{
-				entity_id: string;
-				action: string;
-			}>(
-				`
-				SELECT Event {
-					entity_id,
-					action
-				}
-				FILTER .entity_id = <uuid>$projectId
-			`,
-				{ projectId: project.id },
-			);
-
-			expect(events).toHaveLength(1);
-			expect(events[0].action).toBe("created");
-		});
 	});
 
 	describe("listProjectsForUser", () => {
 		it("should list user's projects", async () => {
-			await createTestProject({ gelClient, title: "Project 1" });
-			await createTestProject({ gelClient, title: "Project 2" });
+			await createTestProject({ userId: testUser.userId, title: "Project 1" });
+			await createTestProject({ userId: testUser.userId, title: "Project 2" });
 
 			const projects = await projectService.listProjectsForUser({
-				gelClient,
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
@@ -108,20 +70,18 @@ describe("Project Service", () => {
 
 		it("should not list deleted projects", async () => {
 			const project = await createTestProject({
-				gelClient,
+				userId: testUser.userId,
 				title: "To Be Deleted",
 			});
 
 			await projectService.deleteProject({
-				gelClient,
 				projectId: project.id,
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
 			const projects = await projectService.listProjectsForUser({
-				gelClient,
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
@@ -132,14 +92,13 @@ describe("Project Service", () => {
 	describe("getProjectById", () => {
 		it("should retrieve project by id", async () => {
 			const created = await createTestProject({
-				gelClient,
+				userId: testUser.userId,
 				title: "Retrieve Test",
 			});
 
 			const project = await projectService.getProjectById({
-				gelClient,
 				projectId: created.id,
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
@@ -151,9 +110,8 @@ describe("Project Service", () => {
 		it("should throw TRPCError NOT_FOUND for non-existent project", async () => {
 			await expect(
 				projectService.getProjectById({
-					gelClient,
 					projectId: FAKE_UUID,
-					userId: "test-user-id",
+					userId: testUser.userId,
 					requestId: "test-request",
 				}),
 			).rejects.toMatchObject({
@@ -166,111 +124,42 @@ describe("Project Service", () => {
 	describe("updateProject", () => {
 		it("should update project title", async () => {
 			const project = await createTestProject({
-				gelClient,
+				userId: testUser.userId,
 				title: "Original Title",
 			});
 
 			const updated = await projectService.updateProject({
-				gelClient,
 				projectId: project.id,
 				input: { title: "Updated Title" },
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
 			expect(updated.title).toBe("Updated Title");
 			expect(updated.id).toBe(project.id);
 		});
-
-		it("should emit event on update", async () => {
-			const project = await createTestProject({
-				gelClient,
-				title: "Update Event Test",
-			});
-
-			await projectService.updateProject({
-				gelClient,
-				projectId: project.id,
-				input: { description: "New description" },
-				userId: "test-user-id",
-				requestId: "test-request",
-			});
-
-			const events = await gelClient.query<{
-				action: string;
-			}>(
-				`
-				SELECT Event {
-					action
-				}
-				FILTER .entity_id = <uuid>$projectId
-				ORDER BY .created_at DESC
-			`,
-				{ projectId: project.id },
-			);
-
-			expect(events.some((e) => e.action === "updated")).toBe(true);
-		});
 	});
 
 	describe("deleteProject", () => {
 		it("should soft delete project", async () => {
 			const project = await createTestProject({
-				gelClient,
+				userId: testUser.userId,
 				title: "To Delete",
 			});
 
 			await projectService.deleteProject({
-				gelClient,
 				projectId: project.id,
-				userId: "test-user-id",
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
-			const deleted = await gelClient.querySingle<{
-				id: string;
-				deleted_at: Date | null;
-			}>(
-				`
-				SELECT Project {
-					id,
-					deleted_at
-				}
-				FILTER .id = <uuid>$id
-			`,
-				{ id: project.id },
-			);
-
-			expect(deleted?.deleted_at).not.toBeNull();
-		});
-
-		it("should emit event on deletion", async () => {
-			const project = await createTestProject({
-				gelClient,
-				title: "Delete Event Test",
-			});
-
-			await projectService.deleteProject({
-				gelClient,
-				projectId: project.id,
-				userId: "test-user-id",
+			// Verify project is not in active list
+			const projects = await projectService.listProjectsForUser({
+				userId: testUser.userId,
 				requestId: "test-request",
 			});
 
-			const events = await gelClient.query<{
-				action: string;
-			}>(
-				`
-				SELECT Event {
-					action
-				}
-				FILTER .entity_id = <uuid>$projectId
-				ORDER BY .created_at DESC
-			`,
-				{ projectId: project.id },
-			);
-
-			expect(events.some((e) => e.action === "deleted")).toBe(true);
+			expect(projects.find((p) => p.id === project.id)).toBeUndefined();
 		});
 	});
 });

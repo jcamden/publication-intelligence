@@ -1,7 +1,6 @@
-import { createAuthenticatedClient } from "../../db/client";
 import { logEvent } from "../../logger";
 import { protectedProcedure, router } from "../../trpc";
-import { deleteUserWithIdentity } from "./user.service";
+import { deleteUser } from "./user.service";
 
 export const userRouter = router({
 	deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
@@ -17,14 +16,7 @@ export const userRouter = router({
 		});
 
 		try {
-			const gelClient = createAuthenticatedClient({
-				authToken: ctx.authToken,
-			});
-
-			await deleteUserWithIdentity({
-				gelClient,
-				userId,
-			});
+			await deleteUser({ userId });
 
 			logEvent({
 				event: "user.account_deleted",

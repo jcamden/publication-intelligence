@@ -43,7 +43,7 @@ describe("Auth API (Integration)", () => {
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.authToken).toBeDefined();
+			expect(body.result.data.token).toBeDefined();
 		});
 
 		it("should validate email format", async () => {
@@ -94,7 +94,7 @@ describe("Auth API (Integration)", () => {
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.authToken).toBeDefined();
+			expect(body.result.data.token).toBeDefined();
 		});
 
 		it("should reject invalid credentials", async () => {
@@ -122,13 +122,13 @@ describe("Auth API (Integration)", () => {
 				payload: { email, password },
 			});
 
-			const { authToken } = JSON.parse(signUpResponse.body).result.data;
+			const { token } = JSON.parse(signUpResponse.body).result.data;
 
 			const response = await server.inject({
 				method: "GET",
 				url: "/trpc/auth.me",
 				headers: {
-					authorization: `Bearer ${authToken}`,
+					authorization: `Bearer ${token}`,
 				},
 			});
 

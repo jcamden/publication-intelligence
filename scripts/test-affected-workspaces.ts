@@ -275,21 +275,6 @@ const runTypecheck = ({
 	}
 };
 
-const runAccessPolicyLint = () => {
-	console.log(`\n🔒 Checking access policies...`);
-
-	try {
-		execSync(`pnpm lint:access-policies`, {
-			stdio: "inherit",
-			encoding: "utf-8",
-		});
-		console.log(`  ✅ Access policies check passed`);
-	} catch (error) {
-		console.error(`  ❌ Access policies check failed`);
-		throw error;
-	}
-};
-
 const hasDbChanges = ({
 	changedFiles,
 }: {
@@ -428,10 +413,6 @@ const main = () => {
 		if (VRT_PACKAGES.includes(workspaceName)) {
 			runVRT({ workspaceName });
 		}
-	}
-
-	if (dbChanged) {
-		runAccessPolicyLint();
 	}
 
 	console.log("\n✅ All checks passed!");

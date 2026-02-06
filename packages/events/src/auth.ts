@@ -4,8 +4,7 @@ export type AuthEvent =
 	| UserDeletedEvent
 	| UserLoggedInEvent
 	| UserLoggedOutEvent
-	| FailedLoginAttemptEvent
-	| UserAddedToWorkspaceEvent;
+	| FailedLoginAttemptEvent;
 
 export type UserCreatedEvent = {
 	type: "user.created";
@@ -51,12 +50,4 @@ export type FailedLoginAttemptEvent = {
 	timestamp: Date;
 	email: string;
 	reason: string;
-};
-
-export type UserAddedToWorkspaceEvent = {
-	type: "user.added_to_workspace";
-	timestamp: Date;
-	userId: string;
-	workspaceId: string;
-	addedBy: string;
 };

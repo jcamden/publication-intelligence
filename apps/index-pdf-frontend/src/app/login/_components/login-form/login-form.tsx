@@ -25,8 +25,8 @@ export const LoginForm = () => {
 	const router = useRouter();
 
 	const signInMutation = trpc.auth.signIn.useMutation({
-		onSuccess: (data: { authToken: string; message: string }) => {
-			saveToken(data.authToken);
+		onSuccess: (data) => {
+			saveToken(data.token);
 			form.reset();
 			router.push("/projects");
 		},

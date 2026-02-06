@@ -1,119 +1,151 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import bcrypt from "bcryptjs";
+import { eq, sql } from "drizzle-orm";
+import jwt from "jsonwebtoken";
+import { db } from "../../db/client";
+import { users } from "../../db/schema";
+import { env } from "../../env";
 
 // ============================================================================
-// Auth Service - Business logic for authentication
+// Auth Service - Custom JWT-based authentication
 // ============================================================================
 
-const GEL_AUTH_URL =
-	process.env.GEL_AUTH_URL ?? "http://localhost:10702/db/main/ext/auth";
-
-// ============================================================================
-// PKCE Helper Functions
-// ============================================================================
-
-export const generateCodeVerifier = (): string => {
-	return randomBytes(32).toString("base64url");
-};
-
-export const generateCodeChallenge = (verifier: string): string => {
-	return createHash("sha256").update(verifier).digest("base64url");
-};
-
-// ============================================================================
-// Token Exchange
-// ============================================================================
-
-export const exchangeCodeForToken = async ({
-	code,
-	verifier,
-}: {
-	code: string;
-	verifier: string;
-}): Promise<string> => {
-	const url = new URL(`${GEL_AUTH_URL}/token`);
-	url.searchParams.set("code", code);
-	url.searchParams.set("verifier", verifier);
-
-	const response = await fetch(url.toString(), {
-		method: "GET",
-	});
-
-	if (!response.ok) {
-		const error = await response.text();
-		throw new Error(error || "Token exchange failed");
-	}
-
-	const result = (await response.json()) as { auth_token: string };
-	return result.auth_token;
+export type AuthTokenPayload = {
+	sub: string; // user ID
+	email: string;
+	name: string | null;
+	iat: number;
+	exp: number;
 };
 
 // ============================================================================
-// Authentication
+// User Signup
 // ============================================================================
 
-export const getAuthToken = async ({
+export const signup = async ({
 	email,
 	password,
+	name,
 }: {
 	email: string;
 	password: string;
-}): Promise<string> => {
-	const verifier = generateCodeVerifier();
-	const challenge = generateCodeChallenge(verifier);
+	name?: string;
+}) => {
+	// Check if user exists
+	const existing = await db
+		.select()
+		.from(users)
+		.where(eq(users.email, email))
+		.limit(1);
 
-	const response = await fetch(`${GEL_AUTH_URL}/authenticate`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			provider: "builtin::local_emailpassword",
-			email,
-			password,
-			challenge,
-		}),
-	});
-
-	if (!response.ok) {
-		const error = await response.text();
-		throw new Error(error || "Authentication failed");
+	if (existing.length > 0) {
+		throw new Error("User already exists");
 	}
 
-	const result = (await response.json()) as { code: string };
-	return await exchangeCodeForToken({ code: result.code, verifier });
-};
+	// Hash password (10 rounds)
+	const passwordHash = await bcrypt.hash(password, 10);
 
-export const registerUser = async ({
-	email,
-	password,
-	challenge,
-	verifyUrl,
-}: {
-	email: string;
-	password: string;
-	challenge: string;
-	verifyUrl?: string;
-}): Promise<{ code?: string; email: string; provider: string }> => {
-	const response = await fetch(`${GEL_AUTH_URL}/register`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			provider: "builtin::local_emailpassword",
-			email,
-			password,
-			challenge,
-			verify_url: verifyUrl ?? "http://localhost:3000/auth/verify",
-		}),
+	// Generate user ID and insert within RLS context
+	// RLS policy requires id = auth.user_id(), so we set context to the new ID
+	const newUserId = randomUUID();
+
+	const [user] = await db.transaction(async (tx) => {
+		// Set auth context for RLS (transaction-scoped)
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${newUserId}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
+
+		// Insert user with pre-generated ID
+		return await tx
+			.insert(users)
+			.values({
+				id: newUserId,
+				email,
+				passwordHash,
+				name,
+			})
+			.returning();
 	});
 
-	if (!response.ok) {
-		const error = await response.text();
-		throw new Error(error || "Signup failed");
-	}
+	// Generate JWT
+	const token = jwt.sign(
+		{
+			sub: user.id,
+			email: user.email,
+			name: user.name,
+		} as Omit<AuthTokenPayload, "iat" | "exp">,
+		env.JWT_SECRET,
+		{ expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions,
+	);
 
-	const result = (await response.json()) as {
-		code?: string;
-		email: string;
-		provider: string;
+	return {
+		user: {
+			id: user.id,
+			email: user.email,
+			name: user.name,
+		},
+		token,
 	};
+};
 
-	return result;
+// ============================================================================
+// User Login
+// ============================================================================
+
+export const login = async ({
+	email,
+	password,
+}: {
+	email: string;
+	password: string;
+}) => {
+	// Find user
+	const [user] = await db
+		.select()
+		.from(users)
+		.where(eq(users.email, email))
+		.limit(1);
+
+	if (!user) {
+		throw new Error("Invalid email or password");
+	}
+
+	// Verify password
+	const valid = await bcrypt.compare(password, user.passwordHash);
+	if (!valid) {
+		throw new Error("Invalid email or password");
+	}
+
+	// Generate JWT
+	const token = jwt.sign(
+		{
+			sub: user.id,
+			email: user.email,
+			name: user.name,
+		} as Omit<AuthTokenPayload, "iat" | "exp">,
+		env.JWT_SECRET,
+		{ expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions,
+	);
+
+	return {
+		user: {
+			id: user.id,
+			email: user.email,
+			name: user.name,
+		},
+		token,
+	};
+};
+
+// ============================================================================
+// Token Verification
+// ============================================================================
+
+export const verifyToken = ({ token }: { token: string }): AuthTokenPayload => {
+	try {
+		return jwt.verify(token, env.JWT_SECRET) as AuthTokenPayload;
+	} catch (_error) {
+		throw new Error("Invalid token");
+	}
 };

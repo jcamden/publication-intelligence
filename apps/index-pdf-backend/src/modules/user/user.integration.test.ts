@@ -38,13 +38,13 @@ describe("User API (Integration)", () => {
 			});
 
 			expect(signUpResponse.statusCode).toBe(200);
-			const { authToken } = JSON.parse(signUpResponse.body).result.data;
+			const { token } = JSON.parse(signUpResponse.body).result.data;
 
 			const deleteResponse = await server.inject({
 				method: "POST",
 				url: "/trpc/user.deleteAccount",
 				headers: {
-					authorization: `Bearer ${authToken}`,
+					authorization: `Bearer ${token}`,
 					"content-type": "application/json",
 				},
 			});
@@ -54,11 +54,12 @@ describe("User API (Integration)", () => {
 			expect(body.result.data.success).toBe(true);
 			expect(body.result.data.message).toBe("Account deleted successfully");
 
+			// Verify deleted user's token is now invalid
 			const verifyDeletedResponse = await server.inject({
 				method: "GET",
 				url: "/trpc/auth.me",
 				headers: {
-					authorization: `Bearer ${authToken}`,
+					authorization: `Bearer ${token}`,
 				},
 			});
 
@@ -91,13 +92,13 @@ describe("User API (Integration)", () => {
 			});
 
 			expect(signUpResponse.statusCode).toBe(200);
-			const { authToken } = JSON.parse(signUpResponse.body).result.data;
+			const { token } = JSON.parse(signUpResponse.body).result.data;
 
 			const deleteResponse = await server.inject({
 				method: "POST",
 				url: "/trpc/user.deleteAccount",
 				headers: {
-					authorization: `Bearer ${authToken}`,
+					authorization: `Bearer ${token}`,
 					"content-type": "application/json",
 				},
 			});
@@ -115,7 +116,7 @@ describe("User API (Integration)", () => {
 
 			expect(reSignUpResponse.statusCode).toBe(200);
 			const reSignUpBody = JSON.parse(reSignUpResponse.body);
-			expect(reSignUpBody.result.data.authToken).toBeDefined();
+			expect(reSignUpBody.result.data.token).toBeDefined();
 		});
 
 		it("should emit events for account deletion", async () => {
@@ -131,13 +132,13 @@ describe("User API (Integration)", () => {
 				payload: { email, password },
 			});
 
-			const { authToken } = JSON.parse(signUpResponse.body).result.data;
+			const { token } = JSON.parse(signUpResponse.body).result.data;
 
 			const response = await server.inject({
 				method: "POST",
 				url: "/trpc/user.deleteAccount",
 				headers: {
-					authorization: `Bearer ${authToken}`,
+					authorization: `Bearer ${token}`,
 					"content-type": "application/json",
 				},
 			});

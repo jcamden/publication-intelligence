@@ -1,4 +1,3 @@
-import type { Client } from "gel";
 import type { StorageService } from "../../infrastructure/storage";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
@@ -22,7 +21,6 @@ export type UploadFileInput = {
 };
 
 export const uploadSourceDocument = async ({
-	gelClient,
 	storageService,
 	projectId,
 	file,
@@ -30,7 +28,6 @@ export const uploadSourceDocument = async ({
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	storageService: StorageService;
 	projectId: string;
 	file: UploadFileInput;
@@ -38,7 +35,7 @@ export const uploadSourceDocument = async ({
 	userId: string;
 	requestId: string;
 }): Promise<SourceDocument> => {
-	const project = await getProjectById({ gelClient, projectId });
+	const project = await getProjectById({ projectId, userId });
 	const foundProject = requireFound(project);
 
 	const validation = validatePdfFile({
@@ -74,7 +71,6 @@ export const uploadSourceDocument = async ({
 	const documentTitle = title ?? file.filename;
 
 	const document = await sourceDocumentRepo.createSourceDocument({
-		gelClient,
 		input: {
 			projectId: foundProject.id,
 			title: documentTitle,
@@ -101,36 +97,35 @@ export const uploadSourceDocument = async ({
 	});
 
 	await insertEvent({
-		gelClient,
+		type: "document.uploaded",
 		projectId: foundProject.id,
+		userId,
 		entityType: "SourceDocument",
 		entityId: document.id,
-		action: "uploaded",
 		metadata: {
 			title: document.title,
 			fileName: document.file_name,
 			fileSize: document.file_size,
 			contentHash: document.content_hash,
 		},
+		requestId,
 	});
 
 	return document;
 };
 
 export const getSourceDocumentById = async ({
-	gelClient,
 	documentId,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	documentId: string;
 	userId: string;
 	requestId: string;
 }): Promise<SourceDocument> => {
 	const document = await sourceDocumentRepo.getSourceDocumentById({
-		gelClient,
 		documentId,
+		userId,
 	});
 
 	const found = requireFound(document);
@@ -148,17 +143,15 @@ export const getSourceDocumentById = async ({
 };
 
 export const listSourceDocumentsByProject = async ({
-	gelClient,
 	projectId,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	projectId: string;
 	userId: string;
 	requestId: string;
 }): Promise<SourceDocumentListItem[]> => {
-	const project = await getProjectById({ gelClient, projectId });
+	const project = await getProjectById({ projectId, userId });
 	requireFound(project);
 
 	logEvent({
@@ -171,31 +164,29 @@ export const listSourceDocumentsByProject = async ({
 	});
 
 	return sourceDocumentRepo.listSourceDocumentsByProject({
-		gelClient,
 		projectId,
+		userId,
 	});
 };
 
 export const deleteSourceDocument = async ({
-	gelClient,
 	documentId,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	documentId: string;
 	userId: string;
 	requestId: string;
 }): Promise<void> => {
 	const document = await sourceDocumentRepo.getSourceDocumentById({
-		gelClient,
 		documentId,
+		userId,
 	});
 	const found = requireFound(document);
 
 	const result = await sourceDocumentRepo.softDeleteSourceDocument({
-		gelClient,
 		documentId,
+		userId,
 	});
 
 	const deleted = requireFound(result);
@@ -213,10 +204,11 @@ export const deleteSourceDocument = async ({
 	});
 
 	await insertEvent({
-		gelClient,
+		type: "document.deleted",
 		projectId: found.project.id,
+		userId,
 		entityType: "SourceDocument",
 		entityId: deleted.id,
-		action: "deleted",
+		requestId,
 	});
 };

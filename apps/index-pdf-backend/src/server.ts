@@ -2,18 +2,13 @@ import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import { env } from "./env";
 import { logger } from "./logger";
 import { registerRequestId } from "./middleware/request-id";
-import { verifyGelToken } from "./modules/auth/verify-token";
+import { verifyToken } from "./modules/auth/auth.service";
 import { registerDownloadRoutes } from "./modules/source-document/download.routes";
 import { registerUploadRoutes } from "./modules/source-document/upload.routes";
 import { appRouter } from "./routers/index";
-
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
-const HOST = process.env.HOST ?? "0.0.0.0";
-const CORS_ORIGINS = process.env.CORS_ORIGINS
-	? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
-	: ["http://localhost:3000", "http://localhost:3001", "http://localhost:6006"];
 
 export const createServer = () => {
 	const server = Fastify({
@@ -31,7 +26,7 @@ export const registerPlugins = async (server: FastifyInstance) => {
 	await registerRequestId(server);
 
 	await server.register(cors, {
-		origin: CORS_ORIGINS,
+		origin: env.CORS_ORIGINS,
 		credentials: true,
 	});
 
@@ -52,16 +47,26 @@ export const registerPlugins = async (server: FastifyInstance) => {
 					: undefined;
 
 				if (authToken) {
-					const verification = await verifyGelToken({
-						authToken,
-						requestId: req.requestId,
-					});
-					if (verification.valid && verification.user) {
+					try {
+						const payload = verifyToken({ token: authToken });
 						return {
 							authToken,
-							user: verification.user,
+							user: {
+								id: payload.sub,
+								email: payload.email,
+								name: payload.name,
+							},
 							requestId: req.requestId,
 						};
+					} catch (error) {
+						// Invalid token - treat as unauthenticated
+						logger.warn({
+							event: "auth.token_invalid",
+							metadata: {
+								requestId: req.requestId,
+								error: error instanceof Error ? error.message : "Unknown error",
+							},
+						});
 					}
 				}
 
@@ -89,14 +94,14 @@ export const startServer = async () => {
 	const server = createServer();
 	await registerPlugins(server);
 
-	await server.listen({ port: PORT, host: HOST });
+	await server.listen({ port: env.PORT, host: env.HOST });
 
 	logger.info({
 		event: "server.started",
 		metadata: {
-			host: HOST,
-			port: PORT,
-			env: process.env.NODE_ENV,
+			host: env.HOST,
+			port: env.PORT,
+			env: env.NODE_ENV,
 		},
 	});
 

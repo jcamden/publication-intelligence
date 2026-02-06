@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { appRouter } from "../../routers/index";
-import { createMockContext, createMockUser } from "../../test/mocks";
+import { createTestUser } from "../../test/factories";
+import { createMockContext } from "../../test/mocks";
 
 describe("auth router", () => {
 	describe("signUp", () => {
@@ -25,6 +26,34 @@ describe("auth router", () => {
 				}),
 			).rejects.toThrow();
 		});
+
+		it("should create a new user successfully", async () => {
+			const caller = appRouter.createCaller(createMockContext());
+
+			const result = await caller.auth.signUp({
+				email: "newuser@example.com",
+				password: "password123",
+			});
+
+			expect(result.user.email).toBe("newuser@example.com");
+			expect(result.token).toBeTruthy();
+		});
+
+		it("should reject duplicate email addresses", async () => {
+			const caller = appRouter.createCaller(createMockContext());
+
+			await caller.auth.signUp({
+				email: "duplicate@example.com",
+				password: "password123",
+			});
+
+			await expect(
+				caller.auth.signUp({
+					email: "duplicate@example.com",
+					password: "password456",
+				}),
+			).rejects.toThrow("User already exists");
+		});
 	});
 
 	describe("signIn", () => {
@@ -38,6 +67,50 @@ describe("auth router", () => {
 				}),
 			).rejects.toThrow();
 		});
+
+		it("should login existing user successfully", async () => {
+			const caller = appRouter.createCaller(createMockContext());
+
+			await caller.auth.signUp({
+				email: "logintest@example.com",
+				password: "password123",
+			});
+
+			const result = await caller.auth.signIn({
+				email: "logintest@example.com",
+				password: "password123",
+			});
+
+			expect(result.user.email).toBe("logintest@example.com");
+			expect(result.token).toBeTruthy();
+		});
+
+		it("should reject invalid credentials", async () => {
+			const caller = appRouter.createCaller(createMockContext());
+
+			await caller.auth.signUp({
+				email: "validuser@example.com",
+				password: "password123",
+			});
+
+			await expect(
+				caller.auth.signIn({
+					email: "validuser@example.com",
+					password: "wrongpassword",
+				}),
+			).rejects.toThrow("Invalid email or password");
+		});
+
+		it("should reject non-existent users", async () => {
+			const caller = appRouter.createCaller(createMockContext());
+
+			await expect(
+				caller.auth.signIn({
+					email: "nonexistent@example.com",
+					password: "password123",
+				}),
+			).rejects.toThrow("Invalid email or password");
+		});
 	});
 
 	describe("me", () => {
@@ -48,16 +121,22 @@ describe("auth router", () => {
 		});
 
 		it("should return user when authenticated", async () => {
-			const mockUser = createMockUser({ id: "test-id" });
+			// Need real user in DB for middleware check
+			const testUser = await createTestUser();
 
 			const caller = appRouter.createCaller(
 				createMockContext({
-					user: mockUser,
+					user: {
+						id: testUser.userId,
+						email: testUser.email,
+						name: testUser.name,
+					},
 				}),
 			);
 
 			const result = await caller.auth.me();
-			expect(result).toEqual(mockUser);
+			expect(result.id).toBe(testUser.userId);
+			expect(result.email).toBe(testUser.email);
 		});
 	});
 
@@ -69,9 +148,16 @@ describe("auth router", () => {
 		});
 
 		it("should succeed when authenticated", async () => {
+			// Need real user in DB for middleware check
+			const testUser = await createTestUser();
+
 			const caller = appRouter.createCaller(
 				createMockContext({
-					user: createMockUser({ id: "test-id" }),
+					user: {
+						id: testUser.userId,
+						email: testUser.email,
+						name: testUser.name,
+					},
 				}),
 			);
 

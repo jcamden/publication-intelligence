@@ -1,15 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { gel } from "../../db/client";
 import { eventEmitter } from "../../events/emitter";
 import { logEvent } from "../../logger";
 import { protectedProcedure, publicProcedure, router } from "../../trpc";
-import {
-	exchangeCodeForToken,
-	generateCodeChallenge,
-	generateCodeVerifier,
-	getAuthToken,
-	registerUser,
-} from "./auth.service";
+import { login, signup } from "./auth.service";
 import { SignInSchema, SignUpSchema } from "./auth.types";
 
 // ============================================================================
@@ -21,79 +14,35 @@ export const authRouter = router({
 		.input(SignUpSchema)
 		.mutation(async ({ input, ctx }) => {
 			try {
-				const verifier = generateCodeVerifier();
-				const challenge = generateCodeChallenge(verifier);
-
-				const signupResult = await registerUser({
+				const { user, token } = await signup({
 					email: input.email,
 					password: input.password,
-					challenge,
+					name: input.name ?? undefined,
 				});
 
-				let authToken: string;
-				if (signupResult.code?.trim()) {
-					authToken = await exchangeCodeForToken({
-						code: signupResult.code,
-						verifier,
-					});
-				} else {
-					authToken = await getAuthToken({
-						email: input.email,
-						password: input.password,
-					});
-				}
-
-				const authenticatedClient = gel.withGlobals({
-					"ext::auth::client_token": authToken,
-				});
-
-				const user = await authenticatedClient.querySingle<{
-					id: string;
-					email: string;
-					name: string | null;
-				}>(
-					`
-			INSERT User {
-				email := <str>$email,
-				name := <optional str>$name,
-				identity := global ext::auth::ClientTokenIdentity
-			}
-			UNLESS CONFLICT ON .identity
-			ELSE (
-				SELECT User FILTER .identity = global ext::auth::ClientTokenIdentity
-			)
-		`,
-					{
-						email: input.email,
-						name: input.name ?? null,
-					},
-				);
-
-				if (user) {
-					logEvent({
-						event: "auth.user_created",
-						context: {
-							requestId: ctx.requestId,
-							userId: user.id,
-							metadata: {
-								email: user.email,
-								hasName: !!user.name,
-							},
-						},
-					});
-
-					await eventEmitter.emit({
-						type: "user.created",
-						timestamp: new Date(),
+				logEvent({
+					event: "auth.user_created",
+					context: {
+						requestId: ctx.requestId,
 						userId: user.id,
-						email: user.email,
-						name: user.name ?? undefined,
-					});
-				}
+						metadata: {
+							email: user.email,
+							hasName: !!user.name,
+						},
+					},
+				});
+
+				await eventEmitter.emit({
+					type: "user.created",
+					timestamp: new Date(),
+					userId: user.id,
+					email: user.email,
+					name: user.name ?? undefined,
+				});
 
 				return {
-					authToken,
-					message: "User created successfully",
+					user,
+					token,
 				};
 			} catch (error) {
 				logEvent({
@@ -107,6 +56,14 @@ export const authRouter = router({
 					},
 				});
 
+				// Check for unique constraint violation (duplicate email)
+				if (error instanceof Error && error.message.includes("unique")) {
+					throw new TRPCError({
+						code: "CONFLICT",
+						message: "Email already registered",
+					});
+				}
+
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: error instanceof Error ? error.message : "Failed to sign up",
@@ -118,52 +75,32 @@ export const authRouter = router({
 		.input(SignInSchema)
 		.mutation(async ({ input, ctx }) => {
 			try {
-				const authToken = await getAuthToken({
+				const { user, token } = await login({
 					email: input.email,
 					password: input.password,
 				});
 
-				const authenticatedClient = gel.withGlobals({
-					"ext::auth::client_token": authToken,
+				logEvent({
+					event: "auth.user_logged_in",
+					context: {
+						requestId: ctx.requestId,
+						userId: user.id,
+						metadata: {
+							email: user.email,
+						},
+					},
 				});
 
-				const user = await authenticatedClient.querySingle<{
-					id: string;
-					email: string;
-				}>(
-					`
-				SELECT User {
-					id,
-					email
-				}
-				FILTER .identity = global ext::auth::ClientTokenIdentity
-				LIMIT 1
-			`,
-				);
-
-				if (user) {
-					logEvent({
-						event: "auth.user_logged_in",
-						context: {
-							requestId: ctx.requestId,
-							userId: user.id,
-							metadata: {
-								email: user.email,
-							},
-						},
-					});
-
-					await eventEmitter.emit({
-						type: "user.logged_in",
-						timestamp: new Date(),
-						userId: user.id,
-						email: user.email,
-					});
-				}
+				await eventEmitter.emit({
+					type: "user.logged_in",
+					timestamp: new Date(),
+					userId: user.id,
+					email: user.email,
+				});
 
 				return {
-					authToken,
-					message: "Signed in successfully",
+					user,
+					token,
 				};
 			} catch (error) {
 				logEvent({

@@ -24,5 +24,4 @@ export const createDocument = ({
 });
 
 export * from "./logger.types";
-// Re-export validation utilities
 export * from "./validation";

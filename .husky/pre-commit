@@ -1,2 +1,2 @@
-pnpm exec tsx scripts/test-affected-workspaces.ts
+pnpx tsx scripts/test-affected-workspaces.ts
 pnpm vrt:clean

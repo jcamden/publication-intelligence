@@ -1,9 +1,5 @@
-// Load environment variables from .env file (must be first)
-
-import { resolve } from "node:path";
-import { config } from "dotenv";
-
-config({ path: resolve(import.meta.dirname, "../../.env") });
+// Validate environment variables (loads and validates)
+import "./env";
 
 import { logger } from "./logger";
 import { startServer } from "./server";

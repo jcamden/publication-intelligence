@@ -70,7 +70,6 @@ pnpm exec tsx scripts/test-affected-workspaces.ts --dry-run
    - Runs type checking
    - Runs unit tests
 5. Runs VRT for `@pubint/index-pdf-frontend`
-6. If you also changed `db/gel/dbschema/`, runs access policy linting
 
 **CI Integration:** Runs automatically on pre-commit hook as the sole check (replaces individual lint/typecheck commands).
 
@@ -78,34 +77,15 @@ pnpm exec tsx scripts/test-affected-workspaces.ts --dry-run
 
 ## Security Scripts
 
-### `lint-access-policies.sh`
-
-Validates Gel/EdgeDB access policies for security issues.
-
-**Checks:**
-- Detects unsafe object equality patterns (`= global current_user`)
-- Ensures `global current_user_id` is defined
-
-**Usage:**
-```bash
-pnpm lint:access-policies
-```
-
-**Why it matters:** Object equality in EdgeDB has subtle set semantics that can leak data. Only ID-based comparisons are safe and deterministic. This lint rule prevents accidental data leaks.
-
-**CI Integration:** Runs automatically on pre-commit hook.
-
----
-
 ### `validate-env.ts` (Node/TypeScript)
 
-Validates all environment variables including the EdgeDB/Gel auth signing key.
+Validates all environment variables including JWT secrets.
 
 **Checks:**
-- Key is set in environment (`EDGEDB_AUTH_SIGNING_KEY`)
-- Key is not using placeholder value
-- Key meets minimum length requirement (32+ bytes)
-- Key appears to be properly base64-encoded
+- Required environment variables are set
+- JWT_SECRET is not using placeholder value
+- Keys meet minimum length requirements
+- Keys appear properly formatted
 
 **Usage:**
 
@@ -159,24 +139,25 @@ openssl rand -base64 32
    cp .env.example .env
    ```
 
-2. **Generate auth signing key:**
+2. **Generate JWT secret:**
    ```bash
    openssl rand -base64 32
    ```
 
 3. **Update `.env` file:**
    ```bash
-   EDGEDB_AUTH_SIGNING_KEY=<paste-generated-key>
+   JWT_SECRET=<paste-generated-key>
    ```
 
-4. **Apply auth configuration:**
+4. **Setup database:**
    ```bash
-   source .env && cd db/gel && gel query -f dbschema/auth-config.edgeql
+   createdb publication_intelligence
+   pnpm db:migrate
    ```
 
 5. **Verify setup:**
    ```bash
-   pnpm lint:auth-key
+   pnpm lint:env
    ```
 
 ---
@@ -185,7 +166,6 @@ openssl rand -base64 32
 
 **Pre-commit hooks run:**
 - Affected workspace checks (linting, type checking, tests, VRT) via `test-affected-workspaces.ts`
-- Access policy linting (only if `db/` folder changes detected)
 
 **To skip hooks (emergency only):**
 ```bash

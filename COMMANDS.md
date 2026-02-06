@@ -21,43 +21,32 @@ pnpm storybook
 pnpm generate:visual-tests
 ```
 
-## Database (Gel/EdgeDB)
+## Database (PostgreSQL + Drizzle)
 
-All Gel commands can now be run from the root:
+All database commands run from the repository root:
 
 ```bash
-# Open Gel UI (schema browser, queries, auth admin)
-pnpm gel:ui
+# Generate migration after schema changes
+pnpm db:generate
+# Optional: Add custom name
+pnpm db:generate --name=add_feature_x
 
-# Create a migration after schema changes
-pnpm gel:migrate
-pnpm gel:migrate:apply
+# Run migrations
+pnpm db:migrate
 
-# Generate TypeScript client (run after schema changes)
-pnpm gel:generate
+# Push schema directly (for prototyping - skips migrations)
+pnpm db:push
 
-# Watch mode for TypeScript generation
-pnpm gel:generate:watch
+# Open Drizzle Studio (database browser/editor)
+pnpm db:studio
 
-# Check migration status
-pnpm gel:status
+# Reset database (DESTRUCTIVE - drops and recreates)
+dropdb publication_intelligence
+createdb publication_intelligence
+pnpm db:migrate
 
-# Reset database (DESTRUCTIVE - deletes all data)
-pnpm gel:wipe
-pnpm gel:migrate:apply
-
-# Or manually:
-cd db/gel
-gel branch wipe --non-interactive main
-gel migrate
-
-# Query the database (use gel CLI directly)
-cd db/gel
-gel query "SELECT User { id, email, name }"
-
-# Check instance status
-cd db/gel
-gel instance status
+# Query database directly (psql)
+psql publication_intelligence
 ```
 
 ## Testing
@@ -204,7 +193,5 @@ pnpm test:visual:update
 
 ```bash
 # Clear all data and start fresh
-pnpm gel:wipe
-pnpm gel:migrate:apply
-pnpm gel:generate
+pnpm db:reset
 ```

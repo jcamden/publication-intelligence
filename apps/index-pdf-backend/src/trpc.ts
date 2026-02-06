@@ -1,9 +1,15 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import type { verifyGelToken } from "./modules/auth/verify-token";
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "./db/client";
+import { users } from "./db/schema";
 
 type Context = {
 	authToken?: string;
-	user?: Awaited<ReturnType<typeof verifyGelToken>>["user"];
+	user?: {
+		id: string;
+		email: string;
+		name: string | null;
+	};
 	requestId: string;
 };
 
@@ -19,6 +25,29 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 			message: "Not authenticated",
 		});
 	}
+
+	// Verify user still exists in database and is not soft-deleted
+	// This ensures deleted users' JWT tokens become invalid
+	const [activeUser] = await db
+		.select({ id: users.id })
+		.from(users)
+		.where(
+			and(
+				eq(users.id, ctx.user.id),
+				isNull(users.deletedAt), // User must not be soft-deleted
+			),
+		)
+		.limit(1);
+
+	if (!activeUser) {
+		throw new TRPCError({
+			code: "UNAUTHORIZED",
+			message: "User account not found or has been deleted",
+		});
+	}
+
+	// Note: RLS user context is set at the repository level via withUserContext()
+	// This allows each database operation to run in its own transaction with proper isolation
 
 	return next({
 		ctx: {

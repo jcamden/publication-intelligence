@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { createAuthenticatedClient } from "../../db/client";
 import { localFileStorage } from "../../infrastructure/storage";
-import { verifyGelToken } from "../auth/verify-token";
+import { verifyToken } from "../auth/auth.service";
 import * as sourceDocumentService from "./sourceDocument.service";
 import { UploadSourceDocumentSchema } from "./sourceDocument.types";
 
@@ -42,12 +41,11 @@ export const registerUploadRoutes = async (
 					return reply.code(401).send({ error: "Unauthorized" });
 				}
 
-				const verification = await verifyGelToken({
-					authToken,
-					requestId: request.id,
-				});
-
-				if (!verification.valid || !verification.user) {
+				let userId: string;
+				try {
+					const payload = verifyToken({ token: authToken });
+					userId = payload.sub;
+				} catch (_error) {
 					return reply.code(401).send({ error: "Invalid token" });
 				}
 
@@ -79,10 +77,7 @@ export const registerUploadRoutes = async (
 					});
 				}
 
-				const gelClient = createAuthenticatedClient({ authToken });
-
 				const document = await sourceDocumentService.uploadSourceDocument({
-					gelClient,
 					storageService: localFileStorage,
 					projectId,
 					file: {
@@ -91,7 +86,7 @@ export const registerUploadRoutes = async (
 						mimeType: data.mimetype,
 					},
 					title,
-					userId: verification.user.id,
+					userId,
 					requestId: request.id,
 				});
 

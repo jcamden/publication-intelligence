@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { appRouter } from "../../routers/index";
-import { createMockContext, createMockUser } from "../../test/mocks";
+import { createTestUser } from "../../test/factories";
+import { createMockContext } from "../../test/mocks";
 import * as userService from "./user.service";
 
 describe("user router", () => {
@@ -18,16 +19,19 @@ describe("user router", () => {
 		});
 
 		it("should succeed when authenticated", async () => {
-			const mockUser = createMockUser();
+			// Need real user in DB for middleware check
+			const testUser = await createTestUser();
 
 			// Mock the service layer to avoid real database calls
-			vi.spyOn(userService, "deleteUserWithIdentity").mockResolvedValue(
-				undefined,
-			);
+			vi.spyOn(userService, "deleteUser").mockResolvedValue(undefined);
 
 			const caller = appRouter.createCaller(
 				createMockContext({
-					user: mockUser,
+					user: {
+						id: testUser.userId,
+						email: testUser.email,
+						name: testUser.name,
+					},
 				}),
 			);
 
@@ -36,9 +40,9 @@ describe("user router", () => {
 			expect(result.message).toBe("Account deleted successfully");
 
 			// Verify the service was called with correct params
-			expect(userService.deleteUserWithIdentity).toHaveBeenCalledWith(
+			expect(userService.deleteUser).toHaveBeenCalledWith(
 				expect.objectContaining({
-					userId: mockUser.id,
+					userId: testUser.userId,
 				}),
 			);
 		});

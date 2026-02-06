@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createAuthenticatedClient } from "../../db/client";
 import { protectedProcedure, router } from "../../trpc";
 import * as sourceDocumentService from "./sourceDocument.service";
 
@@ -13,12 +12,7 @@ export const sourceDocumentRouter = router({
 		.input(z.object({ projectId: z.string().uuid() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				return await sourceDocumentService.listSourceDocumentsByProject({
-					gelClient,
 					projectId: input.projectId,
 					userId: ctx.user.id,
 					requestId: ctx.requestId,
@@ -42,12 +36,7 @@ export const sourceDocumentRouter = router({
 		.input(z.object({ id: z.string().uuid() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				return await sourceDocumentService.getSourceDocumentById({
-					gelClient,
 					documentId: input.id,
 					userId: ctx.user.id,
 					requestId: ctx.requestId,
@@ -71,12 +60,7 @@ export const sourceDocumentRouter = router({
 		.input(z.object({ id: z.string().uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				await sourceDocumentService.deleteSourceDocument({
-					gelClient,
 					documentId: input.id,
 					userId: ctx.user.id,
 					requestId: ctx.requestId,

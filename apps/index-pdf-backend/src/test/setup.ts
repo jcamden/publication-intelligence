@@ -1,10 +1,36 @@
-import { createGelClient } from "../db/client";
+import { sql } from "drizzle-orm";
+import { afterEach, beforeEach } from "vitest";
+import { setTestDb } from "../db/client";
+import type { TestDb } from "../db/test-client";
+import { createTestDb } from "../db/test-client";
 
 // ============================================================================
-// Test Database Setup
+// Test Database Setup (PGLite)
 // ============================================================================
 
-export const testGelClient = createGelClient();
+let testDbInstance: Awaited<TestDb>;
+
+// Export db for tests to use
+export let testDb: Awaited<TestDb>["db"];
+
+beforeEach(async () => {
+	// Create fresh PGLite instance with migrations for each test
+	// This provides complete isolation without cleanup complexity
+	testDbInstance = await createTestDb();
+	testDb = testDbInstance.db;
+
+	// Inject test db into production client
+	// This allows integration tests that use the server to use the test db
+	setTestDb(testDb);
+
+	// Verify database is ready
+	await testDb.execute(sql`SELECT 1`);
+}, 30000); // Longer timeout for migrations
+
+afterEach(async () => {
+	// Close PGLite instance - no cleanup needed, fresh DB per test
+	await testDbInstance.close();
+});
 
 // ============================================================================
 // Test Helpers
@@ -30,20 +56,3 @@ export const waitForCondition = async ({
 
 	throw new Error(`Condition not met within ${timeout}ms`);
 };
-
-// ============================================================================
-// Test Data Cleanup
-// ============================================================================
-//
-// Test cleanup is handled by dropping and recreating the entire test branch.
-// This runs automatically before each test suite via `pnpm test`.
-//
-// See: db/gel/reset-test-branch.sh
-//
-// Why branch reset (vs per-record cleanup):
-// 1. Perfect test isolation - no shared state between runs
-// 2. No access policy gymnastics - policies remain pure
-// 3. Guaranteed correctness - no cleanup edge cases
-// 4. Fast - ~5 seconds to drop/recreate entire branch
-//
-// Legacy cleanup function removed - no longer needed with branch reset.

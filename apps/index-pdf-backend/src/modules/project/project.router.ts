@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createAuthenticatedClient } from "../../db/client";
 import { protectedProcedure, router } from "../../trpc";
 import * as projectService from "./project.service";
 import { CreateProjectSchema, UpdateProjectSchema } from "./project.types";
@@ -14,12 +13,7 @@ export const projectRouter = router({
 		.input(CreateProjectSchema)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				return await projectService.createProject({
-					gelClient,
 					input,
 					userId: ctx.user.id,
 					requestId: ctx.requestId,
@@ -40,12 +34,7 @@ export const projectRouter = router({
 
 	list: protectedProcedure.query(async ({ ctx }) => {
 		try {
-			const gelClient = createAuthenticatedClient({
-				authToken: ctx.authToken,
-			});
-
 			return await projectService.listProjectsForUser({
-				gelClient,
 				userId: ctx.user.id,
 				requestId: ctx.requestId,
 			});
@@ -67,12 +56,7 @@ export const projectRouter = router({
 		.input(z.object({ id: z.string().uuid() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				return await projectService.getProjectById({
-					gelClient,
 					projectId: input.id,
 					userId: ctx.user.id,
 					requestId: ctx.requestId,
@@ -95,12 +79,7 @@ export const projectRouter = router({
 		.input(z.object({ projectDir: z.string() }))
 		.query(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				return await projectService.getProjectByDir({
-					gelClient,
 					projectDir: input.projectDir,
 					userId: ctx.user.id,
 					requestId: ctx.requestId,
@@ -128,12 +107,7 @@ export const projectRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				return await projectService.updateProject({
-					gelClient,
 					projectId: input.id,
 					input: input.data,
 					userId: ctx.user.id,
@@ -157,12 +131,7 @@ export const projectRouter = router({
 		.input(z.object({ id: z.string().uuid() }))
 		.mutation(async ({ ctx, input }) => {
 			try {
-				const gelClient = createAuthenticatedClient({
-					authToken: ctx.authToken,
-				});
-
 				await projectService.deleteProject({
-					gelClient,
 					projectId: input.id,
 					userId: ctx.user.id,
 					requestId: ctx.requestId,

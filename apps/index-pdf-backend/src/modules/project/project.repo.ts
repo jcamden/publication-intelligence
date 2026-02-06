@@ -1,5 +1,11 @@
-import e from "@gel";
-import type { Client } from "gel";
+import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { withUserContext } from "../../db/client";
+import {
+	indexEntries,
+	projects,
+	sourceDocuments,
+	users,
+} from "../../db/schema";
 import type {
 	CreateProjectInput,
 	Project,
@@ -8,266 +14,433 @@ import type {
 } from "./project.types";
 
 // ============================================================================
-// Repository Layer - edgeql-js queries
+// Repository Layer - Drizzle ORM queries
 // ============================================================================
 
 export const createProject = async ({
-	gelClient,
+	userId,
 	input,
 }: {
-	gelClient: Client;
+	userId: string;
 	input: CreateProjectInput;
 }): Promise<Project> => {
-	// Use raw EdgeQL for inserts that need global current_user
-	// edgeql-js doesn't properly support custom globals yet
-	const project = await gelClient.querySingle<Project>(
-		`
-		SELECT (
-			INSERT Project {
-				title := <str>$title,
-				description := <optional str>$description,
-				project_dir := <str>$projectDir,
-				workspace := (SELECT Workspace FILTER .id = <optional uuid>$workspaceId),
-				owner := global current_user,
-				collaborators := {}
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// Insert the project
+			const [newProject] = await tx
+				.insert(projects)
+				.values({
+					title: input.title,
+					description: input.description ?? null,
+					projectDir: input.project_dir,
+					ownerId: userId,
+				})
+				.returning();
+
+			if (!newProject) {
+				throw new Error("Failed to create project");
 			}
-		) {
-			id,
-			title,
-			description,
-			project_dir,
-			workspace: { id },
-			owner: { id, email },
-			collaborators: { id, email },
-			created_at,
-			updated_at,
-			deleted_at,
-			has_document,
-			entry_count,
-			is_deleted
-		}
-	`,
-		{
-			title: input.title,
-			description: input.description ?? null,
-			projectDir: input.project_dir,
-			workspaceId: input.workspace ?? null,
+
+			// Fetch the complete project with owner (in same transaction)
+			const result = await tx
+				.select({
+					id: projects.id,
+					title: projects.title,
+					description: projects.description,
+					project_dir: projects.projectDir,
+					created_at: projects.createdAt,
+					updated_at: projects.updatedAt,
+					deleted_at: projects.deletedAt,
+					owner: {
+						id: users.id,
+						email: users.email,
+					},
+				})
+				.from(projects)
+				.innerJoin(users, eq(projects.ownerId, users.id))
+				.where(eq(projects.id, newProject.id))
+				.limit(1);
+
+			if (result.length === 0) {
+				throw new Error("Failed to fetch created project");
+			}
+
+			const project = result[0];
+
+			// Get entry count (will be 0 for new project)
+			const [entryCountResult] = await tx
+				.select({ count: count() })
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, newProject.id),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+
+			return {
+				id: project.id,
+				title: project.title,
+				description: project.description,
+				project_dir: project.project_dir,
+				owner: project.owner,
+				created_at: project.created_at,
+				updated_at: project.updated_at,
+				deleted_at: project.deleted_at,
+				has_document: false,
+				entry_count: entryCountResult.count,
+				is_deleted: false,
+			};
 		},
-	);
-
-	if (!project) {
-		throw new Error("Failed to create project");
-	}
-
-	return project;
+	});
 };
 
 export const listProjectsForUser = async ({
-	gelClient,
+	userId,
 }: {
-	gelClient: Client;
+	userId: string;
 }): Promise<ProjectListItem[]> => {
-	const query = e.select(e.Project, (project) => ({
-		id: true,
-		title: true,
-		description: true,
-		project_dir: true,
-		entry_count: true,
-		created_at: true,
-		updated_at: true,
-		source_document: {
-			id: true,
-			title: true,
-			file_name: true,
-			file_size: true,
-			page_count: true,
-			storage_key: true,
-			status: true,
-		},
-		filter: e.op("not", e.op("exists", project.deleted_at)),
-		order_by: {
-			expression: project.created_at,
-			direction: e.DESC,
-		},
-	}));
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// Query projects with source_document joined
+			// RLS policies automatically filter to user's owned projects
+			const result = await tx
+				.select({
+					id: projects.id,
+					title: projects.title,
+					description: projects.description,
+					project_dir: projects.projectDir,
+					entry_count: sql<number>`(
+				SELECT COUNT(*)::int 
+				FROM ${indexEntries} 
+				WHERE ${indexEntries.projectId} = ${projects.id}
+					AND ${indexEntries.deletedAt} IS NULL
+			)`,
+					created_at: projects.createdAt,
+					updated_at: projects.updatedAt,
+					source_document: {
+						id: sourceDocuments.id,
+						title: sourceDocuments.title,
+						file_name: sourceDocuments.fileName,
+						file_size: sourceDocuments.fileSize,
+						page_count: sourceDocuments.pageCount,
+						storage_key: sourceDocuments.storageKey,
+						status: sourceDocuments.status,
+					},
+				})
+				.from(projects)
+				.leftJoin(
+					sourceDocuments,
+					and(
+						eq(sourceDocuments.projectId, projects.id),
+						isNull(sourceDocuments.deletedAt),
+					),
+				)
+				.where(isNull(projects.deletedAt))
+				.orderBy(desc(projects.createdAt));
 
-	const projects = await query.run(gelClient);
-
-	return projects as ProjectListItem[];
+			return result.map((row: (typeof result)[number]) => ({
+				id: row.id,
+				title: row.title,
+				description: row.description,
+				project_dir: row.project_dir,
+				entry_count: row.entry_count,
+				created_at: row.created_at,
+				updated_at: row.updated_at,
+				source_document: row.source_document?.id ? row.source_document : null,
+			}));
+		},
+	});
 };
 
 export const getProjectById = async ({
-	gelClient,
 	projectId,
+	userId,
 }: {
-	gelClient: Client;
 	projectId: string;
+	userId: string;
 }): Promise<Project | null> => {
-	// Use raw EdgeQL to ensure access policies are respected
-	const project = await gelClient.querySingle<Project | null>(
-		`
-		SELECT Project {
-			id,
-			title,
-			description,
-			project_dir,
-			workspace: { id },
-			owner: { id, email },
-			collaborators: { id, email },
-			created_at,
-			updated_at,
-			deleted_at,
-			has_document,
-			entry_count,
-			is_deleted
-		}
-		FILTER .id = <uuid>$projectId AND NOT EXISTS .deleted_at
-	`,
-		{ projectId },
-	);
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// Query project with owner
+			// RLS policies automatically filter to user's owned projects
+			const result = await tx
+				.select({
+					id: projects.id,
+					title: projects.title,
+					description: projects.description,
+					project_dir: projects.projectDir,
+					created_at: projects.createdAt,
+					updated_at: projects.updatedAt,
+					deleted_at: projects.deletedAt,
+					owner: {
+						id: users.id,
+						email: users.email,
+					},
+				})
+				.from(projects)
+				.innerJoin(users, eq(projects.ownerId, users.id))
+				.where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+				.limit(1);
 
-	return project;
+			if (result.length === 0) {
+				return null;
+			}
+
+			const project = result[0];
+
+			// Check if has_document
+			const [hasDocResult] = await tx
+				.select({ count: count() })
+				.from(sourceDocuments)
+				.where(
+					and(
+						eq(sourceDocuments.projectId, projectId),
+						isNull(sourceDocuments.deletedAt),
+					),
+				);
+
+			// Get entry count
+			const [entryCountResult] = await tx
+				.select({ count: count() })
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+
+			return {
+				id: project.id,
+				title: project.title,
+				description: project.description,
+				project_dir: project.project_dir,
+				owner: project.owner,
+				created_at: project.created_at,
+				updated_at: project.updated_at,
+				deleted_at: project.deleted_at,
+				has_document: hasDocResult.count > 0,
+				entry_count: entryCountResult.count,
+				is_deleted: project.deleted_at !== null,
+			};
+		},
+	});
 };
 
 export const getProjectByDir = async ({
-	gelClient,
 	projectDir,
+	userId,
 }: {
-	gelClient: Client;
 	projectDir: string;
+	userId: string;
 }): Promise<ProjectListItem | null> => {
-	// Use raw EdgeQL to ensure access policies are respected
-	// Returns source_document info needed for editor
-	// Prioritize owned projects over collaborated projects, then most recent
-	const project = await gelClient.querySingle<ProjectListItem | null>(
-		`
-		SELECT Project {
-			id,
-			title,
-			description,
-			project_dir,
-			entry_count,
-			created_at,
-			updated_at,
-			source_document: {
-				id,
-				title,
-				file_name,
-				file_size,
-				page_count,
-				storage_key,
-				status
-			}
-		}
-		FILTER .project_dir = <str>$projectDir AND NOT EXISTS .deleted_at
-		ORDER BY .owner.id = global current_user_id DESC THEN .created_at DESC
-		LIMIT 1
-	`,
-		{ projectDir },
-	);
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// Query project with source_document
+			// RLS policies automatically filter to user's owned projects
+			const result = await tx
+				.select({
+					id: projects.id,
+					title: projects.title,
+					description: projects.description,
+					project_dir: projects.projectDir,
+					entry_count: sql<number>`(
+				SELECT COUNT(*)::int 
+				FROM ${indexEntries} 
+				WHERE ${indexEntries.projectId} = ${projects.id}
+					AND ${indexEntries.deletedAt} IS NULL
+			)`,
+					created_at: projects.createdAt,
+					updated_at: projects.updatedAt,
+					owner_id: projects.ownerId,
+					source_document: {
+						id: sourceDocuments.id,
+						title: sourceDocuments.title,
+						file_name: sourceDocuments.fileName,
+						file_size: sourceDocuments.fileSize,
+						page_count: sourceDocuments.pageCount,
+						storage_key: sourceDocuments.storageKey,
+						status: sourceDocuments.status,
+					},
+				})
+				.from(projects)
+				.leftJoin(
+					sourceDocuments,
+					and(
+						eq(sourceDocuments.projectId, projects.id),
+						isNull(sourceDocuments.deletedAt),
+					),
+				)
+				.where(
+					and(eq(projects.projectDir, projectDir), isNull(projects.deletedAt)),
+				)
+				.orderBy(desc(projects.createdAt))
+				.limit(1);
 
-	return project;
+			if (result.length === 0) {
+				return null;
+			}
+
+			const project = result[0];
+
+			return {
+				id: project.id,
+				title: project.title,
+				description: project.description,
+				project_dir: project.project_dir,
+				entry_count: project.entry_count,
+				created_at: project.created_at,
+				updated_at: project.updated_at,
+				source_document: project.source_document?.id
+					? project.source_document
+					: null,
+			};
+		},
+	});
 };
 
 export const updateProject = async ({
-	gelClient,
 	projectId,
+	userId,
 	input,
 }: {
-	gelClient: Client;
 	projectId: string;
+	userId: string;
 	input: UpdateProjectInput;
 }): Promise<Project | null> => {
-	// Build dynamic EdgeQL for conditional updates
-	const setFields: string[] = ["updated_at := datetime_current()"];
-	const params: Record<string, unknown> = { projectId };
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// Build update values
+			const updateValues: Partial<typeof projects.$inferInsert> = {
+				updatedAt: new Date(),
+			};
 
-	if (input.title !== undefined) {
-		setFields.push("title := <str>$title");
-		params.title = input.title;
-	}
-
-	if (input.description !== undefined) {
-		setFields.push(
-			input.description === null
-				? "description := <str>{}"
-				: "description := <str>$description",
-		);
-		if (input.description !== null) {
-			params.description = input.description;
-		}
-	}
-
-	if (input.workspace !== undefined) {
-		if (input.workspace === null) {
-			setFields.push("workspace := <Workspace>{}");
-		} else {
-			setFields.push(
-				"workspace := (SELECT Workspace FILTER .id = <uuid>$workspaceId)",
-			);
-			params.workspaceId = input.workspace;
-		}
-	}
-
-	const project = await gelClient.querySingle<Project>(
-		`
-		SELECT (
-			UPDATE Project
-			FILTER .id = <uuid>$projectId AND NOT EXISTS .deleted_at
-			SET {
-				${setFields.join(",\n\t\t\t\t")}
+			if (input.title !== undefined) {
+				updateValues.title = input.title;
 			}
-		) {
-			id,
-			title,
-			description,
-			project_dir,
-			workspace: { id },
-			owner: { id, email },
-			collaborators: { id, email },
-			created_at,
-			updated_at,
-			deleted_at,
-			has_document,
-			entry_count,
-			is_deleted
-		}
-	`,
-		params,
-	);
 
-	// Return null if update failed (access policy violation or doesn't exist)
-	// Service layer will use requireFound() to throw proper NOT_FOUND error
-	return project;
+			if (input.description !== undefined) {
+				updateValues.description = input.description;
+			}
+
+			// Perform update (RLS policies enforce authorization)
+			const result = await tx
+				.update(projects)
+				.set(updateValues)
+				.where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+				.returning({ id: projects.id });
+
+			// Return null if update failed (RLS denied access or doesn't exist)
+			if (result.length === 0) {
+				return null;
+			}
+
+			// Fetch the complete updated project (inline to avoid nested transaction)
+			const projectResult = await tx
+				.select({
+					id: projects.id,
+					title: projects.title,
+					description: projects.description,
+					project_dir: projects.projectDir,
+					created_at: projects.createdAt,
+					updated_at: projects.updatedAt,
+					deleted_at: projects.deletedAt,
+					owner: {
+						id: users.id,
+						email: users.email,
+					},
+				})
+				.from(projects)
+				.innerJoin(users, eq(projects.ownerId, users.id))
+				.where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+				.limit(1);
+
+			if (projectResult.length === 0) {
+				return null;
+			}
+
+			const project = projectResult[0];
+
+			// Get has_document count
+			const [hasDocResult] = await tx
+				.select({ count: count() })
+				.from(sourceDocuments)
+				.where(
+					and(
+						eq(sourceDocuments.projectId, projectId),
+						isNull(sourceDocuments.deletedAt),
+					),
+				);
+
+			// Get entry count
+			const [entryCountResult] = await tx
+				.select({ count: count() })
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+
+			return {
+				id: project.id,
+				title: project.title,
+				description: project.description,
+				project_dir: project.project_dir,
+				owner: project.owner,
+				created_at: project.created_at,
+				updated_at: project.updated_at,
+				deleted_at: project.deleted_at,
+				has_document: hasDocResult.count > 0,
+				entry_count: entryCountResult.count,
+				is_deleted: project.deleted_at !== null,
+			};
+		},
+	});
 };
 
 export const softDeleteProject = async ({
-	gelClient,
 	projectId,
+	userId,
 }: {
-	gelClient: Client;
 	projectId: string;
+	userId: string;
 }): Promise<{ id: string; deleted_at: Date } | null> => {
-	const result = await gelClient.querySingle<{
-		id: string;
-		deleted_at: Date;
-	}>(
-		`
-		SELECT (
-			UPDATE Project
-			FILTER .id = <uuid>$projectId AND NOT EXISTS .deleted_at
-			SET {
-				deleted_at := datetime_current()
-			}
-		) {
-			id,
-			deleted_at
-		}
-	`,
-		{ projectId },
-	);
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// Perform soft delete (RLS enforces owner-only access)
+			const result = await tx
+				.update(projects)
+				.set({
+					deletedAt: new Date(),
+				})
+				.where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+				.returning({
+					id: projects.id,
+					deleted_at: projects.deletedAt,
+				});
 
-	// Return null if delete failed (access policy violation, doesn't exist, or already deleted)
-	// Service layer will use requireFound() to throw proper NOT_FOUND error
-	return result;
+			// Return null if delete failed (RLS denied access, doesn't exist, or already deleted)
+			if (result.length === 0) {
+				return null;
+			}
+
+			if (!result[0].deleted_at) {
+				throw new Error("Soft delete failed: deleted_at is null");
+			}
+
+			return {
+				id: result[0].id,
+				deleted_at: result[0].deleted_at,
+			};
+		},
+	});
 };

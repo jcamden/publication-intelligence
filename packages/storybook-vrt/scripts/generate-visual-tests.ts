@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+
 /**
  * Auto-generates Playwright visual regression test files from Storybook VRT stories
  * Scans visual-regression-tests.stories.tsx files and generates corresponding
@@ -17,6 +18,9 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join, relative } from "node:path";
+import { getWorkspaceRoot } from "./workspace-utils.js";
+
+const workspaceRoot = getWorkspaceRoot();
 
 type StoryInfo = {
 	componentName: string;
@@ -48,7 +52,7 @@ const parseArgs = (): Config => {
 	}
 
 	const packageName = args[packageIndex + 1];
-	const monorepoRoot = join(process.cwd(), "../..");
+	const monorepoRoot = workspaceRoot;
 
 	// Search in both packages/ and apps/
 	const searchDirs = [
@@ -389,7 +393,7 @@ const main = async () => {
 	console.log(`🔍 Scanning package: ${packageName}\n`);
 	console.log(`Search directories:`);
 	for (const dir of searchDirs) {
-		console.log(`  - ${relative(join(process.cwd(), "../.."), dir)}`);
+		console.log(`  - ${relative(workspaceRoot, dir)}`);
 	}
 	console.log();
 

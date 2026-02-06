@@ -28,8 +28,8 @@ export const SignupForm = () => {
 	const router = useRouter();
 
 	const signUpMutation = trpc.auth.signUp.useMutation({
-		onSuccess: (data: { authToken: string; message: string }) => {
-			saveToken(data.authToken);
+		onSuccess: (data) => {
+			saveToken(data.token);
 			form.reset();
 			router.push("/projects");
 		},

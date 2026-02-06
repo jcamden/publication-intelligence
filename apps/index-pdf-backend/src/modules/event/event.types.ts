@@ -2,10 +2,21 @@
 // Event Types
 // ============================================================================
 
+export type EntityType =
+	| "IndexEntry"
+	| "IndexMention"
+	| "SourceDocument"
+	| "DocumentPage"
+	| "LLMRun"
+	| "ExportedIndex"
+	| "Project";
+
 export type InsertEventInput = {
-	projectId: string;
-	entityType: string;
-	entityId: string;
-	action: string;
+	type: string; // e.g., 'project.created', 'document.uploaded'
+	projectId?: string;
+	userId?: string;
+	entityType?: EntityType;
+	entityId?: string;
 	metadata?: Record<string, unknown>;
+	requestId?: string;
 };

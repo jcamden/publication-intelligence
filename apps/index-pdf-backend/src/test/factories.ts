@@ -1,5 +1,9 @@
-import { randomBytes } from "node:crypto";
-import type { Client } from "gel";
+import { randomBytes, randomUUID } from "node:crypto";
+import bcrypt from "bcryptjs";
+import { and, eq, sql } from "drizzle-orm";
+import jwt from "jsonwebtoken";
+import { projects, userIndexTypeAddons, users } from "../db/schema";
+import { testDb } from "./setup";
 
 // ============================================================================
 // Test Data Factories
@@ -39,113 +43,56 @@ export const createTestUser = async ({
 	password?: string;
 	name?: string;
 } = {}) => {
-	// Use GEL_AUTH_URL from environment (defaults to main branch)
-	const GEL_AUTH_URL =
-		process.env.GEL_AUTH_URL ?? "http://localhost:10702/db/main/ext/auth";
+	const JWT_SECRET: string = process.env.JWT_SECRET || "test-secret-key";
+	const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || "7d") as
+		| string
+		| number;
 
-	const createHash = (await import("node:crypto")).createHash;
-	const randomBytes = (await import("node:crypto")).randomBytes;
+	// Hash password
+	const passwordHash = await bcrypt.hash(password, 10);
 
-	const generateCodeVerifier = () => randomBytes(32).toString("base64url");
-	const generateCodeChallenge = (verifier: string) =>
-		createHash("sha256").update(verifier).digest("base64url");
+	// Generate UUID for user BEFORE insertion
+	// This is needed so we can set up auth context for RLS policies
+	const userUuid = randomUUID();
 
-	const verifier = generateCodeVerifier();
-	const challenge = generateCodeChallenge(verifier);
+	// Insert user with pre-generated UUID and auth context for RLS
+	const [user] = await testDb.transaction(async (tx) => {
+		// Set auth context so RLS policies allow the insert
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${userUuid}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
 
-	const response = await fetch(`${GEL_AUTH_URL}/register`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			provider: "builtin::local_emailpassword",
-			email,
-			password,
-			challenge,
-			verify_url: "http://localhost:3000/auth/verify",
-		}),
-	});
-
-	if (!response.ok) {
-		throw new Error(`Failed to create test user: ${await response.text()}`);
-	}
-
-	const result = (await response.json()) as { code?: string };
-
-	let authToken: string;
-	if (result.code?.trim()) {
-		const tokenUrl = new URL(`${GEL_AUTH_URL}/token`);
-		tokenUrl.searchParams.set("code", result.code);
-		tokenUrl.searchParams.set("verifier", verifier);
-
-		const tokenResponse = await fetch(tokenUrl.toString());
-		if (!tokenResponse.ok) {
-			throw new Error("Failed to exchange code for token");
-		}
-
-		const tokenResult = (await tokenResponse.json()) as { auth_token: string };
-		authToken = tokenResult.auth_token;
-	} else {
-		const authResponse = await fetch(`${GEL_AUTH_URL}/authenticate`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				provider: "builtin::local_emailpassword",
+		// Insert with pre-generated UUID
+		const result = await tx
+			.insert(users)
+			.values({
+				id: userUuid,
 				email,
-				password,
-				challenge: generateCodeChallenge(generateCodeVerifier()),
-			}),
-		});
+				passwordHash,
+				name: name ?? null,
+			})
+			.returning();
 
-		if (!authResponse.ok) {
-			throw new Error("Failed to authenticate test user");
-		}
+		// Reset role
+		await tx.execute(sql`RESET ROLE`);
 
-		const authResult = (await authResponse.json()) as { code: string };
-		const newVerifier = generateCodeVerifier();
-		const tokenUrl = new URL(`${GEL_AUTH_URL}/token`);
-		tokenUrl.searchParams.set("code", authResult.code);
-		tokenUrl.searchParams.set("verifier", newVerifier);
-
-		const tokenResponse = await fetch(tokenUrl.toString());
-		const tokenResult = (await tokenResponse.json()) as { auth_token: string };
-		authToken = tokenResult.auth_token;
-	}
-
-	// Create User record in database (required for global current_user)
-	const { createGelClient } = await import("../db/client");
-	const gel = createGelClient();
-	const authenticatedClient = gel.withGlobals({
-		"ext::auth::client_token": authToken,
+		return result;
 	});
 
-	const user = await authenticatedClient.querySingle<{
-		id: string;
-		email: string;
-		name: string | null;
-	}>(
-		`
-		INSERT User {
-			email := <str>$email,
-			name := <optional str>$name,
-			identity := global ext::auth::ClientTokenIdentity
-		}
-		UNLESS CONFLICT ON .identity
-		ELSE (
-			SELECT User FILTER .identity = global ext::auth::ClientTokenIdentity
-		)
-	`,
+	// Generate JWT token (matching production auth.service.ts)
+	const authToken = jwt.sign(
 		{
-			email,
-			name: name ?? null,
+			sub: user.id,
+			email: user.email,
+			name: user.name,
 		},
+		JWT_SECRET,
+		{ expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions,
 	);
 
-	if (!user) {
-		throw new Error("Failed to create User record in database");
-	}
-
 	return {
-		email,
+		email: user.email,
 		password,
 		name: user.name,
 		authToken,
@@ -158,43 +105,114 @@ export const createTestUser = async ({
 // ============================================================================
 
 export const createTestProject = async ({
-	gelClient,
+	userId,
 	title = generateTestTitle(),
 	description,
-	project_dir,
+	projectDir,
 }: {
-	gelClient: Client;
+	userId: string;
 	title?: string;
 	description?: string;
-	project_dir?: string;
+	projectDir?: string;
 }) => {
-	const projectDir = project_dir ?? generateProjectDir(title);
+	const dir = projectDir ?? generateProjectDir(title);
 
-	const project = await gelClient.querySingle<{
-		id: string;
-		title: string;
-		description: string | null;
-		project_dir: string;
-	}>(
-		`
-		INSERT Project {
-			title := <str>$title,
-			description := <optional str>$description,
-			project_dir := <str>$projectDir,
-			owner := global current_user,
-			collaborators := {}
-		}
-	`,
-		{
-			title,
-			description: description ?? null,
-			projectDir,
-		},
-	);
+	const [project] = await testDb.transaction(async (tx) => {
+		// Set auth context so RLS policies allow the insert
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
 
-	if (!project) {
-		throw new Error("Failed to create test project");
-	}
+		const result = await tx
+			.insert(projects)
+			.values({
+				title,
+				description: description ?? null,
+				projectDir: dir,
+				ownerId: userId,
+			})
+			.returning();
+
+		// Reset role
+		await tx.execute(sql`RESET ROLE`);
+
+		return result;
+	});
 
 	return project;
+};
+
+// ============================================================================
+// Index Type Addon Factory
+// ============================================================================
+
+/**
+ * Grant an index type addon to a user
+ * Simulates self-service purchase where user buys addon for themselves
+ *
+ * In production: Payment webhook → validates payment → grants addon
+ * In tests: Directly grants addon to simulate purchase
+ *
+ * @param userId - User ID to grant addon to
+ * @param definitionName - Name of index type to grant
+ * @param expiresAt - Optional expiration (null = lifetime)
+ */
+export const grantIndexTypeAddon = async ({
+	userId,
+	indexType,
+	expiresAt,
+}: {
+	userId: string;
+	indexType:
+		| "subject"
+		| "author"
+		| "scripture"
+		| "bibliography"
+		| "person"
+		| "place"
+		| "concept"
+		| "organization"
+		| "event";
+	expiresAt?: Date;
+}) => {
+	return await testDb.transaction(async (tx) => {
+		// Set auth context so RLS policies work
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
+
+		// Check if addon already exists
+		const existing = await tx
+			.select()
+			.from(userIndexTypeAddons)
+			.where(
+				and(
+					eq(userIndexTypeAddons.userId, userId),
+					eq(userIndexTypeAddons.indexType, indexType),
+				),
+			)
+			.limit(1);
+
+		if (existing.length > 0) {
+			await tx.execute(sql`RESET ROLE`);
+			return existing[0];
+		}
+
+		// Insert addon
+		const [addon] = await tx
+			.insert(userIndexTypeAddons)
+			.values({
+				userId,
+				indexType,
+				expiresAt: expiresAt ?? null,
+			})
+			.returning();
+
+		// Reset role
+		await tx.execute(sql`RESET ROLE`);
+
+		return addon;
+	});
 };

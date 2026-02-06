@@ -19,9 +19,10 @@ pnpm test:e2e
 ## Repo-Specific Patterns
 
 **Backend:**
-- Tests use real Gel database with automatic branch reset
-- Test isolation via `db/gel/reset-test-branch.sh`
+- Tests use PGLite (in-memory PostgreSQL) - no external DB needed
+- Automatic table cleanup via `afterEach` hook in `setup.ts`
 - Factories in `apps/index-pdf-backend/src/test/factories.ts`
+- See `apps/index-pdf-backend/TESTING.md` for detailed guide
 
 **Frontend:**
 - Component behavior → Storybook interaction tests

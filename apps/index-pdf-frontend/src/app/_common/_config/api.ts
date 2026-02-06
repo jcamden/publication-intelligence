@@ -1,3 +1,5 @@
+import { env } from "../../../env";
+
 /**
  * API Configuration
  *
@@ -5,8 +7,4 @@
  * Uses NEXT_PUBLIC_API_URL environment variable with fallback to localhost.
  */
 
-export const getApiUrl = (): string => {
-	return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-};
-
-export const API_URL = getApiUrl();
+export const API_URL = env.NEXT_PUBLIC_API_URL;

@@ -8,13 +8,11 @@
  */
 
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { config } from "dotenv";
-
-const MONOREPO_ROOT = resolve(import.meta.dirname, "..");
+import { resolveFromWorkspaceRoot } from "./workspace-utils.js";
 
 // Load from monorepo root .env
-const envPath = resolve(MONOREPO_ROOT, ".env");
+const envPath = resolveFromWorkspaceRoot(".env");
 if (existsSync(envPath)) {
 	console.log("📄 Loading environment from .env file...\n");
 	config({ path: envPath });
@@ -29,37 +27,37 @@ type ValidationResult = {
 const MIN_KEY_LENGTH = 32;
 
 /**
- * Validate auth signing key
+ * Validate JWT secret
  */
-const validateAuthSigningKey = (): ValidationResult => {
+const validateJwtSecret = (): ValidationResult => {
 	const result: ValidationResult = {
 		success: true,
 		errors: [],
 		warnings: [],
 	};
 
-	const key = process.env.EDGEDB_AUTH_SIGNING_KEY;
+	const secret = process.env.JWT_SECRET;
 
 	// Check if set
-	if (!key) {
+	if (!secret) {
 		result.success = false;
 		result.errors.push(
-			"EDGEDB_AUTH_SIGNING_KEY is not set",
+			"JWT_SECRET is not set",
 			"",
 			"Generate a secure key with:",
 			"  openssl rand -base64 32",
 			"",
 			"Then add to .env:",
-			"  EDGEDB_AUTH_SIGNING_KEY=<your-generated-key>",
+			"  JWT_SECRET=<your-generated-key>",
 		);
 		return result;
 	}
 
 	// Check for placeholder
-	if (key === "REPLACE_WITH_SECURE_KEY_IN_PRODUCTION") {
+	if (secret.includes("REPLACE") || secret.includes("change-in-production")) {
 		result.success = false;
 		result.errors.push(
-			"EDGEDB_AUTH_SIGNING_KEY is still using placeholder value",
+			"JWT_SECRET is still using placeholder value",
 			"",
 			"Generate a secure key with:",
 			"  openssl rand -base64 32",
@@ -68,10 +66,10 @@ const validateAuthSigningKey = (): ValidationResult => {
 	}
 
 	// Check minimum length
-	if (key.length < MIN_KEY_LENGTH) {
+	if (secret.length < MIN_KEY_LENGTH) {
 		result.success = false;
 		result.errors.push(
-			`EDGEDB_AUTH_SIGNING_KEY is too short (${key.length} bytes, minimum ${MIN_KEY_LENGTH})`,
+			`JWT_SECRET is too short (${secret.length} bytes, minimum ${MIN_KEY_LENGTH})`,
 			"",
 			"Generate a secure key with:",
 			"  openssl rand -base64 32",
@@ -81,9 +79,9 @@ const validateAuthSigningKey = (): ValidationResult => {
 
 	// Check if appears to be base64
 	const base64Regex = /^[A-Za-z0-9+/]+=*$/;
-	if (!base64Regex.test(key)) {
+	if (!base64Regex.test(secret)) {
 		result.warnings.push(
-			"EDGEDB_AUTH_SIGNING_KEY doesn't appear to be base64-encoded",
+			"JWT_SECRET doesn't appear to be base64-encoded",
 			"This may be intentional, but consider using: openssl rand -base64 32",
 		);
 	}
@@ -143,11 +141,11 @@ const validateEnvironment = (): ValidationResult => {
 		warnings: [],
 	};
 
-	// Validate auth signing key
-	const authKeyResult = validateAuthSigningKey();
-	result.errors.push(...authKeyResult.errors);
-	result.warnings.push(...authKeyResult.warnings);
-	result.success = result.success && authKeyResult.success;
+	// Validate JWT secret
+	const jwtResult = validateJwtSecret();
+	result.errors.push(...jwtResult.errors);
+	result.warnings.push(...jwtResult.warnings);
+	result.success = result.success && jwtResult.success;
 
 	// Validate CORS origins
 	const corsResult = validateCorsOrigins();
@@ -189,7 +187,7 @@ const main = () => {
 
 	// Print success
 	if (result.success && result.errors.length === 0) {
-		const key = process.env.EDGEDB_AUTH_SIGNING_KEY || "";
+		const secret = process.env.JWT_SECRET || "";
 		const corsOrigins = process.env.CORS_ORIGINS
 			? process.env.CORS_ORIGINS.split(",").map((o) => o.trim())
 			: ["(using defaults)"];
@@ -197,7 +195,7 @@ const main = () => {
 		console.log("✅ All environment variables are valid\n");
 		console.log("Environment variables:");
 		console.log(
-			`  EDGEDB_AUTH_SIGNING_KEY: ${key.slice(0, 8)}... (${key.length} bytes)`,
+			`  JWT_SECRET: ${secret.slice(0, 8)}... (${secret.length} bytes)`,
 		);
 		console.log(`  CORS_ORIGINS: ${corsOrigins.length} origin(s)`);
 		for (const origin of corsOrigins) {

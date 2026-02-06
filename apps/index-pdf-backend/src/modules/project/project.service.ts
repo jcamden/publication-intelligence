@@ -1,4 +1,3 @@
-import type { Client } from "gel";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
@@ -15,17 +14,15 @@ import type {
 // ============================================================================
 
 export const createProject = async ({
-	gelClient,
 	input,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	input: CreateProjectInput;
 	userId: string;
 	requestId: string;
 }): Promise<Project> => {
-	const project = await projectRepo.createProject({ gelClient, input });
+	const project = await projectRepo.createProject({ userId, input });
 
 	logEvent({
 		event: "project.created",
@@ -35,31 +32,29 @@ export const createProject = async ({
 			metadata: {
 				projectId: project.id,
 				title: project.title,
-				hasWorkspace: !!project.workspace,
 			},
 		},
 	});
 
 	await insertEvent({
-		gelClient,
+		type: "project.created",
 		projectId: project.id,
+		userId,
 		entityType: "Project",
 		entityId: project.id,
-		action: "created",
 		metadata: {
 			title: project.title,
 		},
+		requestId,
 	});
 
 	return project;
 };
 
 export const listProjectsForUser = async ({
-	gelClient,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	userId: string;
 	requestId: string;
 }): Promise<ProjectListItem[]> => {
@@ -71,21 +66,19 @@ export const listProjectsForUser = async ({
 		},
 	});
 
-	return projectRepo.listProjectsForUser({ gelClient });
+	return projectRepo.listProjectsForUser({ userId });
 };
 
 export const getProjectById = async ({
-	gelClient,
 	projectId,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	projectId: string;
 	userId: string;
 	requestId: string;
 }): Promise<Project> => {
-	const project = await projectRepo.getProjectById({ gelClient, projectId });
+	const project = await projectRepo.getProjectById({ projectId, userId });
 
 	// Security principle: Don't reveal whether project exists if user can't access it
 	// Both "doesn't exist" and "forbidden" return 404 (via requireFound)
@@ -104,17 +97,15 @@ export const getProjectById = async ({
 };
 
 export const getProjectByDir = async ({
-	gelClient,
 	projectDir,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	projectDir: string;
 	userId: string;
 	requestId: string;
 }): Promise<ProjectListItem> => {
-	const project = await projectRepo.getProjectByDir({ gelClient, projectDir });
+	const project = await projectRepo.getProjectByDir({ projectDir, userId });
 
 	// Security principle: Don't reveal whether project exists if user can't access it
 	// Both "doesn't exist" and "forbidden" return 404 (via requireFound)
@@ -133,21 +124,19 @@ export const getProjectByDir = async ({
 };
 
 export const updateProject = async ({
-	gelClient,
 	projectId,
 	input,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	projectId: string;
 	input: UpdateProjectInput;
 	userId: string;
 	requestId: string;
 }): Promise<Project> => {
 	const project = await projectRepo.updateProject({
-		gelClient,
 		projectId,
+		userId,
 		input,
 	});
 
@@ -167,31 +156,30 @@ export const updateProject = async ({
 	});
 
 	await insertEvent({
-		gelClient,
+		type: "project.updated",
 		projectId: updated.id,
+		userId,
 		entityType: "Project",
 		entityId: updated.id,
-		action: "updated",
 		metadata: {
 			changes: input,
 		},
+		requestId,
 	});
 
 	return updated;
 };
 
 export const deleteProject = async ({
-	gelClient,
 	projectId,
 	userId,
 	requestId,
 }: {
-	gelClient: Client;
 	projectId: string;
 	userId: string;
 	requestId: string;
 }): Promise<void> => {
-	const result = await projectRepo.softDeleteProject({ gelClient, projectId });
+	const result = await projectRepo.softDeleteProject({ projectId, userId });
 
 	// Throw NOT_FOUND if project doesn't exist, already deleted, or user lacks access
 	const deleted = requireFound(result);
@@ -209,10 +197,11 @@ export const deleteProject = async ({
 	});
 
 	await insertEvent({
-		gelClient,
+		type: "project.deleted",
 		projectId: deleted.id,
+		userId,
 		entityType: "Project",
 		entityId: deleted.id,
-		action: "deleted",
+		requestId,
 	});
 };

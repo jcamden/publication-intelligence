@@ -20,11 +20,12 @@ This is a pnpm monorepo with the following structure:
 
 - **Frontend**: Next.js 15, React 19, Tailwind CSS 4, Base UI
 - **Backend**: Node.js 23, Fastify, tRPC, Zod
-- **Database**: Gel (EdgeDB) 7.1 with built-in auth
-- **Type Safety**: TypeScript, end-to-end via tRPC + Gel query builder
-- **Authentication**: Gel Auth (JWT-based, email/password)
+- **Database**: PostgreSQL with Drizzle ORM
+- **Type Safety**: TypeScript, end-to-end via tRPC + Drizzle
+- **Authentication**: JWT-based (bcrypt + jsonwebtoken)
+- **Security**: Row-Level Security (RLS) policies in Drizzle schemas
 - **Data Fetching**: React Query (TanStack Query)
-- **Testing**: Vitest, Playwright, Storybook
+- **Testing**: Vitest + PGLite, Playwright, Storybook
 - **Code Quality**: Biome (linting + formatting)
 
 ## Prerequisites
@@ -49,7 +50,7 @@ pnpm dev
 
 - **[COMMANDS.md](./COMMANDS.md)** - Quick command reference for all available scripts
 - **[TESTING.md](./TESTING.md)** - Testing guide (Vitest, Storybook, Playwright)
-- **[db/gel/README.md](./db/gel/README.md)** - Gel database schema and query reference
+- **[apps/index-pdf-backend/TESTING.md](./apps/index-pdf-backend/TESTING.md)** - Backend testing with PGLite
 
 ## Development
 
