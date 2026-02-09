@@ -48,8 +48,134 @@ const mockTrpcClient = trpc.createClient({
 	links: [
 		httpLink({
 			url: `${API_URL}/trpc`,
-			fetch: async () => {
-				// Return a mock response
+			fetch: async (url) => {
+				// Parse the URL to determine which endpoint is being called
+				const urlString = typeof url === "string" ? url : url.toString();
+
+				// tRPC batching: Check if this is a batch request
+				if (urlString.includes("batch=1")) {
+					// For batch requests, decode the input parameter to see all queries
+					const urlObj = new URL(urlString);
+					const batchInput = urlObj.searchParams.get("input");
+
+					if (batchInput) {
+						try {
+							const inputs = JSON.parse(batchInput);
+							const results: Record<string, unknown> = {};
+
+							// Process each batched query
+							Object.keys(inputs).forEach((key) => {
+								if (key.includes("projectIndexType.listUserAddons")) {
+									results[key] = {
+										result: {
+											data: ["subject", "author", "scripture"],
+										},
+									};
+								} else if (key.includes("projectIndexType.list")) {
+									results[key] = {
+										result: {
+											data: [
+												{
+													id: "mock-pit-subject-id",
+													colorHue: 230,
+													visible: true,
+													indexType: "subject",
+													displayName: "Subject Index",
+													description:
+														"Topical index of key concepts, themes, and subjects",
+													entry_count: 0,
+												},
+												{
+													id: "mock-pit-author-id",
+													colorHue: 270,
+													visible: true,
+													indexType: "author",
+													displayName: "Author Index",
+													description: "Index of cited authors and their works",
+													entry_count: 0,
+												},
+												{
+													id: "mock-pit-scripture-id",
+													colorHue: 160,
+													visible: true,
+													indexType: "scripture",
+													displayName: "Scripture Index",
+													description:
+														"Biblical and scriptural reference index",
+													entry_count: 0,
+												},
+											],
+										},
+									};
+								}
+							});
+
+							return new Response(JSON.stringify(results), {
+								headers: { "Content-Type": "application/json" },
+							});
+						} catch (_e) {
+							// Fall through to default handling
+						}
+					}
+				}
+
+				// Single query handling (non-batched)
+				if (urlString.includes("projectIndexType.listUserAddons")) {
+					return new Response(
+						JSON.stringify({
+							result: {
+								data: ["subject", "author", "scripture"],
+							},
+						}),
+						{
+							headers: { "Content-Type": "application/json" },
+						},
+					);
+				}
+
+				if (urlString.includes("projectIndexType.list")) {
+					return new Response(
+						JSON.stringify({
+							result: {
+								data: [
+									{
+										id: "mock-pit-subject-id",
+										colorHue: 230,
+										visible: true,
+										indexType: "subject",
+										displayName: "Subject Index",
+										description:
+											"Topical index of key concepts, themes, and subjects",
+										entry_count: 0,
+									},
+									{
+										id: "mock-pit-author-id",
+										colorHue: 270,
+										visible: true,
+										indexType: "author",
+										displayName: "Author Index",
+										description: "Index of cited authors and their works",
+										entry_count: 0,
+									},
+									{
+										id: "mock-pit-scripture-id",
+										colorHue: 160,
+										visible: true,
+										indexType: "scripture",
+										displayName: "Scripture Index",
+										description: "Biblical and scriptural reference index",
+										entry_count: 0,
+									},
+								],
+							},
+						}),
+						{
+							headers: { "Content-Type": "application/json" },
+						},
+					);
+				}
+
+				// Default mock response for other endpoints
 				return new Response(
 					JSON.stringify({
 						result: {

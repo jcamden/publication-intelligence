@@ -1,5 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { getIndexTypeConfig } from "../../db/schema/index-type-config";
+import {
+	getIndexTypeConfig,
+	type IndexType,
+} from "../../db/schema/index-type-config";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
@@ -9,7 +12,6 @@ import type {
 	EnableProjectIndexTypeInput,
 	ProjectIndexType,
 	ProjectIndexTypeListItem,
-	ReorderProjectIndexTypesInput,
 	UpdateProjectIndexTypeInput,
 } from "./project-index-type.types";
 
@@ -99,20 +101,9 @@ export const enableProjectIndexType = async ({
 		});
 	}
 
-	// 2. Get config for defaults
-	const config = getIndexTypeConfig(input.indexType);
-
-	// 3. Use provided values or defaults from config
-	const color = input.color ?? config.defaultColor;
-	const ordinal = input.ordinal ?? config.defaultOrdinal;
-
-	// 4. Enable the index type for the project
+	// 2. Enable the index type for the project
 	const projectIndexType = await projectIndexTypeRepo.enableProjectIndexType({
-		input: {
-			...input,
-			color,
-			ordinal,
-		},
+		input,
 		userId,
 	});
 
@@ -129,6 +120,14 @@ export const enableProjectIndexType = async ({
 		},
 	});
 
+	const config = getIndexTypeConfig(input.indexType);
+	if (!config) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Index type ${input.indexType} is not available`,
+		});
+	}
+
 	await insertEvent({
 		type: "index_type.enabled",
 		projectId: input.projectId,
@@ -138,8 +137,7 @@ export const enableProjectIndexType = async ({
 		metadata: {
 			indexType: input.indexType,
 			displayName: config.displayName,
-			color,
-			ordinal,
+			colorHue: input.colorHue,
 		},
 		requestId,
 	});
@@ -191,46 +189,75 @@ export const updateProjectIndexType = async ({
 	return found;
 };
 
-export const reorderProjectIndexTypes = async ({
-	input,
+// Removed: Reordering is now a client-side concern (UI sorting)
+
+export const listUserAddons = async ({
 	userId,
 	requestId,
 }: {
-	input: ReorderProjectIndexTypesInput;
 	userId: string;
 	requestId: string;
-}): Promise<void> => {
-	// Update ordinals for all items in the order array
-	for (const item of input.order) {
-		await projectIndexTypeRepo.updateProjectIndexTypeOrdinal({
-			id: item.id,
-			ordinal: item.ordinal,
-			userId,
-		});
-	}
+}): Promise<IndexType[]> => {
+	const addons = await projectIndexTypeRepo.listUserAddons({ userId });
 
 	logEvent({
-		event: "project_index_type.reordered",
+		event: "project_index_type.user_addons_listed",
 		context: {
 			requestId,
 			userId,
 			metadata: {
-				projectId: input.projectId,
-				count: input.order.length,
+				count: addons.length,
+				addons,
 			},
 		},
 	});
 
-	await insertEvent({
-		type: "index_type.reordered",
-		projectId: input.projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: input.projectId, // Using project ID as no specific entity for reorder
-		metadata: {
-			count: input.order.length,
+	return addons;
+};
+
+export const grantAddon = async ({
+	userId,
+	indexType,
+	requestId,
+}: {
+	userId: string;
+	indexType: IndexType;
+	requestId: string;
+}): Promise<void> => {
+	await projectIndexTypeRepo.grantAddon({ userId, indexType });
+
+	logEvent({
+		event: "project_index_type.addon_granted",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				indexType,
+			},
 		},
-		requestId,
+	});
+};
+
+export const revokeAddon = async ({
+	userId,
+	indexType,
+	requestId,
+}: {
+	userId: string;
+	indexType: IndexType;
+	requestId: string;
+}): Promise<void> => {
+	await projectIndexTypeRepo.revokeAddon({ userId, indexType });
+
+	logEvent({
+		event: "project_index_type.addon_revoked",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				indexType,
+			},
+		},
 	});
 };
 

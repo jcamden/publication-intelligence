@@ -7,22 +7,8 @@ import type { IndexType } from "../../db/schema/index-type-config";
 
 export const EnableProjectIndexTypeSchema = z.object({
 	projectId: z.string().uuid(),
-	indexType: z.enum([
-		"subject",
-		"author",
-		"scripture",
-		"bibliography",
-		"person",
-		"place",
-		"concept",
-		"organization",
-		"event",
-	]),
-	color: z
-		.string()
-		.regex(/^#[0-9A-Fa-f]{6}$/)
-		.optional(),
-	ordinal: z.number().int().min(0).optional(),
+	indexType: z.enum(["subject", "author", "scripture"]),
+	colorHue: z.number().int().min(0).max(360),
 });
 
 export type EnableProjectIndexTypeInput = z.infer<
@@ -30,10 +16,7 @@ export type EnableProjectIndexTypeInput = z.infer<
 >;
 
 export const UpdateProjectIndexTypeSchema = z.object({
-	color: z
-		.string()
-		.regex(/^#[0-9A-Fa-f]{6}$/)
-		.optional(),
+	colorHue: z.number().int().min(0).max(360).optional(),
 	visible: z.boolean().optional(),
 });
 
@@ -41,19 +24,20 @@ export type UpdateProjectIndexTypeInput = z.infer<
 	typeof UpdateProjectIndexTypeSchema
 >;
 
-export const ReorderProjectIndexTypesSchema = z.object({
-	projectId: z.string().uuid(),
-	order: z.array(
-		z.object({
-			id: z.string().uuid(),
-			ordinal: z.number().int().min(0),
-		}),
-	),
-});
-
-export type ReorderProjectIndexTypesInput = z.infer<
-	typeof ReorderProjectIndexTypesSchema
->;
+// Removed: Reordering is now a client-side concern (sorting in UI)
+// export const ReorderProjectIndexTypesSchema = z.object({
+// 	projectId: z.string().uuid(),
+// 	order: z.array(
+// 		z.object({
+// 			id: z.string().uuid(),
+// 			ordinal: z.number().int().min(0),
+// 		}),
+// 	),
+// });
+//
+// export type ReorderProjectIndexTypesInput = z.infer<
+// 	typeof ReorderProjectIndexTypesSchema
+// >;
 
 export type ProjectIndexType = {
 	id: string;
@@ -63,8 +47,7 @@ export type ProjectIndexType = {
 	indexType: IndexType;
 	displayName: string;
 	description: string;
-	ordinal: number;
-	color: string;
+	colorHue: number;
 	visible: boolean;
 	created_at: string;
 	updated_at: string | null;
@@ -75,8 +58,7 @@ export type ProjectIndexType = {
 
 export type ProjectIndexTypeListItem = {
 	id: string;
-	ordinal: number;
-	color: string;
+	colorHue: number;
 	visible: boolean;
 	indexType: IndexType;
 	displayName: string;
@@ -88,5 +70,4 @@ export type AvailableIndexType = {
 	displayName: string;
 	description: string;
 	defaultColor: string;
-	defaultOrdinal: number;
 };

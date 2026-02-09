@@ -95,7 +95,7 @@ MVP is complete when:
 
 ## Out of Scope (Post-MVP)
 
-- Multi-user collaboration
+- Multi-user collaboration (workspaces, collaborators)
 - Cross-document indexing
 - OCR for scanned PDFs
 - Mobile/tablet support

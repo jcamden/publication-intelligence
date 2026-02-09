@@ -27,7 +27,7 @@ Persist mentions, entries, and index types to Gel database with CRUD operations 
 3. **ProjectIndexType** (Project's enabled types with customization)
    - Projects enable index types the owner has addons for
    - Each has project-specific color and ordinal customization
-   - Access control: Collaborators without addon cannot see this index type
+   - ~~Access control: Collaborators without addon cannot see this index type~~ (Collaboration not in MVP)
 
 4. **IndexEntry** (Content items, one per index type)
    - Each entry belongs to exactly ONE project index type (`project_index_type` field)
@@ -43,7 +43,7 @@ Persist mentions, entries, and index types to Gel database with CRUD operations 
    - Multi-type mentions render with diagonal stripes
    - Access: User can see mention if they have addon for ANY of its types
 
-**Collaborative Projects:** Users only see index types they have addons for. If User A has Subject+Author addons but User B has only Subject addon, User B sees only Subject sections/mentions in the project. No error messages - unavailable types are simply invisible.
+**~~Collaborative Projects~~** *(Not in MVP):* ~~Users only see index types they have addons for. If User A has Subject+Author addons but User B has only Subject addon, User B sees only Subject sections/mentions in the project. No error messages - unavailable types are simply invisible.~~
 
 ## Sub-Tasks
 
@@ -86,7 +86,7 @@ Phase 5 complete when:
 - [ ] Error handling graceful (retry, rollback)
 - [ ] Local state replaced with tRPC queries
 - [ ] Context schema ready for Phase 6
-- [ ] Collaborative access tested (users with different addons)
+- [ ] ~~Collaborative access tested (users with different addons)~~ (Collaboration not in MVP)
 - [ ] Performance acceptable (< 200ms for operations)
 
 ## Frontend Architecture (Established in Phase 4)

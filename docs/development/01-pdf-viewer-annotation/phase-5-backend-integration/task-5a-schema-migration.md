@@ -18,9 +18,9 @@ Implement critical schema changes (IndexType, IndexEntry.index_type, IndexMentio
 ## Key Design Decisions Driving Schema Changes
 
 ### 1. Addon-Based Index Type Access
-**Decision:** Index types (Subject, Author, Scripture, etc.) are separate addons that users purchase. Users can only enable index types they have purchased addons for. In collaborative projects, users without an addon cannot see or interact with that index type at all.
+**Decision:** Index types (Subject, Author, Scripture, etc.) are separate addons that users purchase. Users can only enable index types they have purchased addons for. ~~In collaborative projects, users without an addon cannot see or interact with that index type at all.~~ *(Collaboration not in MVP)*
 
-**Reason:** Enables flexible monetization, clear feature gating, and prevents confusion when collaborators have different addon sets.
+**Reason:** Enables flexible monetization, clear feature gating~~, and prevents confusion when collaborators have different addon sets~~.
 
 ### 2. Global Index Type Definitions
 **Decision:** System-wide catalog of available index types via `IndexTypeDefinition` table. Projects reference these definitions via `ProjectIndexType` junction table.
@@ -602,18 +602,18 @@ type Project {
 1. **System defines available index types** via `IndexTypeDefinition`
 2. **Users purchase addons** (tracked in `UserIndexTypeAddon`)
 3. **Projects enable types** the owner has access to (`ProjectIndexType`)
-4. **Collaborators see only types they have addons for**
+4. ~~**Collaborators see only types they have addons for**~~ *(Collaboration not in MVP)*
 
-### Collaborative Project Rules
+### ~~Collaborative Project Rules~~ *(Not in MVP)*
 
-**Scenario:** User A has Subject+Author addons, User B has only Subject addon
+~~**Scenario:** User A has Subject+Author addons, User B has only Subject addon~~
 
-**In shared project with Subject and Author enabled:**
-- User A sees both Subject and Author sections/mentions
-- User B sees only Subject section/mentions
-- User B cannot create Author mentions
-- User B cannot see entries in Author index
-- No error messages about Author - it's simply invisible to User B
+~~**In shared project with Subject and Author enabled:**~~
+~~- User A sees both Subject and Author sections/mentions~~
+~~- User B sees only Subject section/mentions~~
+~~- User B cannot create Author mentions~~
+~~- User B cannot see entries in Author index~~
+~~- No error messages about Author - it's simply invisible to User B~~
 
 ### Frontend Implications
 

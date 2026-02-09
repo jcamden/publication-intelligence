@@ -22,9 +22,7 @@ export const PageSectionContent = ({
 
 	return (
 		<div>
-			<div className="text-sm text-[hsl(var(--color-text-muted))] mb-2">
-				Mentions on this page ({mentionCount})
-			</div>
+			<div className="text-sm mb-2">Mentions on this page ({mentionCount})</div>
 			{mentionCount > 0 && onMentionClick && (
 				<div className="space-y-2">
 					{mentions.map((mention) => (

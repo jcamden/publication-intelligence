@@ -44,6 +44,7 @@ type WindowManagerProps = {
 	mentions: Mention[];
 	currentPage: number;
 	onMentionClick: ({ mentionId }: { mentionId: string }) => void;
+	enabledIndexTypes: string[]; // Index types enabled for this project
 };
 
 const windowRegistry: Record<
@@ -110,6 +111,7 @@ export const WindowManager = ({
 	mentions,
 	currentPage,
 	onMentionClick,
+	enabledIndexTypes,
 }: WindowManagerProps) => {
 	const windowsToRender = useAtomValue(windowsToRenderAtom);
 	const sections = useAtomValue(sectionsStateAtom);
@@ -119,9 +121,26 @@ export const WindowManager = ({
 	const projectCollapsed = useAtomValue(projectSidebarCollapsedAtom);
 	const pageCollapsed = useAtomValue(pageSidebarCollapsedAtom);
 
+	const enabledIndexTypesSet = new Set(enabledIndexTypes);
+
+	// Filter windows to only include enabled index types for this project
+	const filteredWindows = windowsToRender.filter(({ id }) => {
+		// Always include non-index sections (pages, contexts, info)
+		if (
+			id.includes("-pages") ||
+			id.includes("-contexts") ||
+			id.includes("-info")
+		) {
+			return true;
+		}
+		// For index type sections, check if enabled for project
+		const indexType = id.replace(/^(project|page)-/, "");
+		return enabledIndexTypesSet.has(indexType);
+	});
+
 	return (
 		<>
-			{windowsToRender.map(({ id, state }) => {
+			{filteredWindows.map(({ id, state }) => {
 				const config = windowRegistry[id];
 				const sidebarCollapsed = id.startsWith("project")
 					? projectCollapsed

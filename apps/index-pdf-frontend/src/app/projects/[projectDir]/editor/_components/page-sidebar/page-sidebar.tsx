@@ -1,7 +1,7 @@
 "use client";
 
 import type { DropResult } from "@hello-pangea/dnd";
-import { DraggableSidebar } from "@pubint/yaboujee/components/draggable-sidebar";
+import { DraggableSidebarContainer } from "@pubint/yaboujee/components/draggable-sidebar";
 import { useAtom, useAtomValue } from "jotai";
 import {
 	BookOpen,
@@ -12,7 +12,9 @@ import {
 	User,
 } from "lucide-react";
 import type React from "react";
+import { useTheme } from "@/app/_common/_providers/theme-provider";
 import {
+	colorConfigAtom,
 	moveWindowToFrontAtom,
 	pageAccordionExpandedAtom,
 	pageSectionOrderAtom,
@@ -43,6 +45,7 @@ type PageSidebarProps = {
 	mentions: MentionData[];
 	currentPage: number;
 	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
+	enabledIndexTypes: string[]; // Index types enabled for this project
 };
 
 /**
@@ -57,12 +60,18 @@ export const PageSidebar = ({
 	mentions,
 	currentPage,
 	onMentionClick,
+	enabledIndexTypes,
 }: PageSidebarProps) => {
+	const { resolvedTheme } = useTheme();
+	const isDarkMode = resolvedTheme === "dark";
 	const sections = useAtomValue(sectionsStateAtom);
+	const colorConfig = useAtomValue(colorConfigAtom);
 	const [, updateSection] = useAtom(updateSectionAtom);
 	const [, moveToFront] = useAtom(moveWindowToFrontAtom);
 	const [expandedItems, setExpandedItems] = useAtom(pageAccordionExpandedAtom);
 	const [sectionOrder, setSectionOrder] = useAtom(pageSectionOrderAtom);
+
+	const enabledIndexTypesSet = new Set(enabledIndexTypes);
 
 	const handlePop = ({ id }: { id: SectionId }) => {
 		const currentState = sections.get(id);
@@ -109,7 +118,7 @@ export const PageSidebar = ({
 	const getMentionsForType = (indexType: string) =>
 		mentionsOnPage.filter((m) => m.indexTypes.includes(indexType));
 
-	const sectionMetadata: Partial<
+	const allSectionMetadata: Partial<
 		Record<
 			SectionId,
 			{
@@ -196,12 +205,25 @@ export const PageSidebar = ({
 		},
 	};
 
+	// Filter sections to only include index types enabled for this project
+	const sectionMetadata = Object.fromEntries(
+		Object.entries(allSectionMetadata).filter(([sectionId]) => {
+			// Always include non-index sections (pages, contexts)
+			if (sectionId === "page-pages" || sectionId === "page-contexts") {
+				return true;
+			}
+			// For index type sections, check if enabled for project
+			const indexType = sectionId.replace("page-", "");
+			return enabledIndexTypesSet.has(indexType);
+		}),
+	) as typeof allSectionMetadata;
+
 	const visibleSections = sectionOrder
 		.filter((id) => sections.get(id)?.visible && !sections.get(id)?.popped)
 		.reverse();
 
 	return (
-		<DraggableSidebar
+		<DraggableSidebarContainer
 			visibleSections={visibleSections}
 			sectionMetadata={sectionMetadata}
 			expandedItems={expandedItems}
@@ -210,6 +232,8 @@ export const PageSidebar = ({
 			onPop={handlePop}
 			droppableId="page-sidebar-accordion"
 			side="right"
+			colorConfig={colorConfig}
+			isDarkMode={isDarkMode}
 		/>
 	);
 };

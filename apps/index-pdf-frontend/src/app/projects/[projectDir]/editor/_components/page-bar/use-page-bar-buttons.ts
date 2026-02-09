@@ -20,7 +20,11 @@ import {
 	updateSectionAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 
-export const usePageBarButtons = (): {
+export const usePageBarButtons = ({
+	enabledIndexTypes,
+}: {
+	enabledIndexTypes: string[];
+}): {
 	buttons: StyledToggleButton[];
 	onReorder: ({
 		fromIndex,
@@ -39,6 +43,8 @@ export const usePageBarButtons = (): {
 		pageSidebarLastVisibleAtom,
 	);
 	const [sectionOrder, setSectionOrder] = useAtom(pageSectionOrderAtom);
+
+	const enabledIndexTypesSet = new Set(enabledIndexTypes);
 
 	const handleSidebarToggle = () => {
 		if (!pageSidebarCollapsed) {
@@ -116,6 +122,18 @@ export const usePageBarButtons = (): {
 		.map((sectionId) => {
 			const meta = sectionMetadata[sectionId];
 			if (!meta) return null;
+
+			// Filter out index type sections that aren't enabled for this project
+			if (
+				sectionId !== "page-pages" &&
+				sectionId !== "page-contexts" &&
+				sectionId !== "page-info"
+			) {
+				const indexType = sectionId.replace("page-", "");
+				if (!enabledIndexTypesSet.has(indexType)) {
+					return null;
+				}
+			}
 
 			return {
 				name: meta.name,

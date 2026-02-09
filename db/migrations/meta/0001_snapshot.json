@@ -1,5 +1,5 @@
 {
-	"id": "8bea3d37-6c7d-4794-b2aa-f5f20cb1507b",
+	"id": "8ef53437-206c-48f2-acbd-fc476f2661f9",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -503,14 +503,8 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"color": {
-					"name": "color",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": false
-				},
-				"ordinal": {
-					"name": "ordinal",
+				"color_hue": {
+					"name": "color_hue",
 					"type": "smallint",
 					"primaryKey": false,
 					"notNull": true
@@ -554,28 +548,6 @@
 						},
 						{
 							"expression": "index_type",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						}
-					],
-					"isUnique": true,
-					"where": "\"project_index_types\".\"deleted_at\" IS NULL",
-					"concurrently": false,
-					"method": "btree",
-					"with": {}
-				},
-				"unique_project_ordinal": {
-					"name": "unique_project_ordinal",
-					"columns": [
-						{
-							"expression": "project_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						},
-						{
-							"expression": "ordinal",
 							"isExpression": false,
 							"asc": true,
 							"nulls": "last"
@@ -1780,17 +1752,7 @@
 		"public.index_type": {
 			"name": "index_type",
 			"schema": "public",
-			"values": [
-				"subject",
-				"author",
-				"scripture",
-				"bibliography",
-				"person",
-				"place",
-				"concept",
-				"organization",
-				"event"
-			]
+			"values": ["subject", "author", "scripture"]
 		},
 		"public.llm_run_status": {
 			"name": "llm_run_status",

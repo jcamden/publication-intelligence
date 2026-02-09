@@ -56,6 +56,32 @@ describe("ProjectIndexType API (Integration)", () => {
 		await closeTestServer(server);
 	});
 
+	describe("GET /trpc/projectIndexType.listUserAddons", () => {
+		it("should return user's granted addons", async () => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: "/trpc/projectIndexType.listUserAddons",
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(Array.isArray(body.result.data)).toBe(true);
+			// User has subject and author addons granted in beforeEach
+			expect(body.result.data).toContain("subject");
+			expect(body.result.data).toContain("author");
+			expect(body.result.data).not.toContain("scripture");
+		});
+
+		it("should require authentication", async () => {
+			const response = await server.inject({
+				method: "GET",
+				url: "/trpc/projectIndexType.listUserAddons",
+			});
+
+			expect(response.statusCode).toBe(401);
+		});
+	});
+
 	describe("POST /trpc/projectIndexType.listAvailable", () => {
 		it("should list available index types user can enable", async () => {
 			const response = await authenticatedRequest.inject({
@@ -88,31 +114,30 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					indexType: "subject",
+					colorHue: 230, // Blue hue (subject default)
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.color).toBeDefined(); // Has default subject color
+			expect(body.result.data.colorHue).toBe(230);
 			expect(body.result.data.visible).toBe(true);
 		});
 
-		it("should allow custom color and ordinal", async () => {
+		it("should allow custom colorHue", async () => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
 					indexType: "author",
-					color: "#FF0000",
-					ordinal: 10,
+					colorHue: 120, // Green hue
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.color).toBe("#FF0000");
-			expect(body.result.data.ordinal).toBe(10);
+			expect(body.result.data.colorHue).toBe(120);
 		});
 
 		it("should fail if user lacks addon", async () => {
@@ -123,6 +148,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					indexType: "scripture",
+					colorHue: 160, // Green hue
 				},
 			});
 
@@ -139,6 +165,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					indexType: "subject",
+					colorHue: 230, // Blue hue
 				},
 			});
 
@@ -148,6 +175,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					indexType: "author",
+					colorHue: 270, // Purple hue
 				},
 			});
 
@@ -172,6 +200,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					indexType: "subject",
+					colorHue: 230, // Blue hue
 				},
 			});
 
@@ -190,14 +219,14 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					id: pitId,
 					data: {
-						color: "#00FF00",
+						colorHue: 180, // Cyan hue
 					},
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.color).toBe("#00FF00");
+			expect(body.result.data.colorHue).toBe(180);
 		});
 
 		it("should update visibility", async () => {
@@ -208,6 +237,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					indexType: "subject",
+					colorHue: 230, // Blue hue
 				},
 			});
 
@@ -236,59 +266,7 @@ describe("ProjectIndexType API (Integration)", () => {
 		});
 	});
 
-	describe("POST /trpc/projectIndexType.reorder", () => {
-		it("should reorder index types", async () => {
-			// Enable both index types first
-			await authenticatedRequest.inject({
-				method: "POST",
-				url: "/trpc/projectIndexType.enable",
-				payload: {
-					projectId: testProjectId,
-					indexType: "subject",
-				},
-			});
-
-			await authenticatedRequest.inject({
-				method: "POST",
-				url: "/trpc/projectIndexType.enable",
-				payload: {
-					projectId: testProjectId,
-					indexType: "author",
-				},
-			});
-
-			const listResponse = await authenticatedRequest.inject({
-				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
-			});
-
-			const list = JSON.parse(listResponse.body).result.data;
-
-			const response = await authenticatedRequest.inject({
-				method: "POST",
-				url: "/trpc/projectIndexType.reorder",
-				payload: {
-					projectId: testProjectId,
-					order: [
-						{ id: list[0].id, ordinal: 1 },
-						{ id: list[1].id, ordinal: 0 },
-					],
-				},
-			});
-
-			expect(response.statusCode).toBe(200);
-
-			// Verify order changed
-			const newListResponse = await authenticatedRequest.inject({
-				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
-			});
-
-			const newList = JSON.parse(newListResponse.body).result.data;
-			expect(newList[0].id).toBe(list[1].id); // Second item is now first
-			expect(newList[1].id).toBe(list[0].id); // First item is now second
-		});
-	});
+	// Removed: reorder endpoint no longer exists (ordinal is now client-side concern)
 
 	describe("POST /trpc/projectIndexType.disable", () => {
 		it("should disable index type (soft delete)", async () => {
@@ -299,6 +277,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					indexType: "subject",
+					colorHue: 230, // Blue hue
 				},
 			});
 

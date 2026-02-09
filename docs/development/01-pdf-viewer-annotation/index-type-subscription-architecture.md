@@ -506,10 +506,10 @@ async function migrateLocalStorageColors({ projectId, userId }) {
 - Store as IndexTypeTemplate with user ownership
 - Still subject to subscription limits (e.g., "5 custom types in premium")
 
-### Organization/Team Subscriptions
-- Workspace-level subscriptions
-- All workspace members inherit entitlements
-- Workspace admins manage which types are available
+### ~~Organization/Team Subscriptions~~ *(Not in MVP)*
+- ~~Workspace-level subscriptions~~
+- ~~All workspace members inherit entitlements~~
+- ~~Workspace admins manage which types are available~~
 
 ### Usage Analytics
 - Track which index types are most used

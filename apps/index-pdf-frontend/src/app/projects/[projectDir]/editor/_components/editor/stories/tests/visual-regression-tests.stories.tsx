@@ -25,6 +25,7 @@ export const LightMode: Story = {
 	},
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
+		projectId: "test-project-id",
 	},
 };
 
@@ -38,5 +39,6 @@ export const DarkMode: Story = {
 	},
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
+		projectId: "test-project-id",
 	},
 };

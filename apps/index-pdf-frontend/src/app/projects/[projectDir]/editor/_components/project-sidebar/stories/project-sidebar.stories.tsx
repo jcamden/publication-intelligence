@@ -28,7 +28,7 @@ export const Default: Story = {
 				border: "1px solid #ccc",
 			}}
 		>
-			<ProjectSidebar />
+			<ProjectSidebar enabledIndexTypes={["subject", "author", "scripture"]} />
 		</div>
 	),
 };

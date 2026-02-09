@@ -8,6 +8,13 @@ import {
 	FieldLabel,
 } from "@pubint/yabasic/components/ui/field";
 import { Input } from "@pubint/yabasic/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@pubint/yabasic/components/ui/select";
 import { Textarea } from "@pubint/yabasic/components/ui/textarea";
 import { PdfFileUpload, PdfThumbnail } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
@@ -16,6 +23,31 @@ import { z } from "zod";
 import { API_URL } from "@/app/_common/_config/api";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { trpc } from "@/app/_common/_utils/trpc";
+
+// All index types (for MVP)
+const ALL_INDEX_TYPES = [
+	{
+		id: "subject" as const,
+		displayName: "Subject Index",
+		description: "Topical index of key concepts, themes, and subjects",
+		defaultHue: 230, // Blue
+		availableByDefault: true, // All users have access
+	},
+	{
+		id: "author" as const,
+		displayName: "Author Index",
+		description: "Index of cited authors and their works",
+		defaultHue: 270, // Purple
+		availableByDefault: false,
+	},
+	{
+		id: "scripture" as const,
+		displayName: "Scripture Index",
+		description: "Biblical and scriptural reference index",
+		defaultHue: 160, // Green
+		availableByDefault: false,
+	},
+] as const;
 
 const projectFormSchema = z.object({
 	title: z
@@ -61,8 +93,18 @@ export const ProjectForm = ({
 	const [selectedFile, setSelectedFile] = useState<File | undefined>();
 	const [isProjectDirManual, setIsProjectDirManual] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [selectedIndexTypes, setSelectedIndexTypes] = useState<string[]>([
+		"subject",
+	]); // Subject selected by default
+
+	// Query user's actual addons from backend
+	const userAddonsQuery = trpc.projectIndexType.listUserAddons.useQuery();
+	const userAddons = new Set(
+		Array.isArray(userAddonsQuery.data) ? userAddonsQuery.data : [],
+	);
 
 	const createProjectMutation = trpc.project.create.useMutation();
+	const enableIndexTypeMutation = trpc.projectIndexType.enable.useMutation();
 
 	const form = useForm({
 		defaultValues: {
@@ -112,6 +154,7 @@ export const ProjectForm = ({
 			}
 
 			try {
+				// 1. Create the project
 				const project = await createProjectMutation.mutateAsync({
 					title: value.title,
 					description: value.description,
@@ -122,6 +165,21 @@ export const ProjectForm = ({
 					throw new Error("Not authenticated");
 				}
 
+				// 2. Enable selected index types for the project
+				const indexTypePromises = selectedIndexTypes.map((indexType) => {
+					const config = ALL_INDEX_TYPES.find((t) => t.id === indexType);
+					if (!config) return Promise.resolve();
+
+					return enableIndexTypeMutation.mutateAsync({
+						projectId: project.id,
+						indexType: indexType as (typeof ALL_INDEX_TYPES)[number]["id"],
+						colorHue: config.defaultHue,
+					});
+				});
+
+				await Promise.all(indexTypePromises);
+
+				// 3. Upload the PDF document
 				const formData = new FormData();
 				formData.append("file", selectedFile);
 				formData.append("title", selectedFile.name);
@@ -143,6 +201,7 @@ export const ProjectForm = ({
 				}
 
 				form.reset();
+				setSelectedIndexTypes(["subject"]); // Reset to default
 				onSuccess();
 			} catch (error) {
 				console.error("Error creating project:", error);
@@ -383,6 +442,65 @@ export const ProjectForm = ({
 							)}
 						</form.Field>
 
+						{/* Index Type Selection */}
+						<div>
+							<Field>
+								<FieldLabel htmlFor="index-types">Index Types</FieldLabel>
+								<FieldDescription>
+									Select which index types to enable for this project
+								</FieldDescription>
+								<div className="mt-2">
+									<Select
+										multiple
+										value={selectedIndexTypes}
+										onValueChange={(value) => {
+											setSelectedIndexTypes(value as string[]);
+										}}
+										disabled={isSubmitting}
+									>
+										<SelectTrigger id="index-types" className="w-full">
+											<SelectValue placeholder="Select index types">
+												{selectedIndexTypes.length > 0
+													? `${selectedIndexTypes.length} type${selectedIndexTypes.length > 1 ? "s" : ""} selected`
+													: "Select index types"}
+											</SelectValue>
+										</SelectTrigger>
+										<SelectContent>
+											{ALL_INDEX_TYPES.map((indexType) => {
+												const hasAccess = userAddons.has(indexType.id);
+												return (
+													<SelectItem
+														key={indexType.id}
+														value={indexType.id}
+														disabled={!hasAccess}
+													>
+														<div className="flex flex-col gap-0.5">
+															<div className="font-medium">
+																{indexType.displayName}
+																{!hasAccess && (
+																	<span className="text-xs text-muted-foreground ml-2">
+																		(Not available)
+																	</span>
+																)}
+															</div>
+															<div className="text-xs text-muted-foreground">
+																{indexType.description}
+															</div>
+														</div>
+													</SelectItem>
+												);
+											})}
+										</SelectContent>
+									</Select>
+								</div>
+								{selectedIndexTypes.length === 0 && (
+									<div className="mt-2 text-sm text-amber-600 dark:text-amber-500">
+										Select at least one index type to continue
+									</div>
+								)}
+							</Field>
+						</div>
+
 						{submitError && (
 							<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 								{submitError}
@@ -399,7 +517,12 @@ export const ProjectForm = ({
 						>
 							Cancel
 						</Button>
-						<Button type="submit" disabled={isSubmitting || !selectedFile}>
+						<Button
+							type="submit"
+							disabled={
+								isSubmitting || !selectedFile || selectedIndexTypes.length === 0
+							}
+						>
 							{isSubmitting ? "Creating..." : "Create Project"}
 						</Button>
 					</div>

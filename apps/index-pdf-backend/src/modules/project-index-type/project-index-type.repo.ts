@@ -29,8 +29,7 @@ export const listProjectIndexTypes = async ({
 	const result = await db
 		.select({
 			id: projectIndexTypes.id,
-			ordinal: projectIndexTypes.ordinal,
-			color: projectIndexTypes.color,
+			colorHue: projectIndexTypes.colorHue,
 			visible: projectIndexTypes.isVisible,
 			indexType: projectIndexTypes.indexType,
 			entry_count: sql<number>`(
@@ -46,16 +45,18 @@ export const listProjectIndexTypes = async ({
 				eq(projectIndexTypes.projectId, projectId),
 				isNull(projectIndexTypes.deletedAt),
 			),
-		)
-		.orderBy(projectIndexTypes.ordinal);
+		);
 
-	// Enrich with metadata from INDEX_TYPE_CONFIG
 	return result.map((row) => {
 		const config = getIndexTypeConfig(row.indexType as IndexType);
+		if (!config) {
+			throw new Error(
+				`Index type ${row.indexType} is not configured (inactive or removed)`,
+			);
+		}
 		return {
 			id: row.id,
-			ordinal: row.ordinal,
-			color: row.color || config.defaultColor,
+			colorHue: row.colorHue,
 			visible: row.visible,
 			indexType: row.indexType as IndexType,
 			displayName: config.displayName,
@@ -110,29 +111,26 @@ export const listAvailableIndexTypes = async ({
 		return [];
 	}
 
-	// Step 3: Return available types with metadata from config
+	// Step 3: Return available types with metadata from config (filter out inactive types)
 	return availableTypes
 		.map((type) => {
 			const config = getIndexTypeConfig(type);
+			if (!config) return null; // Skip inactive types
 			return {
 				indexType: type,
 				displayName: config.displayName,
 				description: config.description,
 				defaultColor: config.defaultColor,
-				defaultOrdinal: config.defaultOrdinal,
 			};
 		})
-		.sort((a, b) => a.defaultOrdinal - b.defaultOrdinal);
+		.filter((type): type is NonNullable<typeof type> => type !== null);
 };
 
 export const enableProjectIndexType = async ({
 	input,
 	userId,
 }: {
-	input: EnableProjectIndexTypeInput & {
-		color: string;
-		ordinal: number;
-	};
+	input: EnableProjectIndexTypeInput;
 	userId: string;
 }): Promise<ProjectIndexType> => {
 	return await withUserContext({
@@ -143,8 +141,7 @@ export const enableProjectIndexType = async ({
 				.values({
 					projectId: input.projectId,
 					indexType: input.indexType,
-					color: input.color,
-					ordinal: input.ordinal,
+					colorHue: input.colorHue,
 					isVisible: true,
 				})
 				.returning();
@@ -159,8 +156,7 @@ export const enableProjectIndexType = async ({
 					id: projectIndexTypes.id,
 					projectId: projectIndexTypes.projectId,
 					indexType: projectIndexTypes.indexType,
-					ordinal: projectIndexTypes.ordinal,
-					color: projectIndexTypes.color,
+					colorHue: projectIndexTypes.colorHue,
 					visible: projectIndexTypes.isVisible,
 					created_at: projectIndexTypes.createdAt,
 					updated_at: projectIndexTypes.updatedAt,
@@ -182,6 +178,11 @@ export const enableProjectIndexType = async ({
 
 			const row = result[0];
 			const config = getIndexTypeConfig(row.indexType as IndexType);
+			if (!config) {
+				throw new Error(
+					`Index type ${row.indexType} is not configured (inactive or removed)`,
+				);
+			}
 
 			return {
 				id: row.id,
@@ -189,8 +190,7 @@ export const enableProjectIndexType = async ({
 				indexType: row.indexType as IndexType,
 				displayName: config.displayName,
 				description: config.description,
-				ordinal: row.ordinal,
-				color: row.color || config.defaultColor,
+				colorHue: row.colorHue,
 				visible: row.visible,
 				created_at: row.created_at.toISOString(),
 				updated_at: row.updated_at ? row.updated_at.toISOString() : null,
@@ -212,8 +212,7 @@ export const getProjectIndexTypeById = async ({
 			id: projectIndexTypes.id,
 			projectId: projectIndexTypes.projectId,
 			indexType: projectIndexTypes.indexType,
-			ordinal: projectIndexTypes.ordinal,
-			color: projectIndexTypes.color,
+			colorHue: projectIndexTypes.colorHue,
 			visible: projectIndexTypes.isVisible,
 			created_at: projectIndexTypes.createdAt,
 			updated_at: projectIndexTypes.updatedAt,
@@ -235,6 +234,11 @@ export const getProjectIndexTypeById = async ({
 
 	const row = result[0];
 	const config = getIndexTypeConfig(row.indexType as IndexType);
+	if (!config) {
+		throw new Error(
+			`Index type ${row.indexType} is not configured (inactive or removed)`,
+		);
+	}
 
 	return {
 		id: row.id,
@@ -242,8 +246,7 @@ export const getProjectIndexTypeById = async ({
 		indexType: row.indexType as IndexType,
 		displayName: config.displayName,
 		description: config.description,
-		ordinal: row.ordinal,
-		color: row.color || config.defaultColor,
+		colorHue: row.colorHue,
 		visible: row.visible,
 		created_at: row.created_at.toISOString(),
 		updated_at: row.updated_at ? row.updated_at.toISOString() : null,
@@ -269,8 +272,8 @@ export const updateProjectIndexType = async ({
 				updatedAt: new Date(),
 			};
 
-			if (input.color !== undefined) {
-				updateValues.color = input.color;
+			if (input.colorHue !== undefined) {
+				updateValues.colorHue = input.colorHue;
 			}
 
 			if (input.visible !== undefined) {
@@ -293,8 +296,7 @@ export const updateProjectIndexType = async ({
 					id: projectIndexTypes.id,
 					projectId: projectIndexTypes.projectId,
 					indexType: projectIndexTypes.indexType,
-					ordinal: projectIndexTypes.ordinal,
-					color: projectIndexTypes.color,
+					colorHue: projectIndexTypes.colorHue,
 					visible: projectIndexTypes.isVisible,
 					created_at: projectIndexTypes.createdAt,
 					updated_at: projectIndexTypes.updatedAt,
@@ -316,6 +318,11 @@ export const updateProjectIndexType = async ({
 
 			const row = queryResult[0];
 			const config = getIndexTypeConfig(row.indexType as IndexType);
+			if (!config) {
+				throw new Error(
+					`Index type ${row.indexType} is not configured (inactive or removed)`,
+				);
+			}
 
 			return {
 				id: row.id,
@@ -323,8 +330,7 @@ export const updateProjectIndexType = async ({
 				indexType: row.indexType as IndexType,
 				displayName: config.displayName,
 				description: config.description,
-				ordinal: row.ordinal,
-				color: row.color || config.defaultColor,
+				colorHue: row.colorHue,
 				visible: row.visible,
 				created_at: row.created_at.toISOString(),
 				updated_at: row.updated_at ? row.updated_at.toISOString() : null,
@@ -336,27 +342,57 @@ export const updateProjectIndexType = async ({
 	});
 };
 
-export const updateProjectIndexTypeOrdinal = async ({
-	id,
-	ordinal,
+// Removed: Ordinal is now a client-side sorting concern
+
+export const listUserAddons = async ({
 	userId,
 }: {
-	id: string;
-	ordinal: number;
 	userId: string;
+}): Promise<IndexType[]> => {
+	const result = await db
+		.select({ indexType: userIndexTypeAddons.indexType })
+		.from(userIndexTypeAddons)
+		.where(
+			and(
+				eq(userIndexTypeAddons.userId, userId),
+				sql`(${userIndexTypeAddons.expiresAt} IS NULL OR ${userIndexTypeAddons.expiresAt} > NOW())`,
+			),
+		);
+
+	return result.map((row) => row.indexType as IndexType);
+};
+
+export const grantAddon = async ({
+	userId,
+	indexType,
+}: {
+	userId: string;
+	indexType: IndexType;
 }): Promise<void> => {
-	await withUserContext({
-		userId,
-		fn: async (tx) => {
-			await tx
-				.update(projectIndexTypes)
-				.set({
-					ordinal,
-					updatedAt: new Date(),
-				})
-				.where(eq(projectIndexTypes.id, id));
-		},
-	});
+	await db
+		.insert(userIndexTypeAddons)
+		.values({
+			userId,
+			indexType,
+		})
+		.onConflictDoNothing(); // Idempotent: don't error if already exists
+};
+
+export const revokeAddon = async ({
+	userId,
+	indexType,
+}: {
+	userId: string;
+	indexType: IndexType;
+}): Promise<void> => {
+	await db
+		.delete(userIndexTypeAddons)
+		.where(
+			and(
+				eq(userIndexTypeAddons.userId, userId),
+				eq(userIndexTypeAddons.indexType, indexType),
+			),
+		);
 };
 
 export const disableProjectIndexType = async ({
@@ -387,8 +423,7 @@ export const disableProjectIndexType = async ({
 					id: projectIndexTypes.id,
 					projectId: projectIndexTypes.projectId,
 					indexType: projectIndexTypes.indexType,
-					ordinal: projectIndexTypes.ordinal,
-					color: projectIndexTypes.color,
+					colorHue: projectIndexTypes.colorHue,
 					visible: projectIndexTypes.isVisible,
 					created_at: projectIndexTypes.createdAt,
 					updated_at: projectIndexTypes.updatedAt,
@@ -410,6 +445,11 @@ export const disableProjectIndexType = async ({
 
 			const row = queryResult[0];
 			const config = getIndexTypeConfig(row.indexType as IndexType);
+			if (!config) {
+				throw new Error(
+					`Index type ${row.indexType} is not configured (inactive or removed)`,
+				);
+			}
 
 			return {
 				id: row.id,
@@ -417,8 +457,7 @@ export const disableProjectIndexType = async ({
 				indexType: row.indexType as IndexType,
 				displayName: config.displayName,
 				description: config.description,
-				ordinal: row.ordinal,
-				color: row.color || config.defaultColor,
+				colorHue: row.colorHue,
 				visible: row.visible,
 				created_at: row.created_at.toISOString(),
 				updated_at: row.updated_at ? row.updated_at.toISOString() : null,

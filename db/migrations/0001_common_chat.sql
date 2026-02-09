@@ -2,7 +2,7 @@ CREATE TYPE "public"."context_type" AS ENUM('ignore', 'page_number');--> stateme
 CREATE TYPE "public"."entity_type" AS ENUM('IndexEntry', 'IndexMention', 'SourceDocument', 'DocumentPage', 'LLMRun', 'ExportedIndex', 'Project');--> statement-breakpoint
 CREATE TYPE "public"."export_format" AS ENUM('book_index', 'json', 'xml');--> statement-breakpoint
 CREATE TYPE "public"."index_entry_status" AS ENUM('suggested', 'active', 'deprecated', 'merged');--> statement-breakpoint
-CREATE TYPE "public"."index_type" AS ENUM('subject', 'author', 'scripture', 'bibliography', 'person', 'place', 'concept', 'organization', 'event');--> statement-breakpoint
+CREATE TYPE "public"."index_type" AS ENUM('subject', 'author', 'scripture');--> statement-breakpoint
 CREATE TYPE "public"."llm_run_status" AS ENUM('pending', 'running', 'completed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."mention_range_type" AS ENUM('single_page', 'page_range', 'passim');--> statement-breakpoint
 CREATE TYPE "public"."mention_type" AS ENUM('text', 'region');--> statement-breakpoint
@@ -78,8 +78,7 @@ CREATE TABLE "project_index_types" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
 	"index_type" "index_type" NOT NULL,
-	"color" text,
-	"ordinal" smallint NOT NULL,
+	"color_hue" smallint NOT NULL,
 	"is_visible" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone,
@@ -241,7 +240,6 @@ ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_executed_by_user_id_users_id_fk"
 ALTER TABLE "projects" ADD CONSTRAINT "projects_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_document_page" ON "document_pages" USING btree ("document_id","page_number");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_index_type" ON "project_index_types" USING btree ("project_id","index_type") WHERE "project_index_types"."deleted_at" IS NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX "unique_project_ordinal" ON "project_index_types" USING btree ("project_id","ordinal") WHERE "project_index_types"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_user_index_type" ON "user_index_type_addons" USING btree ("user_id","index_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_index_type_slug" ON "index_entries" USING btree ("project_id","project_index_type_id","slug");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_mention_type" ON "index_mention_types" USING btree ("index_mention_id","project_index_type_id");--> statement-breakpoint

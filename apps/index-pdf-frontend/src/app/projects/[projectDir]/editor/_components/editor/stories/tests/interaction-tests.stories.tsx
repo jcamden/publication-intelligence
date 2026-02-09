@@ -122,6 +122,7 @@ const meta: Meta<typeof Editor> = {
 	decorators: [TestDecorator],
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
+		projectId: "test-project-id",
 		initialMentions: MOCK_MENTIONS,
 	},
 	globals: {

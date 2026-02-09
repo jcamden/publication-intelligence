@@ -65,6 +65,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
+		projectId: "test-project-id",
 	},
 	parameters: {
 		docs: {
@@ -79,6 +80,7 @@ export const Default: Story = {
 export const ErrorState: Story = {
 	args: {
 		fileUrl: ERROR_PDF_URL,
+		projectId: "test-project-id",
 	},
 	parameters: {
 		docs: {

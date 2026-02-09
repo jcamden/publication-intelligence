@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { db } from "../../db/client";
-import { users } from "../../db/schema";
+import { userIndexTypeAddons, users } from "../../db/schema";
 import { env } from "../../env";
 
 // ============================================================================
@@ -57,7 +57,7 @@ export const signup = async ({
 		await tx.execute(sql`SET LOCAL ROLE authenticated`);
 
 		// Insert user with pre-generated ID
-		return await tx
+		const newUsers = await tx
 			.insert(users)
 			.values({
 				id: newUserId,
@@ -66,6 +66,14 @@ export const signup = async ({
 				name,
 			})
 			.returning();
+
+		// Grant default "subject" addon to new user
+		await tx.insert(userIndexTypeAddons).values({
+			userId: newUserId,
+			indexType: "subject",
+		});
+
+		return newUsers;
 	});
 
 	// Generate JWT

@@ -62,6 +62,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 						payload: {
 							projectId: project.id,
 							indexType: "scripture",
+							colorHue: 160, // Green hue
 						},
 					}),
 			});
@@ -93,6 +94,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 						payload: {
 							projectId: project.id,
 							indexType: "subject",
+							colorHue: 230, // Blue hue
 						},
 					}),
 			});
@@ -108,13 +110,14 @@ describe("ProjectIndexType Security & Authorization", () => {
 			// Create project
 			const project = await createTestProject({ userId: owner.userId });
 
-			// Grant expired addon (expired 1 day ago)
+			// Grant expired addon for scripture (expired 1 day ago)
+			// Note: User already has non-expired "subject" addon from createTestUser
 			const yesterday = new Date();
 			yesterday.setDate(yesterday.getDate() - 1);
 
 			await grantIndexTypeAddon({
 				userId: owner.userId,
-				indexType: "subject",
+				indexType: "scripture",
 				expiresAt: yesterday,
 			});
 
@@ -127,7 +130,8 @@ describe("ProjectIndexType Security & Authorization", () => {
 						url: "/trpc/projectIndexType.enable",
 						payload: {
 							projectId: project.id,
-							indexType: "subject",
+							indexType: "scripture",
+							colorHue: 160, // Green hue
 						},
 					}),
 			});

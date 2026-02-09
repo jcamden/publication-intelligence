@@ -4,7 +4,6 @@ import {
 	pgPolicy,
 	pgTable,
 	smallint,
-	text,
 	timestamp,
 	uniqueIndex,
 	uuid,
@@ -60,8 +59,7 @@ export const projectIndexTypes = pgTable(
 			.references(() => projects.id, { onDelete: "cascade" })
 			.notNull(),
 		indexType: indexTypeEnum("index_type").notNull(),
-		color: text("color"), // Custom color override (optional)
-		ordinal: smallint("ordinal").notNull(),
+		colorHue: smallint("color_hue").notNull(), // Hue value 0-360
 		isVisible: boolean("is_visible").default(true).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
@@ -70,12 +68,9 @@ export const projectIndexTypes = pgTable(
 		deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
 	},
 	(table) => [
-		// Unique constraints only for non-deleted project index types
+		// Unique constraint: one index type per project (for non-deleted)
 		uniqueIndex("unique_project_index_type")
 			.on(table.projectId, table.indexType)
-			.where(sql`${table.deletedAt} IS NULL`),
-		uniqueIndex("unique_project_ordinal")
-			.on(table.projectId, table.ordinal)
 			.where(sql`${table.deletedAt} IS NULL`),
 
 		// RLS: Inherit access from project

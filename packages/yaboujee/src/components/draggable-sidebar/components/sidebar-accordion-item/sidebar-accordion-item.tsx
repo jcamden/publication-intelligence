@@ -16,6 +16,7 @@ import {
 	TextSelect,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { formatOklchColor } from "../../../../utils/index-type-colors";
 import { StyledButton } from "../../../styled-button";
 
 type ActionButtons = {
@@ -37,6 +38,8 @@ type SidebarAccordionItemProps = {
 	actionButtons?: ActionButtons;
 	isExpanded: boolean;
 	onToggle: () => void;
+	headerColorHue?: number; // Hue value 0-360
+	isDarkMode?: boolean; // Optional dark mode flag from parent
 };
 
 export const SidebarAccordionItem = ({
@@ -51,7 +54,29 @@ export const SidebarAccordionItem = ({
 	actionButtons,
 	isExpanded,
 	onToggle,
+	headerColorHue,
+	isDarkMode = false,
 }: SidebarAccordionItemProps) => {
+	// Compute header background color from hue with specific lightness/chroma for accordion headers
+	// Use lower lightness in dark mode for better contrast
+	const headerBackgroundColor = headerColorHue
+		? formatOklchColor({
+				hue: headerColorHue,
+				lightness: isDarkMode ? 0.5 : 0.95, // Darker in dark mode, very light in light mode
+				chroma: 0.2, // Low saturation for subtle color
+				alpha: isDarkMode ? 0.15 : 0.1,
+			})
+		: undefined;
+
+	const contentBackgroundColor = headerColorHue
+		? formatOklchColor({
+				hue: headerColorHue,
+				lightness: isDarkMode ? 0.5 : 0.95, // Darker in dark mode, very light in light mode
+				chroma: 0.2, // Low saturation for subtle color
+				alpha: isDarkMode ? 0.075 : 0.05,
+			})
+		: undefined;
+
 	const PopIcon =
 		side === "right" ? SquareArrowOutUpLeft : SquareArrowOutUpRight;
 
@@ -64,42 +89,15 @@ export const SidebarAccordionItem = ({
 		actionButtons.activeAction.type === "draw-region" &&
 		actionButtons.activeAction.indexType === actionButtons.indexType;
 
-	// Index type background colors
-	const getBackgroundClass = () => {
-		// Check if it's a page-level section with actionButtons
-		let type: string | undefined;
-		if (actionButtons) {
-			type = actionButtons.indexType;
-		}
-		// Check if it's a project-level section by value/ID
-		else if (value.includes("subject")) {
-			type = "subject";
-		} else if (value.includes("author")) {
-			type = "author";
-		} else if (value.includes("scripture")) {
-			type = "scripture";
-		} else if (value.includes("context")) {
-			type = "context";
-		}
-
-		switch (type) {
-			case "subject":
-				return "bg-subject-200 dark:bg-subject-700";
-			case "author":
-				return "bg-author-200 dark:bg-author-700";
-			case "scripture":
-				return "bg-scripture-200 dark:bg-scripture-700";
-			case "context":
-				return "bg-context-200 dark:bg-context-700";
-			default:
-				return "bg-neutral-100/50";
-		}
-	};
-
 	return (
 		<AccordionItem value={value}>
 			<div
-				className={`flex items-center justify-between gap-2 shadow-sm p-2 ${side === "right" ? "flex-row-reverse" : ""} ${index !== 0 ? "border-t" : ""} ${getBackgroundClass()}`}
+				className={`flex items-center justify-between gap-2 shadow-sm p-2 ${side === "right" ? "flex-row-reverse" : ""} ${index !== 0 ? "border-t" : ""}`}
+				style={
+					headerBackgroundColor
+						? { backgroundColor: headerBackgroundColor }
+						: undefined
+				}
 			>
 				{dragHandleProps && (
 					// biome-ignore lint/a11y/useSemanticElements: drag handle from react-beautiful-dnd requires div
@@ -178,7 +176,12 @@ export const SidebarAccordionItem = ({
 					</>
 				)}
 			</div>
-			<AccordionContent className={"p-3"}>{children}</AccordionContent>
+			<AccordionContent
+				style={{ backgroundColor: contentBackgroundColor }}
+				className={"p-3"}
+			>
+				{children}
+			</AccordionContent>
 		</AccordionItem>
 	);
 };

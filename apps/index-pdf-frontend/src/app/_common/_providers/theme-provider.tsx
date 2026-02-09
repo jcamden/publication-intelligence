@@ -12,6 +12,9 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Export for testing/storybook
+export { ThemeContext };
+
 const getSystemTheme = (): "light" | "dark" => {
 	if (typeof window === "undefined") return "light";
 	return window.matchMedia("(prefers-color-scheme: dark)").matches

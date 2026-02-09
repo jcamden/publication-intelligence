@@ -74,6 +74,12 @@ export const createTestUser = async ({
 			})
 			.returning();
 
+		// Grant default "subject" addon to new user (matching production signup)
+		await tx.insert(userIndexTypeAddons).values({
+			userId: userUuid,
+			indexType: "subject",
+		});
+
 		// Reset role
 		await tx.execute(sql`RESET ROLE`);
 
@@ -164,16 +170,7 @@ export const grantIndexTypeAddon = async ({
 	expiresAt,
 }: {
 	userId: string;
-	indexType:
-		| "subject"
-		| "author"
-		| "scripture"
-		| "bibliography"
-		| "person"
-		| "place"
-		| "concept"
-		| "organization"
-		| "event";
+	indexType: "subject" | "author" | "scripture";
 	expiresAt?: Date;
 }) => {
 	return await testDb.transaction(async (tx) => {

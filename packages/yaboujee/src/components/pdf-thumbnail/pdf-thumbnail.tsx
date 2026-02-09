@@ -129,7 +129,10 @@ export const PdfThumbnail = ({
 			>
 				{loadingState === "loading" && (
 					<div className="absolute inset-0 flex items-center justify-center">
-						<div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+						<div
+							data-testid="pdf-thumbnail-loading-spinner"
+							className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+						/>
 					</div>
 				)}
 

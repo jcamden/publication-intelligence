@@ -57,6 +57,7 @@ export const Default: Story = {
 				mentions={mockMentions}
 				currentPage={1}
 				onMentionClick={fn()}
+				enabledIndexTypes={["subject", "author", "scripture"]}
 			/>
 		</div>
 	),

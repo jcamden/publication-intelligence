@@ -19,11 +19,13 @@ type ActionButtons = {
 	onDrawRegion: ({ indexType }: { indexType: string }) => void;
 };
 
-type SectionMetadata = {
+export type SectionMetadata = {
 	title: string;
 	icon: LucideIcon;
 	content: React.ComponentType;
 	actionButtons?: ActionButtons;
+	headerColorHue?: number; // Hue value 0-360
+	isDarkMode?: boolean; // Optional dark mode flag from parent
 };
 
 type DraggableSidebarProps<TSectionId extends string> = {
@@ -99,6 +101,8 @@ export const DraggableSidebar = <TSectionId extends string>({
 														actionButtons={meta.actionButtons}
 														isExpanded={isExpanded}
 														onToggle={handleToggle}
+														headerColorHue={meta.headerColorHue}
+														isDarkMode={meta.isDarkMode}
 													>
 														<Content />
 													</SidebarAccordionItem>

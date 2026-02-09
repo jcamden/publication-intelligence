@@ -8,6 +8,8 @@ import {
 	indexEntriesAtom,
 	mentionsAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
+import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
+import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
 
@@ -15,8 +17,17 @@ export const ProjectSubjectContent = () => {
 	const [indexEntries, setIndexEntries] = useAtom(indexEntriesAtom);
 	const mentions = useAtomValue(mentionsAtom);
 	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
+	const { projectId } = useProjectContext();
 
 	const [modalOpen, setModalOpen] = useState(false);
+
+	// Persist color changes to backend
+	usePersistColorChange({
+		projectId,
+		indexType: "subject",
+		colorHue: colorConfig.subject.hue,
+		enabled: !!projectId,
+	});
 
 	const subjectEntries = useMemo(
 		() => indexEntries.filter((e) => e.indexType === "subject"),

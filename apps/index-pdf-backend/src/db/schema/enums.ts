@@ -87,12 +87,16 @@ export const exportFormatEnum = pgEnum("export_format", [
 // Index type addons (fixed catalog)
 export const indexTypeEnum = pgEnum("index_type", [
 	"subject",
-	"author",
+	"author", // pretty much like subject
 	"scripture",
-	"bibliography",
-	"person",
-	"place",
-	"concept",
-	"organization",
-	"event",
+	// Then expand to technical manuals
+	// "locality", // like subject
+	// "errorCode", // like subject
+	// "partNumber", // like subject
+	// "legalTableOfAuthorities",
+	// "statutory",
+	// "taxonomy",
+	// "formula",
+	// "CAS Registry",
+	// "incipit", // music and poetry
 ]);

@@ -13,27 +13,32 @@ export type IndexTypeHue = {
 
 /**
  * Default hue assignments for index types
- * These match the defaults in the editor's colorConfig
+ * These match the defaults in the backend's index type config
  */
 export const DEFAULT_INDEX_TYPE_HUES: Record<IndexTypeName, IndexTypeHue> = {
-	author: { hue: 30 }, // Orange
+	author: { hue: 270 }, // Purple
 	subject: { hue: 230 }, // Blue
-	scripture: { hue: 120 }, // Green
+	scripture: { hue: 160 }, // Green
 	context: { hue: 340 }, // Pink
 };
 
 /**
- * Generate OKLCH color string from hue with specified lightness and chroma
+ * Generate OKLCH color string from hue with specified lightness, chroma, and alpha
  */
 export const formatOklchColor = ({
 	hue,
 	lightness = 0.8,
 	chroma = 0.2,
+	alpha,
 }: {
 	hue: number;
 	lightness?: number;
 	chroma?: number;
-}): string => `oklch(${lightness.toFixed(2)} ${chroma.toFixed(2)} ${hue})`;
+	alpha?: number; // 0-1, optional
+}): string => {
+	const base = `oklch(${lightness.toFixed(2)} ${chroma.toFixed(2)} ${hue}`;
+	return alpha !== undefined ? `${base} / ${alpha.toFixed(2)})` : `${base})`;
+};
 
 /**
  * Map index type names to their OKLCH color strings
@@ -57,5 +62,44 @@ export const mapIndexTypesToColors = ({
 			lightness,
 			chroma,
 		});
+	});
+};
+
+type ColorContext = "sidebar" | "pdf" | "badge";
+
+/**
+ * Get context-specific lightness and chroma parameters
+ */
+const getContextParams = ({
+	context,
+}: {
+	context: ColorContext;
+}): { lightness: number; chroma: number } => {
+	switch (context) {
+		case "sidebar":
+			return { lightness: 0.95, chroma: 0.15 };
+		case "pdf":
+			return { lightness: 0.8, chroma: 0.2 };
+		case "badge":
+			return { lightness: 0.85, chroma: 0.18 };
+		default:
+			return { lightness: 0.75, chroma: 0.15 };
+	}
+};
+
+/**
+ * Derive OKLCH color string for a specific context
+ */
+export const deriveColorForContext = ({
+	hue,
+	context,
+}: {
+	hue: number;
+	context: ColorContext;
+}): string => {
+	const params = getContextParams({ context });
+	return formatOklchColor({
+		hue,
+		...params,
 	});
 };

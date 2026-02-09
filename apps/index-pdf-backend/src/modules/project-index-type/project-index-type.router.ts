@@ -4,7 +4,6 @@ import { protectedProcedure, router } from "../../trpc";
 import * as projectIndexTypeService from "./project-index-type.service";
 import {
 	EnableProjectIndexTypeSchema,
-	ReorderProjectIndexTypesSchema,
 	UpdateProjectIndexTypeSchema,
 } from "./project-index-type.types";
 
@@ -13,6 +12,84 @@ import {
 // ============================================================================
 
 export const projectIndexTypeRouter = router({
+	// List user's available addons (no projectId required)
+	listUserAddons: protectedProcedure.query(async ({ ctx }) => {
+		try {
+			return await projectIndexTypeService.listUserAddons({
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		} catch (error) {
+			if (error instanceof TRPCError) {
+				throw error;
+			}
+
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message:
+					error instanceof Error ? error.message : "Failed to list user addons",
+			});
+		}
+	}),
+
+	// Grant addon to user (dev purposes - no billing)
+	grantAddon: protectedProcedure
+		.input(
+			z.object({
+				indexType: z.enum(["subject", "author", "scripture"]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await projectIndexTypeService.grantAddon({
+					userId: ctx.user.id,
+					indexType: input.indexType,
+					requestId: ctx.requestId,
+				});
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) {
+					throw error;
+				}
+
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message:
+						error instanceof Error ? error.message : "Failed to grant addon",
+				});
+			}
+		}),
+
+	// Revoke addon from user (dev purposes)
+	revokeAddon: protectedProcedure
+		.input(
+			z.object({
+				indexType: z.enum(["subject", "author", "scripture"]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			try {
+				await projectIndexTypeService.revokeAddon({
+					userId: ctx.user.id,
+					indexType: input.indexType,
+					requestId: ctx.requestId,
+				});
+
+				return { success: true };
+			} catch (error) {
+				if (error instanceof TRPCError) {
+					throw error;
+				}
+
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message:
+						error instanceof Error ? error.message : "Failed to revoke addon",
+				});
+			}
+		}),
+
 	// List project's enabled index types (filtered by user's addons)
 	list: protectedProcedure
 		.input(z.object({ projectId: z.string().uuid() }))
@@ -115,33 +192,6 @@ export const projectIndexTypeRouter = router({
 						error instanceof Error
 							? error.message
 							: "Failed to update project index type",
-				});
-			}
-		}),
-
-	// Reorder project index types (change ordinals)
-	reorder: protectedProcedure
-		.input(ReorderProjectIndexTypesSchema)
-		.mutation(async ({ ctx, input }) => {
-			try {
-				await projectIndexTypeService.reorderProjectIndexTypes({
-					input,
-					userId: ctx.user.id,
-					requestId: ctx.requestId,
-				});
-
-				return { success: true };
-			} catch (error) {
-				if (error instanceof TRPCError) {
-					throw error;
-				}
-
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message:
-						error instanceof Error
-							? error.message
-							: "Failed to reorder project index types",
 				});
 			}
 		}),

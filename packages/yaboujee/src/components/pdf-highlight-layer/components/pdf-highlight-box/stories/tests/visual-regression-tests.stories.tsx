@@ -2,7 +2,6 @@ import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import type { PdfHighlight } from "../../../../../../types";
-import { mapIndexTypesToColors } from "../../../../../../utils/index-type-colors";
 import { PdfHighlightBox } from "../../pdf-highlight-box";
 
 const meta: Meta<typeof PdfHighlightBox> = {
@@ -186,12 +185,10 @@ export const TwoTypes: Story = {
 		viewport: { value: "mobile1", isRotated: true },
 	},
 	render: () => {
-		const indexTypes = ["subject", "scripture"] as const;
 		const highlight: PdfHighlight = {
 			...mockHighlight,
 			metadata: {
-				indexTypes: [...indexTypes],
-				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+				hues: [230, 160], // subject (blue), scripture (green)
 			},
 		};
 		return renderContainer(
@@ -201,19 +198,17 @@ export const TwoTypes: Story = {
 };
 
 /**
- * Three index types - Subject + Author + Scripture (blue/orange/green stripes)
+ * Three index types - Subject + Author + Scripture (blue/purple/green stripes)
  */
 export const ThreeTypes: Story = {
 	globals: {
 		...defaultGlobals,
 	},
 	render: () => {
-		const indexTypes = ["subject", "author", "scripture"] as const;
 		const highlight: PdfHighlight = {
 			...mockHighlight,
 			metadata: {
-				indexTypes: [...indexTypes],
-				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+				hues: [230, 270, 160], // subject (blue), author (purple), scripture (green)
 			},
 		};
 		return renderContainer(
@@ -223,7 +218,7 @@ export const ThreeTypes: Story = {
 };
 
 /**
- * Three types hover state (blue/orange/green stripes with hover)
+ * Three types hover state (blue/purple/green stripes with hover)
  */
 export const ThreeTypesHover: Story = {
 	globals: {
@@ -235,12 +230,10 @@ export const ThreeTypesHover: Story = {
 		},
 	},
 	render: () => {
-		const indexTypes = ["subject", "author", "scripture"] as const;
 		const highlight: PdfHighlight = {
 			...mockHighlight,
 			metadata: {
-				indexTypes: [...indexTypes],
-				colors: mapIndexTypesToColors({ indexTypes: [...indexTypes] }),
+				hues: [230, 270, 160], // subject (blue), author (purple), scripture (green)
 			},
 		};
 		return renderContainer(

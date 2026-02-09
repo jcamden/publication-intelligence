@@ -1,7 +1,7 @@
 "use client";
 
 import type { DropResult } from "@hello-pangea/dnd";
-import { DraggableSidebar } from "@pubint/yaboujee/components/draggable-sidebar";
+import { DraggableSidebarContainer } from "@pubint/yaboujee/components/draggable-sidebar";
 import { useAtom, useAtomValue } from "jotai";
 import {
 	BookOpen,
@@ -12,7 +12,9 @@ import {
 	User,
 } from "lucide-react";
 import type React from "react";
+import { useTheme } from "@/app/_common/_providers/theme-provider";
 import {
+	colorConfigAtom,
 	moveWindowToFrontAtom,
 	projectAccordionExpandedAtom,
 	projectSectionOrderAtom,
@@ -26,19 +28,28 @@ import { ProjectPagesContent } from "./components/project-pages-content";
 import { ProjectScriptureContent } from "./components/project-scripture-content";
 import { ProjectSubjectContent } from "./components/project-subject-content";
 
+type ProjectSidebarProps = {
+	enabledIndexTypes: string[]; // Index types enabled for this project
+};
+
 /**
  * Project Sidebar Component
  *
  * Left sidebar showing project-level panels (pages, indices, etc.)
  */
-export const ProjectSidebar = () => {
+export const ProjectSidebar = ({ enabledIndexTypes }: ProjectSidebarProps) => {
+	const { resolvedTheme } = useTheme();
+	const isDarkMode = resolvedTheme === "dark";
 	const sections = useAtomValue(sectionsStateAtom);
+	const colorConfig = useAtomValue(colorConfigAtom);
 	const [, updateSection] = useAtom(updateSectionAtom);
 	const [, moveToFront] = useAtom(moveWindowToFrontAtom);
 	const [expandedItems, setExpandedItems] = useAtom(
 		projectAccordionExpandedAtom,
 	);
 	const [sectionOrder, setSectionOrder] = useAtom(projectSectionOrderAtom);
+
+	const enabledIndexTypesSet = new Set(enabledIndexTypes);
 
 	const handlePop = ({ id }: { id: SectionId }) => {
 		const currentState = sections.get(id);
@@ -76,7 +87,7 @@ export const ProjectSidebar = () => {
 		setSectionOrder(newOrder);
 	};
 
-	const sectionMetadata: Partial<
+	const allSectionMetadata: Partial<
 		Record<
 			SectionId,
 			{
@@ -113,12 +124,25 @@ export const ProjectSidebar = () => {
 		},
 	};
 
+	// Filter sections to only include index types enabled for this project
+	const sectionMetadata = Object.fromEntries(
+		Object.entries(allSectionMetadata).filter(([sectionId]) => {
+			// Always include non-index sections (pages, contexts)
+			if (sectionId === "project-pages" || sectionId === "project-contexts") {
+				return true;
+			}
+			// For index type sections, check if enabled for project
+			const indexType = sectionId.replace("project-", "");
+			return enabledIndexTypesSet.has(indexType);
+		}),
+	) as typeof allSectionMetadata;
+
 	const visibleSections = sectionOrder.filter(
 		(id) => sections.get(id)?.visible && !sections.get(id)?.popped,
 	);
 
 	return (
-		<DraggableSidebar
+		<DraggableSidebarContainer
 			visibleSections={visibleSections}
 			sectionMetadata={sectionMetadata}
 			expandedItems={expandedItems}
@@ -127,6 +151,8 @@ export const ProjectSidebar = () => {
 			onPop={handlePop}
 			droppableId="project-sidebar-accordion"
 			side="left"
+			colorConfig={colorConfig}
+			isDarkMode={isDarkMode}
 		/>
 	);
 };

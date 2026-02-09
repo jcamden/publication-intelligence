@@ -46,6 +46,34 @@ describe("Auth API (Integration)", () => {
 			expect(body.result.data.token).toBeDefined();
 		});
 
+		it("should grant default subject addon to new users", async () => {
+			const email = generateTestEmail();
+			const password = generateTestPassword();
+
+			const signUpResponse = await server.inject({
+				method: "POST",
+				url: "/trpc/auth.signUp",
+				payload: { email, password },
+			});
+
+			expect(signUpResponse.statusCode).toBe(200);
+			const { token } = JSON.parse(signUpResponse.body).result.data;
+
+			// Verify user has subject addon
+			const addonsResponse = await server.inject({
+				method: "GET",
+				url: "/trpc/projectIndexType.listUserAddons",
+				headers: {
+					authorization: `Bearer ${token}`,
+				},
+			});
+
+			expect(addonsResponse.statusCode).toBe(200);
+			const addons = JSON.parse(addonsResponse.body).result.data;
+			expect(addons).toContain("subject");
+			expect(addons.length).toBe(1); // Should only have subject addon by default
+		});
+
 		it("should validate email format", async () => {
 			const response = await server.inject({
 				method: "POST",

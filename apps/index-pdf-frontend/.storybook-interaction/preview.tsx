@@ -1,4 +1,6 @@
 import type { Preview } from "@storybook/nextjs-vite";
+import { MockProjectProvider } from "../src/app/_common/_test-utils/storybook-utils/project-decorator";
+import { MockThemeProvider } from "../src/app/_common/_test-utils/storybook-utils/theme-decorator";
 import { TrpcDecorator } from "../src/app/_common/_test-utils/storybook-utils/trpc-decorator";
 import "../src/app/globals.css";
 
@@ -70,13 +72,7 @@ const preview: Preview = {
 		theme: "light",
 	},
 	decorators: [
-		// Global tRPC provider for all stories
-		(Story) => (
-			<TrpcDecorator>
-				<Story />
-			</TrpcDecorator>
-		),
-		// Theme decorator
+		// Global tRPC provider, theme provider, and project provider for all stories
 		(Story, context) => {
 			const theme = context.globals.theme || "light";
 
@@ -91,7 +87,15 @@ const preview: Preview = {
 				}
 			}
 
-			return <Story />;
+			return (
+				<TrpcDecorator>
+					<MockThemeProvider theme={theme as "light" | "dark"}>
+						<MockProjectProvider projectId="test-project-id">
+							<Story />
+						</MockProjectProvider>
+					</MockThemeProvider>
+				</TrpcDecorator>
+			);
 		},
 	],
 };

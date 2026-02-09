@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@pubint/yabasic/components/ui/badge";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import {
 	Card,
@@ -21,7 +22,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@pubint/yabasic/components/ui/select";
-import { Trash2Icon } from "lucide-react";
+import { CheckIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
@@ -48,6 +49,62 @@ export default function SettingsPage() {
 	const userQuery = trpc.auth.me.useQuery(undefined, {
 		enabled: !!authToken,
 	});
+
+	// Fetch user's addons
+	const userAddonsQuery = trpc.projectIndexType.listUserAddons.useQuery(
+		undefined,
+		{
+			enabled: !!authToken,
+		},
+	);
+
+	// Addon mutations
+	const grantAddonMutation = trpc.projectIndexType.grantAddon.useMutation({
+		onSuccess: () => {
+			userAddonsQuery.refetch();
+		},
+	});
+
+	const revokeAddonMutation = trpc.projectIndexType.revokeAddon.useMutation({
+		onSuccess: () => {
+			userAddonsQuery.refetch();
+		},
+	});
+
+	// Available addons (hardcoded for MVP)
+	const availableAddons = [
+		{
+			id: "subject" as const,
+			name: "Subject Index",
+			description: "Topical index of key concepts, themes, and subjects",
+		},
+		{
+			id: "author" as const,
+			name: "Author Index",
+			description: "Index of cited authors and their works",
+		},
+		{
+			id: "scripture" as const,
+			name: "Scripture Index",
+			description: "Biblical and scriptural reference index",
+		},
+	];
+
+	const enabledAddons = new Set(userAddonsQuery.data ?? []);
+
+	const handleToggleAddon = ({
+		indexType,
+		isEnabled,
+	}: {
+		indexType: "subject" | "author" | "scripture";
+		isEnabled: boolean;
+	}) => {
+		if (isEnabled) {
+			revokeAddonMutation.mutate({ indexType });
+		} else {
+			grantAddonMutation.mutate({ indexType });
+		}
+	};
 
 	// Show loading spinner while checking auth
 	if (isAuthLoading) {
@@ -105,6 +162,80 @@ export default function SettingsPage() {
 								</p>
 							</div>
 						)}
+					</CardContent>
+				</Card>
+
+				{/* Index Type Addons */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Index Type Addons</CardTitle>
+						<CardDescription>
+							Manage which index types are available in your projects
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="grid gap-4 md:grid-cols-3">
+							{availableAddons.map((addon) => {
+								const isEnabled = enabledAddons.has(addon.id);
+								const isLoading =
+									grantAddonMutation.isPending || revokeAddonMutation.isPending;
+
+								return (
+									<Card
+										key={addon.id}
+										className={`relative ${isEnabled ? "shadow-md" : ""}`}
+									>
+										<CardHeader>
+											<div className="flex items-start justify-between mb-2">
+												<Badge variant={isEnabled ? "default" : "secondary"}>
+													{isEnabled ? (
+														<>
+															<CheckIcon className="h-3 w-3 mr-1" />
+															Enabled
+														</>
+													) : (
+														<>
+															<XIcon className="h-3 w-3 mr-1" />
+															Disabled
+														</>
+													)}
+												</Badge>
+											</div>
+											<CardTitle className="text-base">{addon.name}</CardTitle>
+											<CardDescription className="text-xs">
+												{addon.description}
+											</CardDescription>
+										</CardHeader>
+										<CardContent>
+											<Button
+												size="sm"
+												variant={isEnabled ? "outline" : "default"}
+												onClick={() =>
+													handleToggleAddon({
+														indexType: addon.id,
+														isEnabled,
+													})
+												}
+												disabled={isLoading}
+												className="w-full"
+											>
+												{isEnabled ? (
+													<>
+														<XIcon className="h-4 w-4 mr-2" />
+														Disable
+													</>
+												) : (
+													<>
+														<PlusIcon className="h-4 w-4 mr-2" />
+														Enable
+													</>
+												)}
+											</Button>
+										</CardContent>
+									</Card>
+								);
+							})}
+						</div>
 					</CardContent>
 				</Card>
 
