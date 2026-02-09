@@ -418,4 +418,10 @@ const main = () => {
 	console.log("\n✅ All checks passed!");
 };
 
-main();
+try {
+	main();
+} catch (error) {
+	console.error("\n❌ Pre-commit checks failed:");
+	console.error(error);
+	process.exit(1);
+}
