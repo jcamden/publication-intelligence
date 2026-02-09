@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { createTestUser } from "../../test/factories";
 import { createTestUser as _createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
@@ -20,11 +21,11 @@ type TestUser = Awaited<ReturnType<typeof createTestUser>>;
 describe("Project Security & Authorization", () => {
 	let server: FastifyInstance;
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		server = await createTestServer();
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		await closeTestServer(server);
 	});
 

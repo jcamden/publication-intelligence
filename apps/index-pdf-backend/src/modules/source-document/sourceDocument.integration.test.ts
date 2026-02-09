@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
@@ -13,30 +14,39 @@ import {
 // API / Integration Tests
 // ============================================================================
 
+// Extend test context to include server and test user
+declare module "vitest" {
+	export interface TestContext {
+		server: FastifyInstance;
+		testUser: Awaited<ReturnType<typeof createTestUser>>;
+		authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+	}
+}
+
 describe("SourceDocument API (Integration)", () => {
-	let server: FastifyInstance;
-	let testUser: Awaited<ReturnType<typeof createTestUser>>;
-	let authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+	beforeEach(async (context) => {
+		// Create server with test-specific database
+		context.server = await createTestServer();
 
-	beforeAll(async () => {
-		server = await createTestServer();
-	});
-
-	beforeEach(async () => {
-		// Recreate user before each test (afterEach cleanup deletes all data)
-		testUser = await createTestUser();
-		authenticatedRequest = makeAuthenticatedRequest({
-			server,
-			authToken: testUser.authToken,
+		// Create user for authenticated tests
+		// Factories will use module-level override (set by setup.ts beforeEach)
+		context.testUser = await createTestUser();
+		context.authenticatedRequest = makeAuthenticatedRequest({
+			server: context.server,
+			authToken: context.testUser.authToken,
 		});
 	});
 
-	afterAll(async () => {
-		await closeTestServer(server);
+	afterEach(async (context) => {
+		await closeTestServer(context.server);
 	});
 
 	describe("POST /projects/:projectId/source-documents/upload", () => {
-		it("should upload PDF via multipart/form-data", async () => {
+		it("should upload PDF via multipart/form-data", async ({
+			authenticatedRequest,
+			server,
+			testUser,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -86,7 +96,11 @@ describe("SourceDocument API (Integration)", () => {
 			await localFileStorage.deleteFile({ storageKey: body.storage_key });
 		});
 
-		it("should use filename as title when not provided", async () => {
+		it("should use filename as title when not provided", async ({
+			authenticatedRequest,
+			server,
+			testUser,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -127,7 +141,10 @@ describe("SourceDocument API (Integration)", () => {
 			await localFileStorage.deleteFile({ storageKey: body.storage_key });
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({
+			authenticatedRequest,
+			server,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -160,7 +177,11 @@ describe("SourceDocument API (Integration)", () => {
 			expect(response.statusCode).toBe(401);
 		});
 
-		it("should reject non-PDF files", async () => {
+		it("should reject non-PDF files", async ({
+			server,
+			testUser,
+			authenticatedRequest,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -196,7 +217,10 @@ describe("SourceDocument API (Integration)", () => {
 			expect(body.error).toContain("PDF");
 		});
 
-		it("should return 404 for non-existent project", async () => {
+		it("should return 404 for non-existent project", async ({
+			server,
+			testUser,
+		}) => {
 			const fakeProjectId = FAKE_UUID;
 
 			const pdfContent = "%PDF-1.4\ntest";
@@ -226,7 +250,11 @@ describe("SourceDocument API (Integration)", () => {
 	});
 
 	describe("GET /trpc/sourceDocument.listByProject", () => {
-		it("should list documents in project", async () => {
+		it("should list documents in project", async ({
+			server,
+			testUser,
+			authenticatedRequest,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -275,7 +303,7 @@ describe("SourceDocument API (Integration)", () => {
 			await localFileStorage.deleteFile({ storageKey: uploaded.storage_key });
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({ server }) => {
 			const response = await server.inject({
 				method: "GET",
 				url: "/trpc/sourceDocument.listByProject?input=%7B%22projectId%22%3A%2200000000-0000-0000-0000-000000000000%22%7D",
@@ -286,7 +314,11 @@ describe("SourceDocument API (Integration)", () => {
 	});
 
 	describe("GET /trpc/sourceDocument.getById", () => {
-		it("should retrieve document by id", async () => {
+		it("should retrieve document by id", async ({
+			server,
+			testUser,
+			authenticatedRequest,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -331,7 +363,9 @@ describe("SourceDocument API (Integration)", () => {
 			await localFileStorage.deleteFile({ storageKey: uploaded.storage_key });
 		});
 
-		it("should return 404 for non-existent document", async () => {
+		it("should return 404 for non-existent document", async ({
+			authenticatedRequest,
+		}) => {
 			const fakeId = FAKE_UUID;
 
 			const response = await authenticatedRequest.inject({
@@ -344,7 +378,11 @@ describe("SourceDocument API (Integration)", () => {
 	});
 
 	describe("POST /trpc/sourceDocument.delete", () => {
-		it("should soft delete document", async () => {
+		it("should soft delete document", async ({
+			server,
+			testUser,
+			authenticatedRequest,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -400,7 +438,9 @@ describe("SourceDocument API (Integration)", () => {
 	});
 
 	describe("Authorization", () => {
-		it("should not allow upload to other users' projects", async () => {
+		it("should not allow upload to other users' projects", async ({
+			server,
+		}) => {
 			const user1 = await createTestUser();
 			const user2 = await createTestUser();
 
@@ -442,7 +482,9 @@ describe("SourceDocument API (Integration)", () => {
 			expect(response.statusCode).toBe(500);
 		});
 
-		it("should not allow listing other users' project documents", async () => {
+		it("should not allow listing other users' project documents", async ({
+			server,
+		}) => {
 			const user1 = await createTestUser();
 			const user2 = await createTestUser();
 

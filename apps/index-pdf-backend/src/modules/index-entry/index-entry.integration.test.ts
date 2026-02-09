@@ -1,0 +1,838 @@
+import "../../test/setup";
+import type { FastifyInstance } from "fastify";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+	createTestIndexEntry,
+	createTestProject,
+	createTestProjectIndexType,
+	createTestUser,
+	grantIndexTypeAddon,
+} from "../../test/factories";
+import {
+	closeTestServer,
+	createTestServer,
+	makeAuthenticatedRequest,
+} from "../../test/server-harness";
+import type { IndexEntrySearchResult, IndexVariant } from "./index-entry.types";
+
+// ============================================================================
+// API / Integration Tests for IndexEntry
+// ============================================================================
+
+// Extend test context to include server and test data
+declare module "vitest" {
+	export interface TestContext {
+		server: FastifyInstance;
+		testUser: Awaited<ReturnType<typeof createTestUser>>;
+		authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+		testProjectId: string;
+		subjectIndexTypeId: string;
+		authorIndexTypeId: string;
+	}
+}
+
+describe("IndexEntry API (Integration)", () => {
+	beforeEach(async (context) => {
+		// Create server with test-specific database
+		// context.testDb is set by setup.ts beforeEach, which runs first
+		context.server = await createTestServer();
+
+		// Create user for authenticated tests
+		// Factories will use module-level override (set by setup.ts beforeEach)
+		context.testUser = await createTestUser();
+		context.authenticatedRequest = makeAuthenticatedRequest({
+			server: context.server,
+			authToken: context.testUser.authToken,
+		});
+
+		const project = await createTestProject({
+			userId: context.testUser.userId,
+		});
+		context.testProjectId = project.id;
+
+		await grantIndexTypeAddon({
+			userId: context.testUser.userId,
+			indexType: "subject",
+		});
+
+		await grantIndexTypeAddon({
+			userId: context.testUser.userId,
+			indexType: "author",
+		});
+
+		const subjectIndexType = await createTestProjectIndexType({
+			projectId: context.testProjectId,
+			indexType: "subject",
+			userId: context.testUser.userId,
+		});
+		context.subjectIndexTypeId = subjectIndexType.id;
+
+		const authorIndexType = await createTestProjectIndexType({
+			projectId: context.testProjectId,
+			indexType: "author",
+			userId: context.testUser.userId,
+		});
+		context.authorIndexTypeId = authorIndexType.id;
+	});
+
+	afterEach(async (context) => {
+		await closeTestServer(context.server);
+	});
+
+	describe("POST /trpc/indexEntry.create", () => {
+		it("should create a new index entry", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Theology",
+					slug: "theology",
+					description: "Study of religious faith",
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.label).toBe("Theology");
+			expect(body.result.data.slug).toBe("theology");
+			expect(body.result.data.description).toBe("Study of religious faith");
+			expect(body.result.data.projectIndexTypeId).toBe(subjectIndexTypeId);
+		});
+
+		it("should create entry with variants (aliases)", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Christology",
+					slug: "christology",
+					variants: ["Christ", "Jesus Christ", "The Messiah"],
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.label).toBe("Christology");
+			expect(body.result.data.variants).toHaveLength(3);
+			expect(
+				body.result.data.variants.map((v: IndexVariant) => v.text),
+			).toEqual(["Christ", "Jesus Christ", "The Messiah"]);
+		});
+
+		it("should create entry with parent", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const parent = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Systematic Theology",
+					slug: "systematic-theology",
+					parentId: parent.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.parentId).toBe(parent.id);
+		});
+
+		it("should reject parent from different index type", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+			authorIndexTypeId,
+		}) => {
+			const authorEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: authorIndexTypeId,
+				label: "John Calvin",
+				slug: "john-calvin",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Systematic Theology",
+					slug: "systematic-theology",
+					parentId: authorEntry.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(400);
+			const body = JSON.parse(response.body);
+			expect(body.error.message).toContain("same index type");
+		});
+
+		it("should require authentication", async ({
+			server,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await server.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Theology",
+					slug: "theology",
+				},
+			});
+
+			expect(response.statusCode).toBe(401);
+		});
+	});
+
+	describe("GET /trpc/indexEntry.list", () => {
+		it("should list all entries for a project", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toHaveLength(2);
+		});
+
+		it("should filter by index type", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+			authorIndexTypeId,
+		}) => {
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: authorIndexTypeId,
+				label: "John Calvin",
+				slug: "john-calvin",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toHaveLength(1);
+			expect(body.result.data[0].label).toBe("Theology");
+		});
+
+		it("should exclude deleted entries by default", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.delete",
+				payload: {
+					id: entry.id,
+				},
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toHaveLength(0);
+		});
+
+		it("should include deleted entries when requested", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.delete",
+				payload: {
+					id: entry.id,
+				},
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, includeDeleted: true }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toHaveLength(1);
+		});
+	});
+
+	describe("POST /trpc/indexEntry.update", () => {
+		it("should update entry label", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.update",
+				payload: {
+					id: entry.id,
+					label: "Systematic Theology",
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.label).toBe("Systematic Theology");
+			expect(body.result.data.revision).toBe(2);
+		});
+
+		it("should update variants", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+				variants: ["Christ"],
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.update",
+				payload: {
+					id: entry.id,
+					variants: ["Christ", "Jesus", "The Messiah"],
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.variants).toHaveLength(3);
+			expect(
+				body.result.data.variants.map((v: IndexVariant) => v.text),
+			).toEqual(["Christ", "Jesus", "The Messiah"]);
+		});
+
+		it("should not change slug", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.update",
+				payload: {
+					id: entry.id,
+					label: "Systematic Theology",
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.slug).toBe("theology");
+		});
+	});
+
+	describe("POST /trpc/indexEntry.updateParent", () => {
+		it("should update entry parent", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const parent = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.updateParent",
+				payload: {
+					id: entry.id,
+					parentId: parent.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.parentId).toBe(parent.id);
+		});
+
+		it("should detect cycles", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const grandparent = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const parent = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Systematic Theology",
+				slug: "systematic-theology",
+				userId: testUser.userId,
+				parentId: grandparent.id,
+			});
+
+			const child = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+				parentId: parent.id,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.updateParent",
+				payload: {
+					id: grandparent.id,
+					parentId: child.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(400);
+			const body = JSON.parse(response.body);
+			expect(body.error.message).toContain("cycle");
+		});
+
+		it("should enforce max depth", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			let currentParentId: string | undefined;
+
+			for (let i = 0; i < 5; i++) {
+				const entry = await createTestIndexEntry({
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: `Level ${i}`,
+					slug: `level-${i}`,
+					userId: testUser.userId,
+					parentId: currentParentId,
+				});
+				currentParentId = entry.id;
+			}
+
+			const tooDeep = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Too Deep",
+				slug: "too-deep",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.updateParent",
+				payload: {
+					id: tooDeep.id,
+					parentId: currentParentId,
+				},
+			});
+
+			expect(response.statusCode).toBe(400);
+			const body = JSON.parse(response.body);
+			expect(body.error.message).toContain("depth");
+		});
+	});
+
+	describe("GET /trpc/indexEntry.search", () => {
+		beforeEach(async ({ testProjectId, subjectIndexTypeId, testUser }) => {
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+				variants: ["Christ", "Jesus Christ"],
+			});
+
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Soteriology",
+				slug: "soteriology",
+				userId: testUser.userId,
+			});
+		});
+
+		it("should search by label", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.search?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId, query: "theo" }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.length).toBeGreaterThanOrEqual(1);
+			expect(body.result.data[0].label).toContain("Theology");
+		});
+
+		it("should search by variant", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.search?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId, query: "Christ" }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.length).toBeGreaterThanOrEqual(1);
+			const christologyEntry = body.result.data.find(
+				(e: IndexEntrySearchResult) => e.label === "Christology",
+			);
+			expect(christologyEntry).toBeDefined();
+		});
+
+		it("should respect limit", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.search?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId, query: "ology", limit: 2 }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.length).toBeLessThanOrEqual(2);
+		});
+	});
+
+	describe("GET /trpc/indexEntry.checkExactMatch", () => {
+		beforeEach(async ({ testProjectId, subjectIndexTypeId, testUser }) => {
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+				variants: ["Christ", "Jesus Christ"],
+			});
+		});
+
+		it("should match exact label (case-insensitive)", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.checkExactMatch?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId, text: "THEOLOGY" }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toBeDefined();
+			expect(body.result.data.label).toBe("Theology");
+		});
+
+		it("should match exact variant (case-insensitive)", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.checkExactMatch?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId, text: "christ" }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toBeDefined();
+			expect(body.result.data.label).toBe("Christology");
+		});
+
+		it("should return null for partial match", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.checkExactMatch?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId, text: "theo" }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toBeNull();
+		});
+
+		it("should trim whitespace", async ({
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.checkExactMatch?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, projectIndexTypeId: subjectIndexTypeId, text: "  Theology  " }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toBeDefined();
+			expect(body.result.data.label).toBe("Theology");
+		});
+	});
+
+	describe("POST /trpc/indexEntry.delete", () => {
+		it("should soft delete entry", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.delete",
+				payload: {
+					id: entry.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.deletedAt).toBeDefined();
+			expect(body.result.data.deletedAt).not.toBeNull();
+		});
+
+		it("should reject delete if entry has children", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const parent = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+				parentId: parent.id,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.delete",
+				payload: {
+					id: parent.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(400);
+			const body = JSON.parse(response.body);
+			expect(body.error.message).toContain("children");
+		});
+
+		it("should cascade delete children when requested", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const parent = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			// create child entry
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+				parentId: parent.id,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.delete",
+				payload: {
+					id: parent.id,
+					cascadeToChildren: true,
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+
+			const listResponse = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+
+			const listBody = JSON.parse(listResponse.body);
+			expect(listBody.result.data).toHaveLength(0);
+		});
+	});
+});

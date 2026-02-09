@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateTestEmail, generateTestPassword } from "../../test/factories";
 import { closeTestServer, createTestServer } from "../../test/server-harness";
 
@@ -7,21 +8,27 @@ import { closeTestServer, createTestServer } from "../../test/server-harness";
 // User Integration Tests
 // ============================================================================
 
-describe("User API (Integration)", () => {
-	let server: FastifyInstance;
+// Extend test context to include server
+declare module "vitest" {
+	export interface TestContext {
+		server: FastifyInstance;
+	}
+}
 
-	beforeAll(async () => {
-		server = await createTestServer();
+describe("User API (Integration)", () => {
+	beforeEach(async (context) => {
+		// Create server with test-specific database
+		context.server = await createTestServer();
 	});
 
-	afterAll(async () => {
-		await closeTestServer(server);
+	afterEach(async (context) => {
+		await closeTestServer(context.server);
 	});
 
 	// Note: Test data cleanup handled by branch reset (see reset-test-branch.sh)
 
 	describe("POST /trpc/user.deleteAccount", () => {
-		it("should delete authenticated user account", async () => {
+		it("should delete authenticated user account", async ({ server }) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 
@@ -66,7 +73,7 @@ describe("User API (Integration)", () => {
 			expect(verifyDeletedResponse.statusCode).toBe(401);
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({ server }) => {
 			const response = await server.inject({
 				method: "POST",
 				url: "/trpc/user.deleteAccount",
@@ -78,7 +85,9 @@ describe("User API (Integration)", () => {
 			expect(response.statusCode).toBe(401);
 		});
 
-		it("should delete user and allow re-registration with same email", async () => {
+		it("should delete user and allow re-registration with same email", async ({
+			server,
+		}) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 
@@ -119,7 +128,7 @@ describe("User API (Integration)", () => {
 			expect(reSignUpBody.result.data.token).toBeDefined();
 		});
 
-		it("should emit events for account deletion", async () => {
+		it("should emit events for account deletion", async ({ server }) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 

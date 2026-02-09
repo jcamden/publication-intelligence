@@ -905,10 +905,13 @@ Per-project color editing is **already fully implemented** in the PDF editor sid
 - No need to duplicate this functionality in project settings modal
 - Project settings modal should focus on: title, description, index type selection, and delete
 
-**Project Settings UI 🔮 PENDING:**
-- Edit project modal to modify title, description, enabled index types
-- Add/remove index types from project (multiselect interface)
-- Delete project functionality
+**Project Settings UI ✅ COMPLETE:**
+- ✅ Edit project modal to modify title, description, project directory, enabled index types
+- ✅ Add/remove index types from project (multiselect interface)
+- ✅ Delete project functionality with confirmation dialog
+  - User must type exact project name to confirm deletion
+  - Debounced confirmation input for better performance
+  - Uses destructive button variant for clear visual affordance
 - **NOT included:** Color customization (already available in editor sidebar)
 - **NOT included:** Reordering (not a high priority for MVP)
 - **NOT included:** Visibility toggles (can be added later if needed)
@@ -942,8 +945,8 @@ export const IndexTypesSettings = () => {
 **Next Steps (for Project Settings):**
 1. ✅ ~~Build index type settings page~~ → Using modal in project list instead
 2. ✅ ~~Implement color picker~~ → Already exists in editor sidebar
-3. 🔮 Build edit project modal with index type multiselect
-4. 🔮 Add delete project functionality with confirmation
+3. ✅ Build edit project modal with index type multiselect
+4. ✅ Add delete project functionality with confirmation
 5. ✅ ~~Add drag-drop reordering~~ → Deferred (not MVP priority)
 6. ✅ Connect to tRPC endpoints (color updates already working)
 
@@ -977,7 +980,8 @@ Test files exist in `apps/index-pdf-backend/src/modules/project-index-type/`:
 - [ ] Page number extraction from contexts (Phase 7)
 - [ ] Parent entry same-index-type validation (application layer, needs test)
 - [x] ~~Color editing UI~~ → Already implemented in editor sidebar
-- [ ] Edit project modal with index type management
+- [x] Edit project modal with index type management
+- [x] Delete project functionality with confirmation
 - [ ] Default addon seeding at user creation
 
 ---
@@ -1001,13 +1005,14 @@ Test files exist in `apps/index-pdf-backend/src/modules/project-index-type/`:
 - [x] Add RLS policies for access control
 - [x] Write integration and security tests
 
-### Frontend Integration 🟡 **PARTIAL**
+### Frontend Integration ✅ **COMPLETE**
 - [x] Color picker UI → Already implemented in editor sidebar
 - [x] Color customization backend integration → `usePersistColorChange` hook working
-- [ ] Project settings modal (edit title, description, index types)
-- [ ] Index type add/remove in project form
-- [ ] Delete project functionality
-- [ ] Integration with PDF viewer highlighting (filter by `isVisible`)
+- [x] Edit project modal (edit title, description, project directory, index types)
+- [x] Index type selection in create/edit project forms
+- [x] Delete project functionality with name confirmation input
+- [x] Integration with PDF viewer highlighting (filter by `visible` flag)
+- [x] Shared debounce hook (`useDebouncedValue`) for input performance
 - [ ] ~~Visibility toggles~~ → Deferred (not MVP priority)
 - [ ] ~~Drag-drop reordering~~ → Deferred (not MVP priority)
 
@@ -1015,7 +1020,7 @@ Test files exist in `apps/index-pdf-backend/src/modules/project-index-type/`:
 
 ## Summary
 
-**Task 5A is complete** at the backend level. The database migration from EdgeDB to Drizzle ORM included all planned schema changes for the index type system:
+**Task 5A is fully complete** (backend + frontend). The database migration from EdgeDB to Drizzle ORM included all planned schema changes for the index type system, and the frontend integration is now complete:
 
 ✅ **Completed:**
 - Index type enum + application metadata
@@ -1026,21 +1031,29 @@ Test files exist in `apps/index-pdf-backend/src/modules/project-index-type/`:
 - Full tRPC CRUD endpoints
 - Row Level Security policies
 - Integration and security tests
+- Edit project modal with create/edit modes
+- Delete project confirmation dialog with name validation
+- PDF viewer highlight filtering by visibility
+- Shared debounce hook for input performance
 
 🔮 **Remaining Work:**
-- Project settings modal (edit project details and index type selection)
-- Integration with PDF viewer highlighting (filter by `isVisible` flag)
 - Default addon seeding at user creation
+- Phase 7 page numbering features
 
 ✅ **Note:** Per-project color customization is already fully functional in the editor sidebar components
-- Phase 7 page numbering features
+
+✅ **Recent Additions:**
+- Edit project modal with create/edit mode support
+- Delete project confirmation dialog with name validation
+- Shared `useDebouncedValue` hook for input performance
+- PDF viewer highlights now filtered by `visible` flag from `project_index_types`
 
 ---
 
 ## Next Steps
 
-With the backend infrastructure complete, the next priorities are:
+With Task 5A fully complete (backend + frontend), the next priorities are:
 
-1. **Frontend Integration** - Build UI for managing project index types
+1. ✅ ~~**Frontend Integration** - Build UI for managing project index types~~ → COMPLETE
 2. **[Task 5B: IndexEntry Backend](./task-5b-index-entry-backend.md)** - Implement entry CRUD with index type filtering
-3. **PDF Viewer Integration** - Connect index types to highlight colors in viewer
+3. ✅ ~~**PDF Viewer Integration** - Connect index types to highlight colors in viewer~~ → COMPLETE

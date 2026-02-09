@@ -1,3 +1,4 @@
+import "../../test/setup";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestProject, createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";

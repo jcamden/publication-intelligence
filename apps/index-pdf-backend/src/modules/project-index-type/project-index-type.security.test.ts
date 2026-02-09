@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	createTestProject,
 	createTestUser,
@@ -21,11 +22,11 @@ type TestUser = Awaited<ReturnType<typeof createTestUser>>;
 describe("ProjectIndexType Security & Authorization", () => {
 	let server: FastifyInstance;
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		server = await createTestServer();
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		await closeTestServer(server);
 	});
 

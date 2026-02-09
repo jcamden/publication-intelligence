@@ -8,7 +8,6 @@ export default defineConfig({
 		setupFiles: ["./vitest.setup.ts"],
 		testTimeout: 30000,
 		hookTimeout: 30000,
-		fileParallelism: false,
 		coverage: {
 			...nodeConfig.coverage,
 			include: ["src/**/*.ts"],

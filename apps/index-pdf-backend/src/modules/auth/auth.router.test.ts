@@ -1,3 +1,4 @@
+import "../../test/setup";
 import { describe, expect, it } from "vitest";
 import { appRouter } from "../../routers/index";
 import { createTestUser } from "../../test/factories";

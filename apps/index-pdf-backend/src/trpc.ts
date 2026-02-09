@@ -16,7 +16,33 @@ type Context = {
 export const t = initTRPC.context<Context>().create();
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
+
+// ============================================================================
+// Error Handling Middleware
+// ============================================================================
+
+const errorHandler = t.middleware(async ({ next }) => {
+	try {
+		return await next();
+	} catch (error) {
+		// Re-throw TRPCErrors as-is (from service layer or other middleware)
+		if (error instanceof TRPCError) {
+			throw error;
+		}
+
+		// Wrap unknown errors
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: error instanceof Error ? error.message : "Internal server error",
+		});
+	}
+});
+
+// ============================================================================
+// Base Procedures
+// ============================================================================
+
+export const publicProcedure = t.procedure.use(errorHandler);
 
 const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 	if (!ctx.user || !ctx.authToken) {
@@ -58,4 +84,4 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 	});
 });
 
-export const protectedProcedure = t.procedure.use(isAuthenticated);
+export const protectedProcedure = publicProcedure.use(isAuthenticated);

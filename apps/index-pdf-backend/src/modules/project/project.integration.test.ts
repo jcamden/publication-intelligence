@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
 import {
@@ -12,30 +13,35 @@ import {
 // API / Integration Tests
 // ============================================================================
 
-describe.sequential("Project API (Integration)", () => {
-	let server: FastifyInstance;
-	let testUser: Awaited<ReturnType<typeof createTestUser>>;
-	let authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+// Extend test context to include server and test user
+declare module "vitest" {
+	export interface TestContext {
+		server: FastifyInstance;
+		testUser: Awaited<ReturnType<typeof createTestUser>>;
+		authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+	}
+}
 
-	beforeAll(async () => {
-		server = await createTestServer();
-	});
+describe("Project API (Integration)", () => {
+	beforeEach(async (context) => {
+		// Create server with test-specific database
+		context.server = await createTestServer();
 
-	beforeEach(async () => {
-		// Recreate user before each test (afterEach cleanup deletes all data)
-		testUser = await createTestUser();
-		authenticatedRequest = makeAuthenticatedRequest({
-			server,
-			authToken: testUser.authToken,
+		// Create user for authenticated tests
+		// Factories will use module-level override (set by setup.ts beforeEach)
+		context.testUser = await createTestUser();
+		context.authenticatedRequest = makeAuthenticatedRequest({
+			server: context.server,
+			authToken: context.testUser.authToken,
 		});
 	});
 
-	afterAll(async () => {
-		await closeTestServer(server);
+	afterEach(async (context) => {
+		await closeTestServer(context.server);
 	});
 
 	describe("POST /trpc/project.create", () => {
-		it("should create project via HTTP", async () => {
+		it("should create project via HTTP", async ({ authenticatedRequest }) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -51,7 +57,7 @@ describe.sequential("Project API (Integration)", () => {
 			expect(body.result.data.title).toBe("HTTP Test Project");
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({ server }) => {
 			const response = await server.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -64,7 +70,7 @@ describe.sequential("Project API (Integration)", () => {
 			expect(response.statusCode).toBe(401);
 		});
 
-		it("should validate required fields", async () => {
+		it("should validate required fields", async ({ authenticatedRequest }) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -78,7 +84,7 @@ describe.sequential("Project API (Integration)", () => {
 	});
 
 	describe("GET /trpc/project.list", () => {
-		it("should list projects", async () => {
+		it("should list projects", async ({ authenticatedRequest }) => {
 			await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -102,7 +108,7 @@ describe.sequential("Project API (Integration)", () => {
 			expect(body.result.data.length).toBeGreaterThanOrEqual(2);
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({ server }) => {
 			const response = await server.inject({
 				method: "GET",
 				url: "/trpc/project.list",
@@ -113,7 +119,7 @@ describe.sequential("Project API (Integration)", () => {
 	});
 
 	describe("GET /trpc/project.getById", () => {
-		it("should retrieve project by id", async () => {
+		it("should retrieve project by id", async ({ authenticatedRequest }) => {
 			const createResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -132,7 +138,9 @@ describe.sequential("Project API (Integration)", () => {
 			expect(body.result.data.id).toBe(created.id);
 		});
 
-		it("should return 404 for non-existent project", async () => {
+		it("should return 404 for non-existent project", async ({
+			authenticatedRequest,
+		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "GET",
 				url: `/trpc/project.getById?input=${encodeURIComponent(JSON.stringify({ id: FAKE_UUID }))}`,
@@ -143,7 +151,7 @@ describe.sequential("Project API (Integration)", () => {
 	});
 
 	describe("PATCH /trpc/project.update", () => {
-		it("should update project", async () => {
+		it("should update project", async ({ authenticatedRequest }) => {
 			const createResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -168,7 +176,7 @@ describe.sequential("Project API (Integration)", () => {
 	});
 
 	describe("DELETE /trpc/project.delete", () => {
-		it("should soft delete project", async () => {
+		it("should soft delete project", async ({ authenticatedRequest }) => {
 			const createResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -195,7 +203,9 @@ describe.sequential("Project API (Integration)", () => {
 	});
 
 	describe("GET /trpc/project.getByDir", () => {
-		it("should retrieve project by directory", async () => {
+		it("should retrieve project by directory", async ({
+			authenticatedRequest,
+		}) => {
 			const createResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -218,7 +228,9 @@ describe.sequential("Project API (Integration)", () => {
 			expect(body.result.data.project_dir).toBe("get-by-dir-test");
 		});
 
-		it("should return source_document info when document exists", async () => {
+		it("should return source_document info when document exists", async ({
+			authenticatedRequest,
+		}) => {
 			// Create project
 			await authenticatedRequest.inject({
 				method: "POST",
@@ -244,7 +256,9 @@ describe.sequential("Project API (Integration)", () => {
 			expect(body.result.data.source_document).toBeNull();
 		});
 
-		it("should return 404 for non-existent project directory", async () => {
+		it("should return 404 for non-existent project directory", async ({
+			authenticatedRequest,
+		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "GET",
 				url: `/trpc/project.getByDir?input=${encodeURIComponent(JSON.stringify({ projectDir: "non-existent-dir" }))}`,
@@ -253,7 +267,9 @@ describe.sequential("Project API (Integration)", () => {
 			expect(response.statusCode).toBe(404);
 		});
 
-		it("should prioritize owned projects over collaborated projects", async () => {
+		it("should prioritize owned projects over collaborated projects", async ({
+			server,
+		}) => {
 			const user2 = await createTestUser();
 
 			const user2Request = makeAuthenticatedRequest({
@@ -286,7 +302,9 @@ describe.sequential("Project API (Integration)", () => {
 	});
 
 	describe("Authorization", () => {
-		it("should not allow access to other users' projects", async () => {
+		it("should not allow access to other users' projects", async ({
+			server,
+		}) => {
 			const user1 = await createTestUser();
 			const user2 = await createTestUser();
 

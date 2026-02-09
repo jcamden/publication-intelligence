@@ -1,3 +1,4 @@
+import "../../test/setup";
 import { beforeEach, describe, expect, it } from "vitest";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestProject, createTestUser } from "../../test/factories";

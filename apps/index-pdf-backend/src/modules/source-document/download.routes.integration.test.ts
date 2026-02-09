@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestUser } from "../../test/factories";
 import { FAKE_UUID } from "../../test/mocks";
@@ -13,30 +14,39 @@ import {
 // Download Routes Integration Tests
 // ============================================================================
 
+// Extend test context to include server and test user
+declare module "vitest" {
+	export interface TestContext {
+		server: FastifyInstance;
+		testUser: Awaited<ReturnType<typeof createTestUser>>;
+		authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+	}
+}
+
 describe("Source Document Download API (Integration)", () => {
-	let server: FastifyInstance;
-	let testUser: Awaited<ReturnType<typeof createTestUser>>;
-	let authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+	beforeEach(async (context) => {
+		// Create server with test-specific database
+		context.server = await createTestServer();
 
-	beforeAll(async () => {
-		server = await createTestServer();
-	});
-
-	beforeEach(async () => {
-		// Recreate user before each test (afterEach cleanup deletes all data)
-		testUser = await createTestUser();
-		authenticatedRequest = makeAuthenticatedRequest({
-			server,
-			authToken: testUser.authToken,
+		// Create user for authenticated tests
+		// Factories will use module-level override (set by setup.ts beforeEach)
+		context.testUser = await createTestUser();
+		context.authenticatedRequest = makeAuthenticatedRequest({
+			server: context.server,
+			authToken: context.testUser.authToken,
 		});
 	});
 
-	afterAll(async () => {
-		await closeTestServer(server);
+	afterEach(async (context) => {
+		await closeTestServer(context.server);
 	});
 
 	describe("GET /source-documents/:documentId/file", () => {
-		it("should download PDF with valid authentication", async () => {
+		it("should download PDF with valid authentication", async ({
+			authenticatedRequest,
+			server,
+			testUser,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -102,7 +112,11 @@ describe("Source Document Download API (Integration)", () => {
 			});
 		});
 
-		it("should return 401 when no token provided", async () => {
+		it("should return 401 when no token provided", async ({
+			authenticatedRequest,
+			server,
+			testUser,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -155,7 +169,11 @@ describe("Source Document Download API (Integration)", () => {
 			});
 		});
 
-		it("should return 401 when invalid token provided", async () => {
+		it("should return 401 when invalid token provided", async ({
+			authenticatedRequest,
+			server,
+			testUser,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -211,7 +229,10 @@ describe("Source Document Download API (Integration)", () => {
 			});
 		});
 
-		it("should return 404 when document does not exist", async () => {
+		it("should return 404 when document does not exist", async ({
+			server,
+			testUser,
+		}) => {
 			const fakeDocumentId = FAKE_UUID;
 
 			const downloadResponse = await server.inject({
@@ -225,7 +246,11 @@ describe("Source Document Download API (Integration)", () => {
 			expect(downloadResponse.statusCode).toBe(404);
 		});
 
-		it("should return 404 when file not found in storage", async () => {
+		it("should return 404 when file not found in storage", async ({
+			authenticatedRequest,
+			server,
+			testUser,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",
@@ -285,7 +310,11 @@ describe("Source Document Download API (Integration)", () => {
 			);
 		});
 
-		it("should emit events for successful download", async () => {
+		it("should emit events for successful download", async ({
+			authenticatedRequest,
+			server,
+			testUser,
+		}) => {
 			const projectResponse = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/project.create",

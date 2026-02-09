@@ -8,28 +8,31 @@ import { createTestDb } from "../db/test-client";
 // Test Database Setup (PGLite)
 // ============================================================================
 
-let testDbInstance: Awaited<TestDb>;
+// Extend Vitest's test context to include our db instance
+declare module "vitest" {
+	export interface TestContext {
+		testDbInstance: Awaited<TestDb>;
+		testDb: Awaited<TestDb>["db"];
+	}
+}
 
-// Export db for tests to use
-export let testDb: Awaited<TestDb>["db"];
-
-beforeEach(async () => {
+beforeEach(async (context) => {
 	// Create fresh PGLite instance with migrations for each test
-	// This provides complete isolation without cleanup complexity
-	testDbInstance = await createTestDb();
-	testDb = testDbInstance.db;
+	// Store in test context for cleanup
+	context.testDbInstance = await createTestDb();
+	context.testDb = context.testDbInstance.db;
 
-	// Inject test db into production client
-	// This allows integration tests that use the server to use the test db
-	setTestDb(testDb);
+	// Set module-level test db override for this test file
+	// Safe for file-level parallelism (tests within file run sequentially)
+	setTestDb(context.testDb);
 
 	// Verify database is ready
-	await testDb.execute(sql`SELECT 1`);
+	await context.testDb.execute(sql`SELECT 1`);
 }, 30000); // Longer timeout for migrations
 
-afterEach(async () => {
+afterEach(async (context) => {
 	// Close PGLite instance - no cleanup needed, fresh DB per test
-	await testDbInstance.close();
+	await context.testDbInstance.close();
 });
 
 // ============================================================================

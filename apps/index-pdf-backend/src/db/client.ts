@@ -6,22 +6,30 @@ import postgres from "postgres";
 import { env } from "../env";
 import * as schema from "./schema";
 
-// Allow tests to inject a database instance
-// This is set by test setup before any modules call getDb()
+// Module-level test database override
+// Safe for file-level parallelism since each test file runs in isolation
+// and tests within a file run sequentially
 let testDbOverride: PgliteDatabase<typeof schema> | null = null;
+
 let productionDb: PostgresJsDatabase<typeof schema> | null = null;
 
 export const setTestDb = (testDb: PgliteDatabase<typeof schema>) => {
 	testDbOverride = testDb;
 };
 
+// Get the current test database (for factory functions)
+export const getTestDb = (): PgliteDatabase<typeof schema> | null => {
+	return testDbOverride;
+};
+
 // Get the appropriate database based on NODE_ENV
-// This is called lazily, so testDbOverride can be set before first use
 const getDb = ():
 	| PostgresJsDatabase<typeof schema>
 	| PgliteDatabase<typeof schema> => {
-	if (process.env.NODE_ENV === "test" && testDbOverride) {
-		return testDbOverride;
+	if (process.env.NODE_ENV === "test") {
+		if (testDbOverride) {
+			return testDbOverride;
+		}
 	}
 
 	// Cache production db connection

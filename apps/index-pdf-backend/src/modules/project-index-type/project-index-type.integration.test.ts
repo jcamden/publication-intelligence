@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	createTestProject,
 	createTestUser,
@@ -15,36 +16,43 @@ import {
 // API / Integration Tests for ProjectIndexType
 // ============================================================================
 
+// Extend test context to include server and test user
+declare module "vitest" {
+	export interface TestContext {
+		server: FastifyInstance;
+		testUser: Awaited<ReturnType<typeof createTestUser>>;
+		authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
+		testProjectId: string;
+	}
+}
+
 describe("ProjectIndexType API (Integration)", () => {
-	let server: FastifyInstance;
-	let testUser: Awaited<ReturnType<typeof createTestUser>>;
-	let authenticatedRequest: ReturnType<typeof makeAuthenticatedRequest>;
-	let testProjectId: string;
+	beforeEach(async (context) => {
+		// Create server with test-specific database
+		context.server = await createTestServer();
 
-	beforeAll(async () => {
-		server = await createTestServer();
-	});
-
-	beforeEach(async () => {
-		// Recreate user and project before each test (afterEach cleanup deletes all data)
-		testUser = await createTestUser();
-		authenticatedRequest = makeAuthenticatedRequest({
-			server,
-			authToken: testUser.authToken,
+		// Create user for authenticated tests
+		// Factories will use module-level override (set by setup.ts beforeEach)
+		context.testUser = await createTestUser();
+		context.authenticatedRequest = makeAuthenticatedRequest({
+			server: context.server,
+			authToken: context.testUser.authToken,
 		});
 
 		// Create test project
-		const project = await createTestProject({ userId: testUser.userId });
-		testProjectId = project.id;
+		const project = await createTestProject({
+			userId: context.testUser.userId,
+		});
+		context.testProjectId = project.id;
 
 		// Grant addons to test user (simulates self-service purchase)
 		await grantIndexTypeAddon({
-			userId: testUser.userId,
+			userId: context.testUser.userId,
 			indexType: "subject",
 		});
 
 		await grantIndexTypeAddon({
-			userId: testUser.userId,
+			userId: context.testUser.userId,
 			indexType: "author",
 		});
 
@@ -52,12 +60,14 @@ describe("ProjectIndexType API (Integration)", () => {
 		// This keeps listAvailable and enable tests working correctly
 	});
 
-	afterAll(async () => {
-		await closeTestServer(server);
+	afterEach(async (context) => {
+		await closeTestServer(context.server);
 	});
 
 	describe("GET /trpc/projectIndexType.listUserAddons", () => {
-		it("should return user's granted addons", async () => {
+		it("should return user's granted addons", async ({
+			authenticatedRequest,
+		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "GET",
 				url: "/trpc/projectIndexType.listUserAddons",
@@ -72,7 +82,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			expect(body.result.data).not.toContain("scripture");
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({ server }) => {
 			const response = await server.inject({
 				method: "GET",
 				url: "/trpc/projectIndexType.listUserAddons",
@@ -83,7 +93,10 @@ describe("ProjectIndexType API (Integration)", () => {
 	});
 
 	describe("POST /trpc/projectIndexType.listAvailable", () => {
-		it("should list available index types user can enable", async () => {
+		it("should list available index types user can enable", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "GET",
 				url: `/trpc/projectIndexType.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
@@ -96,7 +109,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			expect(body.result.data.length).toBeGreaterThanOrEqual(2);
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({ server, testProjectId }) => {
 			const response = await server.inject({
 				method: "GET",
 				url: `/trpc/projectIndexType.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
@@ -107,7 +120,10 @@ describe("ProjectIndexType API (Integration)", () => {
 	});
 
 	describe("POST /trpc/projectIndexType.enable", () => {
-		it("should enable index type for project", async () => {
+		it("should enable index type for project", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/projectIndexType.enable",
@@ -124,7 +140,10 @@ describe("ProjectIndexType API (Integration)", () => {
 			expect(body.result.data.visible).toBe(true);
 		});
 
-		it("should allow custom colorHue", async () => {
+		it("should allow custom colorHue", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/projectIndexType.enable",
@@ -140,7 +159,10 @@ describe("ProjectIndexType API (Integration)", () => {
 			expect(body.result.data.colorHue).toBe(120);
 		});
 
-		it("should fail if user lacks addon", async () => {
+		it("should fail if user lacks addon", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			// User doesn't have scripture addon
 			const response = await authenticatedRequest.inject({
 				method: "POST",
@@ -157,7 +179,10 @@ describe("ProjectIndexType API (Integration)", () => {
 	});
 
 	describe("GET /trpc/projectIndexType.list", () => {
-		it("should list enabled index types", async () => {
+		it("should list enabled index types", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			// First enable some index types
 			await authenticatedRequest.inject({
 				method: "POST",
@@ -192,7 +217,10 @@ describe("ProjectIndexType API (Integration)", () => {
 	});
 
 	describe("POST /trpc/projectIndexType.update", () => {
-		it("should update color", async () => {
+		it("should update color", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			// Enable an index type first
 			await authenticatedRequest.inject({
 				method: "POST",
@@ -229,7 +257,10 @@ describe("ProjectIndexType API (Integration)", () => {
 			expect(body.result.data.colorHue).toBe(180);
 		});
 
-		it("should update visibility", async () => {
+		it("should update visibility", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			// Enable an index type first
 			await authenticatedRequest.inject({
 				method: "POST",
@@ -269,7 +300,10 @@ describe("ProjectIndexType API (Integration)", () => {
 	// Removed: reorder endpoint no longer exists (ordinal is now client-side concern)
 
 	describe("POST /trpc/projectIndexType.disable", () => {
-		it("should disable index type (soft delete)", async () => {
+		it("should disable index type (soft delete)", async ({
+			authenticatedRequest,
+			testProjectId,
+		}) => {
 			// Enable an index type first
 			await authenticatedRequest.inject({
 				method: "POST",

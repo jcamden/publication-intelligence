@@ -1,5 +1,6 @@
+import "../../test/setup";
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateTestEmail, generateTestPassword } from "../../test/factories";
 import { closeTestServer, createTestServer } from "../../test/server-harness";
 
@@ -7,21 +8,27 @@ import { closeTestServer, createTestServer } from "../../test/server-harness";
 // Auth Integration Tests
 // ============================================================================
 
-describe("Auth API (Integration)", () => {
-	let server: FastifyInstance;
+// Extend test context to include server
+declare module "vitest" {
+	export interface TestContext {
+		server: FastifyInstance;
+	}
+}
 
-	beforeAll(async () => {
-		server = await createTestServer();
+describe("Auth API (Integration)", () => {
+	beforeEach(async (context) => {
+		// Create server with test-specific database
+		context.server = await createTestServer();
 	});
 
-	afterAll(async () => {
-		await closeTestServer(server);
+	afterEach(async (context) => {
+		await closeTestServer(context.server);
 	});
 
 	// Note: Test data cleanup handled by branch reset (see reset-test-branch.sh)
 
 	describe("POST /trpc/auth.signUp", () => {
-		it("should create new user", async () => {
+		it("should create new user", async ({ server }) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 
@@ -46,7 +53,9 @@ describe("Auth API (Integration)", () => {
 			expect(body.result.data.token).toBeDefined();
 		});
 
-		it("should grant default subject addon to new users", async () => {
+		it("should grant default subject addon to new users", async ({
+			server,
+		}) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 
@@ -74,7 +83,7 @@ describe("Auth API (Integration)", () => {
 			expect(addons.length).toBe(1); // Should only have subject addon by default
 		});
 
-		it("should validate email format", async () => {
+		it("should validate email format", async ({ server }) => {
 			const response = await server.inject({
 				method: "POST",
 				url: "/trpc/auth.signUp",
@@ -87,7 +96,7 @@ describe("Auth API (Integration)", () => {
 			expect(response.statusCode).toBe(400);
 		});
 
-		it("should validate password length", async () => {
+		it("should validate password length", async ({ server }) => {
 			const email = generateTestEmail();
 
 			const response = await server.inject({
@@ -104,7 +113,7 @@ describe("Auth API (Integration)", () => {
 	});
 
 	describe("POST /trpc/auth.signIn", () => {
-		it("should authenticate existing user", async () => {
+		it("should authenticate existing user", async ({ server }) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 
@@ -125,7 +134,7 @@ describe("Auth API (Integration)", () => {
 			expect(body.result.data.token).toBeDefined();
 		});
 
-		it("should reject invalid credentials", async () => {
+		it("should reject invalid credentials", async ({ server }) => {
 			const response = await server.inject({
 				method: "POST",
 				url: "/trpc/auth.signIn",
@@ -140,7 +149,7 @@ describe("Auth API (Integration)", () => {
 	});
 
 	describe("GET /trpc/auth.me", () => {
-		it("should return authenticated user", async () => {
+		it("should return authenticated user", async ({ server }) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 
@@ -165,7 +174,7 @@ describe("Auth API (Integration)", () => {
 			expect(body.result.data.email).toBe(email);
 		});
 
-		it("should require authentication", async () => {
+		it("should require authentication", async ({ server }) => {
 			const response = await server.inject({
 				method: "GET",
 				url: "/trpc/auth.me",
@@ -176,7 +185,7 @@ describe("Auth API (Integration)", () => {
 	});
 
 	describe("Event emission", () => {
-		it("should emit events for auth actions", async () => {
+		it("should emit events for auth actions", async ({ server }) => {
 			const email = generateTestEmail();
 			const password = generateTestPassword();
 

@@ -1,9 +1,18 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, eq, sql } from "drizzle-orm";
+import type { PgliteDatabase } from "drizzle-orm/pglite";
 import jwt from "jsonwebtoken";
-import { projects, userIndexTypeAddons, users } from "../db/schema";
-import { testDb } from "./setup";
+import { getTestDb } from "../db/client";
+import type * as schema from "../db/schema";
+import {
+	indexEntries,
+	indexVariants,
+	projectIndexTypes,
+	projects,
+	userIndexTypeAddons,
+	users,
+} from "../db/schema";
 
 // ============================================================================
 // Test Data Factories
@@ -38,11 +47,20 @@ export const createTestUser = async ({
 	email = generateTestEmail(),
 	password = generateTestPassword(),
 	name,
+	testDb,
 }: {
 	email?: string;
 	password?: string;
 	name?: string;
+	testDb?: PgliteDatabase<typeof schema>;
 } = {}) => {
+	// Get testDb from module-level override if not explicitly provided
+	const db = testDb || getTestDb();
+	if (!db) {
+		throw new Error(
+			"No test database available. Ensure test is running with proper setup.",
+		);
+	}
 	const JWT_SECRET: string = process.env.JWT_SECRET || "test-secret-key";
 	const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || "7d") as
 		| string
@@ -56,7 +74,7 @@ export const createTestUser = async ({
 	const userUuid = randomUUID();
 
 	// Insert user with pre-generated UUID and auth context for RLS
-	const [user] = await testDb.transaction(async (tx) => {
+	const [user] = await db.transaction(async (tx) => {
 		// Set auth context so RLS policies allow the insert
 		await tx.execute(
 			sql`SELECT set_config('request.jwt.claim.sub', ${userUuid}, TRUE)`,
@@ -115,15 +133,25 @@ export const createTestProject = async ({
 	title = generateTestTitle(),
 	description,
 	projectDir,
+	testDb,
 }: {
 	userId: string;
 	title?: string;
 	description?: string;
 	projectDir?: string;
+	testDb?: PgliteDatabase<typeof schema>;
 }) => {
+	// Get testDb from module-level override if not explicitly provided
+	const db = testDb || getTestDb();
+	if (!db) {
+		throw new Error(
+			"No test database available. Ensure test is running with proper setup.",
+		);
+	}
+
 	const dir = projectDir ?? generateProjectDir(title);
 
-	const [project] = await testDb.transaction(async (tx) => {
+	const [project] = await db.transaction(async (tx) => {
 		// Set auth context so RLS policies allow the insert
 		await tx.execute(
 			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
@@ -168,12 +196,22 @@ export const grantIndexTypeAddon = async ({
 	userId,
 	indexType,
 	expiresAt,
+	testDb,
 }: {
 	userId: string;
 	indexType: "subject" | "author" | "scripture";
 	expiresAt?: Date;
+	testDb?: PgliteDatabase<typeof schema>;
 }) => {
-	return await testDb.transaction(async (tx) => {
+	// Get testDb from module-level override if not explicitly provided
+	const db = testDb || getTestDb();
+	if (!db) {
+		throw new Error(
+			"No test database available. Ensure test is running with proper setup.",
+		);
+	}
+
+	return await db.transaction(async (tx) => {
 		// Set auth context so RLS policies work
 		await tx.execute(
 			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
@@ -211,5 +249,127 @@ export const grantIndexTypeAddon = async ({
 		await tx.execute(sql`RESET ROLE`);
 
 		return addon;
+	});
+};
+
+// ============================================================================
+// Project Index Type Factory
+// ============================================================================
+
+export const createTestProjectIndexType = async ({
+	projectId,
+	indexType,
+	userId,
+	colorHue,
+	isVisible = true,
+	testDb,
+}: {
+	projectId: string;
+	indexType: "subject" | "author" | "scripture";
+	userId: string;
+	colorHue?: number;
+	isVisible?: boolean;
+	testDb?: PgliteDatabase<typeof schema>;
+}) => {
+	// Get testDb from module-level override if not explicitly provided
+	const db = testDb || getTestDb();
+	if (!db) {
+		throw new Error(
+			"No test database available. Ensure test is running with proper setup.",
+		);
+	}
+
+	const defaultColorHue =
+		indexType === "subject" ? 230 : indexType === "author" ? 280 : 30;
+
+	return await db.transaction(async (tx) => {
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
+
+		const [projectIndexType] = await tx
+			.insert(projectIndexTypes)
+			.values({
+				projectId,
+				indexType,
+				colorHue: colorHue ?? defaultColorHue,
+				isVisible,
+			})
+			.returning();
+
+		await tx.execute(sql`RESET ROLE`);
+
+		return projectIndexType;
+	});
+};
+
+// ============================================================================
+// Index Entry Factory
+// ============================================================================
+
+export const createTestIndexEntry = async ({
+	projectId,
+	projectIndexTypeId,
+	label,
+	slug,
+	userId,
+	description,
+	parentId,
+	variants,
+	testDb,
+}: {
+	projectId: string;
+	projectIndexTypeId: string;
+	label: string;
+	slug: string;
+	userId: string;
+	description?: string;
+	parentId?: string;
+	variants?: string[];
+	testDb?: PgliteDatabase<typeof schema>;
+}) => {
+	// Get testDb from module-level override if not explicitly provided
+	const db = testDb || getTestDb();
+	if (!db) {
+		throw new Error(
+			"No test database available. Ensure test is running with proper setup.",
+		);
+	}
+
+	return await db.transaction(async (tx) => {
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
+
+		const [entry] = await tx
+			.insert(indexEntries)
+			.values({
+				projectId,
+				projectIndexTypeId,
+				label,
+				slug,
+				description: description ?? null,
+				parentId: parentId ?? null,
+				status: "active",
+				revision: 1,
+			})
+			.returning();
+
+		if (variants && variants.length > 0) {
+			await tx.insert(indexVariants).values(
+				variants.map((text) => ({
+					entryId: entry.id,
+					text,
+					variantType: "alias" as const,
+					revision: 1,
+				})),
+			);
+		}
+
+		await tx.execute(sql`RESET ROLE`);
+
+		return entry;
 	});
 };

@@ -1,12 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { createServer, registerPlugins } from "../server";
-
 // ============================================================================
 // Test Server Harness
 // ============================================================================
 
 export const createTestServer = async (): Promise<FastifyInstance> => {
 	const server = createServer();
+
+	// The test db is already set via module-level override in setup.ts beforeEach
+	// It's available to the server via getDb() in client.ts
 
 	// Register all plugins and routes (but don't listen)
 	await registerPlugins(server);

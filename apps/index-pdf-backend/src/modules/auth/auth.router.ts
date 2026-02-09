@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eventEmitter } from "../../events/emitter";
+// import { eventEmitter } from "../../events/emitter";
 import { logEvent } from "../../logger";
 import { protectedProcedure, publicProcedure, router } from "../../trpc";
 import { login, signup } from "./auth.service";
@@ -32,13 +32,14 @@ export const authRouter = router({
 					},
 				});
 
-				await eventEmitter.emit({
-					type: "user.created",
-					timestamp: new Date(),
-					userId: user.id,
-					email: user.email,
-					name: user.name ?? undefined,
-				});
+				// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
+				// await eventEmitter.emit({
+				// 	type: "user.created",
+				// 	timestamp: new Date(),
+				// 	userId: user.id,
+				// 	email: user.email,
+				// 	name: user.name ?? undefined,
+				// });
 
 				return {
 					user,
@@ -64,10 +65,8 @@ export const authRouter = router({
 					});
 				}
 
-				throw new TRPCError({
-					code: "INTERNAL_SERVER_ERROR",
-					message: error instanceof Error ? error.message : "Failed to sign up",
-				});
+				// Re-throw to let middleware handle it
+				throw error;
 			}
 		}),
 
@@ -91,12 +90,13 @@ export const authRouter = router({
 					},
 				});
 
-				await eventEmitter.emit({
-					type: "user.logged_in",
-					timestamp: new Date(),
-					userId: user.id,
-					email: user.email,
-				});
+				// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
+				// await eventEmitter.emit({
+				// 	type: "user.logged_in",
+				// 	timestamp: new Date(),
+				// 	userId: user.id,
+				// 	email: user.email,
+				// });
 
 				return {
 					user,
@@ -115,12 +115,13 @@ export const authRouter = router({
 					},
 				});
 
-				await eventEmitter.emit({
-					type: "auth.failed_login_attempt",
-					timestamp: new Date(),
-					email: input.email,
-					reason: error instanceof Error ? error.message : "Unknown error",
-				});
+				// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
+				// await eventEmitter.emit({
+				// 	type: "auth.failed_login_attempt",
+				// 	timestamp: new Date(),
+				// 	email: input.email,
+				// 	reason: error instanceof Error ? error.message : "Unknown error",
+				// });
 
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
@@ -145,12 +146,13 @@ export const authRouter = router({
 			},
 		});
 
-		await eventEmitter.emit({
-			type: "user.logged_out",
-			timestamp: new Date(),
-			userId: ctx.user.id,
-			email: ctx.user.email,
-		});
+		// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
+		// await eventEmitter.emit({
+		// 	type: "user.logged_out",
+		// 	timestamp: new Date(),
+		// 	userId: ctx.user.id,
+		// 	email: ctx.user.email,
+		// });
 
 		return { message: "Signed out successfully" };
 	}),
