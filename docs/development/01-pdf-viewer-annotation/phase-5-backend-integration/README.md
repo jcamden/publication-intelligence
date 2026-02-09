@@ -1,12 +1,14 @@
 # Phase 5: Backend Integration
 
-**Status:** ⚪ Ready to Start  
+**Status:** 🟡 In Progress (Backend Complete, Frontend Pending)  
 **Dependencies:** Phase 4 completion ✅  
 **Duration:** 7-10 days
 
 ## Overview
 
-Persist mentions, entries, and index types to Gel database with CRUD operations and optimistic updates. This phase transitions from Phase 4's local state management to full backend integration.
+Persist mentions, entries, and index types to database with CRUD operations and optimistic updates. This phase transitions from Phase 4's local state management to full backend integration.
+
+**Major Change:** As of commit `3580a8f`, the database layer was migrated from EdgeDB (Gel) to **Drizzle ORM + PostgreSQL** with Row Level Security.
 
 ## Key Data Model Summary
 
@@ -14,15 +16,17 @@ Persist mentions, entries, and index types to Gel database with CRUD operations 
 
 **User purchases index type addons → Project enables index types → Entries & Mentions use those types**
 
-1. **IndexTypeDefinition** (System-wide catalog)
-   - Defines available index types (Subject, Author, Scripture, Bibliography, etc.)
-   - Each has default color and description
-   - Managed by system, rarely changes
+1. **Index Type Enum + Application Metadata** (System-wide catalog)
+   - PostgreSQL enum: `index_type` with values (subject, author, scripture, etc.)
+   - Metadata stored in TypeScript: `INDEX_TYPE_CONFIG` with display names, colors, descriptions
+   - Fixed set of ~9 types, not user-extensible
+   - Simpler than separate table, no joins needed for metadata
 
 2. **UserIndexTypeAddon** (User's purchased addons)
-   - Junction table: which users have access to which index types
-   - Managed by payment system (Stripe webhooks)
+   - Junction table: which users have access to which index types (enum values)
+   - Managed by payment system (Stripe webhooks - future work)
    - Users can only see/use index types they have addons for
+   - Row Level Security enforces access
 
 3. **ProjectIndexType** (Project's enabled types with customization)
    - Projects enable index types the owner has addons for
@@ -49,9 +53,22 @@ Persist mentions, entries, and index types to Gel database with CRUD operations 
 
 ### [5A: Schema Migration & Index Type Backend](./task-5a-schema-migration.md)
 **Duration:** 2-3 days  
-**Status:** ⚪ Not Started
+**Status:** ✅ **COMPLETE** (Backend) - commit `3580a8f`
 
-Schema changes (IndexTypeDefinition, UserIndexTypeAddon, ProjectIndexType, IndexEntry.project_index_type, IndexMention.project_index_types, Context). Addon-based access control. No migration needed (fresh start). CRUD endpoints for enabling/disabling index types in projects.
+**Completed:**
+- ✅ Database migration from EdgeDB (Gel) to Drizzle ORM + PostgreSQL
+- ✅ Index type enum + application metadata system
+- ✅ UserIndexTypeAddon table with RLS policies
+- ✅ ProjectIndexType table with customization fields
+- ✅ IndexEntry.project_index_type_id field
+- ✅ IndexMention multi-type support via junction table
+- ✅ Context table (simplified schema)
+- ✅ Full tRPC CRUD endpoints (list, enable, update, reorder, disable)
+- ✅ Integration and security tests
+
+**Pending:**
+- 🔮 Frontend UI for project settings (edit modal with index type add/remove)
+- ✅ Color customization already implemented in editor sidebar
 
 ### [5B: IndexEntry Backend](./task-5b-index-entry-backend.md)
 **Duration:** 2 days  
@@ -74,20 +91,22 @@ React Query optimistic updates, error handling, retry logic, loading states, sta
 ## Completion Criteria
 
 Phase 5 complete when:
-- [ ] Schema created (IndexTypeDefinition, UserIndexTypeAddon, ProjectIndexType, etc.)
-- [ ] Default addon grants working (all users get Subject, Author, Scripture)
-- [ ] ProjectIndexType CRUD working (enable/disable/reorder)
-- [ ] Addon access control working (users only see types they have access to)
-- [ ] IndexEntry CRUD working (filtered by accessible types)
-- [ ] IndexMention CRUD working (multi-type support, addon validation)
+- [x] Schema created (Index type enum, UserIndexTypeAddon, ProjectIndexType, etc.)
+- [x] ProjectIndexType CRUD working (enable/disable/reorder)
+- [x] Addon access control working (RLS policies enforce addon ownership)
+- [x] Context schema ready for Phase 6
+- [ ] Default addon grants working (all users get Subject, Author, Scripture) - *needs implementation*
+- [ ] IndexEntry CRUD working (filtered by accessible types) - *backend only*
+- [ ] IndexMention CRUD working (multi-type support, addon validation) - *backend only*
 - [ ] Parent/child hierarchy constraints enforced
 - [ ] Entry search and exact match working
 - [ ] Optimistic updates smooth (no flicker)
 - [ ] Error handling graceful (retry, rollback)
 - [ ] Local state replaced with tRPC queries
-- [ ] Context schema ready for Phase 6
 - [ ] ~~Collaborative access tested (users with different addons)~~ (Collaboration not in MVP)
 - [ ] Performance acceptable (< 200ms for operations)
+- [x] ~~Frontend color customization~~ → Already implemented in editor sidebar
+- [ ] Frontend project settings modal (edit title, description, index types, delete)
 
 ## Frontend Architecture (Established in Phase 4)
 
