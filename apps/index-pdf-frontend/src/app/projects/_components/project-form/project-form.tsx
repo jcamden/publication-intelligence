@@ -18,11 +18,14 @@ import {
 import { Textarea } from "@pubint/yabasic/components/ui/textarea";
 import { PdfFileUpload, PdfThumbnail } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
+import { FileIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { API_URL } from "@/app/_common/_config/api";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
+import { useDebouncedValue } from "@/app/_common/_hooks/use-debounced-value";
 import { trpc } from "@/app/_common/_utils/trpc";
+import { useAuthenticatedPdf } from "@/app/projects/_hooks/use-authenticated-pdf";
 
 // All index types (for MVP)
 const ALL_INDEX_TYPES = [
@@ -79,23 +82,65 @@ const toKebabCase = (str: string): string => {
 };
 
 export type ProjectFormProps = {
+	mode?: "create" | "edit";
+	projectId?: string;
+	initialData?: {
+		title: string;
+		description: string | null;
+		project_dir: string;
+		selectedIndexTypes: string[];
+		sourceDocument?: {
+			id: string;
+			title: string;
+			file_name: string;
+			file_size: number | null;
+			page_count: number | null;
+		} | null;
+	};
 	onSuccess: () => void;
 	onCancel: () => void;
 	existingProjects: Array<{ project_dir: string; title: string }>;
+	renderDeleteButton?: () => React.ReactNode;
 };
 
 export const ProjectForm = ({
+	mode: propMode,
+	projectId,
+	initialData,
 	onSuccess,
 	onCancel,
 	existingProjects,
+	renderDeleteButton,
 }: ProjectFormProps) => {
+	const mode = propMode ?? "create";
+	const isEditMode = mode === "edit";
+
 	const { authToken } = useAuthToken();
 	const [selectedFile, setSelectedFile] = useState<File | undefined>();
-	const [isProjectDirManual, setIsProjectDirManual] = useState(false);
+	const [isProjectDirManual, setIsProjectDirManual] = useState(
+		isEditMode || false,
+	);
 	const [submitError, setSubmitError] = useState<string | null>(null);
-	const [selectedIndexTypes, setSelectedIndexTypes] = useState<string[]>([
-		"subject",
-	]); // Subject selected by default
+	const [selectedIndexTypes, setSelectedIndexTypes] = useState<string[]>(
+		initialData?.selectedIndexTypes ?? ["subject"],
+	);
+	const [currentTitle, setCurrentTitle] = useState(initialData?.title ?? "");
+	const debouncedTitle = useDebouncedValue({
+		value: currentTitle,
+		delay: 150,
+	});
+
+	// For edit mode: Load PDF for thumbnail display
+	const editModePdfUrl =
+		isEditMode && initialData?.sourceDocument
+			? `${API_URL}/source-documents/${initialData.sourceDocument.id}/file`
+			: null;
+
+	const {
+		blobUrl: editModePdfBlobUrl,
+		isLoading: isLoadingPdf,
+		error: pdfLoadError,
+	} = useAuthenticatedPdf({ url: editModePdfUrl });
 
 	// Query user's actual addons from backend
 	const userAddonsQuery = trpc.projectIndexType.listUserAddons.useQuery();
@@ -104,137 +149,161 @@ export const ProjectForm = ({
 	);
 
 	const createProjectMutation = trpc.project.create.useMutation();
+	const updateProjectMutation = trpc.project.update.useMutation();
 	const enableIndexTypeMutation = trpc.projectIndexType.enable.useMutation();
 
 	const form = useForm({
 		defaultValues: {
-			title: "",
-			description: "",
-			project_dir: "",
+			title: initialData?.title ?? "",
+			description: initialData?.description ?? "",
+			project_dir: initialData?.project_dir ?? "",
 		},
 		onSubmit: async ({ value }) => {
 			setSubmitError(null);
 
-			if (!selectedFile) {
-				setSubmitError("Please select a PDF file");
-				return;
-			}
-
-			// Validate project_dir before submission (even if auto-populated)
-			const projectDirValidation =
-				projectFormSchema.shape.project_dir.safeParse(value.project_dir);
-			if (!projectDirValidation.success) {
-				setSubmitError(
-					projectDirValidation.error.issues[0]?.message ||
-						"Invalid project directory",
-				);
-				return;
-			}
-
-			// Check for duplicate project_dir
-			const isDuplicateDir = existingProjects.some(
-				(p) => p.project_dir === value.project_dir,
-			);
-			if (isDuplicateDir) {
-				setSubmitError(
-					"This project directory is already in use. Please choose a different one.",
-				);
-				return;
-			}
-
-			// Check for duplicate title
-			const isDuplicateTitle = existingProjects.some(
-				(p) => p.title && p.title.toLowerCase() === value.title.toLowerCase(),
-			);
-			if (isDuplicateTitle) {
-				setSubmitError(
-					"A project with this title already exists. Please choose a different title.",
-				);
-				return;
-			}
-
-			try {
-				// 1. Create the project
-				const project = await createProjectMutation.mutateAsync({
-					title: value.title,
-					description: value.description,
-					project_dir: value.project_dir,
-				});
-
-				if (!authToken) {
-					throw new Error("Not authenticated");
+			if (isEditMode) {
+				// Edit mode: Update existing project
+				if (!projectId) {
+					setSubmitError("Project ID is required for editing");
+					return;
 				}
 
-				// 2. Enable selected index types for the project
-				const indexTypePromises = selectedIndexTypes.map((indexType) => {
-					const config = ALL_INDEX_TYPES.find((t) => t.id === indexType);
-					if (!config) return Promise.resolve();
-
-					return enableIndexTypeMutation.mutateAsync({
-						projectId: project.id,
-						indexType: indexType as (typeof ALL_INDEX_TYPES)[number]["id"],
-						colorHue: config.defaultHue,
-					});
-				});
-
-				await Promise.all(indexTypePromises);
-
-				// 3. Upload the PDF document
-				const formData = new FormData();
-				formData.append("file", selectedFile);
-				formData.append("title", selectedFile.name);
-
-				const response = await fetch(
-					`${API_URL}/projects/${project.id}/source-documents/upload`,
-					{
-						method: "POST",
-						headers: {
-							Authorization: `Bearer ${authToken}`,
+				try {
+					// Update project metadata
+					await updateProjectMutation.mutateAsync({
+						id: projectId,
+						data: {
+							title: value.title,
+							description: value.description || null,
+							project_dir: value.project_dir,
+						} as {
+							title?: string;
+							description?: string | null;
+							project_dir?: string;
 						},
-						body: formData,
-					},
-				);
+					});
 
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || "Failed to upload document");
+					// TODO: Handle index type changes if needed
+					// Compare selectedIndexTypes with initialData?.selectedIndexTypes
+					// Call enable/disable endpoints for changes
+
+					onSuccess();
+				} catch (error) {
+					console.error("Error updating project:", error);
+					setSubmitError(
+						error instanceof Error ? error.message : "Failed to update project",
+					);
+				}
+			} else {
+				// Create mode: Original create logic
+				if (!selectedFile) {
+					setSubmitError("Please select a PDF file");
+					return;
 				}
 
-				form.reset();
-				setSelectedIndexTypes(["subject"]); // Reset to default
-				onSuccess();
-			} catch (error) {
-				console.error("Error creating project:", error);
-				setSubmitError(
-					error instanceof Error ? error.message : "Failed to create project",
+				// Validate project_dir before submission (even if auto-populated)
+				const projectDirValidation =
+					projectFormSchema.shape.project_dir.safeParse(value.project_dir);
+				if (!projectDirValidation.success) {
+					setSubmitError(
+						projectDirValidation.error.issues[0]?.message ||
+							"Invalid project directory",
+					);
+					return;
+				}
+
+				// Check for duplicate project_dir
+				const isDuplicateDir = existingProjects.some(
+					(p) => p.project_dir === value.project_dir,
 				);
+				if (isDuplicateDir) {
+					setSubmitError(
+						"This project directory is already in use. Please choose a different one.",
+					);
+					return;
+				}
+
+				// Check for duplicate title
+				const isDuplicateTitle = existingProjects.some(
+					(p) => p.title && p.title.toLowerCase() === value.title.toLowerCase(),
+				);
+				if (isDuplicateTitle) {
+					setSubmitError(
+						"A project with this title already exists. Please choose a different title.",
+					);
+					return;
+				}
+
+				try {
+					// 1. Create the project
+					const project = await createProjectMutation.mutateAsync({
+						title: value.title,
+						description: value.description,
+						project_dir: value.project_dir,
+					});
+
+					if (!authToken) {
+						throw new Error("Not authenticated");
+					}
+
+					// 2. Enable selected index types for the project
+					const indexTypePromises = selectedIndexTypes.map((indexType) => {
+						const config = ALL_INDEX_TYPES.find((t) => t.id === indexType);
+						if (!config) return Promise.resolve();
+
+						return enableIndexTypeMutation.mutateAsync({
+							projectId: project.id,
+							indexType: indexType as (typeof ALL_INDEX_TYPES)[number]["id"],
+							colorHue: config.defaultHue,
+						});
+					});
+
+					await Promise.all(indexTypePromises);
+
+					// 3. Upload the PDF document
+					const formData = new FormData();
+					formData.append("file", selectedFile);
+					formData.append("title", selectedFile.name);
+
+					const response = await fetch(
+						`${API_URL}/projects/${project.id}/source-documents/upload`,
+						{
+							method: "POST",
+							headers: {
+								Authorization: `Bearer ${authToken}`,
+							},
+							body: formData,
+						},
+					);
+
+					if (!response.ok) {
+						const errorData = await response.json();
+						throw new Error(errorData.error || "Failed to upload document");
+					}
+
+					form.reset();
+					setSelectedIndexTypes(["subject"]); // Reset to default
+					onSuccess();
+				} catch (error) {
+					console.error("Error creating project:", error);
+					setSubmitError(
+						error instanceof Error ? error.message : "Failed to create project",
+					);
+				}
 			}
 		},
 	});
 
 	// Auto-populate project_dir from title (debounced to avoid performance issues)
 	useEffect(() => {
-		let timeoutId: NodeJS.Timeout;
-
-		const subscription = form.store.subscribe(() => {
-			const { title, project_dir } = form.store.state.values;
-			if (!isProjectDirManual && title) {
-				const kebabTitle = toKebabCase(title);
-				if (project_dir !== kebabTitle) {
-					// Debounce to avoid too many updates
-					clearTimeout(timeoutId);
-					timeoutId = setTimeout(() => {
-						form.setFieldValue("project_dir", kebabTitle);
-					}, 150);
-				}
+		if (!isProjectDirManual && debouncedTitle) {
+			const kebabTitle = toKebabCase(debouncedTitle);
+			const currentProjectDir = form.getFieldValue("project_dir");
+			if (currentProjectDir !== kebabTitle) {
+				form.setFieldValue("project_dir", kebabTitle);
 			}
-		});
-
-		return () => {
-			clearTimeout(timeoutId);
-			subscription();
-		};
-	}, [form, isProjectDirManual]);
+		}
+	}, [debouncedTitle, isProjectDirManual, form]);
 
 	const handleFileSelect = (file: File) => {
 		setSelectedFile(file);
@@ -256,25 +325,75 @@ export const ProjectForm = ({
 			}}
 		>
 			<div className="grid grid-cols-[300px_1fr] gap-8">
-				{/* Left Column - PDF Upload & Preview */}
-				<div className="space-y-4">
+				{/* Left Column - PDF Preview */}
+				<div className="space-y-4 flex flex-col justify-between">
 					<div>
-						<PdfFileUpload
-							onFileSelect={handleFileSelect}
-							onClear={handleFileClear}
-							selectedFile={selectedFile}
-							disabled={isSubmitting}
-						/>
+						{!isEditMode ? (
+							<>
+								<div>
+									<PdfFileUpload
+										onFileSelect={handleFileSelect}
+										onClear={handleFileClear}
+										selectedFile={selectedFile}
+										disabled={isSubmitting}
+									/>
+								</div>
+
+								{selectedFile && (
+									<div>
+										<FieldLabel>Preview</FieldLabel>
+										<div className="mt-2 w-full">
+											<PdfThumbnail source={selectedFile} alt="PDF preview" />
+										</div>
+									</div>
+								)}
+							</>
+						) : (
+							<div>
+								<FieldLabel>Source Document</FieldLabel>
+								<div className="mt-2 w-full h-[400px] bg-muted overflow-hidden flex-shrink-0 rounded">
+									{isLoadingPdf ? (
+										<div className="flex items-center justify-center h-full">
+											<div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+										</div>
+									) : pdfLoadError ? (
+										<div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
+											<FileIcon className="h-12 w-12 mb-2" />
+											<div className="text-sm">Failed to load PDF</div>
+											<div className="text-xs mt-1">{pdfLoadError}</div>
+										</div>
+									) : editModePdfBlobUrl ? (
+										<PdfThumbnail
+											source={editModePdfBlobUrl}
+											alt={
+												initialData?.sourceDocument?.file_name ?? "PDF preview"
+											}
+										/>
+									) : (
+										<div className="flex items-center justify-center h-full text-muted-foreground">
+											<FileIcon className="h-12 w-12" />
+											<div className="text-xs mt-2">No PDF data</div>
+										</div>
+									)}
+								</div>
+								{initialData?.sourceDocument && (
+									<div className="mt-2 space-y-1">
+										<div className="text-sm font-medium">
+											{initialData.sourceDocument.file_name}
+										</div>
+										{initialData.sourceDocument.page_count && (
+											<div className="text-xs text-muted-foreground">
+												{initialData.sourceDocument.page_count} pages
+											</div>
+										)}
+									</div>
+								)}
+							</div>
+						)}
 					</div>
 
-					{selectedFile && (
-						<div>
-							<FieldLabel>Preview</FieldLabel>
-							<div className="mt-2 w-full">
-								<PdfThumbnail source={selectedFile} alt="PDF preview" />
-							</div>
-						</div>
-					)}
+					{/* Delete button in edit mode */}
+					{renderDeleteButton && <div>{renderDeleteButton()}</div>}
 				</div>
 
 				{/* Right Column - Form Fields */}
@@ -297,12 +416,13 @@ export const ProjectForm = ({
 										return result.error.issues[0]?.message;
 									}
 
-									// Check for duplicate title
+									// Check for duplicate title (excluding current project in edit mode)
 									if (value) {
 										const isDuplicate = existingProjects.some(
 											(p) =>
 												p.title &&
-												p.title.toLowerCase() === value.toLowerCase(),
+												p.title.toLowerCase() === value.toLowerCase() &&
+												(!isEditMode || p.title !== initialData?.title),
 										);
 										if (isDuplicate) {
 											return "A project with this title already exists. Please choose a different title.";
@@ -322,7 +442,11 @@ export const ProjectForm = ({
 									<Input
 										id="title"
 										value={field.state.value}
-										onChange={(e) => field.handleChange(e.target.value)}
+										onChange={(e) => {
+											const newValue = e.target.value;
+											field.handleChange(newValue);
+											setCurrentTitle(newValue);
+										}}
 										onBlur={field.handleBlur}
 										placeholder="e.g., Word Biblical Commentary: Daniel"
 										disabled={isSubmitting}
@@ -398,10 +522,13 @@ export const ProjectForm = ({
 										return result.error.issues[0]?.message;
 									}
 
-									// Check for duplicate project_dir
+									// Check for duplicate project_dir (excluding current project in edit mode)
 									if (value) {
 										const isDuplicate = existingProjects.some(
-											(p) => p.project_dir === value,
+											(p) =>
+												p.project_dir === value &&
+												(!isEditMode ||
+													p.project_dir !== initialData?.project_dir),
 										);
 										if (isDuplicate) {
 											return "This project directory is already in use. Please choose a different one.";
@@ -418,8 +545,9 @@ export const ProjectForm = ({
 										Project Directory
 									</FieldLabel>
 									<FieldDescription>
-										URL-friendly name: indexpdf.com/projects/
-										{field.state.value || "your-project"}
+										{isEditMode
+											? "Changing this will update the project URL"
+											: `URL-friendly name: indexpdf.com/projects/${field.state.value || "your-project"}`}
 									</FieldDescription>
 									<Input
 										id="project_dir"
@@ -520,10 +648,19 @@ export const ProjectForm = ({
 						<Button
 							type="submit"
 							disabled={
-								isSubmitting || !selectedFile || selectedIndexTypes.length === 0
+								isSubmitting ||
+								(isEditMode
+									? false
+									: !selectedFile || selectedIndexTypes.length === 0)
 							}
 						>
-							{isSubmitting ? "Creating..." : "Create Project"}
+							{isSubmitting
+								? isEditMode
+									? "Saving..."
+									: "Creating..."
+								: isEditMode
+									? "Update Project"
+									: "Create Project"}
 						</Button>
 					</div>
 				</div>

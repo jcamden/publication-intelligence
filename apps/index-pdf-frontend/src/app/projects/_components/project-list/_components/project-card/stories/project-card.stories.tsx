@@ -32,7 +32,7 @@ export const Default: Story = {
 				storage_key: "storage-key-6",
 			},
 		},
-		onDelete: fn(),
+		onSettingsClick: fn(),
 	},
 };
 
@@ -54,7 +54,7 @@ export const ListLayout: StoryObj<typeof ProjectCard> = {
 						storage_key: "storage-key-l1",
 					},
 				}}
-				onDelete={fn()}
+				onSettingsClick={fn()}
 			/>
 			<ProjectCard
 				project={{
@@ -71,7 +71,7 @@ export const ListLayout: StoryObj<typeof ProjectCard> = {
 						storage_key: "storage-key-l2",
 					},
 				}}
-				onDelete={fn()}
+				onSettingsClick={fn()}
 			/>
 			<ProjectCard
 				project={{
@@ -88,7 +88,7 @@ export const ListLayout: StoryObj<typeof ProjectCard> = {
 						storage_key: "storage-key-l3",
 					},
 				}}
-				onDelete={fn()}
+				onSettingsClick={fn()}
 			/>
 		</div>
 	),

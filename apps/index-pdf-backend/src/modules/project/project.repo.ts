@@ -91,6 +91,7 @@ export const createProject = async ({
 				has_document: false,
 				entry_count: entryCountResult.count,
 				is_deleted: false,
+				source_document: null,
 			};
 		},
 	});
@@ -192,16 +193,25 @@ export const getProjectById = async ({
 
 			const project = result[0];
 
-			// Check if has_document
-			const [hasDocResult] = await tx
-				.select({ count: count() })
+			// Get source document details
+			const sourceDocResult = await tx
+				.select({
+					id: sourceDocuments.id,
+					title: sourceDocuments.title,
+					file_name: sourceDocuments.fileName,
+					file_size: sourceDocuments.fileSize,
+					page_count: sourceDocuments.pageCount,
+					storage_key: sourceDocuments.storageKey,
+					status: sourceDocuments.status,
+				})
 				.from(sourceDocuments)
 				.where(
 					and(
 						eq(sourceDocuments.projectId, projectId),
 						isNull(sourceDocuments.deletedAt),
 					),
-				);
+				)
+				.limit(1);
 
 			// Get entry count
 			const [entryCountResult] = await tx
@@ -214,6 +224,8 @@ export const getProjectById = async ({
 					),
 				);
 
+			const sourceDoc = sourceDocResult[0] || null;
+
 			return {
 				id: project.id,
 				title: project.title,
@@ -223,9 +235,10 @@ export const getProjectById = async ({
 				created_at: project.created_at,
 				updated_at: project.updated_at,
 				deleted_at: project.deleted_at,
-				has_document: hasDocResult.count > 0,
+				has_document: sourceDoc !== null,
 				entry_count: entryCountResult.count,
 				is_deleted: project.deleted_at !== null,
+				source_document: sourceDoc,
 			};
 		},
 	});
@@ -329,6 +342,10 @@ export const updateProject = async ({
 				updateValues.description = input.description;
 			}
 
+			if (input.project_dir !== undefined) {
+				updateValues.projectDir = input.project_dir;
+			}
+
 			// Perform update (RLS policies enforce authorization)
 			const result = await tx
 				.update(projects)
@@ -367,16 +384,25 @@ export const updateProject = async ({
 
 			const project = projectResult[0];
 
-			// Get has_document count
-			const [hasDocResult] = await tx
-				.select({ count: count() })
+			// Get source document details
+			const sourceDocResult = await tx
+				.select({
+					id: sourceDocuments.id,
+					title: sourceDocuments.title,
+					file_name: sourceDocuments.fileName,
+					file_size: sourceDocuments.fileSize,
+					page_count: sourceDocuments.pageCount,
+					storage_key: sourceDocuments.storageKey,
+					status: sourceDocuments.status,
+				})
 				.from(sourceDocuments)
 				.where(
 					and(
 						eq(sourceDocuments.projectId, projectId),
 						isNull(sourceDocuments.deletedAt),
 					),
-				);
+				)
+				.limit(1);
 
 			// Get entry count
 			const [entryCountResult] = await tx
@@ -389,6 +415,8 @@ export const updateProject = async ({
 					),
 				);
 
+			const sourceDoc = sourceDocResult[0] || null;
+
 			return {
 				id: project.id,
 				title: project.title,
@@ -398,9 +426,10 @@ export const updateProject = async ({
 				created_at: project.created_at,
 				updated_at: project.updated_at,
 				deleted_at: project.deleted_at,
-				has_document: hasDocResult.count > 0,
+				has_document: sourceDoc !== null,
 				entry_count: entryCountResult.count,
 				is_deleted: project.deleted_at !== null,
+				source_document: sourceDoc,
 			};
 		},
 	});

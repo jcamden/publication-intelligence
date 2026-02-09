@@ -63,7 +63,7 @@ export const Default: Story = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 };
 
@@ -71,7 +71,7 @@ export const Empty: Story = {
 	args: {
 		projects: [],
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 		onCreateClick: fn(),
 	},
 	parameters: {
@@ -87,7 +87,7 @@ export const Loading: Story = {
 	args: {
 		projects: [],
 		isLoading: true,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 	parameters: {
 		docs: {
@@ -102,7 +102,7 @@ export const SingleProject: Story = {
 	args: {
 		projects: [mockProjects[0]],
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 };
 
@@ -154,7 +154,7 @@ export const ManyProjects: Story = {
 			},
 		],
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 	parameters: {
 		docs: {
@@ -185,7 +185,7 @@ export const WithoutDocuments: Story = {
 			mockProjects[0],
 		],
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 	parameters: {
 		docs: {
@@ -222,7 +222,7 @@ export const ResponsiveLayout: Story = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 	parameters: {
 		docs: {
@@ -256,7 +256,7 @@ export const LongTitlesAndDescriptions: Story = {
 			mockProjects[1],
 		],
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 	parameters: {
 		docs: {
@@ -302,7 +302,7 @@ export const MixedSizes: Story = {
 			},
 		],
 		isLoading: false,
-		onDeleteClick: fn(),
+		onSettingsClick: fn(),
 	},
 	parameters: {
 		docs: {

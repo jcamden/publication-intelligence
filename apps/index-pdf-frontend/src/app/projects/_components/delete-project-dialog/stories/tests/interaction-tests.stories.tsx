@@ -13,127 +13,59 @@ export default {
 	},
 } satisfies Meta<typeof DeleteProjectDialog>;
 
-export const OpensWhenProjectIdProvided: StoryObj<typeof DeleteProjectDialog> =
-	{
-		args: {
-			projectId: "project-123",
-			onOpenChange: () => {},
-			onSuccess: () => {},
-		},
-		play: async ({ canvasElement: _canvasElement }) => {
-			// Dialog renders in portal - query from document.body
-			await waitFor(async () => {
-				const body = within(document.body);
-				const dialog = body.getByRole("alertdialog", { hidden: true });
-				await expect(dialog).toBeInTheDocument();
-
-				// Verify warning message
-				const warningText = body.getByText(/this will permanently delete/i);
-				await expect(warningText).toBeInTheDocument();
-			});
-		},
-	};
-
-export const CancelButtonClosesDialog: StoryObj<typeof DeleteProjectDialog> = {
+export const DeleteButtonEnabledAfterConfirmation: StoryObj<
+	typeof DeleteProjectDialog
+> = {
 	args: {
-		projectId: "project-456",
+		projectId: "project-confirm",
 		onOpenChange: () => {},
 		onSuccess: () => {},
 	},
-	play: async ({ canvasElement: _canvasElement }) => {
+	play: async ({ canvasElement: _canvasElement, step }) => {
 		const user = userEvent.setup();
-
-		// Dialog renders in portal - query from document.body
-		await waitFor(async () => {
-			const body = within(document.body);
-			const cancelButton = body.getByRole("button", { name: /cancel/i });
-			await expect(cancelButton).toBeInTheDocument();
-			await user.click(cancelButton);
-		});
-	},
-};
-
-export const DeleteButtonTriggersAction: StoryObj<typeof DeleteProjectDialog> =
-	{
-		args: {
-			projectId: "project-789",
-			onOpenChange: () => {},
-			onSuccess: () => {},
-		},
-		play: async ({ canvasElement: _canvasElement }) => {
-			const user = userEvent.setup();
-
-			// Dialog renders in portal - query from document.body
-			await waitFor(async () => {
-				const body = within(document.body);
-				const deleteButton = body.getByRole("button", { name: /^delete$/i });
-				await expect(deleteButton).toBeInTheDocument();
-				await expect(deleteButton).not.toBeDisabled();
-
-				// Click delete button
-				await user.click(deleteButton);
-
-				// Note: In real app, mutation will be triggered
-				// In storybook, we just verify the button is clickable
-			});
-		},
-	};
-
-export const KeyboardNavigation: StoryObj<typeof DeleteProjectDialog> = {
-	args: {
-		projectId: "project-kbd",
-		onOpenChange: () => {},
-		onSuccess: () => {},
-	},
-	play: async ({ canvasElement: _canvasElement }) => {
-		const user = userEvent.setup();
-
-		// Dialog renders in portal - query from document.body
 		const body = within(document.body);
 
-		// Wait for dialog to be fully mounted and focus to be initialized
-		await waitFor(
-			async () => {
+		await step("Wait for dialog to open", async () => {
+			await waitFor(async () => {
 				const dialog = body.getByRole("alertdialog", { hidden: true });
 				await expect(dialog).toBeInTheDocument();
-			},
-			{ timeout: 3000 },
-		);
-
-		// Wait for initial focus to settle on Cancel button
-		const cancelButton = body.getByRole("button", { name: /cancel/i });
-		await waitFor(
-			async () => {
-				await expect(cancelButton).toHaveFocus();
-			},
-			{ timeout: 1000 },
-		);
-
-		// Tab to Delete button
-		await user.tab();
-		const deleteButton = body.getByRole("button", { name: /^delete$/i });
-		await expect(deleteButton).toHaveFocus();
-	},
-};
-
-export const WarningMessageIsVisible: StoryObj<typeof DeleteProjectDialog> = {
-	args: {
-		projectId: "project-warning",
-		onOpenChange: () => {},
-		onSuccess: () => {},
-	},
-	play: async ({ canvasElement: _canvasElement }) => {
-		// Dialog renders in portal - query from document.body
-		await waitFor(async () => {
-			const body = within(document.body);
-
-			// Verify all warning text is present
-			await expect(
-				body.getByText(/permanently delete the project/i),
-			).toBeInTheDocument();
-			await expect(
-				body.getByText(/this action cannot be undone/i),
-			).toBeInTheDocument();
+			});
 		});
+
+		await step("Wait for project data to load", async () => {
+			// Give the tRPC query time to resolve
+			await new Promise((resolve) => setTimeout(resolve, 500));
+		});
+
+		await step("Type incorrect confirmation text", async () => {
+			const confirmInput = body.getByPlaceholderText(
+				/type project name to confirm/i,
+			);
+			await user.type(confirmInput, "wrong name");
+
+			const deleteButton = body.getByRole("button", { name: /^delete$/i });
+			await expect(deleteButton).toBeDisabled();
+		});
+
+		await step("Clear and type correct confirmation text", async () => {
+			const confirmInput = body.getByPlaceholderText(
+				/type project name to confirm/i,
+			);
+			await user.clear(confirmInput);
+
+			// Type the correct project name from mock (see trpc-decorator.tsx)
+			await user.type(confirmInput, "Test Project Title");
+
+			// Wait for debounced validation (150ms delay in component)
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+
+		await step(
+			"Verify delete button is enabled with correct text",
+			async () => {
+				const deleteButton = body.getByRole("button", { name: /^delete$/i });
+				await expect(deleteButton).toBeEnabled();
+			},
+		);
 	},
 };

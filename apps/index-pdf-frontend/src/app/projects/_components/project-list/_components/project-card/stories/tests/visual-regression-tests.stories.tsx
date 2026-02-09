@@ -37,7 +37,7 @@ const mockProject = {
 export const DefaultLight: StoryObj<typeof ProjectCard> = {
 	args: {
 		project: mockProject,
-		onDelete: () => {},
+		onSettingsClick: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -48,7 +48,7 @@ export const DefaultLight: StoryObj<typeof ProjectCard> = {
 export const DefaultDark: StoryObj<typeof ProjectCard> = {
 	args: {
 		project: mockProject,
-		onDelete: () => {},
+		onSettingsClick: () => {},
 	},
 	parameters: {
 		backgrounds: { default: "dark" },
@@ -62,7 +62,7 @@ export const DefaultDark: StoryObj<typeof ProjectCard> = {
 export const HoverStateLight: StoryObj<typeof ProjectCard> = {
 	args: {
 		project: mockProject,
-		onDelete: () => {},
+		onSettingsClick: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -81,7 +81,7 @@ export const HoverStateLight: StoryObj<typeof ProjectCard> = {
 export const HoverStateDark: StoryObj<typeof ProjectCard> = {
 	args: {
 		project: mockProject,
-		onDelete: () => {},
+		onSettingsClick: () => {},
 	},
 	parameters: {
 		backgrounds: { default: "dark" },

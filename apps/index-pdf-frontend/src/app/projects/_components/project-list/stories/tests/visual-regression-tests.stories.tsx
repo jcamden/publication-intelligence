@@ -61,7 +61,7 @@ export const DefaultLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -73,7 +73,7 @@ export const DefaultDark: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	parameters: {
 		backgrounds: { default: "dark" },
@@ -88,7 +88,7 @@ export const EmptyStateLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 		onCreateClick: () => {},
 	},
 	globals: {
@@ -101,7 +101,7 @@ export const EmptyStateDark: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 		onCreateClick: () => {},
 	},
 	parameters: {
@@ -117,7 +117,7 @@ export const LoadingStateLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: true,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -129,7 +129,7 @@ export const MobileLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	globals: {
 		...defaultGlobals,
@@ -142,7 +142,7 @@ export const TabletLight: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	globals: {
 		...defaultGlobals,

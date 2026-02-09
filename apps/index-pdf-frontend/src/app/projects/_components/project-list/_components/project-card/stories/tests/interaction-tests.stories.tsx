@@ -31,7 +31,7 @@ const mockProject = {
 export const ClickableCard: StoryObj<typeof ProjectCard> = {
 	args: {
 		project: mockProject,
-		onDelete: () => {},
+		onSettingsClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
@@ -45,50 +45,74 @@ export const ClickableCard: StoryObj<typeof ProjectCard> = {
 	},
 };
 
-export const DeleteButtonAppearsOnHover: StoryObj<typeof ProjectCard> = {
+export const SettingsButtonAppearsOnHover: StoryObj<typeof ProjectCard> = {
 	args: {
 		project: mockProject,
-		onDelete: () => {},
+		onSettingsClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
 
-		// Delete button exists (but has opacity-0 initially)
-		const deleteButton = canvas.getByRole("button", {
-			name: /delete project/i,
+		// Settings button exists (but has opacity-0 initially)
+		const settingsButton = canvas.getByRole("button", {
+			name: /project settings/i,
 		});
-		await expect(deleteButton).toBeInTheDocument();
+		await expect(settingsButton).toBeInTheDocument();
 
-		// Find the card and hover to reveal delete button
+		// Find the card and hover to reveal settings button
 		const card = canvas.getByRole("link");
 		await user.hover(card);
 
 		// Button is now revealed via group-hover (can be clicked even if opacity animation is ongoing)
-		await expect(deleteButton).toBeInTheDocument();
+		await expect(settingsButton).toBeInTheDocument();
 	},
 };
 
-export const DeleteButtonTriggersCallback: StoryObj<typeof ProjectCard> = {
+export const SettingsButtonTriggersCallback: StoryObj<typeof ProjectCard> = {
 	args: {
 		project: mockProject,
-		onDelete: () => {},
+		onSettingsClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
 
-		// Hover to show delete button
+		// Hover to show settings button
 		const card = canvas.getByRole("link");
 		await user.hover(card);
 
-		// Click delete button
-		const deleteButton = canvas.getByRole("button", {
-			name: /delete project/i,
+		// Click settings button
+		const settingsButton = canvas.getByRole("button", {
+			name: /project settings/i,
 		});
-		await user.click(deleteButton);
+		await user.click(settingsButton);
 
-		// Note: In real app, onDelete callback would be triggered
+		// Note: In real app, onSettingsClick callback would be triggered
 		// In storybook, we just verify the button is clickable
+	},
+};
+
+export const SettingsButtonStopsPropagation: StoryObj<typeof ProjectCard> = {
+	args: {
+		project: mockProject,
+		onSettingsClick: () => {},
+	},
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		const user = userEvent.setup();
+
+		// Hover to show settings button
+		const card = canvas.getByRole("link");
+		await user.hover(card);
+
+		// Click settings button (should not navigate to editor)
+		const settingsButton = canvas.getByRole("button", {
+			name: /project settings/i,
+		});
+		await user.click(settingsButton);
+
+		// Verify the settings button is still visible (didn't navigate away)
+		await expect(settingsButton).toBeInTheDocument();
 	},
 };

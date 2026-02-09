@@ -18,6 +18,7 @@ export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
 export const UpdateProjectSchema = z.object({
 	title: titleValidator.optional(),
 	description: z.string().max(2000).optional().nullable(),
+	project_dir: projectDirValidator.max(100).optional(),
 });
 
 export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
@@ -38,6 +39,15 @@ export type Project = {
 	has_document: boolean;
 	entry_count: number;
 	is_deleted: boolean;
+	source_document: {
+		id: string;
+		title: string;
+		file_name: string;
+		file_size: number | null;
+		page_count: number | null;
+		storage_key: string;
+		status: string;
+	} | null;
 };
 
 export type ProjectListItem = {

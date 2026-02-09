@@ -62,7 +62,7 @@ export const DisplaysProjects: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
@@ -80,7 +80,7 @@ export const ShowsLoadingState: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: true,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
 		// Verify loading skeleton cards are present (they have animate-pulse class)
@@ -93,7 +93,7 @@ export const ShowsEmptyState: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: [],
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 		onCreateClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
@@ -111,28 +111,28 @@ export const ShowsEmptyState: StoryObj<typeof ProjectList> = {
 	},
 };
 
-export const DeleteButtonsWork: StoryObj<typeof ProjectList> = {
+export const SettingsButtonsWork: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
 
-		// Delete buttons exist (with opacity-0 initially)
-		const deleteButtons = canvas.getAllByRole("button", {
-			name: /delete project/i,
+		// Settings buttons exist (with opacity-0 initially)
+		const settingsButtons = canvas.getAllByRole("button", {
+			name: /project settings/i,
 		});
-		expect(deleteButtons.length).toBeGreaterThan(0);
+		expect(settingsButtons.length).toBeGreaterThan(0);
 
-		// Find first project card and hover to reveal delete button
+		// Find first project card and hover to reveal settings button
 		const firstCard = canvas.getAllByRole("link")[0];
 		await user.hover(firstCard);
 
-		// Click delete button (it's now visible via group-hover)
-		await user.click(deleteButtons[0]);
+		// Click settings button (it's now visible via group-hover)
+		await user.click(settingsButtons[0]);
 	},
 };
 
@@ -140,7 +140,7 @@ export const ProjectCardsAreClickable: StoryObj<typeof ProjectList> = {
 	args: {
 		projects: mockProjects,
 		isLoading: false,
-		onDeleteClick: () => {},
+		onSettingsClick: () => {},
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);

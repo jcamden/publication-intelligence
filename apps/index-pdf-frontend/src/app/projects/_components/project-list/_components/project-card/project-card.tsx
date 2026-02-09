@@ -9,7 +9,7 @@ import {
 	CardTitle,
 } from "@pubint/yabasic/components/ui/card";
 import { PdfThumbnail } from "@pubint/yaboujee";
-import { FileIcon, Trash2Icon } from "lucide-react";
+import { FileIcon, Settings } from "lucide-react";
 import Link from "next/link";
 import { API_URL } from "@/app/_common/_config/api";
 import { useAuthenticatedPdf } from "@/app/projects/_hooks/use-authenticated-pdf";
@@ -29,7 +29,7 @@ export type ProjectCardProps = {
 			storage_key: string;
 		} | null;
 	};
-	onDelete: () => void;
+	onSettingsClick: () => void;
 };
 
 const formatFileSize = (bytes: number): string => {
@@ -40,7 +40,7 @@ const formatFileSize = (bytes: number): string => {
 	return `${Math.round(bytes / k ** i)} ${sizes[i]}`;
 };
 
-export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
+export const ProjectCard = ({ project, onSettingsClick }: ProjectCardProps) => {
 	const fileUrl = project.source_document
 		? `${API_URL}/source-documents/${project.source_document.id}/file`
 		: null;
@@ -56,11 +56,11 @@ export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
 				onClick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					onDelete();
+					onSettingsClick();
 				}}
-				aria-label="Delete project"
+				aria-label="Project settings"
 			>
-				<Trash2Icon className="h-4 w-4" />
+				<Settings className="h-4 w-4" />
 			</Button>
 
 			<Link

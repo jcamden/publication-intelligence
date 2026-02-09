@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { CreateProjectModal } from "./_components/create-project-modal";
-import { DeleteProjectDialog } from "./_components/delete-project-dialog";
+import { EditProjectModal } from "./_components/edit-project-modal";
 import { ProjectList } from "./_components/project-list";
 import { ProjectNavbar } from "./_components/project-navbar";
 
@@ -18,7 +18,7 @@ export default function ProjectsPage() {
 		clearToken,
 	} = useAuthToken();
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-	const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+	const [projectToEdit, setProjectToEdit] = useState<string | null>(null);
 
 	const userQuery = trpc.auth.me.useQuery(undefined, {
 		enabled: isAuthenticated,
@@ -38,8 +38,9 @@ export default function ProjectsPage() {
 		projectsQuery.refetch();
 	};
 
-	const handleDeleteSuccess = () => {
+	const handleEditSuccess = () => {
 		projectsQuery.refetch();
+		setProjectToEdit(null);
 	};
 
 	if (authLoading) {
@@ -87,7 +88,7 @@ export default function ProjectsPage() {
 				<ProjectList
 					projects={projectsQuery.data}
 					isLoading={projectsQuery.isLoading}
-					onDeleteClick={setProjectToDelete}
+					onSettingsClick={setProjectToEdit}
 					onCreateClick={() => setIsCreateModalOpen(true)}
 				/>
 
@@ -98,11 +99,15 @@ export default function ProjectsPage() {
 					existingProjects={projectsQuery.data ?? []}
 				/>
 
-				<DeleteProjectDialog
-					projectId={projectToDelete}
-					onOpenChange={(open: boolean) => !open && setProjectToDelete(null)}
-					onSuccess={handleDeleteSuccess}
-				/>
+				{projectToEdit && (
+					<EditProjectModal
+						open={!!projectToEdit}
+						onOpenChange={(open) => !open && setProjectToEdit(null)}
+						onSuccess={handleEditSuccess}
+						projectId={projectToEdit}
+						existingProjects={projectsQuery.data ?? []}
+					/>
+				)}
 			</div>
 		</>
 	);

@@ -16,7 +16,7 @@ const config: StorybookConfig = {
 		"storybook-addon-pseudo-states",
 	],
 	framework: "@storybook/react-vite",
-	staticDirs: ["./public"],
+	staticDirs: ["../.storybook/public"],
 	async viteFinal(config) {
 		config.plugins = config.plugins || [];
 		config.plugins.push(tailwindcss());

@@ -21,7 +21,7 @@ export const DefaultLight: StoryObj<typeof DeleteProjectDialog> = {
 	globals: {
 		...defaultGlobals,
 		theme: "light",
-		viewport: { value: "mobile1" },
+		viewport: { value: "mobile2", isRotated: true },
 	},
 };
 
@@ -37,6 +37,6 @@ export const DefaultDark: StoryObj<typeof DeleteProjectDialog> = {
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
-		viewport: { value: "mobile1" },
+		viewport: { value: "mobile2", isRotated: true },
 	},
 };

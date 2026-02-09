@@ -20,7 +20,7 @@ export type ProjectListProps = {
 		} | null;
 	}>;
 	isLoading?: boolean;
-	onDeleteClick: (projectId: string) => void;
+	onSettingsClick: (projectId: string) => void;
 	onCreateClick?: () => void;
 };
 
@@ -61,7 +61,7 @@ const EmptyState = ({ onCreateClick }: { onCreateClick?: () => void }) => (
 export const ProjectList = ({
 	projects,
 	isLoading,
-	onDeleteClick,
+	onSettingsClick,
 	onCreateClick,
 }: ProjectListProps) => {
 	if (isLoading) {
@@ -78,7 +78,7 @@ export const ProjectList = ({
 				<ProjectCard
 					key={project.id}
 					project={project}
-					onDelete={() => onDeleteClick(project.id)}
+					onSettingsClick={() => onSettingsClick(project.id)}
 				/>
 			))}
 		</div>

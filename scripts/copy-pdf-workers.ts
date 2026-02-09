@@ -90,12 +90,14 @@ const targets: CopyTarget[] = [
 	{
 		source: workerSource,
 		dest: join(rootDir, "packages/yaboujee/.storybook/public", workerFileName),
-		description: "yaboujee Storybook",
+		description:
+			"yaboujee Storybook (shared by .storybook, .storybook-interaction, .storybook-vrt)",
 	},
 	{
 		source: workerSource,
 		dest: join(rootDir, "apps/index-pdf-frontend/public", workerFileName),
-		description: "index-pdf-frontend (app + Storybook)",
+		description:
+			"index-pdf-frontend (app + all Storybook configs via staticDirs)",
 	},
 ];
 

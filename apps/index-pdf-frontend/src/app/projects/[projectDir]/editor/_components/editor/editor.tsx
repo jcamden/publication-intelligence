@@ -548,8 +548,20 @@ export const Editor = ({
 	const onlyProjectVisible = !projectCollapsed && !pdfVisible && pageCollapsed;
 	const onlyPageVisible = projectCollapsed && !pdfVisible && !pageCollapsed;
 
-	// Convert mentions to PdfHighlight format for rendering
-	const mentionHighlights: PdfHighlight[] = mentions.map((mention) => {
+	// Get visible index type names from projectIndexTypes
+	const visibleIndexTypeNames = new Set<string>(
+		projectIndexTypesQuery.data
+			?.filter((pit) => pit.visible !== false)
+			.map((pit) => pit.indexType) ?? [],
+	);
+
+	// Filter mentions to only include those with ALL types visible
+	const visibleMentions = mentions.filter((mention) =>
+		mention.indexTypes.every((typeName) => visibleIndexTypeNames.has(typeName)),
+	);
+
+	// Convert visible mentions to PdfHighlight format for rendering
+	const mentionHighlights: PdfHighlight[] = visibleMentions.map((mention) => {
 		// Map mention.indexTypes to hues from colorConfig
 		const hues = mention.indexTypes
 			.map((typeName) => {

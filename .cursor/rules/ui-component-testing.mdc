@@ -241,15 +241,35 @@ export const HoverState: Story = {
 
 ## Portal Rendering (Modals/Dialogs)
 
-Components rendering in portals require `within(document.body)`:
+Components rendering in portals (modals, dialogs, popovers, tooltips) render outside the `canvasElement`, so use `screen` instead of `canvas`:
 
 ```typescript
-await waitFor(async () => {
-  const body = within(document.body);
-  const modal = body.getByRole("dialog", { hidden: true });
-  await expect(modal).toBeInTheDocument();
-});
+import { screen, userEvent, waitFor, expect } from '@storybook/test';
+
+export const MyTest: Story = {
+ play: async ({ step }) => {
+ const user = userEvent.setup();
+ 
+ await step('Wait for modal to render', async () => {
+ await waitFor(async () => {
+ const modal = screen.getByRole("dialog", { hidden: true });
+ await expect(modal).toBeInTheDocument();
+ });
+ });
+ 
+ await step('Interact with modal content', async () => {
+ const button = screen.getByRole("button", { name: /submit/i });
+ await user.click(button);
+ });
+ },
+};
 ```
+
+**Key points:**
+- Use `screen` (not `canvas`) for portalled content
+- `screen` is equivalent to `within(document.body)` but cleaner
+- Always wait for the portal to render before querying elements
+- Use `{ hidden: true }` for dialog roles since portals may be aria-hidden initially
 
 ## Async UI Updates
 
