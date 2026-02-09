@@ -40,7 +40,12 @@ export const CreateMentionClick: Story = {
 			const createButton = body.getByRole("button", {
 				name: /create mention/i,
 			});
-			await expect(createButton).toBeVisible();
+			await waitFor(
+				async () => {
+					await expect(createButton).toBeVisible();
+				},
+				{ timeout: 500 },
+			);
 			await expect(createButton).toBeEnabled();
 			await userEvent.click(createButton);
 		});
