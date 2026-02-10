@@ -1,8 +1,14 @@
 # Phase 6: Context System
 
-**Status:** ✅ Complete  
+**Status:** ✅ Complete (Including Extended Features)  
 **Dependencies:** Phase 5 completion ✅  
 **Completed:** February 10, 2026
+
+**Extended Features Status:**
+- ✅ Page exclusion ("Remove from page", `exceptPages` field)
+- ✅ Conflict detection (client-side, automatic)
+- ✅ Conflict resolution UI (Project/Page Sidebar navigation)
+- ✅ "Every other page" with optional end page
 
 ## Overview
 
@@ -12,8 +18,8 @@ Implement region-based context system for marking areas to ignore during text ex
 - ✅ User-provided name (`name` field) for identification
 - ✅ Color customization (`color` field)
 - ✅ Visibility toggles (`visible` field)
-- ✅ "Every other page" support (`everyOther`, `startPage` fields)
-- ✅ Extracted page number storage (`extractedPageNumber` field)
+- ✅ "Every other page" support (`everyOther`, `startPage`, `endPage` fields)
+- ✅ Page exclusion support (`exceptPages` field)
 - ✅ Association changed from `documentId` → `projectId` (simpler, 1:1 in MVP)
 
 ## User Stories
@@ -60,10 +66,11 @@ Contexts can be applied to pages using these modes:
 
 ### Every Other Page, Starting On
 - **Implementation:** Top-level radio option (not a modifier)
-- Start page configurable via number input
-- Example: "Every other page starting on page 4" = 4, 6, 8, 10...
-- Example: "Every other page starting on page 5" = 5, 7, 9, 11...
-- **Backend mapping:** Stored as `pageConfigMode: "all_pages"` with `everyOther: true`
+- Start page configurable via number input (required)
+- End page configurable via number input (optional, defaults to last page of document)
+- Example: "Every other page starting on 4, ending on 10" = 4, 6, 8, 10
+- Example: "Every other page starting on 5" = 5, 7, 9, 11... (to end of document)
+- **Backend mapping:** Stored as `pageConfigMode: "all_pages"` with `everyOther: true`, `startPage`, and optional `endPage`
 
 ### Custom
 - Comma-separated list of ranges and individual pages
@@ -83,15 +90,12 @@ function appliesToPage({ context, targetPage }: {
       if (context.pageNumber !== targetPage) return false;
       break;
     case 'all_pages':
-      // Applies to all pages
-      break;
-    case 'page_range':
-      // Parse context.pageRange (e.g., "1-50")
-      // Check if targetPage is in range
+      // Applies to all pages (unless filtered by everyOther, endPage, or exceptPages)
       break;
     case 'custom':
       // Parse context.pageRange (e.g., "1-2,5-6,8")
       // Check if targetPage is in list
+      if (!isPageInCustomRange(context.pageRange, targetPage)) return false;
       break;
   }
   
@@ -101,6 +105,15 @@ function appliesToPage({ context, targetPage }: {
     if (offset < 0 || offset % 2 !== 0) {
       return false;
     }
+    // Check endPage boundary if specified
+    if (context.endPage !== undefined && targetPage > context.endPage) {
+      return false;
+    }
+  }
+  
+  // Check exceptPages exclusions
+  if (context.exceptPages && context.exceptPages.includes(targetPage)) {
+    return false;
   }
   
   return true;
@@ -210,15 +223,21 @@ function appliesToPage({ context, targetPage }: {
 - **Apply to:**
   - ○ This page only (default if created from page sidebar)
   - ○ All pages
-  - ○ Every other page, starting on: [___] (number input appears immediately when selected)
-  - ○ Custom pages: [___________________] (text input appears immediately when selected, e.g., "1-2, 5-6, 8, 10-12")
+  - ○ Every other page:
+    - Starting on: [___] (number input, required)
+    - Ending on: [___] (number input, optional - defaults to last page)
+  - ○ Custom pages: [___________________] (text input, e.g., "1-2, 5-6, 8, 10-12")
+- **Except pages:** [___________________] (text input, comma-separated, only visible when mode is NOT "this_page", e.g., "3, 5, 7")
 - **Color:** Color picker (default per type: Red for ignore, Purple for page_number)
 
 **Validation:**
 - Bbox must be drawn
+- Name is required
 - Page ranges must be valid (within document page count)
-- Custom string must parse correctly
-- "Every other starting page" must be within range
+- Custom string must parse correctly (e.g., "1-2,5-6,8")
+- "Every other starting page" must be within range (>= 1, <= document page count)
+- "Every other ending page" (if specified) must be >= starting page and <= document page count
+- Except pages must be valid comma-separated numbers and within the pages covered by the page config
 
 **Mockup:**
 ```
@@ -322,11 +341,12 @@ export const contexts = pgTable("contexts", {
   visible: boolean("visible").default(true).notNull(),  // Controls rendering on PDF
   everyOther: boolean("every_other").default(false).notNull(),  // Apply every other page
   startPage: integer("start_page"),  // Starting page for every other (e.g., 4 = 4,6,8,10...)
-  extractedPageNumber: text("extracted_page_number"),  // For page_number contexts, stores extracted value
+  endPage: integer("end_page"),  // Ending page for every other (optional, defaults to last page)
+  exceptPages: integer("except_pages").array(),  // Pages to exclude from this context
 });
 ```
 
-**Final Schema (after Phase 6):**
+**Final Schema (after Phase 6 extensions):**
 ```typescript
 {
   id: uuid;
@@ -338,10 +358,11 @@ export const contexts = pgTable("contexts", {
   pageRange: text;  // For custom mode (e.g., "1-2,5-6,8")
   everyOther: boolean;  // Whether to apply every other page
   startPage: integer;  // Starting page for every other
+  endPage: integer;  // Ending page for every other (optional, defaults to last page)
+  exceptPages: integer[];  // Pages to exclude (e.g., [3, 5, 7])
   bbox: json;  // BoundingBox in PDF user space
   color: text;  // Hex color
   visible: boolean;  // Visibility toggle
-  extractedPageNumber: text;  // Extracted page number (for page_number type)
   createdAt: timestamp;
   updatedAt: timestamp;
   deletedAt: timestamp;
@@ -365,10 +386,11 @@ type Context = {
   pageRange?: string;
   everyOther: boolean;
   startPage?: number;
+  endPage?: number;  // Optional ending page for every other mode
+  exceptPages?: number[];  // Pages to exclude
   bbox: BoundingBox;
   color: string;
   visible: boolean;
-  extractedPageNumber?: string;
   createdAt: Date;
   updatedAt?: Date;
   deletedAt?: Date;
@@ -384,6 +406,8 @@ type CreateContextInput = {
   pageRange?: string;
   everyOther?: boolean;
   startPage?: number;
+  endPage?: number;  // Optional ending page for every other mode
+  exceptPages?: number[];  // Optional exclusions
   color?: string;  // Default per type if not provided
   visible?: boolean;  // Default true
 };
@@ -395,9 +419,10 @@ type CreateContextInput = {
 context: {
   list: // Get all contexts for a project
   create: // Create new context with bbox and page config
-  update: // Update context (color, visible, page config, etc.)
+  update: // Update context (color, visible, page config, exceptPages, etc.)
   delete: // Soft delete context
   getForPage: // Get contexts that apply to a specific page number
+  // Note: detectConflicts runs client-side, no separate endpoint needed
 }
 ```
 
@@ -433,9 +458,10 @@ const createContext = trpc.context.create.useMutation({
 - ✅ Added `visible` field (boolean, default true)
 - ✅ Added `everyOther` field (boolean, default false)
 - ✅ Added `startPage` field (integer, for every other mode)
-- ✅ Added `extractedPageNumber` field (text, for page_number contexts)
+- ✅ Added `endPage` field (integer, optional ending page for every other mode)
+- ✅ Added `exceptPages` field (integer array, for page exclusions)
 - ✅ Updated RLS policies (inherit from projects)
-- ✅ Generated migrations (`0001_real_abomination.sql`, `0002_smooth_master_mold.sql`)
+- ✅ Generated migrations (`0001_real_abomination.sql`)
 
 **1. tRPC Backend**
 - ✅ Created context module (`context.repo.ts`, `context.service.ts`, `context.router.ts`)
@@ -485,6 +511,39 @@ const createContext = trpc.context.create.useMutation({
 - ✅ Visibility toggle hides/shows contexts
 - ✅ Context highlights use selected hex color
 - ✅ Semi-transparent fill for visibility
+
+### ✅ Completed: Extended Features
+
+**7. Page Exclusion ("Remove from Page")**
+- ✅ Added `except_pages` field to schema (integer array)
+- ✅ Updated `appliesToPage()` to check exceptPages
+- ✅ Implemented "Remove from page" button in Page Sidebar
+  - ✅ For "this_page" contexts: Shows confirmation, then deletes context
+  - ✅ For multi-page contexts: Adds current page to exceptPages
+- ✅ Added "Except pages" input to Create/Edit Context Modal (comma-separated, e.g., "3, 5, 7")
+- ✅ Updated page config summary to show exceptions (e.g., "All pages except 3, 5, 7")
+- ✅ Validated except pages are within the page config range
+
+**8. Conflict Detection & Resolution**
+- ✅ Implemented `detectPageNumberConflicts()` utility function (client-side)
+- ✅ Conflict detection runs client-side using `useMemo` (no separate tRPC endpoint needed)
+- ✅ Shows warning in Create/Edit modal when conflicts will occur
+  - ✅ Calculates conflicting pages
+  - ✅ Displays list of conflicts with context names
+  - ✅ Allows user to proceed (warning, not blocking)
+- ✅ Displays conflicts in Project Sidebar
+  - ✅ Shows "Conflicts: 5, 7, 9" below context (inline, comma-separated)
+  - ✅ Styles page numbers in red
+  - ✅ Clicking page number navigates PDF to that page
+- ✅ Displays conflict warning in Page Sidebar (when on conflicting page)
+  - ✅ Lists all conflicting contexts
+  - ✅ Shows "Remove from this page" for each
+  - ✅ Updates immediately after removal
+
+**9. Testing Documentation**
+- ✅ Documented all new functionality in phase-6-testing.md
+- ✅ Added test cases for page exclusion
+- ✅ Added test cases for conflict detection and resolution
 
 ### 🔧 Implementation Notes
 
@@ -555,16 +614,28 @@ const createContext = trpc.context.create.useMutation({
 - [x] Delete operations work (with confirmation)
 - [x] Visibility toggles show/hide contexts (inline eye icon)
 
-🔄 Phase 6 Deferred Features (to be completed with Phase 7):
-- [ ] "Remove from this page" functionality
-- [ ] Page exclusion support (e.g., "every other starting on 1; except 3,5,7")
-- [ ] Conflict detection for overlapping page_number contexts
-- [ ] Conflict resolution UI with navigation to conflicting pages
-- [ ] Interaction tests for context operations (see testing document)
+✅ Phase 6 Extended Features (Complete):
+- [x] "Remove from this page" functionality
+  - [x] Schema change: Added `except_pages` integer array field
+  - [x] For "this_page" contexts: Shows confirmation, deletes if confirmed
+  - [x] For multi-page contexts: Adds page to exceptPages array
+  - [x] Edit modal shows "Except pages" input (for multi-page modes)
+- [x] Page exclusion support (e.g., "every other starting on 1; except 3,5,7")
+  - [x] Updated `appliesToPage()` to check exceptPages
+  - [x] Display exceptions in page config summary
+- [x] Conflict detection for overlapping page_number contexts
+  - [x] Client-side: `detectPageNumberConflicts()` utility function
+  - [x] Conflict detection runs in Project Sidebar via `useMemo` (no tRPC endpoint)
+  - [x] Warning in Create/Edit modal (non-blocking)
+- [x] Conflict resolution UI with navigation to conflicting pages
+  - [x] Project Sidebar: Shows red page numbers for conflicts (inline, comma-separated)
+  - [x] Clicking red page number navigates to that page
+  - [x] Page Sidebar: Shows conflict warning with "Remove from page" buttons
+- [x] Testing documentation for all extended features (see phase-6-testing.md)
 
-## Deferred Features (Phase 6 Extensions)
+## Extended Features (Now Implementing)
 
-The following features were identified during Phase 6 implementation but deferred to be completed alongside Phase 7:
+The following features were identified during Phase 6 implementation and are now being implemented:
 
 ### Page Exclusion ("Except" Clause)
 
@@ -587,34 +658,67 @@ type Context = {
 - Context: "Custom pages 1-10,20-30, except 5,25"
   - `pageConfigMode: "custom"`, `pageRange: "1-10,20-30"`, `exceptPages: [5, 25]`
 
+**Special Case - "This Page Only" Context:**
+When a context has `pageConfigMode: "this_page"` and the user clicks "Remove from page":
+- Show confirmation: "Removing the last page from a context will delete it. Are you sure you'd like to proceed?"
+- If confirmed: Delete the context entirely (soft delete)
+- Rationale: A "this page only" context with zero pages makes no sense
+
 **UI Updates:**
 - "Remove from page" button adds current page to `exceptPages` array
-- Edit Context modal shows excluded pages with option to re-include them
+- Edit Context modal shows excluded pages input (for all multi-page modes)
+- Excluded pages input appears below page config options when mode is not "this_page"
+- User can edit the excluded pages list to re-include pages
 - Page config summary includes exceptions (e.g., "All pages except 3, 5, 7")
 
 ### Conflict Detection for Page Number Contexts
 
 **Constraint:** Only ONE `page_number` context can apply to any given page (to avoid ambiguity in canonical page numbers).
 
+**When to Check:** Automatically when creating or updating contexts.
+
+**Create/Edit Modal Validation:**
+When user submits the modal:
+1. Calculate which pages the context will apply to
+2. Check for conflicts with existing page_number contexts
+3. If conflicts exist, show warning before creating:
+   ```
+   ⚠️ Conflicts Detected
+   
+   This context will conflict with existing page number contexts on:
+   • Page 5 (with "Bottom-center Page Number")
+   • Page 7 (with "Bottom-center Page Number")
+   • Page 9 (with "Bottom-center Page Number")
+   
+   You can resolve these conflicts after creating the context, but
+   page numbers will be unavailable until conflicts are resolved.
+   
+   [Cancel] [Create Anyway]
+   ```
+4. Allow user to proceed (warning only, not blocking)
+
 **Conflict Detection Logic:**
 ```typescript
-// Backend: Detect conflicts when contexts change
-function detectPageNumberConflicts({ projectId }): ConflictReport[] {
-  const pageNumberContexts = getContexts({ projectId, type: 'page_number' });
+// Client-side: Detect conflicts when contexts change (from @pubint/core/context.utils.ts)
+function detectPageNumberConflicts({ 
+  contexts, 
+  maxPage 
+}: {
+  contexts: Context[];
+  maxPage: number;
+}): Array<{ pageNumber: number; contexts: Context[] }> {
+  const pageNumberContexts = contexts.filter(ctx => ctx.contextType === 'page_number');
   const conflicts = [];
   
-  for (let page = 1; page <= documentPageCount; page++) {
+  for (let page = 1; page <= maxPage; page++) {
     const contextsForPage = pageNumberContexts.filter(ctx => 
       appliesToPage({ context: ctx, targetPage: page })
     );
     
     if (contextsForPage.length > 1) {
       conflicts.push({
-        page,
-        contexts: contextsForPage.map(ctx => ({
-          id: ctx.id,
-          name: ctx.name,
-        })),
+        pageNumber: page,
+        contexts: contextsForPage,
       });
     }
   }
@@ -623,25 +727,33 @@ function detectPageNumberConflicts({ projectId }): ConflictReport[] {
 }
 ```
 
-**Conflict Resolution UI:**
+**Implementation Notes:**
+- Conflict detection runs **client-side** using the shared utility function
+- Project Sidebar uses `useMemo` to compute conflicts from fetched contexts
+- Create/Edit modal calls the utility directly before submitting
+- No separate tRPC endpoint needed (simplifies architecture)
 
-In Project Sidebar, contexts with conflicts show error state:
+**Conflict Display - Project Sidebar:**
+
+After a context is created/updated, conflicts appear immediately below the context:
 
 ```
 ┌─────────────────────────────────┐
 │ ● Top-right Page Number         │
 │   Page Number                   │
 │   All pages                     │
-│   ⚠️ CONFLICTS:                 │
-│   • Page 5 (with "Bottom PN")   │
-│     [Navigate to Page 5]        │
-│   • Page 7 (with "Bottom PN")   │
-│     [Navigate to Page 7]        │
+│   Conflicts: 5, 7, 9            │  ← Red colored page numbers
 │   [👁][✏️][🗑️]                  │
 └─────────────────────────────────┘
 ```
 
-In Page Sidebar (when on conflicting page):
+**Clicking a red page number:**
+- Navigates the PDF viewer to that page
+- Allows user to resolve conflict by removing one of the contexts
+
+**Conflict Display - Page Sidebar:**
+
+When viewing a page with conflicting page_number contexts:
 
 ```
 ┌─────────────────────────────────┐
@@ -658,10 +770,11 @@ In Page Sidebar (when on conflicting page):
 └─────────────────────────────────┘
 ```
 
-**Resolution Options:**
-1. Click "Remove from this page" on unwanted context (adds to `exceptPages`)
-2. Edit context to change page config (avoid overlap)
-3. Delete one of the conflicting contexts
+**Important Notes:**
+- Conflicts are NOT blocking - users can create conflicting contexts
+- Warning appears during creation/edit, but allows proceeding
+- Red page numbers appear immediately after context is created/updated
+- No separate conflict detection screen - just inline warnings and navigation
 
 ### Ignore Context Overlaps (No Conflict)
 
@@ -669,4 +782,4 @@ In Page Sidebar (when on conflicting page):
 
 ## Next Phase
 
-[Phase 7: Page Numbering System](../phase-7-page-numbering/) uses page number contexts to extract and display canonical page numbers. Phase 7 will complete the deferred Phase 6 features (page exclusion, conflict detection) as they are required for canonical page numbering to work correctly.
+[Phase 7: Page Numbering System](../phase-7-page-numbering/) uses page number contexts to extract and display canonical page numbers. All Phase 6 features (including page exclusion and conflict detection) have been completed and are ready for Phase 7 integration.

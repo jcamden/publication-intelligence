@@ -17,6 +17,8 @@ export type ContextListItem = {
 	pageRange?: string;
 	everyOther: boolean;
 	startPage?: number;
+	endPage?: number;
+	exceptPages?: number[];
 	bbox: {
 		x: number;
 		y: number;
@@ -25,7 +27,6 @@ export type ContextListItem = {
 	};
 	color: string;
 	visible: boolean;
-	extractedPageNumber?: string;
 	createdAt: string;
 };
 
@@ -73,6 +74,8 @@ export const CreateContextSchema = z.object({
 	pageRange: z.string().optional(),
 	everyOther: z.boolean().optional(),
 	startPage: z.number().int().min(1).optional(),
+	endPage: z.number().int().min(1).optional(),
+	exceptPages: z.array(z.number().int().min(1)).optional(),
 	color: z
 		.string()
 		.regex(/^#[0-9A-Fa-f]{6}$/)
@@ -92,12 +95,13 @@ export const UpdateContextSchema = z.object({
 	pageRange: z.string().optional(),
 	everyOther: z.boolean().optional(),
 	startPage: z.number().int().min(1).optional(),
+	endPage: z.number().int().min(1).optional(),
+	exceptPages: z.array(z.number().int().min(1)).optional(),
 	color: z
 		.string()
 		.regex(/^#[0-9A-Fa-f]{6}$/)
 		.optional(),
 	visible: z.boolean().optional(),
-	extractedPageNumber: z.string().optional(),
 });
 
 export type UpdateContextInput = z.infer<typeof UpdateContextSchema>;
@@ -107,3 +111,14 @@ export const DeleteContextSchema = z.object({
 });
 
 export type DeleteContextInput = z.infer<typeof DeleteContextSchema>;
+
+export const DetectConflictsSchema = z.object({
+	projectId: z.string().uuid(),
+});
+
+export type DetectConflictsInput = z.infer<typeof DetectConflictsSchema>;
+
+export type PageNumberConflict = {
+	pageNumber: number;
+	contexts: Array<{ id: string; name: string }>;
+};

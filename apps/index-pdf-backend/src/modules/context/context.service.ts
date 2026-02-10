@@ -1,15 +1,22 @@
-import { validatePageRange } from "@pubint/core";
+import {
+	type Context as CoreContext,
+	detectPageNumberConflicts,
+	validatePageRange,
+} from "@pubint/core";
 import { TRPCError } from "@trpc/server";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
+import * as projectRepo from "../project/project.repo";
 import * as contextRepo from "./context.repo";
 import type {
 	Context,
 	ContextListItem,
 	CreateContextInput,
 	DeleteContextInput,
+	DetectConflictsInput,
 	GetContextsForPageInput,
 	ListContextsInput,
+	PageNumberConflict,
 	UpdateContextInput,
 } from "./context.types";
 
@@ -224,4 +231,86 @@ export const deleteContext = async ({
 			},
 		},
 	});
+};
+
+export const detectConflicts = async ({
+	projectId,
+	userId,
+	requestId,
+}: DetectConflictsInput & {
+	userId: string;
+	requestId: string;
+}): Promise<PageNumberConflict[]> => {
+	logEvent({
+		event: "context.detect_conflicts_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				projectId,
+			},
+		},
+	});
+
+	// Get project to get page count
+	const project = await projectRepo.getProjectById({ projectId, userId });
+
+	if (!project) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Project not found",
+		});
+	}
+
+	if (!project.source_document?.page_count) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Project has no document or page count is not available",
+		});
+	}
+
+	// Get all contexts for the project
+	const contexts = await contextRepo.listContexts({
+		projectId,
+		includeDeleted: false,
+	});
+
+	// Convert to CoreContext type for the utility function
+	const coreContexts: CoreContext[] = contexts.map((ctx) => ({
+		id: ctx.id,
+		projectId: ctx.projectId,
+		name: ctx.name,
+		contextType: ctx.contextType,
+		pageConfigMode: ctx.pageConfigMode,
+		pageNumber: ctx.pageNumber,
+		pageRange: ctx.pageRange,
+		everyOther: ctx.everyOther,
+		startPage: ctx.startPage,
+		endPage: ctx.endPage,
+		exceptPages: ctx.exceptPages,
+		bbox: ctx.bbox,
+		color: ctx.color,
+		visible: ctx.visible,
+		createdAt: new Date(ctx.createdAt),
+	}));
+
+	// Detect conflicts using the utility function
+	const conflicts = detectPageNumberConflicts({
+		contexts: coreContexts,
+		maxPage: project.source_document.page_count,
+	});
+
+	logEvent({
+		event: "context.conflicts_detected",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				projectId,
+				conflictCount: conflicts.length,
+			},
+		},
+	});
+
+	return conflicts;
 };

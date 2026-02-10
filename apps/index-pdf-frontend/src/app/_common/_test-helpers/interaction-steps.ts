@@ -102,6 +102,12 @@ export const expectValidationError = async ({
  * Wait for PDF highlights to render in the highlight layer
  * Useful when testing Editor component stories that depend on highlights being visible
  *
+ * The highlight layer only renders when:
+ * 1. The PDF has loaded (viewport is set)
+ * 2. There are highlights for the current page
+ *
+ * This helper waits for both conditions to be met.
+ *
  * @example
  * await awaitHighlights({ canvas });
  */
@@ -112,12 +118,21 @@ export const awaitHighlights = async ({
 }) => {
 	await waitFor(
 		async () => {
-			const highlightLayer = canvas.getByTestId("pdf-highlight-layer");
+			// First check if highlight layer exists (means PDF loaded and has highlights)
+			const highlightLayer = canvas.queryByTestId("pdf-highlight-layer");
+			if (!highlightLayer) {
+				// If layer doesn't exist yet, throw to keep waiting
+				throw new Error(
+					"Highlight layer not yet rendered - PDF may still be loading",
+				);
+			}
+
+			// Once layer exists, verify it has highlight elements
 			const highlights = highlightLayer.querySelectorAll(
 				"[data-testid^='highlight-']",
 			);
 			await expect(highlights.length).toBeGreaterThan(0);
 		},
-		{ timeout: 10000 },
+		{ timeout: 15000, interval: 500 },
 	);
 };

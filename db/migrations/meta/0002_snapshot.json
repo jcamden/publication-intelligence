@@ -1,6 +1,6 @@
 {
-	"id": "f0ee2f4c-6f18-41de-9044-c52118910e78",
-	"prevId": "a83e1947-20c6-41ad-9509-ee568e632022",
+	"id": "86528c42-54f0-4e43-a6bd-4c299fe4135e",
+	"prevId": "7ced6550-7cfb-4e25-8b4f-b24076c18bc9",
 	"version": "7",
 	"dialect": "postgresql",
 	"tables": {
@@ -66,6 +66,12 @@
 					"primaryKey": false,
 					"notNull": false
 				},
+				"end_page": {
+					"name": "end_page",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"bbox": {
 					"name": "bbox",
 					"type": "json",
@@ -85,9 +91,9 @@
 					"notNull": true,
 					"default": true
 				},
-				"extracted_page_number": {
-					"name": "extracted_page_number",
-					"type": "text",
+				"except_pages": {
+					"name": "except_pages",
+					"type": "integer[]",
 					"primaryKey": false,
 					"notNull": false
 				},

@@ -1,7 +1,13 @@
 # Phase 6: Context System - Testing Checklist
 
-**Status:** 🔄 Testing Required  
+**Status:** ✅ Implementation Complete - Testing Pending  
 **Related:** [Phase 6 Implementation](./phase-6-context-system.md)
+
+**Implementation Notes:**
+- All core features completed (February 10, 2026)
+- Extended features completed (page exclusion, conflict detection, "every other" with end page)
+- Conflict detection runs client-side via `useMemo` (no separate backend endpoint)
+- Ready for comprehensive testing before Phase 7
 
 ## Pre-Testing Setup
 
@@ -73,9 +79,10 @@
 
 ### Create Context Modal - Page Config: Every Other Page
 - [ ] Select "Every other page, starting on" radio
-- [ ] **Expected:** Number input appears IMMEDIATELY below radio option
+- [ ] **Expected:** Number inputs appear IMMEDIATELY below radio option (starting on, ending on)
 - [ ] Input "4" as starting page
 - [ ] **Expected:** Input accepts value
+- [ ] Leave ending page empty (optional, defaults to last page)
 - [ ] Submit form
 - [ ] **Expected:** Context created
 - [ ] Navigate to page 4
@@ -86,6 +93,18 @@
 - [ ] **Expected:** Context visible in Page Sidebar
 - [ ] Navigate to page 3
 - [ ] **Expected:** Context NOT visible in Page Sidebar (before start page)
+
+### Create Context Modal - Page Config: Every Other Page with End Page
+- [ ] Select "Every other page, starting on" radio
+- [ ] Input "2" as starting page, "8" as ending page
+- [ ] Submit form
+- [ ] **Expected:** Context created
+- [ ] Navigate to pages 2, 4, 6, 8
+- [ ] **Expected:** Context visible in Page Sidebar
+- [ ] Navigate to page 10
+- [ ] **Expected:** Context NOT visible (after end page)
+- [ ] Navigate to pages 3, 5, 7, 9
+- [ ] **Expected:** Context NOT visible (odd pages)
 
 ### Create Context Modal - Page Config: Custom Pages
 - [ ] Select "Custom pages" radio
@@ -319,17 +338,29 @@
 - [ ] Navigate through all pages in document
 - [ ] **Expected:** Context visible on every page
 
-### Every Other Starting On (Odd Start)
+### Every Other Starting On (Odd Start, No End Page)
 - [ ] Create context with "Every other, starting on 5"
 - [ ] Navigate to pages: 3, 4, 5, 6, 7, 8, 9, 10
-- [ ] **Expected Visible:** Pages 5, 7, 9 only
+- [ ] **Expected Visible:** Pages 5, 7, 9 (and all subsequent odd pages)
 - [ ] **Expected Hidden:** Pages 3, 4, 6, 8, 10
 
-### Every Other Starting On (Even Start)
+### Every Other Starting On (Even Start, No End Page)
 - [ ] Create context with "Every other, starting on 4"
 - [ ] Navigate to pages: 2, 3, 4, 5, 6, 7, 8, 9
-- [ ] **Expected Visible:** Pages 4, 6, 8 only
+- [ ] **Expected Visible:** Pages 4, 6, 8 (and all subsequent even pages)
 - [ ] **Expected Hidden:** Pages 2, 3, 5, 7, 9
+
+### Every Other with End Page
+- [ ] Create context with "Every other, starting on 2, ending on 8"
+- [ ] Navigate to pages: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+- [ ] **Expected Visible:** Pages 2, 4, 6, 8 only
+- [ ] **Expected Hidden:** Pages 1, 3, 5, 7, 9, 10 (before start, after end, or odd pages)
+
+### Every Other with End Page Validation
+- [ ] Select "Every other" mode
+- [ ] Input starting page "10", ending page "5"
+- [ ] Try to submit
+- [ ] **Expected:** Validation error (ending page must be >= starting page)
 
 ### Custom Pages - Simple Range
 - [ ] Create context with "1-5"
@@ -414,16 +445,191 @@
 
 ---
 
-## 10. Known Issues / Deferred Features
+## 10. Page Exclusion ("Remove from Page")
 
-### Remove Page from Context (Not Implemented)
-- [ ] "Remove Page" button exists in Page Sidebar but functionality is deferred
-- [ ] Clicking button may log to console or show placeholder message
-- [ ] **Expected:** Will be implemented later (requires custom page config adjustment logic)
+### Remove from Multi-Page Context
+- [ ] Create context with "All pages"
+- [ ] Navigate to page 5
+- [ ] Click "Remove from this page" button in Page Sidebar
+- [ ] **Expected:** Button triggers update mutation
+- [ ] **Expected:** Context no longer appears in Page Sidebar for page 5
+- [ ] Navigate to page 4 and page 6
+- [ ] **Expected:** Context still appears on pages 4 and 6
+- [ ] Open Edit Context modal
+- [ ] **Expected:** "Except pages" field shows "5"
+
+### Remove from "This Page Only" Context
+- [ ] Create context with "This page only" on page 3
+- [ ] Click "Remove from this page" button
+- [ ] **Expected:** Confirmation dialog: "Removing the last page from a context will delete it. Are you sure you'd like to proceed?"
+- [ ] Click "Cancel"
+- [ ] **Expected:** Context not deleted
+- [ ] Click "Remove from this page" again, click "OK"
+- [ ] **Expected:** Context deleted entirely (soft delete)
+- [ ] Check Project Sidebar
+- [ ] **Expected:** Context no longer listed
+- [ ] **Implementation Note:** Uses `deleteContext` mutation for "this_page" contexts, `updateContext` with `exceptPages` for multi-page contexts
+
+### Remove Multiple Pages
+- [ ] Create context with "All pages"
+- [ ] Navigate to page 3, click "Remove from this page"
+- [ ] Navigate to page 7, click "Remove from this page"
+- [ ] Navigate to page 10, click "Remove from this page"
+- [ ] **Expected:** Context not visible on pages 3, 7, 10
+- [ ] Navigate to other pages
+- [ ] **Expected:** Context visible on all other pages
+- [ ] Open Edit Context modal
+- [ ] **Expected:** "Except pages" field shows "3, 7, 10"
+
+### Re-include Excluded Pages
+- [ ] Create context with "All pages except 3, 7"
+- [ ] Open Edit Context modal
+- [ ] **Expected:** "Except pages" field shows "3, 7"
+- [ ] Change "Except pages" to "3" (remove 7)
+- [ ] Click "Save"
+- [ ] Navigate to page 7
+- [ ] **Expected:** Context now appears in Page Sidebar
+- [ ] Navigate to page 3
+- [ ] **Expected:** Context does NOT appear
+
+### Except Pages Input Validation
+- [ ] Create context with "Custom pages: 1-10"
+- [ ] Open Edit Context modal
+- [ ] Enter "15" in "Except pages" (outside custom range)
+- [ ] Try to submit
+- [ ] **Expected:** Validation error: "Except pages must be within the page config range"
+- [ ] Enter "3, 5, abc" (invalid format)
+- [ ] Try to submit
+- [ ] **Expected:** Validation error about invalid format
+- [ ] Enter "3, 5, 7" (valid)
+- [ ] Submit
+- [ ] **Expected:** Context updated successfully
+
+### Except Pages Display
+- [ ] Create context with "All pages except 3, 5, 7"
+- [ ] Check Project Sidebar
+- [ ] **Expected:** Page config summary shows "All pages except 3, 5, 7"
+- [ ] Create context with "Every other starting on 1, except 3, 7"
+- [ ] **Expected:** Summary shows something like "(every other, 1-[last page]) except 3, 7"
+- [ ] Create context with "Custom: 1-10,20-30 except 5, 25"
+- [ ] **Expected:** Summary shows "1-10, 20-30 except 5, 25"
+- [ ] **Implementation Note:** Summary generation uses `getPageConfigSummary()` from `@pubint/core/context.utils.ts`
 
 ---
 
-## Test Summary Template
+## 11. Conflict Detection & Resolution
+
+### Create Context with Conflicts
+- [ ] Create page_number context "Top-right PN" with "All pages"
+- [ ] Navigate to page 5
+- [ ] Draw second page_number context region
+- [ ] Fill modal with name "Bottom-center PN", type "Page Number", "All pages"
+- [ ] Try to submit
+- [ ] **Expected:** Conflict warning appears inline in the modal (replacing form fields):
+  - Header: "⚠️ Conflicts Detected"
+  - Lists conflicting pages (e.g., "Page 1, 2, 3...")
+  - Shows conflicting context names
+  - Message: "You can resolve these conflicts after creating the context..."
+  - Buttons: "Cancel" and "Save Anyway" (modal footer buttons are hidden)
+- [ ] Click "Cancel"
+- [ ] **Expected:** Warning disappears, form fields reappear, context not created
+- [ ] Submit again, click "Save Anyway"
+- [ ] **Expected:** Context created despite conflicts
+- [ ] **Implementation Note:** Warning replaces form content, footer buttons hidden during warning
+
+### Conflict Display - Project Sidebar
+- [ ] After creating conflicting contexts from previous test
+- [ ] Open Project Sidebar
+- [ ] **Expected:** Both contexts show conflicts below them (inline, comma-separated):
+  - "Top-right PN" → "Conflicts: 1, 2, 3, 4, 5, ..." (in red, comma-separated)
+  - "Bottom-center PN" → "Conflicts: 1, 2, 3, 4, 5, ..." (in red, comma-separated)
+- [ ] **Expected:** Conflict list shows up to 20 page numbers, then "..." if more
+- [ ] Click on red page number "5" under "Top-right PN"
+- [ ] **Expected:** PDF viewer navigates to page 5
+- [ ] **Expected:** URL updates to reflect page 5
+- [ ] **Implementation Note:** Conflicts are computed client-side via `useMemo` in the Project Sidebar
+
+### Conflict Display - Page Sidebar
+- [ ] While on page 5 (with conflicts from previous test)
+- [ ] Open Page Sidebar
+- [ ] **Expected:** Conflict warning appears at top:
+  ```
+  ⚠️ PAGE NUMBER CONFLICT
+  
+  Multiple page number contexts:
+  • Top-right Page Number
+    [Remove from this page]
+  • Bottom-center Page Number
+    [Remove from this page]
+  
+  Resolve conflict to enable
+  canonical page number indexing.
+  ```
+
+### Resolve Conflict - Remove from Page
+- [ ] On page 5 with conflict warning visible
+- [ ] Click "Remove from this page" under "Bottom-center Page Number"
+- [ ] **Expected:** Conflict warning disappears
+- [ ] **Expected:** Only "Top-right Page Number" listed in Page Sidebar
+- [ ] Navigate to page 6
+- [ ] **Expected:** Still shows conflict (only removed from page 5)
+- [ ] Navigate back to page 5
+- [ ] **Expected:** No conflict, only "Top-right Page Number" visible
+
+### Conflict with Every Other Page
+- [ ] Create page_number context "Even pages PN" with "Every other starting on 2"
+- [ ] Create page_number context "All pages PN" with "All pages"
+- [ ] **Expected:** Warning shows conflicts on pages 2, 4, 6, 8... (even pages)
+- [ ] Click "Create Anyway"
+- [ ] Navigate to page 2
+- [ ] **Expected:** Page Sidebar shows conflict warning
+- [ ] Navigate to page 3
+- [ ] **Expected:** No conflict warning (only "All pages PN" applies)
+
+### Conflict with Custom Pages
+- [ ] Create page_number context "Custom PN" with "Custom: 1-5, 10-15"
+- [ ] Create page_number context "Overlapping PN" with "Custom: 3-8"
+- [ ] **Expected:** Warning shows conflicts on pages 3, 4, 5 (overlap)
+- [ ] Click "Create Anyway"
+- [ ] Navigate to pages 1, 2
+- [ ] **Expected:** No conflict (only "Custom PN" applies)
+- [ ] Navigate to page 3
+- [ ] **Expected:** Conflict warning (both apply)
+- [ ] Navigate to pages 6, 7, 8
+- [ ] **Expected:** No conflict (only "Overlapping PN" applies)
+
+### No Conflict for Ignore Contexts
+- [ ] Create ignore context "Header" with "All pages"
+- [ ] Create ignore context "Footer" with "All pages"
+- [ ] **Expected:** NO conflict warning (ignore contexts can overlap)
+- [ ] Navigate to any page
+- [ ] **Expected:** Both contexts visible, no conflict warning
+- [ ] Check Project Sidebar
+- [ ] **Expected:** No conflict indicators for ignore contexts
+
+### Edit Context to Create Conflict
+- [ ] Create page_number context "PN 1" with "Custom: 1-5"
+- [ ] Create page_number context "PN 2" with "Custom: 10-15"
+- [ ] **Expected:** No conflicts initially
+- [ ] Edit "PN 2", change to "Custom: 3-8"
+- [ ] Try to submit
+- [ ] **Expected:** Warning shows conflicts on pages 3, 4, 5
+- [ ] Click "Save Anyway"
+- [ ] **Expected:** Conflicts appear in Project Sidebar
+
+### Edit Context to Resolve Conflict
+- [ ] With conflicting contexts from previous test
+- [ ] Edit "PN 2", change to "Custom: 6-10" (no overlap)
+- [ ] Submit
+- [ ] **Expected:** No warning (conflict resolved)
+- [ ] Check Project Sidebar
+- [ ] **Expected:** No conflict indicators on either context
+- [ ] Navigate to pages 3, 4, 5
+- [ ] **Expected:** No conflict warnings in Page Sidebar
+
+---
+
+## 12. Edge Cases & Error Handling (Extended)
 
 Use this template to record test results:
 
@@ -450,6 +656,34 @@ Use this template to record test results:
 ### Notes
 - [Any additional observations]
 ```
+
+---
+
+## 12. Edge Cases & Error Handling (Extended)
+
+### Except Pages Edge Cases
+- [ ] Create context with "All pages except 1-200" (all pages excluded)
+- [ ] **Expected:** Validation warning or allow but context never shows anywhere
+- [ ] Create context "Custom: 1-10 except 1-10" (all pages in range excluded)
+- [ ] **Expected:** Similar to above
+- [ ] Try to exclude page 999 when document only has 100 pages
+- [ ] **Expected:** Validation error
+
+### Conflict Detection Edge Cases
+- [ ] Create 3+ page_number contexts all applying to same page
+- [ ] **Expected:** Conflict warning lists all 3+ contexts
+- [ ] Delete one conflicting context
+- [ ] **Expected:** Conflicts update immediately (fewer conflicts or resolved)
+- [ ] Create page_number context that conflicts on page 1 only
+- [ ] **Expected:** Warning shows only page 1 in conflict list
+
+### Remove from Page During Navigation
+- [ ] Create context "All pages"
+- [ ] Navigate rapidly between pages 1, 2, 3, 4, 5
+- [ ] While navigating, click "Remove from page" on page 3
+- [ ] **Expected:** No UI glitches, context removed from page 3 only
+- [ ] Navigate back to page 3
+- [ ] **Expected:** Context not visible
 
 ---
 

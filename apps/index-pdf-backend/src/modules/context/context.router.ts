@@ -3,6 +3,7 @@ import * as contextService from "./context.service";
 import {
 	CreateContextSchema,
 	DeleteContextSchema,
+	DetectConflictsSchema,
 	GetContextsForPageSchema,
 	ListContextsSchema,
 	UpdateContextSchema,
@@ -60,6 +61,16 @@ export const contextRouter = router({
 		.mutation(async ({ input, ctx }) => {
 			return await contextService.deleteContext({
 				input,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
+
+	detectConflicts: protectedProcedure
+		.input(DetectConflictsSchema)
+		.query(async ({ input, ctx }) => {
+			return await contextService.detectConflicts({
+				projectId: input.projectId,
 				userId: ctx.user.id,
 				requestId: ctx.requestId,
 			});

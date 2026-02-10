@@ -127,10 +127,11 @@ export const contexts = pgTable(
 		pageRange: text("page_range"), // For page_range/custom modes
 		everyOther: boolean("every_other").default(false).notNull(),
 		startPage: integer("start_page"), // Starting page for every other
+		endPage: integer("end_page"), // Ending page for every other (optional)
 		bbox: json("bbox"), // BoundingBox coordinates
 		color: text("color").notNull(), // Hex color (e.g., "#FCA5A5")
 		visible: boolean("visible").default(true).notNull(),
-		extractedPageNumber: text("extracted_page_number"), // For page_number contexts
+		exceptPages: integer("except_pages").array(), // Pages to exclude from this context
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),

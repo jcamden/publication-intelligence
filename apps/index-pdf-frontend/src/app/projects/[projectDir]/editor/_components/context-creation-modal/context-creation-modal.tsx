@@ -1,6 +1,11 @@
 "use client";
 
-import { DEFAULT_CONTEXT_COLORS, validatePageRange } from "@pubint/core";
+import {
+	type Context,
+	DEFAULT_CONTEXT_COLORS,
+	getApplicablePages,
+	validatePageRange,
+} from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import {
 	Field,
@@ -23,7 +28,8 @@ import {
 import { Spinner } from "@pubint/yabasic/components/ui/spinner";
 import { Modal } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
-import { useCallback, useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
 
 type BoundingBox = {
@@ -54,6 +60,16 @@ export const ContextCreationModal = ({
 }: ContextCreationModalProps) => {
 	const utils = trpc.useUtils();
 	const isEditMode = !!contextId;
+	const [showConflictWarning, setShowConflictWarning] = useState(false);
+	const [conflictPages, setConflictPages] = useState<
+		Array<{ pageNumber: number; contextNames: string[] }>
+	>([]);
+
+	// Fetch all contexts for conflict detection
+	const { data: allContexts = [] } = trpc.context.list.useQuery(
+		{ projectId },
+		{ enabled: !!projectId },
+	);
 
 	// Fetch context data if editing
 	const { data: existingContext } = trpc.context.list.useQuery(
@@ -78,6 +94,96 @@ export const ContextCreationModal = ({
 		},
 	});
 
+	const detectConflicts = useCallback(
+		({
+			contextType,
+			pageConfigMode,
+			pageRange,
+			isEveryOther,
+			startPage,
+			endPage,
+			exceptPages,
+		}: {
+			contextType: "ignore" | "page_number";
+			pageConfigMode: "this_page" | "all_pages" | "page_range";
+			pageRange?: string;
+			isEveryOther: boolean;
+			startPage?: number;
+			endPage?: number;
+			exceptPages?: number[];
+		}) => {
+			// Only check conflicts for page_number contexts
+			if (contextType !== "page_number" || !documentPageCount) {
+				return [];
+			}
+
+			// Build a temp context object to check applicable pages
+			const tempContext: Context = {
+				id: contextId || "temp",
+				projectId,
+				name: "temp",
+				contextType,
+				pageConfigMode,
+				pageNumber: pageConfigMode === "this_page" ? currentPage : undefined,
+				pageRange,
+				everyOther: isEveryOther,
+				startPage,
+				endPage,
+				exceptPages,
+				bbox: drawnBbox || { x: 0, y: 0, width: 0, height: 0 },
+				color: "#000000",
+				visible: true,
+				createdAt: new Date(),
+			};
+
+			const applicablePages = getApplicablePages({
+				context: tempContext,
+				maxPage: documentPageCount,
+			});
+
+			// Find conflicts with other page_number contexts (excluding self if editing)
+			const conflicts: Array<{ pageNumber: number; contextNames: string[] }> =
+				[];
+			const conflictsByPage = new Map<number, string[]>();
+
+			for (const page of applicablePages) {
+				const conflictingContexts = allContexts.filter(
+					(ctx) =>
+						ctx.contextType === "page_number" &&
+						ctx.id !== contextId && // Exclude self if editing
+						getApplicablePages({
+							context: {
+								...ctx,
+								createdAt: new Date(ctx.createdAt),
+							} as Context,
+							maxPage: documentPageCount,
+						}).includes(page),
+				);
+
+				if (conflictingContexts.length > 0) {
+					conflictsByPage.set(
+						page,
+						conflictingContexts.map((c) => c.name),
+					);
+				}
+			}
+
+			for (const [pageNumber, contextNames] of conflictsByPage.entries()) {
+				conflicts.push({ pageNumber, contextNames });
+			}
+
+			return conflicts;
+		},
+		[
+			allContexts,
+			contextId,
+			currentPage,
+			documentPageCount,
+			drawnBbox,
+			projectId,
+		],
+	);
+
 	const form = useForm({
 		defaultValues: {
 			name: "",
@@ -89,6 +195,8 @@ export const ContextCreationModal = ({
 				| "custom",
 			pageRange: "",
 			startPage: currentPage,
+			endPage: undefined as number | undefined,
+			exceptPages: "",
 			color: DEFAULT_CONTEXT_COLORS.ignore,
 		},
 		onSubmit: async ({ value }) => {
@@ -109,6 +217,37 @@ export const ContextCreationModal = ({
 			}
 			const isEveryOther = value.pageConfigMode === "every_other";
 
+			// Parse exceptPages string to array of numbers
+			const exceptPagesArray = value.exceptPages?.trim()
+				? value.exceptPages
+						.split(",")
+						.map((p) => Number.parseInt(p.trim(), 10))
+						.filter((p) => !Number.isNaN(p))
+				: undefined;
+
+			// Check for conflicts before proceeding
+			const conflicts = detectConflicts({
+				contextType: value.contextType,
+				pageConfigMode: backendPageConfigMode,
+				pageRange:
+					value.pageConfigMode === "custom" ? value.pageRange : undefined,
+				isEveryOther,
+				startPage: isEveryOther ? value.startPage : undefined,
+				endPage: isEveryOther ? value.endPage : undefined,
+				exceptPages: exceptPagesArray,
+			});
+
+			// If conflicts exist and user hasn't confirmed yet, show warning
+			if (conflicts.length > 0 && !showConflictWarning) {
+				setConflictPages(conflicts);
+				setShowConflictWarning(true);
+				return;
+			}
+
+			// Reset conflict warning state (user has confirmed or no conflicts)
+			setShowConflictWarning(false);
+			setConflictPages([]);
+
 			if (isEditMode && contextId) {
 				await updateContext.mutateAsync({
 					id: contextId,
@@ -121,6 +260,8 @@ export const ContextCreationModal = ({
 						value.pageConfigMode === "custom" ? value.pageRange : undefined,
 					everyOther: isEveryOther,
 					startPage: isEveryOther ? value.startPage : undefined,
+					endPage: isEveryOther ? value.endPage : undefined,
+					exceptPages: exceptPagesArray,
 					color: value.color,
 				});
 			} else {
@@ -140,6 +281,8 @@ export const ContextCreationModal = ({
 						value.pageConfigMode === "custom" ? value.pageRange : undefined,
 					everyOther: isEveryOther,
 					startPage: isEveryOther ? value.startPage : undefined,
+					endPage: isEveryOther ? value.endPage : undefined,
+					exceptPages: exceptPagesArray,
 					color: value.color,
 				});
 			}
@@ -173,12 +316,21 @@ export const ContextCreationModal = ({
 			form.setFieldValue("pageConfigMode", formPageConfigMode);
 			form.setFieldValue("pageRange", existingContext.pageRange || "");
 			form.setFieldValue("startPage", existingContext.startPage || currentPage);
+			form.setFieldValue("endPage", existingContext.endPage);
+			form.setFieldValue(
+				"exceptPages",
+				existingContext.exceptPages
+					? existingContext.exceptPages.join(", ")
+					: "",
+			);
 			form.setFieldValue("color", existingContext.color);
 		}
 	}, [existingContext, isEditMode, form, currentPage]);
 
 	const handleClose = useCallback(() => {
 		form.reset();
+		setShowConflictWarning(false);
+		setConflictPages([]);
 		onClose();
 	}, [form, onClose]);
 
@@ -197,27 +349,34 @@ export const ContextCreationModal = ({
 			title={isEditMode ? "Edit Context" : "Create Context"}
 			size="lg"
 			footer={
-				<>
-					<Button variant="outline" onClick={handleClose} disabled={isPending}>
-						Cancel
-					</Button>
-					<Button
-						variant="default"
-						onClick={() => form.handleSubmit()}
-						disabled={form.state.isSubmitting || isPending}
-					>
-						{isPending ? (
-							<>
-								<Spinner size="sm" className="mr-2" />
-								{isEditMode ? "Saving..." : "Creating..."}
-							</>
-						) : isEditMode ? (
-							"Save"
-						) : (
-							"Create"
-						)}
-					</Button>
-				</>
+				showConflictWarning ? // When conflict warning is showing, hide default footer (buttons are in the warning)
+				null : (
+					<>
+						<Button
+							variant="outline"
+							onClick={handleClose}
+							disabled={isPending}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="default"
+							onClick={() => form.handleSubmit()}
+							disabled={form.state.isSubmitting || isPending}
+						>
+							{isPending ? (
+								<>
+									<Spinner size="sm" className="mr-2" />
+									{isEditMode ? "Saving..." : "Creating..."}
+								</>
+							) : isEditMode ? (
+								"Save"
+							) : (
+								"Create"
+							)}
+						</Button>
+					</>
+				)
 			}
 		>
 			<form
@@ -321,45 +480,95 @@ export const ContextCreationModal = ({
 								</RadioGroup>
 							</Field>
 
-							{/* Starting Page Input for Every Other */}
+							{/* Starting Page and Ending Page Inputs for Every Other */}
 							{field.state.value === "every_other" && (
-								<form.Field
-									name="startPage"
-									validators={{
-										onSubmit: ({ value }) => {
-											if (!value || value < 1) {
-												return "Starting page must be >= 1";
-											}
-											if (documentPageCount && value > documentPageCount) {
-												return `Starting page cannot exceed ${documentPageCount}`;
-											}
-											return undefined;
-										},
-									}}
-								>
-									{(startPageField) => (
-										<Field>
-											<Input
-												type="number"
-												min={1}
-												max={documentPageCount}
-												value={startPageField.state.value}
-												onChange={(e) =>
-													startPageField.handleChange(
-														Number.parseInt(e.target.value, 10),
-													)
+								<>
+									<form.Field
+										name="startPage"
+										validators={{
+											onSubmit: ({ value }) => {
+												if (!value || value < 1) {
+													return "Starting page must be >= 1";
 												}
-												onBlur={startPageField.handleBlur}
-												placeholder="Starting page number"
-											/>
-											{startPageField.state.meta.errors.length > 0 && (
-												<FieldError>
-													{startPageField.state.meta.errors[0]}
-												</FieldError>
-											)}
-										</Field>
-									)}
-								</form.Field>
+												if (documentPageCount && value > documentPageCount) {
+													return `Starting page cannot exceed ${documentPageCount}`;
+												}
+												return undefined;
+											},
+										}}
+									>
+										{(startPageField) => (
+											<Field>
+												<FieldLabel>Starting on page</FieldLabel>
+												<Input
+													type="number"
+													min={1}
+													max={documentPageCount}
+													value={startPageField.state.value}
+													onChange={(e) =>
+														startPageField.handleChange(
+															Number.parseInt(e.target.value, 10),
+														)
+													}
+													onBlur={startPageField.handleBlur}
+													placeholder="Starting page number"
+												/>
+												{startPageField.state.meta.errors.length > 0 && (
+													<FieldError>
+														{startPageField.state.meta.errors[0]}
+													</FieldError>
+												)}
+											</Field>
+										)}
+									</form.Field>
+									<form.Field
+										name="endPage"
+										validators={{
+											onSubmit: ({ value }) => {
+												// Optional field - if empty, defaults to last page of document
+												if (!value) {
+													return undefined;
+												}
+												if (value < 1) {
+													return "Ending page must be >= 1";
+												}
+												if (documentPageCount && value > documentPageCount) {
+													return `Ending page cannot exceed ${documentPageCount}`;
+												}
+												const startPage = form.getFieldValue("startPage");
+												if (startPage && value < startPage) {
+													return "Ending page must be >= starting page";
+												}
+												return undefined;
+											},
+										}}
+									>
+										{(endPageField) => (
+											<Field>
+												<FieldLabel>Ending on page (optional)</FieldLabel>
+												<Input
+													type="number"
+													min={1}
+													max={documentPageCount}
+													value={endPageField.state.value || ""}
+													onChange={(e) => {
+														const val = e.target.value;
+														endPageField.handleChange(
+															val ? Number.parseInt(val, 10) : undefined,
+														);
+													}}
+													onBlur={endPageField.handleBlur}
+													placeholder="Last page (optional)"
+												/>
+												{endPageField.state.meta.errors.length > 0 && (
+													<FieldError>
+														{endPageField.state.meta.errors[0]}
+													</FieldError>
+												)}
+											</Field>
+										)}
+									</form.Field>
+								</>
 							)}
 
 							{/* Custom Page Range Input */}
@@ -403,6 +612,53 @@ export const ContextCreationModal = ({
 					)}
 				</form.Field>
 
+				{/* Except Pages Input (only for multi-page modes) */}
+				<form.Field name="pageConfigMode">
+					{(pageModeField) =>
+						pageModeField.state.value !== "this_page" && (
+							<form.Field
+								name="exceptPages"
+								validators={{
+									onSubmit: ({ value }) => {
+										if (!value || !value.trim()) {
+											return undefined; // Optional field
+										}
+										// Validate format: comma-separated numbers
+										const pages = value.split(",").map((p) => p.trim());
+										for (const page of pages) {
+											const pageNum = Number.parseInt(page, 10);
+											if (Number.isNaN(pageNum) || pageNum < 1) {
+												return "Except pages must be comma-separated numbers (e.g., 3, 5, 7)";
+											}
+											if (documentPageCount && pageNum > documentPageCount) {
+												return `Page ${pageNum} exceeds document page count (${documentPageCount})`;
+											}
+										}
+										return undefined;
+									},
+								}}
+							>
+								{(field) => (
+									<Field>
+										<FieldLabel>
+											Except pages (optional, e.g., 3, 5, 7)
+										</FieldLabel>
+										<Input
+											value={field.state.value}
+											onChange={(e) => field.handleChange(e.target.value)}
+											onBlur={field.handleBlur}
+											placeholder="3, 5, 7"
+										/>
+										{field.state.meta.errors.length > 0 && (
+											<FieldError>{field.state.meta.errors[0]}</FieldError>
+										)}
+									</Field>
+								)}
+							</form.Field>
+						)
+					}
+				</form.Field>
+
 				{/* Color Picker */}
 				<form.Field name="color">
 					{(field) => (
@@ -417,6 +673,64 @@ export const ContextCreationModal = ({
 						</Field>
 					)}
 				</form.Field>
+
+				{/* Conflict Warning */}
+				{showConflictWarning && conflictPages.length > 0 && (
+					<div className="p-4 border border-yellow-600 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 rounded-md">
+						<div className="flex items-start gap-3">
+							<AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+							<div className="flex-1 min-w-0">
+								<h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
+									⚠️ Conflicts Detected
+								</h4>
+								<p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
+									This context will conflict with existing page number contexts
+									on the following pages:
+								</p>
+								<div className="max-h-32 overflow-y-auto mb-3">
+									<ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-1">
+										{conflictPages.slice(0, 10).map((conflict) => (
+											<li key={conflict.pageNumber}>
+												• Page {conflict.pageNumber} (with{" "}
+												{conflict.contextNames.join(", ")})
+											</li>
+										))}
+										{conflictPages.length > 10 && (
+											<li className="italic">
+												...and {conflictPages.length - 10} more pages
+											</li>
+										)}
+									</ul>
+								</div>
+								<p className="text-sm text-yellow-800 dark:text-yellow-200">
+									You can resolve these conflicts after creating the context,
+									but page numbers will be unavailable until conflicts are
+									resolved.
+								</p>
+								<div className="flex gap-2 mt-4">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											setShowConflictWarning(false);
+											setConflictPages([]);
+										}}
+									>
+										Cancel
+									</Button>
+									<Button
+										variant="default"
+										size="sm"
+										onClick={() => form.handleSubmit()}
+										disabled={isPending}
+									>
+										{isEditMode ? "Save Anyway" : "Create Anyway"}
+									</Button>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
 			</form>
 		</Modal>
 	);

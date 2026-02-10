@@ -1,5 +1,5 @@
 {
-	"id": "a83e1947-20c6-41ad-9509-ee568e632022",
+	"id": "7ced6550-7cfb-4e25-8b4f-b24076c18bc9",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -18,6 +18,12 @@
 				"project_id": {
 					"name": "project_id",
 					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
 					"primaryKey": false,
 					"notNull": true
 				},
@@ -79,9 +85,9 @@
 					"notNull": true,
 					"default": true
 				},
-				"extracted_page_number": {
-					"name": "extracted_page_number",
-					"type": "text",
+				"except_pages": {
+					"name": "except_pages",
+					"type": "integer[]",
 					"primaryKey": false,
 					"notNull": false
 				},

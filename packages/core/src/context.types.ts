@@ -34,10 +34,11 @@ export type Context = {
 	pageRange?: string; // For page_range/custom modes (e.g., "1-50" or "1-2,5-6,8")
 	everyOther: boolean; // Apply every other page
 	startPage?: number; // Starting page for every other
+	endPage?: number; // Ending page for every other (optional)
+	exceptPages?: number[]; // Pages to exclude from this context
 	bbox: BoundingBox; // BoundingBox in PDF user space
 	color: string; // Hex color (e.g., "#FCA5A5")
 	visible: boolean; // Visibility toggle
-	extractedPageNumber?: string; // Extracted page number (for page_number type)
 	createdAt: Date;
 	updatedAt?: Date;
 	deletedAt?: Date;
@@ -56,6 +57,8 @@ export type CreateContextInput = {
 	pageRange?: string;
 	everyOther?: boolean;
 	startPage?: number;
+	endPage?: number;
+	exceptPages?: number[]; // Pages to exclude from this context
 	color?: string; // Default per type if not provided
 	visible?: boolean; // Default true
 };
@@ -73,9 +76,10 @@ export type UpdateContextInput = {
 	pageRange?: string;
 	everyOther?: boolean;
 	startPage?: number;
+	endPage?: number;
+	exceptPages?: number[];
 	color?: string;
 	visible?: boolean;
-	extractedPageNumber?: string;
 };
 
 /**

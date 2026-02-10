@@ -36,10 +36,11 @@ export const listContexts = async ({
 			pageRange: contexts.pageRange,
 			everyOther: contexts.everyOther,
 			startPage: contexts.startPage,
+			endPage: contexts.endPage,
+			exceptPages: contexts.exceptPages,
 			bbox: contexts.bbox,
 			color: contexts.color,
 			visible: contexts.visible,
-			extractedPageNumber: contexts.extractedPageNumber,
 			createdAt: contexts.createdAt,
 		})
 		.from(contexts)
@@ -56,10 +57,11 @@ export const listContexts = async ({
 		pageRange: row.pageRange ?? undefined,
 		everyOther: row.everyOther,
 		startPage: row.startPage ?? undefined,
+		endPage: row.endPage ?? undefined,
+		exceptPages: row.exceptPages ?? undefined,
 		bbox: row.bbox as { x: number; y: number; width: number; height: number },
 		color: row.color,
 		visible: row.visible,
-		extractedPageNumber: row.extractedPageNumber ?? undefined,
 		createdAt: row.createdAt.toISOString(),
 	}));
 };
@@ -106,6 +108,8 @@ export const createContext = async ({
 			pageRange: input.pageRange,
 			everyOther: input.everyOther ?? false,
 			startPage: input.startPage,
+			endPage: input.endPage,
+			exceptPages: input.exceptPages,
 			color,
 			visible: input.visible ?? true,
 		})
@@ -125,7 +129,8 @@ export const createContext = async ({
 		pageNumber: newContext.pageNumber ?? undefined,
 		pageRange: newContext.pageRange ?? undefined,
 		startPage: newContext.startPage ?? undefined,
-		extractedPageNumber: newContext.extractedPageNumber ?? undefined,
+		endPage: newContext.endPage ?? undefined,
+		exceptPages: newContext.exceptPages ?? undefined,
 	};
 };
 
@@ -162,14 +167,17 @@ export const updateContext = async ({
 	if (input.startPage !== undefined) {
 		updateData.startPage = input.startPage;
 	}
+	if (input.endPage !== undefined) {
+		updateData.endPage = input.endPage;
+	}
+	if (input.exceptPages !== undefined) {
+		updateData.exceptPages = input.exceptPages;
+	}
 	if (input.color !== undefined) {
 		updateData.color = input.color;
 	}
 	if (input.visible !== undefined) {
 		updateData.visible = input.visible;
-	}
-	if (input.extractedPageNumber !== undefined) {
-		updateData.extractedPageNumber = input.extractedPageNumber;
 	}
 
 	const [updatedContext] = await db
@@ -196,7 +204,8 @@ export const updateContext = async ({
 		pageNumber: updatedContext.pageNumber ?? undefined,
 		pageRange: updatedContext.pageRange ?? undefined,
 		startPage: updatedContext.startPage ?? undefined,
-		extractedPageNumber: updatedContext.extractedPageNumber ?? undefined,
+		endPage: updatedContext.endPage ?? undefined,
+		exceptPages: updatedContext.exceptPages ?? undefined,
 	};
 };
 

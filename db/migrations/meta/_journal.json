@@ -12,15 +12,15 @@
 		{
 			"idx": 1,
 			"version": "7",
-			"when": 1770737493068,
-			"tag": "0001_real_abomination",
+			"when": 1770747813422,
+			"tag": "0001_odd_beyonder",
 			"breakpoints": true
 		},
 		{
 			"idx": 2,
 			"version": "7",
-			"when": 1770741629761,
-			"tag": "0002_smooth_master_mold",
+			"when": 1770750956559,
+			"tag": "0002_steep_vance_astro",
 			"breakpoints": true
 		}
 	]

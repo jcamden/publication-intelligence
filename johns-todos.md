@@ -9,3 +9,5 @@ Replace full header and content color with probably just colored icon for accord
 fix up Create/Edit context form
 
 move no entries yet to below the Create Entry button
+
+order z index of highlights from smallest to largest (so smaller are never unclickable/obscured)?

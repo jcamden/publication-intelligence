@@ -94,6 +94,15 @@ export const appliesToPage = ({
 		if (offset < 0 || offset % 2 !== 0) {
 			return false;
 		}
+		// Check if beyond end page (if specified)
+		if (context.endPage !== undefined && targetPage > context.endPage) {
+			return false;
+		}
+	}
+
+	// Check if page is explicitly excluded
+	if (context.exceptPages?.includes(targetPage)) {
+		return false;
 	}
 
 	return true;
@@ -138,11 +147,24 @@ export const getPageConfigSummary = ({
 }: {
 	context: Pick<
 		Context,
-		"pageConfigMode" | "pageNumber" | "pageRange" | "everyOther" | "startPage"
+		| "pageConfigMode"
+		| "pageNumber"
+		| "pageRange"
+		| "everyOther"
+		| "startPage"
+		| "endPage"
+		| "exceptPages"
 	>;
 }): string => {
-	const { pageConfigMode, pageNumber, pageRange, everyOther, startPage } =
-		context;
+	const {
+		pageConfigMode,
+		pageNumber,
+		pageRange,
+		everyOther,
+		startPage,
+		endPage,
+		exceptPages,
+	} = context;
 
 	let base = "";
 
@@ -162,8 +184,124 @@ export const getPageConfigSummary = ({
 	}
 
 	if (everyOther && startPage !== undefined) {
-		base += ` (every other, starting page ${startPage})`;
+		if (endPage !== undefined) {
+			base += ` (every other, ${startPage}-${endPage})`;
+		} else {
+			base += ` (every other, starting page ${startPage})`;
+		}
+	}
+
+	// Add exceptions if any
+	if (exceptPages && exceptPages.length > 0) {
+		base += ` except ${exceptPages.join(", ")}`;
 	}
 
 	return base;
+};
+
+/**
+ * Get all page numbers that a context applies to
+ * @param maxPage - Maximum page number in document (required for all_pages mode)
+ */
+export const getApplicablePages = ({
+	context,
+	maxPage,
+}: {
+	context: Context;
+	maxPage: number;
+}): number[] => {
+	const pages: number[] = [];
+
+	// Determine base pages based on mode
+	switch (context.pageConfigMode) {
+		case "this_page":
+			if (context.pageNumber) {
+				pages.push(context.pageNumber);
+			}
+			break;
+		case "all_pages":
+			for (let i = 1; i <= maxPage; i++) {
+				pages.push(i);
+			}
+			break;
+		case "page_range":
+		case "custom":
+			if (context.pageRange) {
+				try {
+					pages.push(...parsePageRange({ rangeStr: context.pageRange }));
+				} catch {
+					// Invalid page range, return empty
+					return [];
+				}
+			}
+			break;
+	}
+
+	// Apply everyOther filter if enabled
+	const filtered =
+		context.everyOther && context.startPage !== undefined
+			? pages.filter((page) => {
+					const startPage = context.startPage;
+					if (startPage === undefined) return false;
+					const offset = page - startPage;
+					if (offset < 0 || offset % 2 !== 0) {
+						return false;
+					}
+					// Check if beyond end page (if specified)
+					if (context.endPage !== undefined && page > context.endPage) {
+						return false;
+					}
+					return true;
+				})
+			: pages;
+
+	// Remove exceptions
+	const exceptSet = new Set(context.exceptPages || []);
+	return filtered.filter((page) => !exceptSet.has(page));
+};
+
+/**
+ * Conflict report for a specific page
+ */
+export type PageNumberConflict = {
+	pageNumber: number;
+	contexts: Array<{ id: string; name: string }>;
+};
+
+/**
+ * Detect conflicts where multiple page_number contexts apply to the same page
+ * Returns array of conflicts (pages with 2+ page_number contexts)
+ */
+export const detectPageNumberConflicts = ({
+	contexts,
+	maxPage,
+}: {
+	contexts: Context[];
+	maxPage: number;
+}): PageNumberConflict[] => {
+	// Filter to only page_number contexts
+	const pageNumberContexts = contexts.filter(
+		(ctx) => ctx.contextType === "page_number",
+	);
+
+	// Map: pageNumber -> contexts that apply to that page
+	const conflictsByPage = new Map<number, Context[]>();
+
+	for (const context of pageNumberContexts) {
+		const applicablePages = getApplicablePages({ context, maxPage });
+		for (const page of applicablePages) {
+			if (!conflictsByPage.has(page)) {
+				conflictsByPage.set(page, []);
+			}
+			conflictsByPage.get(page)?.push(context);
+		}
+	}
+
+	// Return pages with 2+ contexts (conflicts)
+	return Array.from(conflictsByPage.entries())
+		.filter(([_, ctxs]) => ctxs.length > 1)
+		.map(([page, ctxs]) => ({
+			pageNumber: page,
+			contexts: ctxs.map((c) => ({ id: c.id, name: c.name })),
+		}));
 };

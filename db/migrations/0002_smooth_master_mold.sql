@@ -1,1 +1,0 @@
-ALTER TABLE "contexts" ADD COLUMN "name" text NOT NULL;

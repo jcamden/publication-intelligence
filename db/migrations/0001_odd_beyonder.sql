@@ -13,6 +13,7 @@ CREATE TYPE "public"."variant_type" AS ENUM('alias', 'synonym', 'abbreviation', 
 CREATE TABLE "contexts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
+	"name" text NOT NULL,
 	"context_type" "context_type" NOT NULL,
 	"page_config_mode" "page_config_mode" NOT NULL,
 	"page_number" integer,
@@ -22,7 +23,7 @@ CREATE TABLE "contexts" (
 	"bbox" json,
 	"color" text NOT NULL,
 	"visible" boolean DEFAULT true NOT NULL,
-	"extracted_page_number" text,
+	"except_pages" integer[],
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone,
 	"deleted_at" timestamp with time zone

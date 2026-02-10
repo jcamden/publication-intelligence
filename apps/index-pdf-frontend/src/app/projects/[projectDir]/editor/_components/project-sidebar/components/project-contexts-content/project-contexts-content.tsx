@@ -1,8 +1,13 @@
 "use client";
 
-import { getPageConfigSummary } from "@pubint/core";
+import {
+	type Context,
+	detectPageNumberConflicts,
+	getPageConfigSummary,
+} from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { StyledButton } from "@pubint/yaboujee";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
 	Edit,
 	Eye,
@@ -10,7 +15,12 @@ import {
 	SquareDashedMousePointer,
 	Trash2,
 } from "lucide-react";
+import { useMemo } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
+import {
+	currentPageAtom,
+	totalPagesAtom,
+} from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
 
 type ProjectContextsContentProps = {
@@ -26,6 +36,8 @@ export const ProjectContextsContent = ({
 }: ProjectContextsContentProps) => {
 	const { projectId } = useProjectContext();
 	const utils = trpc.useUtils();
+	const setCurrentPage = useSetAtom(currentPageAtom);
+	const totalPages = useAtomValue(totalPagesAtom);
 
 	// Fetch contexts for this project
 	const {
@@ -36,6 +48,49 @@ export const ProjectContextsContent = ({
 		{ projectId: projectId || "" },
 		{ enabled: !!projectId },
 	);
+
+	// Detect conflicts client-side
+	const conflictsData = useMemo(() => {
+		if (!totalPages || contexts.length === 0) {
+			return [];
+		}
+
+		// Convert to CoreContext type for the utility function
+		const coreContexts: Context[] = contexts.map((ctx) => ({
+			...ctx,
+			createdAt: new Date(ctx.createdAt),
+		}));
+
+		return detectPageNumberConflicts({
+			contexts: coreContexts,
+			maxPage: totalPages,
+		});
+	}, [contexts, totalPages]);
+
+	// Build a map of contextId -> conflicting pages
+	const conflictsByContext = useMemo(() => {
+		const map = new Map<
+			string,
+			Array<{ pageNumber: number; conflictsWith: string[] }>
+		>();
+
+		for (const conflict of conflictsData) {
+			for (const ctx of conflict.contexts) {
+				if (!map.has(ctx.id)) {
+					map.set(ctx.id, []);
+				}
+				const otherContextNames = conflict.contexts
+					.filter((c) => c.id !== ctx.id)
+					.map((c) => c.name);
+				map.get(ctx.id)?.push({
+					pageNumber: conflict.pageNumber,
+					conflictsWith: otherContextNames,
+				});
+			}
+		}
+
+		return map;
+	}, [conflictsData]);
 
 	const deleteContext = trpc.context.delete.useMutation({
 		onSuccess: () => {
@@ -138,9 +193,47 @@ export const ProjectContextsContent = ({
 										<div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">
 											{getContextTypeLabel(context.contextType)}
 										</div>
-										<div className="text-xs text-gray-500 dark:text-gray-500">
+										<div className="text-xs text-gray-500 dark:text-gray-500 mb-1">
 											{getPageConfigSummary({ context })}
 										</div>
+
+										{/* Conflicts Display */}
+										{context.contextType === "page_number" &&
+											conflictsByContext.has(context.id) && (
+												<div className="mt-1.5 text-xs">
+													<span className="text-gray-600 dark:text-gray-400">
+														Conflicts:{" "}
+													</span>
+													{conflictsByContext
+														.get(context.id)
+														?.slice(0, 20)
+														.map((conflict, index) => (
+															<span key={conflict.pageNumber}>
+																{index > 0 && (
+																	<span className="text-gray-500 dark:text-gray-400">
+																		,{" "}
+																	</span>
+																)}
+																<button
+																	type="button"
+																	onClick={() =>
+																		setCurrentPage(conflict.pageNumber)
+																	}
+																	className="text-red-600 dark:text-red-400 hover:underline cursor-pointer font-medium"
+																	title={`Conflicts with: ${conflict.conflictsWith.join(", ")}`}
+																>
+																	{conflict.pageNumber}
+																</button>
+															</span>
+														))}
+													{(conflictsByContext.get(context.id)?.length || 0) >
+														20 && (
+														<span className="text-gray-500 dark:text-gray-400">
+															, ...
+														</span>
+													)}
+												</div>
+											)}
 									</div>
 
 									{/* Actions */}
