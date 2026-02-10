@@ -18,3 +18,20 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+// Re-export types for frontend consumption
+export type {
+	CreateIndexEntryInput,
+	DeleteIndexEntryInput,
+	IndexEntry,
+	IndexEntryListItem,
+	UpdateIndexEntryInput,
+} from "../modules/index-entry/index-entry.types";
+
+export type {
+	CreateIndexMentionInput,
+	DeleteIndexMentionInput,
+	IndexMention,
+	IndexMentionListItem,
+	UpdateIndexMentionInput,
+} from "../modules/index-mention/index-mention.types";
