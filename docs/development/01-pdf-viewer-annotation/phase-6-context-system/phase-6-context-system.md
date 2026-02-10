@@ -539,7 +539,7 @@ const createContext = trpc.context.create.useMutation({
 
 ## Success Criteria
 
-✅ Phase 6 Complete:
+✅ Phase 6 Complete (Core Features):
 - [x] Schema migration complete (name, color, visible, everyOther, startPage, extractedPageNumber)
 - [x] tRPC endpoints implemented (context.create, list, update, delete, getForPage)
 - [x] User can draw regions on PDF (reused existing region drawing mode)
@@ -554,9 +554,119 @@ const createContext = trpc.context.create.useMutation({
 - [x] Edit operations work (modal pre-fills data)
 - [x] Delete operations work (with confirmation)
 - [x] Visibility toggles show/hide contexts (inline eye icon)
-- [ ] "Remove from this page" functionality (deferred - needs custom page config logic)
+
+🔄 Phase 6 Deferred Features (to be completed with Phase 7):
+- [ ] "Remove from this page" functionality
+- [ ] Page exclusion support (e.g., "every other starting on 1; except 3,5,7")
+- [ ] Conflict detection for overlapping page_number contexts
+- [ ] Conflict resolution UI with navigation to conflicting pages
 - [ ] Interaction tests for context operations (see testing document)
+
+## Deferred Features (Phase 6 Extensions)
+
+The following features were identified during Phase 6 implementation but deferred to be completed alongside Phase 7:
+
+### Page Exclusion ("Except" Clause)
+
+**Problem:** When user clicks "Remove from page" in Page Sidebar, we need to exclude specific pages from a context without recreating it.
+
+**Solution:** Add `exceptPages` field to schema:
+
+```typescript
+type Context = {
+  // ... existing fields ...
+  exceptPages?: number[]; // Array of page numbers to exclude
+};
+```
+
+**Examples:**
+- Context: "All pages, except 3,5,7"
+  - `pageConfigMode: "all_pages"`, `exceptPages: [3, 5, 7]`
+- Context: "Every other starting on 1, except 3,7"
+  - `pageConfigMode: "all_pages"`, `everyOther: true`, `startPage: 1`, `exceptPages: [3, 7]`
+- Context: "Custom pages 1-10,20-30, except 5,25"
+  - `pageConfigMode: "custom"`, `pageRange: "1-10,20-30"`, `exceptPages: [5, 25]`
+
+**UI Updates:**
+- "Remove from page" button adds current page to `exceptPages` array
+- Edit Context modal shows excluded pages with option to re-include them
+- Page config summary includes exceptions (e.g., "All pages except 3, 5, 7")
+
+### Conflict Detection for Page Number Contexts
+
+**Constraint:** Only ONE `page_number` context can apply to any given page (to avoid ambiguity in canonical page numbers).
+
+**Conflict Detection Logic:**
+```typescript
+// Backend: Detect conflicts when contexts change
+function detectPageNumberConflicts({ projectId }): ConflictReport[] {
+  const pageNumberContexts = getContexts({ projectId, type: 'page_number' });
+  const conflicts = [];
+  
+  for (let page = 1; page <= documentPageCount; page++) {
+    const contextsForPage = pageNumberContexts.filter(ctx => 
+      appliesToPage({ context: ctx, targetPage: page })
+    );
+    
+    if (contextsForPage.length > 1) {
+      conflicts.push({
+        page,
+        contexts: contextsForPage.map(ctx => ({
+          id: ctx.id,
+          name: ctx.name,
+        })),
+      });
+    }
+  }
+  
+  return conflicts;
+}
+```
+
+**Conflict Resolution UI:**
+
+In Project Sidebar, contexts with conflicts show error state:
+
+```
+┌─────────────────────────────────┐
+│ ● Top-right Page Number         │
+│   Page Number                   │
+│   All pages                     │
+│   ⚠️ CONFLICTS:                 │
+│   • Page 5 (with "Bottom PN")   │
+│     [Navigate to Page 5]        │
+│   • Page 7 (with "Bottom PN")   │
+│     [Navigate to Page 7]        │
+│   [👁][✏️][🗑️]                  │
+└─────────────────────────────────┘
+```
+
+In Page Sidebar (when on conflicting page):
+
+```
+┌─────────────────────────────────┐
+│ ⚠️ PAGE NUMBER CONFLICT          │
+│                                 │
+│ Multiple page number contexts:  │
+│ • Top-right Page Number         │
+│   [Remove from this page]       │
+│ • Bottom-center Page Number     │
+│   [Remove from this page]       │
+│                                 │
+│ Resolve conflict to enable      │
+│ canonical page number indexing. │
+└─────────────────────────────────┘
+```
+
+**Resolution Options:**
+1. Click "Remove from this page" on unwanted context (adds to `exceptPages`)
+2. Edit context to change page config (avoid overlap)
+3. Delete one of the conflicting contexts
+
+### Ignore Context Overlaps (No Conflict)
+
+**Note:** Multiple `ignore` contexts CAN overlap on the same page (no conflict). All ignore regions apply cumulatively.
 
 ## Next Phase
 
-[Phase 7: Page Numbering System](../phase-7-page-numbering/) uses page number contexts to extract and display canonical page numbers.
+[Phase 7: Page Numbering System](../phase-7-page-numbering/) uses page number contexts to extract and display canonical page numbers. Phase 7 will complete the deferred Phase 6 features (page exclusion, conflict detection) as they are required for canonical page numbering to work correctly.
