@@ -23,5 +23,7 @@ export const createDocument = ({
 	metadata,
 });
 
+export * from "./context.types";
+export * from "./context.utils";
 export * from "./logger.types";
 export * from "./validation";

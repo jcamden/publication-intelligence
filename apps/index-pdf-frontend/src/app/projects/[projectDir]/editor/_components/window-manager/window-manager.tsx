@@ -41,6 +41,8 @@ type WindowManagerProps = {
 	activeAction: { type: string | null; indexType: string | null };
 	onSelectText: ({ indexType }: { indexType: string }) => void;
 	onDrawRegion: ({ indexType }: { indexType: string }) => void;
+	onDrawContext?: () => void;
+	onEditContext?: (contextId: string) => void;
 	mentions: Mention[];
 	currentPage: number;
 	onMentionClick: ({ mentionId }: { mentionId: string }) => void;
@@ -108,6 +110,8 @@ export const WindowManager = ({
 	activeAction,
 	onSelectText,
 	onDrawRegion,
+	onDrawContext,
+	onEditContext,
 	mentions,
 	currentPage,
 	onMentionClick,
@@ -162,6 +166,10 @@ export const WindowManager = ({
 					"page-author",
 					"page-scripture",
 				].includes(id);
+
+				// Special case for project-contexts
+				const isProjectContexts = id === "project-contexts";
+
 				const contentProps = needsActionProps
 					? {
 							activeAction,
@@ -171,7 +179,9 @@ export const WindowManager = ({
 							currentPage,
 							onMentionClick,
 						}
-					: {};
+					: isProjectContexts
+						? { activeAction, onDrawContext, onEditContext }
+						: {};
 
 				return (
 					<Window

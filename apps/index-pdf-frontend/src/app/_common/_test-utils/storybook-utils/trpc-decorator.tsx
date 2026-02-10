@@ -307,6 +307,32 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
+					if (urlString.includes("context.list")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					if (urlString.includes("context.getForPage")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
 					// Default mock response for other endpoints
 					return new Response(
 						JSON.stringify({

@@ -12,12 +12,17 @@ CREATE TYPE "public"."source_document_status" AS ENUM('uploaded', 'processing', 
 CREATE TYPE "public"."variant_type" AS ENUM('alias', 'synonym', 'abbreviation', 'deprecated', 'editorial');--> statement-breakpoint
 CREATE TABLE "contexts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"document_id" uuid NOT NULL,
+	"project_id" uuid NOT NULL,
 	"context_type" "context_type" NOT NULL,
 	"page_config_mode" "page_config_mode" NOT NULL,
 	"page_number" integer,
 	"page_range" text,
+	"every_other" boolean DEFAULT false NOT NULL,
+	"start_page" integer,
 	"bbox" json,
+	"color" text NOT NULL,
+	"visible" boolean DEFAULT true NOT NULL,
+	"extracted_page_number" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone,
 	"deleted_at" timestamp with time zone
@@ -215,7 +220,7 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-ALTER TABLE "contexts" ADD CONSTRAINT "contexts_document_id_source_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."source_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "contexts" ADD CONSTRAINT "contexts_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "document_pages" ADD CONSTRAINT "document_pages_document_id_source_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."source_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "source_documents" ADD CONSTRAINT "source_documents_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -248,9 +253,9 @@ CREATE UNIQUE INDEX "unique_entry_text" ON "index_variants" USING btree ("entry_
 CREATE UNIQUE INDEX "unique_name_version" ON "prompts" USING btree ("name","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_owner_dir" ON "projects" USING btree ("owner_id","project_dir") WHERE "projects"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_owner_title" ON "projects" USING btree ("owner_id","title") WHERE "projects"."deleted_at" IS NULL;--> statement-breakpoint
-CREATE POLICY "contexts_document_access" ON "contexts" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
-				SELECT 1 FROM source_documents
-				WHERE source_documents.id = "contexts"."document_id"
+CREATE POLICY "contexts_project_access" ON "contexts" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
+				SELECT 1 FROM projects
+				WHERE projects.id = "contexts"."project_id"
 			));--> statement-breakpoint
 CREATE POLICY "document_pages_document_access" ON "document_pages" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
 				SELECT 1 FROM source_documents

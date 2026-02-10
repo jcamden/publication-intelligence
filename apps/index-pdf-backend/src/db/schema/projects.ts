@@ -7,7 +7,7 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { sourceDocuments } from "./documents";
+import { contexts, sourceDocuments } from "./documents";
 import { projectIndexTypes } from "./index-types";
 import { indexEntries } from "./indexing";
 import { authenticatedRole, users } from "./users";
@@ -58,4 +58,5 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 	sourceDocuments: many(sourceDocuments),
 	indexEntries: many(indexEntries),
 	projectIndexTypes: many(projectIndexTypes),
+	contexts: many(contexts),
 }));

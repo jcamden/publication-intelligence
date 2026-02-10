@@ -190,18 +190,7 @@ export const PageSidebar = ({
 		"page-contexts": {
 			title: "Page Contexts",
 			icon: FolderTree,
-			content: () => (
-				<PageContextsContent
-					mentions={getMentionsForType("context")}
-					onMentionClick={onMentionClick}
-				/>
-			),
-			actionButtons: {
-				indexType: "context",
-				activeAction,
-				onSelectText,
-				onDrawRegion,
-			},
+			content: () => <PageContextsContent currentPage={currentPage} />,
 		},
 	};
 

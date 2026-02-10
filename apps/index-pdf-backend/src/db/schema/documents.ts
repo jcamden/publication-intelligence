@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
 	bigint,
+	boolean,
 	integer,
 	json,
 	pgPolicy,
@@ -63,7 +64,6 @@ export const sourceDocumentsRelations = relations(
 			references: [projects.id],
 		}),
 		pages: many(documentPages),
-		contexts: many(contexts),
 		indexMentions: many(indexMentions),
 	}),
 );
@@ -117,14 +117,20 @@ export const contexts = pgTable(
 	"contexts",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
-		documentId: uuid("document_id")
-			.references(() => sourceDocuments.id, { onDelete: "cascade" })
+		projectId: uuid("project_id")
+			.references(() => projects.id, { onDelete: "cascade" })
 			.notNull(),
+		name: text("name").notNull(), // User-provided name for the context
 		contextType: contextTypeEnum("context_type").notNull(),
 		pageConfigMode: pageConfigModeEnum("page_config_mode").notNull(),
 		pageNumber: integer("page_number"), // For this_page mode
 		pageRange: text("page_range"), // For page_range/custom modes
+		everyOther: boolean("every_other").default(false).notNull(),
+		startPage: integer("start_page"), // Starting page for every other
 		bbox: json("bbox"), // BoundingBox coordinates
+		color: text("color").notNull(), // Hex color (e.g., "#FCA5A5")
+		visible: boolean("visible").default(true).notNull(),
+		extractedPageNumber: text("extracted_page_number"), // For page_number contexts
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -132,14 +138,13 @@ export const contexts = pgTable(
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [
-		// RLS: Inherit access from source document
-		// source_documents RLS inherits from projects RLS
-		pgPolicy("contexts_document_access", {
+		// RLS: Inherit access from project
+		pgPolicy("contexts_project_access", {
 			for: "all",
 			to: authenticatedRole,
 			using: sql`EXISTS (
-				SELECT 1 FROM source_documents
-				WHERE source_documents.id = ${table.documentId}
+				SELECT 1 FROM projects
+				WHERE projects.id = ${table.projectId}
 			)`,
 		}),
 	],
@@ -147,8 +152,8 @@ export const contexts = pgTable(
 
 // Context relations
 export const contextsRelations = relations(contexts, ({ one }) => ({
-	document: one(sourceDocuments, {
-		fields: [contexts.documentId],
-		references: [sourceDocuments.id],
+	project: one(projects, {
+		fields: [contexts.projectId],
+		references: [projects.id],
 	}),
 }));

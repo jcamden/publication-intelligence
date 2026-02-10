@@ -1,4 +1,5 @@
 import { authRouter } from "../modules/auth/auth.router";
+import { contextRouter } from "../modules/context/context.router";
 import { indexEntryRouter } from "../modules/index-entry/index-entry.router";
 import { indexMentionRouter } from "../modules/index-mention/index-mention.router";
 import { projectRouter } from "../modules/project/project.router";
@@ -9,6 +10,7 @@ import { router } from "../trpc";
 
 export const appRouter = router({
 	auth: authRouter,
+	context: contextRouter,
 	indexEntry: indexEntryRouter,
 	indexMention: indexMentionRouter,
 	project: projectRouter,
@@ -20,6 +22,14 @@ export const appRouter = router({
 export type AppRouter = typeof appRouter;
 
 // Re-export types for frontend consumption
+export type {
+	Context,
+	ContextListItem,
+	CreateContextInput,
+	DeleteContextInput,
+	UpdateContextInput,
+} from "../modules/context/context.types";
+
 export type {
 	CreateIndexEntryInput,
 	DeleteIndexEntryInput,

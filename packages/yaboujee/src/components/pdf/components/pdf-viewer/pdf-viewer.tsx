@@ -794,7 +794,13 @@ export const PdfViewer = ({
 			{/* PDF Canvas */}
 			<ScrollArea viewportRef={scrollContainerRef} className="flex-1 pt-4">
 				<div className="mx-auto w-fit rounded-lg bg-[hsl(var(--color-background))] shadow-lg">
-					<div ref={pageContainerRef} className="relative">
+					<div
+						ref={pageContainerRef}
+						className="relative"
+						style={{
+							cursor: regionDrawingActive ? "crosshair" : "default",
+						}}
+					>
 						<canvas ref={canvasRef} className="block" />
 
 						{/* Text Layer - selectable when textLayerInteractive is true */}

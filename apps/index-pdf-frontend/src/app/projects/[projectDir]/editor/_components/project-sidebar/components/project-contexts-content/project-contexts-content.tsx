@@ -1,133 +1,194 @@
 "use client";
 
-import { OklchColorPicker } from "@pubint/yabasic/components/ui/oklch-color-picker";
-import { useAtom } from "jotai";
-import { useMemo, useState } from "react";
+import { getPageConfigSummary } from "@pubint/core";
+import { Button } from "@pubint/yabasic/components/ui/button";
+import { StyledButton } from "@pubint/yaboujee";
+import {
+	Edit,
+	Eye,
+	EyeOff,
+	SquareDashedMousePointer,
+	Trash2,
+} from "lucide-react";
 import { trpc } from "@/app/_common/_utils/trpc";
-import { colorConfigAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
-import { EntryCreationModal } from "../../../entry-creation-modal";
-import { EntryTree } from "../../../entry-tree";
 
-export const ProjectContextsContent = () => {
-	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
-	const { projectId, documentId } = useProjectContext();
+type ProjectContextsContentProps = {
+	activeAction?: { type: string | null; indexType: string | null };
+	onDrawContext?: () => void;
+	onEditContext?: (contextId: string) => void;
+};
 
-	const [modalOpen, setModalOpen] = useState(false);
+export const ProjectContextsContent = ({
+	activeAction,
+	onDrawContext,
+	onEditContext,
+}: ProjectContextsContentProps) => {
+	const { projectId } = useProjectContext();
+	const utils = trpc.useUtils();
 
-	const { data: projectIndexTypes, isLoading: isLoadingIndexTypes } =
-		trpc.projectIndexType.list.useQuery(
-			{ projectId: projectId || "" },
-			{ enabled: !!projectId },
-		);
-
-	// Note: "context" index type not yet implemented in backend
-	// Backend only supports: "subject", "author", "scripture"
-	const contextProjectIndexTypeId = useMemo(
-		() =>
-			// biome-ignore lint/suspicious/noExplicitAny: Context index type not yet in backend enum
-			projectIndexTypes?.find((t) => t.indexType === ("context" as any))?.id ||
-			undefined,
-		[projectIndexTypes],
-	);
-
-	// Fetch entries from backend (will be empty until context type is added)
+	// Fetch contexts for this project
 	const {
-		data: backendEntries = [],
-		isLoading: isLoadingEntries,
-		error: entriesError,
-	} = trpc.indexEntry.list.useQuery(
-		{
-			projectId: projectId || "",
-			projectIndexTypeId: contextProjectIndexTypeId,
-		},
-		{ enabled: !!projectId && !!contextProjectIndexTypeId },
+		data: contexts = [],
+		isLoading,
+		error,
+	} = trpc.context.list.useQuery(
+		{ projectId: projectId || "" },
+		{ enabled: !!projectId },
 	);
 
-	// Convert backend entries to frontend format (add indexType field)
-	const entries = backendEntries.map((e) => ({
-		...e,
-		indexType: "context",
-		projectId: projectId || undefined,
-		projectIndexTypeId: contextProjectIndexTypeId,
-		metadata: {
-			aliases: e.variants.map((v) => v.text),
+	const deleteContext = trpc.context.delete.useMutation({
+		onSuccess: () => {
+			// Invalidate both project and page context queries
+			utils.context.list.invalidate({ projectId: projectId || "" });
+			utils.context.getForPage.invalidate();
 		},
-	}));
-
-	// Fetch mentions for this document
-	const { data: backendMentions = [], isLoading: isLoadingMentions } =
-		trpc.indexMention.list.useQuery(
-			{
-				projectId: projectId || "",
-				documentId: documentId || "",
-			},
-			{ enabled: !!projectId && !!documentId },
-		);
-
-	// Convert backend mentions to frontend format
-	const allMentions = backendMentions.map((m) => ({
-		id: m.id,
-		pageNumber: m.pageNumber ?? 1,
-		text: m.textSpan,
-		bboxes: m.bboxes ?? [],
-		entryId: m.entryId,
-		entryLabel: m.entry.label,
-		indexTypes: m.indexTypes.map((t) => t.indexType),
-		type: m.mentionType as "text" | "region",
-		createdAt: new Date(m.createdAt),
-	}));
-
-	// Persist color changes to backend
-	usePersistColorChange({
-		projectId,
-		indexType: "context",
-		colorHue: colorConfig.context.hue,
-		enabled: !!projectId,
 	});
 
-	const isLoading =
-		isLoadingIndexTypes ||
-		isLoadingEntries ||
-		(isLoadingMentions && !!documentId);
+	const toggleVisibility = trpc.context.update.useMutation({
+		onSuccess: () => {
+			// Invalidate both project and page context queries
+			utils.context.list.invalidate({ projectId: projectId || "" });
+			utils.context.getForPage.invalidate();
+		},
+	});
+
+	const handleDelete = async ({ contextId }: { contextId: string }) => {
+		if (!confirm("Are you sure you want to delete this context?")) {
+			return;
+		}
+
+		await deleteContext.mutateAsync({ id: contextId });
+	};
+
+	const handleToggleVisibility = async ({
+		contextId,
+		visible,
+	}: {
+		contextId: string;
+		visible: boolean;
+	}) => {
+		await toggleVisibility.mutateAsync({ id: contextId, visible: !visible });
+	};
+
+	const getContextTypeLabel = (type: "ignore" | "page_number") => {
+		return type === "ignore" ? "Ignore" : "Page Number";
+	};
+
+	if (isLoading) {
+		return (
+			<div className="p-4 text-sm text-gray-500 dark:text-gray-400">
+				Loading contexts...
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="p-4 text-sm text-red-600 dark:text-red-400">
+				Error loading contexts: {error.message}
+			</div>
+		);
+	}
+
+	const isDrawContextActive = activeAction?.type === "draw-context";
 
 	return (
-		<>
+		<div className="flex flex-col h-full">
+			{/* Header */}
 			<div className="p-3 border-b border-gray-200 dark:border-gray-700">
-				<div className="flex items-center justify-between gap-3">
-					<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-						Context Color
-					</span>
-					<OklchColorPicker
-						value={colorConfig.context}
-						onChange={(color) => {
-							setColorConfig((prev) => ({
-								...prev,
-								context: color,
-							}));
-						}}
-						label="Context color"
-					/>
-				</div>
-			</div>
-			<EntryTree
-				entries={entries}
-				mentions={allMentions}
-				projectId={projectId}
-				onCreateEntry={() => setModalOpen(true)}
-				isLoading={isLoading}
-				error={entriesError ? (entriesError as unknown as Error) : null}
-			/>
-			{contextProjectIndexTypeId && projectId && (
-				<EntryCreationModal
-					open={modalOpen}
-					onClose={() => setModalOpen(false)}
-					projectId={projectId}
-					projectIndexTypeId={contextProjectIndexTypeId}
-					existingEntries={entries}
+				<StyledButton
+					icon={SquareDashedMousePointer}
+					label="Draw Context Region"
+					isActive={isDrawContextActive}
+					onClick={() => {
+						if (onDrawContext) {
+							onDrawContext();
+						}
+					}}
 				/>
-			)}
-		</>
+			</div>
+
+			{/* Context list */}
+			<div className="flex-1 overflow-y-auto">
+				{contexts.length === 0 ? (
+					<div className="p-4 text-sm text-center text-gray-500 dark:text-gray-400">
+						No contexts yet. Create one to mark regions for ignore or page
+						numbers.
+					</div>
+				) : (
+					<div className="divide-y divide-gray-200 dark:divide-gray-700">
+						{contexts.map((context) => (
+							<div
+								key={context.id}
+								className="p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+							>
+								<div className="flex items-start gap-2">
+									{/* Color indicator */}
+									<div
+										className="w-3 h-3 rounded-full mt-1 flex-shrink-0"
+										style={{ backgroundColor: context.color }}
+									/>
+
+									{/* Content */}
+									<div className="flex-1 min-w-0">
+										<div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-0.5">
+											{context.name}
+										</div>
+										<div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">
+											{getContextTypeLabel(context.contextType)}
+										</div>
+										<div className="text-xs text-gray-500 dark:text-gray-500">
+											{getPageConfigSummary({ context })}
+										</div>
+									</div>
+
+									{/* Actions */}
+									<div className="flex gap-1">
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() =>
+												handleToggleVisibility({
+													contextId: context.id,
+													visible: context.visible,
+												})
+											}
+											title={context.visible ? "Hide context" : "Show context"}
+										>
+											{context.visible ? (
+												<Eye className="w-3 h-3" />
+											) : (
+												<EyeOff className="w-3 h-3" />
+											)}
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => {
+												if (onEditContext) {
+													onEditContext(context.id);
+												}
+											}}
+											title="Edit context"
+										>
+											<Edit className="w-3 h-3" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => handleDelete({ contextId: context.id })}
+											title="Delete context"
+										>
+											<Trash2 className="w-3 h-3" />
+										</Button>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+			</div>
+		</div>
 	);
 };

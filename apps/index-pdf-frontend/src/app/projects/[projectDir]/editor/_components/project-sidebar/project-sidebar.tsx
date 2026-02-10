@@ -30,6 +30,9 @@ import { ProjectSubjectContent } from "./components/project-subject-content";
 
 type ProjectSidebarProps = {
 	enabledIndexTypes: string[]; // Index types enabled for this project
+	activeAction?: { type: string | null; indexType: string | null }; // Current active action
+	onDrawContext?: () => void; // Callback to activate context drawing mode
+	onEditContext?: (contextId: string) => void; // Callback to edit context
 };
 
 /**
@@ -37,7 +40,12 @@ type ProjectSidebarProps = {
  *
  * Left sidebar showing project-level panels (pages, indices, etc.)
  */
-export const ProjectSidebar = ({ enabledIndexTypes }: ProjectSidebarProps) => {
+export const ProjectSidebar = ({
+	enabledIndexTypes,
+	activeAction,
+	onDrawContext,
+	onEditContext,
+}: ProjectSidebarProps) => {
 	const { resolvedTheme } = useTheme();
 	const isDarkMode = resolvedTheme === "dark";
 	const sections = useAtomValue(sectionsStateAtom);
@@ -120,7 +128,13 @@ export const ProjectSidebar = ({ enabledIndexTypes }: ProjectSidebarProps) => {
 		"project-contexts": {
 			title: "Project Contexts",
 			icon: FolderTree,
-			content: ProjectContextsContent,
+			content: () => (
+				<ProjectContextsContent
+					activeAction={activeAction}
+					onDrawContext={onDrawContext}
+					onEditContext={onEditContext}
+				/>
+			),
 		},
 	};
 

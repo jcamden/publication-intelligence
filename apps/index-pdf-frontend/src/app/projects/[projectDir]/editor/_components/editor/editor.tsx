@@ -28,6 +28,7 @@ import { useHydrated } from "@/app/projects/[projectDir]/editor/_hooks/use-hydra
 import { ProjectProvider } from "../../_context/project-context";
 import type { ColorConfig, IndexTypeName } from "../../_types/color-config";
 import { ColorConfigProvider } from "../color-config-provider";
+import { ContextCreationModal } from "../context-creation-modal";
 import { DeleteMentionDialog } from "../delete-mention-dialog";
 import {
 	type BoundingBox,
@@ -91,9 +92,16 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 
 	// Transient action state (replaces persistent annotationMode)
 	const [activeAction, setActiveAction] = useState<{
-		type: "select-text" | "draw-region" | null;
+		type: "select-text" | "draw-region" | "draw-context" | null;
 		indexType: string | null;
 	}>({ type: null, indexType: null });
+
+	// Context creation/edit state
+	const [contextModalOpen, setContextModalOpen] = useState(false);
+	const [contextToEdit, setContextToEdit] = useState<string | null>(null); // Context ID for editing
+	const [drawnContextBbox, setDrawnContextBbox] = useState<BoundingBox | null>(
+		null,
+	);
 
 	// Fetch project index types from backend
 	const projectIndexTypesQuery = trpc.projectIndexType.list.useQuery(
@@ -147,6 +155,23 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		type: m.mentionType,
 		createdAt: new Date(m.createdAt),
 	}));
+
+	// Fetch contexts for current page
+	const { data: contextsForPage = [] } = trpc.context.getForPage.useQuery(
+		{
+			projectId: projectId ?? "",
+			pageNumber: currentPage,
+		},
+		{ enabled: !!projectId && currentPage > 0 },
+	);
+
+	// TODO Phase 6: Integrate ContextLayer into PdfViewer
+	// Contexts are fetched above but need to be rendered on the PDF.
+	// Similar to how PdfHighlightLayer renders mentions, contexts need:
+	// 1. Add renderContextLayer prop to PdfViewer (in yaboujee)
+	// 2. Pass contextsForPage and onContextClick handler
+	// 3. ContextLayer needs page dimensions (width/height) from PDF.js
+	// For now, contexts are managed via sidebar but not rendered on PDF yet.
 
 	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
 
@@ -236,6 +261,21 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		[],
 	);
 
+	const handleDrawContext = useCallback(() => {
+		setActiveAction((current) => {
+			// Toggle off if already active
+			if (current.type === "draw-context") {
+				return { type: null, indexType: null };
+			}
+			return { type: "draw-context", indexType: null };
+		});
+	}, []);
+
+	const handleEditContext = useCallback((contextId: string) => {
+		setContextToEdit(contextId);
+		setContextModalOpen(true);
+	}, []);
+
 	const handleDraftConfirmed = useCallback(
 		async ({
 			draft,
@@ -244,7 +284,18 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			draft: { pageNumber: number; text: string; bboxes: BoundingBox[] };
 			entry: { entryId: string; entryLabel: string; regionName?: string };
 		}) => {
-			// Capture which index type this mention was created from
+			// Check if this is context creation mode
+			if (activeAction.type === "draw-context") {
+				// Store the bbox and open context creation modal
+				setDrawnContextBbox(draft.bboxes[0] || null);
+				setContextToEdit(null); // Clear edit mode
+				setContextModalOpen(true);
+				setActiveAction({ type: null, indexType: null });
+				setClearDraftTrigger((prev) => prev + 1);
+				return;
+			}
+
+			// Regular mention creation flow
 			const indexType = activeAction.indexType || "subject"; // Default to subject if none
 
 			// Find the projectIndexTypeId for this index type
@@ -277,6 +328,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		},
 		[
 			activeAction.indexType,
+			activeAction.type,
 			createMention,
 			documentId,
 			projectIndexTypesQuery.data,
@@ -291,6 +343,18 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 
 	const handleHighlightClick = useCallback(
 		(highlight: PdfHighlight) => {
+			// Check if this is a context click
+			if (highlight.metadata?.isContext) {
+				const contextId = highlight.id.replace("context-", "");
+				const context = contextsForPage.find((c) => c.id === contextId);
+				if (context) {
+					setContextToEdit(contextId);
+					setContextModalOpen(true);
+					return;
+				}
+			}
+
+			// Regular mention click
 			const mention = mentions.find((m) => m.id === highlight.id);
 			if (mention) {
 				// Find the highlight element to use as anchor
@@ -303,7 +367,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				}
 			}
 		},
-		[mentions],
+		[mentions, contextsForPage],
 	);
 
 	const handleMentionClickFromSidebar = useCallback(
@@ -489,8 +553,25 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		};
 	});
 
-	// Use real mentions as highlights
-	const allHighlights = mentionHighlights;
+	// Convert contexts to highlight format for rendering
+	// TODO: Create dedicated context rendering in yaboujee for better styling (dashed borders)
+	const contextHighlights: PdfHighlight[] = contextsForPage
+		.filter((ctx) => ctx.visible)
+		.map((ctx) => ({
+			id: `context-${ctx.id}`,
+			pageNumber: currentPage,
+			label: ctx.contextType === "ignore" ? "Ignore" : "Page Number",
+			text: "",
+			bboxes: [ctx.bbox],
+			metadata: {
+				isContext: true,
+				contextType: ctx.contextType,
+				contextColor: ctx.color,
+			},
+		}));
+
+	// Combine mentions and contexts for rendering
+	const allHighlights = [...mentionHighlights, ...contextHighlights];
 
 	// Get enabled index types for this project (to filter sidebar sections)
 	const enabledIndexTypes =
@@ -526,7 +607,12 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						{/* Project sidebar - always rendered, transitions to 0 width when collapsed */}
 						{onlyProjectVisible ? (
 							<div className="flex-1 min-w-0">
-								<ProjectSidebar enabledIndexTypes={enabledIndexTypes} />
+								<ProjectSidebar
+									enabledIndexTypes={enabledIndexTypes}
+									activeAction={activeAction}
+									onDrawContext={handleDrawContext}
+									onEditContext={handleEditContext}
+								/>
 							</div>
 						) : (
 							<ResizableSidebar
@@ -534,7 +620,12 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 								widthAtom={projectSidebarWidthAtom}
 								isCollapsed={projectCollapsed}
 							>
-								<ProjectSidebar enabledIndexTypes={enabledIndexTypes} />
+								<ProjectSidebar
+									enabledIndexTypes={enabledIndexTypes}
+									activeAction={activeAction}
+									onDrawContext={handleDrawContext}
+									onEditContext={handleEditContext}
+								/>
 							</ResizableSidebar>
 						)}
 
@@ -550,7 +641,10 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									highlights={allHighlights}
 									onHighlightClick={handleHighlightClick}
 									textLayerInteractive={activeAction.type === "select-text"}
-									regionDrawingActive={activeAction.type === "draw-region"}
+									regionDrawingActive={
+										activeAction.type === "draw-region" ||
+										activeAction.type === "draw-context"
+									}
 									onDraftConfirmed={handleDraftConfirmed}
 									onDraftCancelled={handleDraftCancelled}
 									clearDraftTrigger={clearDraftTrigger}
@@ -560,22 +654,35 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 										bboxes,
 										onConfirm,
 										onCancel,
-									}) => (
-										<MentionCreationPopover
-											draft={{
-												documentId: documentId || "",
-												pageNumber,
-												text,
-												bboxes,
-												type: text ? "text" : "region",
-											}}
-											indexType={activeAction.indexType || "subject"}
-											entries={allEntries}
-											mentions={mentions}
-											onAttach={onConfirm}
-											onCancel={onCancel}
-										/>
-									)}
+									}) => {
+										// For context drawing, don't show mention popover - just auto-confirm
+										if (activeAction.type === "draw-context") {
+											// Auto-confirm to trigger handleDraftConfirmed
+											onConfirm({
+												entryId: "",
+												entryLabel: "",
+											});
+											return null;
+										}
+
+										// Regular mention creation popover
+										return (
+											<MentionCreationPopover
+												draft={{
+													documentId: documentId || "",
+													pageNumber,
+													text,
+													bboxes,
+													type: text ? "text" : "region",
+												}}
+												indexType={activeAction.indexType || "subject"}
+												entries={allEntries}
+												mentions={mentions}
+												onAttach={onConfirm}
+												onCancel={onCancel}
+											/>
+										);
+									}}
 								/>
 							</div>
 						)}
@@ -617,6 +724,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						activeAction={activeAction}
 						onSelectText={handleSelectText}
 						onDrawRegion={handleDrawRegion}
+						onDrawContext={handleDrawContext}
+						onEditContext={handleEditContext}
 						mentions={mentions}
 						currentPage={currentPage}
 						onMentionClick={handleMentionClickFromSidebar}
@@ -653,6 +762,21 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						isOpen={showDeleteConfirm}
 						onOpenChange={({ open }) => setShowDeleteConfirm(open)}
 						onConfirm={handleConfirmDelete}
+					/>
+
+					{/* Context creation/edit modal */}
+					<ContextCreationModal
+						open={contextModalOpen}
+						onClose={() => {
+							setContextModalOpen(false);
+							setContextToEdit(null);
+							setDrawnContextBbox(null);
+						}}
+						projectId={projectId || ""}
+						currentPage={currentPage}
+						documentPageCount={totalPages}
+						drawnBbox={drawnContextBbox}
+						contextId={contextToEdit || undefined}
 					/>
 				</div>
 			</ProjectProvider>

@@ -223,10 +223,13 @@ const runInteractionTests = ({
 	}
 
 	try {
-		execSync(`pnpm exec turbo run test:interaction --filter="${workspaceName}"`, {
-			stdio: "inherit",
-			encoding: "utf-8",
-		});
+		execSync(
+			`pnpm exec turbo run test:interaction --filter="${workspaceName}"`,
+			{
+				stdio: "inherit",
+				encoding: "utf-8",
+			},
+		);
 		console.log(`  ✅ Interaction tests passed`);
 	} catch (error) {
 		console.error(`  ❌ Interaction tests failed`);
