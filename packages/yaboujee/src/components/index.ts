@@ -1,6 +1,9 @@
 export type { AlertProps, AlertVariant } from "./alert";
 export { Alert, AlertAction, AlertDescription, AlertTitle } from "./alert";
 export { DraggableSidebar, SidebarAccordionItem } from "./draggable-sidebar";
+export type { EmptyStateProps } from "./empty-state/empty-state";
+export { EmptyState } from "./empty-state/empty-state";
+export { ErrorState } from "./error-state/error-state";
 export type { FormFooterProps } from "./form-footer";
 export { FormFooter } from "./form-footer";
 export type { FormInputProps } from "./form-input";

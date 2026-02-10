@@ -4,11 +4,11 @@ import {
 } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { awaitHighlights } from "@/app/_common/_test-helpers/interaction-steps";
 import {
 	TestDecorator,
 	TrpcDecorator,
 } from "@/app/_common/_test-utils/storybook-utils";
-import { awaitHighlights } from "@/test-helpers/interaction-steps";
 import { Editor } from "../../editor";
 import { SAMPLE_PDF_URL } from "../shared";
 

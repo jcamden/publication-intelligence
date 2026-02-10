@@ -16,10 +16,11 @@ export const ProjectScriptureContent = () => {
 
 	const [modalOpen, setModalOpen] = useState(false);
 
-	const { data: projectIndexTypes } = trpc.projectIndexType.list.useQuery(
-		{ projectId: projectId || "" },
-		{ enabled: !!projectId },
-	);
+	const { data: projectIndexTypes, isLoading: isLoadingIndexTypes } =
+		trpc.projectIndexType.list.useQuery(
+			{ projectId: projectId || "" },
+			{ enabled: !!projectId },
+		);
 
 	const scriptureProjectIndexTypeId = useMemo(
 		() =>
@@ -29,7 +30,11 @@ export const ProjectScriptureContent = () => {
 	);
 
 	// Fetch entries from backend
-	const { data: backendEntries = [] } = trpc.indexEntry.list.useQuery(
+	const {
+		data: backendEntries = [],
+		isLoading: isLoadingEntries,
+		error: entriesError,
+	} = trpc.indexEntry.list.useQuery(
 		{
 			projectId: projectId || "",
 			projectIndexTypeId: scriptureProjectIndexTypeId,
@@ -41,19 +46,22 @@ export const ProjectScriptureContent = () => {
 	const entries = backendEntries.map((e) => ({
 		...e,
 		indexType: "scripture",
+		projectId: projectId || undefined,
+		projectIndexTypeId: scriptureProjectIndexTypeId,
 		metadata: {
 			aliases: e.variants.map((v) => v.text),
 		},
 	}));
 
 	// Fetch mentions for this document
-	const { data: backendMentions = [] } = trpc.indexMention.list.useQuery(
-		{
-			projectId: projectId || "",
-			documentId: documentId || "",
-		},
-		{ enabled: !!projectId && !!documentId },
-	);
+	const { data: backendMentions = [], isLoading: isLoadingMentions } =
+		trpc.indexMention.list.useQuery(
+			{
+				projectId: projectId || "",
+				documentId: documentId || "",
+			},
+			{ enabled: !!projectId && !!documentId },
+		);
 
 	// Convert backend mentions to frontend format
 	const allMentions = backendMentions.map((m) => ({
@@ -75,6 +83,11 @@ export const ProjectScriptureContent = () => {
 		colorHue: colorConfig.scripture.hue,
 		enabled: !!projectId,
 	});
+
+	const isLoading =
+		isLoadingIndexTypes ||
+		isLoadingEntries ||
+		(isLoadingMentions && !!documentId);
 
 	return (
 		<>
@@ -100,6 +113,8 @@ export const ProjectScriptureContent = () => {
 				mentions={allMentions}
 				projectId={projectId}
 				onCreateEntry={() => setModalOpen(true)}
+				isLoading={isLoading}
+				error={entriesError ? (entriesError as unknown as Error) : null}
 			/>
 			{scriptureProjectIndexTypeId && projectId && (
 				<EntryCreationModal

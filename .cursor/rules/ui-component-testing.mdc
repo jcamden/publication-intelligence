@@ -56,6 +56,86 @@ export const MyTest: Story = {
 
 **Note:** `step` is provided by Storybook's play function context, not imported from `@storybook/test`.
 
+## Mock Callback Functions
+
+When testing components that accept callback props (like `onClick`, `onSubmit`, `onRetry`), use `fn()` from `@storybook/test` and always clear mocks at the start of the play function.
+
+**Pattern: Mock in args, clear in play function**
+
+```typescript
+import { expect, fn, userEvent, within } from '@storybook/test';
+
+export const CallbackTest: Story = {
+  args: {
+    onRetry: fn(),  // Create mock in args
+  },
+  play: async ({ args, canvasElement, step }) => {
+    const canvas = within(canvasElement);
+    const onRetry = args.onRetry as ReturnType<typeof fn>;
+    
+    // Reset mock to ensure clean state for test run
+    onRetry.mockClear();
+    
+    await step('Trigger callback', async () => {
+      const button = canvas.getByRole('button', { name: /retry/i });
+      await userEvent.click(button);
+    });
+    
+    await step('Verify callback was called', async () => {
+      await expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+  },
+};
+```
+
+**Pattern: Mock in custom render function**
+
+For components that don't directly accept callbacks as props (like when passing a callback to a child component):
+
+```typescript
+export const ActionButtonClick: Story = {
+  render: (args) => {
+    const { onActionClick, ...componentProps } = args as typeof args & {
+      onActionClick: () => void;
+    };
+    return (
+      <MyComponent {...componentProps}>
+        <Button onClick={onActionClick}>Click Me</Button>
+      </MyComponent>
+    );
+  },
+  args: {
+    // @ts-expect-error - onActionClick is a test-only prop
+    onActionClick: fn(),
+  },
+  play: async ({ args, canvasElement, step }) => {
+    const canvas = within(canvasElement);
+    const { onActionClick } = args as typeof args & {
+      onActionClick: ReturnType<typeof fn>;
+    };
+    
+    // Reset mock to ensure clean state
+    onActionClick.mockClear();
+    
+    await step('Click button', async () => {
+      const button = canvas.getByRole('button', { name: /click me/i });
+      await userEvent.click(button);
+      await expect(onActionClick).toHaveBeenCalledTimes(1);
+    });
+  },
+};
+```
+
+**Why clear mocks?**
+
+Mock functions created in `args` persist across test runs in Storybook. Without `mockClear()`, call counts accumulate and `toHaveBeenCalledTimes(1)` will fail on subsequent runs.
+
+**Key points:**
+- Always call `mockClear()` at the start of the play function
+- Use `fn()` from `@storybook/test`, not `vi.fn()` or `jest.fn()`
+- Type assertions may be needed for test-only props
+- Extract the mock at the top of play function if using custom render
+
 ## Default Meta Configurations
 
 Always use the exported default meta configurations from `@pubint/storybook-config`:

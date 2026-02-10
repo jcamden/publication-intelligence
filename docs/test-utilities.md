@@ -81,7 +81,7 @@ This document catalogs shared test utilities across the monorepo to prevent dupl
 **`TrpcDecorator`** (`trpc-decorator.tsx`)
 - Provides mock tRPC client and Next.js router for Storybook
 
-### Interaction Steps (`src/test-helpers/interaction-steps.ts`)
+### Interaction Steps (`@/app/_common/_test-helpers/interaction-stepss`)
 
 **`awaitHighlights()`**
 - Waits for PDF highlights to render

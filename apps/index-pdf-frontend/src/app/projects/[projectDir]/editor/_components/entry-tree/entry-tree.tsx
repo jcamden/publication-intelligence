@@ -1,11 +1,13 @@
 "use client";
 
+import { ErrorState } from "@pubint/yaboujee";
 import { useMemo, useState } from "react";
 import { useUpdateEntryParent } from "@/app/_common/_hooks/use-update-entry-parent";
 import type { IndexEntry } from "../../_types/index-entry";
 import type { Mention } from "../editor/editor";
 import { CreateEntryButton } from "./components/create-entry-button";
 import { EntryItem } from "./components/entry-item";
+import { EntryListSkeleton } from "./components/entry-list-skeleton";
 
 export type EntryTreeProps = {
 	entries: IndexEntry[]; // All entries for this index type
@@ -13,6 +15,8 @@ export type EntryTreeProps = {
 	projectId?: string; // Optional for hierarchy updates (disabled if not provided)
 	onEntryClick?: (entry: IndexEntry) => void; // Optional click handler
 	onCreateEntry: () => void; // Open entry creation modal
+	isLoading?: boolean; // Loading state
+	error?: Error | null; // Error state
 };
 
 type EntryTreeNodeProps = {
@@ -89,6 +93,8 @@ export const EntryTree = ({
 	projectId = "",
 	onEntryClick,
 	onCreateEntry,
+	isLoading = false,
+	error = null,
 }: EntryTreeProps) => {
 	const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
 	const [isRootDropTarget, setIsRootDropTarget] = useState(false);
@@ -133,6 +139,26 @@ export const EntryTree = ({
 		setIsRootDropTarget(false);
 		handleDrop(null);
 	};
+
+	if (error) {
+		return (
+			<div className="p-4">
+				<ErrorState
+					title="Failed to load entries"
+					message={error.message}
+					onRetry={() => window.location.reload()}
+				/>
+			</div>
+		);
+	}
+
+	if (isLoading) {
+		return (
+			<div className="p-4">
+				<EntryListSkeleton count={5} />
+			</div>
+		);
+	}
 
 	if (entries.length === 0) {
 		return (

@@ -9,6 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@pubint/yabasic/components/ui/select";
+import { Spinner } from "@pubint/yabasic/components/ui/spinner";
 import { FormInput, Modal } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useCallback, useMemo } from "react";
@@ -93,15 +94,26 @@ export const EntryCreationModal = ({
 			size="md"
 			footer={
 				<>
-					<Button variant="outline" onClick={handleCancel}>
+					<Button
+						variant="outline"
+						onClick={handleCancel}
+						disabled={createEntry.isPending}
+					>
 						Cancel
 					</Button>
 					<Button
 						variant="default"
 						onClick={() => form.handleSubmit()}
-						disabled={form.state.isSubmitting}
+						disabled={form.state.isSubmitting || createEntry.isPending}
 					>
-						Create
+						{createEntry.isPending ? (
+							<>
+								<Spinner size="sm" className="mr-2" />
+								Creating...
+							</>
+						) : (
+							"Create"
+						)}
 					</Button>
 				</>
 			}

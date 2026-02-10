@@ -16,10 +16,11 @@ export const ProjectAuthorContent = () => {
 
 	const [modalOpen, setModalOpen] = useState(false);
 
-	const { data: projectIndexTypes } = trpc.projectIndexType.list.useQuery(
-		{ projectId: projectId || "" },
-		{ enabled: !!projectId },
-	);
+	const { data: projectIndexTypes, isLoading: isLoadingIndexTypes } =
+		trpc.projectIndexType.list.useQuery(
+			{ projectId: projectId || "" },
+			{ enabled: !!projectId },
+		);
 
 	const authorProjectIndexTypeId = useMemo(
 		() =>
@@ -28,7 +29,11 @@ export const ProjectAuthorContent = () => {
 	);
 
 	// Fetch entries from backend
-	const { data: backendEntries = [] } = trpc.indexEntry.list.useQuery(
+	const {
+		data: backendEntries = [],
+		isLoading: isLoadingEntries,
+		error: entriesError,
+	} = trpc.indexEntry.list.useQuery(
 		{
 			projectId: projectId || "",
 			projectIndexTypeId: authorProjectIndexTypeId,
@@ -40,19 +45,22 @@ export const ProjectAuthorContent = () => {
 	const entries = backendEntries.map((e) => ({
 		...e,
 		indexType: "author",
+		projectId: projectId || undefined,
+		projectIndexTypeId: authorProjectIndexTypeId,
 		metadata: {
 			aliases: e.variants.map((v) => v.text),
 		},
 	}));
 
 	// Fetch mentions for this document
-	const { data: backendMentions = [] } = trpc.indexMention.list.useQuery(
-		{
-			projectId: projectId || "",
-			documentId: documentId || "",
-		},
-		{ enabled: !!projectId && !!documentId },
-	);
+	const { data: backendMentions = [], isLoading: isLoadingMentions } =
+		trpc.indexMention.list.useQuery(
+			{
+				projectId: projectId || "",
+				documentId: documentId || "",
+			},
+			{ enabled: !!projectId && !!documentId },
+		);
 
 	// Convert backend mentions to frontend format
 	const allMentions = backendMentions.map((m) => ({
@@ -74,6 +82,11 @@ export const ProjectAuthorContent = () => {
 		colorHue: colorConfig.author.hue,
 		enabled: !!projectId,
 	});
+
+	const isLoading =
+		isLoadingIndexTypes ||
+		isLoadingEntries ||
+		(isLoadingMentions && !!documentId);
 
 	return (
 		<>
@@ -99,6 +112,8 @@ export const ProjectAuthorContent = () => {
 				mentions={allMentions}
 				projectId={projectId}
 				onCreateEntry={() => setModalOpen(true)}
+				isLoading={isLoading}
+				error={entriesError ? (entriesError as unknown as Error) : null}
 			/>
 			{authorProjectIndexTypeId && projectId && (
 				<EntryCreationModal
