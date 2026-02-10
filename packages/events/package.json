@@ -16,6 +16,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
+		"lint:biome": "biome ci .",
 		"clean": "rm -rf dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",

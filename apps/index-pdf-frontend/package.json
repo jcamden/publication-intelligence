@@ -8,6 +8,7 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
+		"lint:biome": "biome ci .",
 		"clean": "rm -rf .next",
 		"typecheck": "tsc --noEmit",
 		"test": "pnpm test:unit && pnpm test:interaction",

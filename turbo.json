@@ -1,0 +1,22 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"tasks": {
+		"lint:biome": {
+			"cache": true,
+			"inputs": ["src/**", "*.json", "*.config.*", "biome.json"]
+		},
+		"typecheck": {
+			"cache": true,
+			"inputs": ["src/**", "*.json", "tsconfig.json"]
+		},
+		"test:unit": {
+			"cache": true,
+			"inputs": ["src/**", "*.json", "*.config.*", "test/**", "vitest.*.ts"]
+		},
+		"test:interaction": {
+			"cache": true,
+			"outputs": ["test-results/**"],
+			"inputs": ["src/**", ".storybook-interaction/**", "*.config.*"]
+		}
+	}
+}

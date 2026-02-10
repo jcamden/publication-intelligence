@@ -179,7 +179,7 @@ const runTests = ({
 	}
 
 	try {
-		execSync(`pnpm --filter "${workspaceName}" test:unit`, {
+		execSync(`pnpm exec turbo run test:unit --filter="${workspaceName}"`, {
 			stdio: "inherit",
 			encoding: "utf-8",
 		});
@@ -223,7 +223,7 @@ const runInteractionTests = ({
 	}
 
 	try {
-		execSync(`pnpm --filter "${workspaceName}" test:interaction`, {
+		execSync(`pnpm exec turbo run test:interaction --filter="${workspaceName}"`, {
 			stdio: "inherit",
 			encoding: "utf-8",
 		});
@@ -234,11 +234,22 @@ const runInteractionTests = ({
 	}
 };
 
-const runBiome = ({ workspacePath }: { workspacePath: string }) => {
+const runBiome = ({
+	workspaceName,
+	workspacePath,
+}: {
+	workspaceName: string;
+	workspacePath: string;
+}) => {
 	console.log(`\n🔍 Linting ${workspacePath}...`);
 
+	if (!hasScript({ workspacePath, scriptName: "lint:biome" })) {
+		console.log(`  ⏭️  No lint:biome script found, skipping`);
+		return;
+	}
+
 	try {
-		execSync(`pnpm exec biome ci ${workspacePath}`, {
+		execSync(`pnpm exec turbo run lint:biome --filter="${workspaceName}"`, {
 			stdio: "inherit",
 			encoding: "utf-8",
 		});
@@ -264,7 +275,7 @@ const runTypecheck = ({
 	}
 
 	try {
-		execSync(`pnpm --filter "${workspaceName}" typecheck`, {
+		execSync(`pnpm exec turbo run typecheck --filter="${workspaceName}"`, {
 			stdio: "inherit",
 			encoding: "utf-8",
 		});
@@ -363,6 +374,10 @@ const main = () => {
 			const workspace = workspaceMap.get(workspaceName);
 			if (!workspace) continue;
 
+			const hasLintBiome = hasScript({
+				workspacePath: workspace.path,
+				scriptName: "lint:biome",
+			});
 			const hasTests = hasScript({
 				workspacePath: workspace.path,
 				scriptName: "test:unit",
@@ -376,7 +391,9 @@ const main = () => {
 				INTERACTION_TEST_PACKAGES.includes(workspaceName);
 
 			console.log(`   ${workspaceName}:`);
-			console.log(`     - Biome lint: ✅ yes`);
+			console.log(
+				`     - Biome lint: ${hasLintBiome ? "✅ yes" : "⏭️  skipped (no lint:biome script)"}`,
+			);
 			console.log(
 				`     - Type check: ${hasTypecheck ? "✅ yes" : "⏭️  skipped (no typecheck script)"}`,
 			);
@@ -402,7 +419,7 @@ const main = () => {
 		const workspace = workspaceMap.get(workspaceName);
 		if (!workspace) continue;
 
-		runBiome({ workspacePath: workspace.path });
+		runBiome({ workspaceName, workspacePath: workspace.path });
 		runTypecheck({ workspaceName, workspacePath: workspace.path });
 		runTests({ workspaceName, workspacePath: workspace.path });
 

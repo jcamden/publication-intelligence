@@ -17,6 +17,8 @@ test-results
 playwright-report
 playwright/.cache
 
+.turbo
+
 # Misc
 .DS_Store
 *.log

@@ -10,6 +10,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
+		"lint:biome": "biome ci .",
 		"clean": "rm -rf dist storybook-static",
 		"typecheck": "tsc --noEmit",
 		"test": "pnpm test:unit && pnpm test:interaction",
