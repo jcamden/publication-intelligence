@@ -105,6 +105,9 @@ export type CreateIndexMentionInput = z.infer<typeof CreateIndexMentionSchema>;
 
 export const UpdateIndexMentionSchema = z.object({
 	id: z.string().uuid(),
+	projectId: z.string().uuid(),
+	documentId: z.string().uuid(),
+	pageNumber: z.number().int(),
 	entryId: z.string().uuid().optional(),
 	textSpan: z.string().optional(),
 	projectIndexTypeIds: z.array(z.string().uuid()).min(1).optional(),
@@ -145,6 +148,9 @@ export type BulkCreateIndexMentionsInput = z.infer<
 
 export const DeleteIndexMentionSchema = z.object({
 	id: z.string().uuid(),
+	projectId: z.string().uuid(),
+	documentId: z.string().uuid(),
+	pageNumber: z.number().int(),
 });
 
 export type DeleteIndexMentionInput = z.infer<typeof DeleteIndexMentionSchema>;

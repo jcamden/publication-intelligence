@@ -98,6 +98,8 @@ export type CreateIndexEntryInput = z.infer<typeof CreateIndexEntrySchema>;
 
 export const UpdateIndexEntrySchema = z.object({
 	id: z.string().uuid(),
+	projectId: z.string().uuid(),
+	projectIndexTypeId: z.string().uuid(),
 	label: z.string().min(1).max(200).optional(),
 	description: z.string().optional().nullable(),
 	variants: z.array(z.string()).optional(),
@@ -116,6 +118,8 @@ export type UpdateIndexEntryParentInput = z.infer<
 
 export const DeleteIndexEntrySchema = z.object({
 	id: z.string().uuid(),
+	projectId: z.string().uuid(),
+	projectIndexTypeId: z.string().uuid(),
 	cascadeToChildren: z.boolean().optional().default(false),
 });
 

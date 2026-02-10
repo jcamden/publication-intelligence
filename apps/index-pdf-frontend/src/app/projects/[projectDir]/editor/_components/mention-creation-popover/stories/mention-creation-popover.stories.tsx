@@ -17,6 +17,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const mockDraft: MentionDraft = {
+	documentId: "mock-document-id",
 	pageNumber: 1,
 	text: "This is a selected text that will be turned into a mention. It might be quite long and needs to be truncated in the UI.",
 	bboxes: [{ x: 100, y: 200, width: 300, height: 40 }],
@@ -24,6 +25,7 @@ const mockDraft: MentionDraft = {
 };
 
 const mockRegionDraft: MentionDraft = {
+	documentId: "mock-document-id",
 	pageNumber: 1,
 	text: "",
 	bboxes: [{ x: 100, y: 200, width: 300, height: 200 }],

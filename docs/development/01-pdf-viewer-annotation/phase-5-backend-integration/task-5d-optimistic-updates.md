@@ -1,498 +1,170 @@
-# Task 5D: Optimistic Updates & Error Handling
+# Task 5D: Frontend Integration & Polish
 
-**Duration:** 1-2 days  
+**Duration:** 4-6 days  
 **Status:** ⚪ Not Started  
 **Dependencies:** Task 5C completion (IndexMention backend)
 
 ## Overview
 
-Polish the user experience with optimistic updates (instant feedback) and graceful error handling (retry, rollback, clear messaging). Migrate from local state to tRPC queries throughout the application.
+Integrate frontend with backend APIs, implement optimistic updates for smooth UX, remove mock data, fix bugs, and polish the user experience with loading states, error handling, and comprehensive testing.
 
-**Key Features:**
-- Optimistic updates for all CRUD operations
-- Automatic retry with exponential backoff
-- Rollback on failure
-- Loading states and skeletons
-- Toast notifications for success/error
-- Offline detection and queueing
+**This task is split into 4 sub-tasks for manageable implementation:**
 
-## Optimistic Update Patterns
+1. **[Task 5D-1: Core Optimistic Updates](./task-5d-1-core-optimistic-updates.md)** (1-2 days)
+   - Entry and mention CRUD with optimistic updates
+   - Adapters for data conversion
+   - Basic error handling and retry logic
 
-### Pattern 1: Create Mention (Optimistic)
+2. **[Task 5D-2: Advanced Operations](./task-5d-2-advanced-operations.md)** (1-2 days)
+   - Multi-type mention operations
+   - Bulk updateIndexTypes
+   - Hierarchy management (drag-drop, cycle detection)
+   - ProjectIndexType operations
 
-```typescript
-// apps/index-pdf-frontend/src/hooks/use-create-mention.ts
+3. **[Task 5D-3: State Migration & Cleanup](./task-5d-3-state-migration-cleanup.md)** (1 day)
+   - Remove all mock data from frontend
+   - Replace useState with tRPC queries
+   - Fix project settings index types bug
+   - Code cleanup
 
-export const useCreateMention = () => {
-  const utils = trpc.useContext();
-  
-  return trpc.indexMention.create.useMutation({
-    // BEFORE mutation starts
-    onMutate: async (newMention) => {
-      // Cancel any outgoing queries (prevent race conditions)
-      await utils.indexMention.list.cancel();
-      
-      // Snapshot current state for rollback
-      const previous = utils.indexMention.list.getData({
-        documentId: newMention.documentId,
-        pageNumber: newMention.pageNumber,
-      });
-      
-      // Optimistically update cache
-      utils.indexMention.list.setData(
-        {
-          documentId: newMention.documentId,
-          pageNumber: newMention.pageNumber,
-        },
-        (old) => [
-          ...(old || []),
-          {
-            id: `temp-${Date.now()}`, // Temporary ID
-            ...newMention,
-            created_at: new Date().toISOString(),
-            entry: null, // Will be filled by server
-          } as any,
-        ]
-      );
-      
-      // Return context for rollback
-      return { previous };
-    },
-    
-    // ON ERROR: Rollback
-    onError: (err, newMention, context) => {
-      // Restore previous state
-      if (context?.previous) {
-        utils.indexMention.list.setData(
-          {
-            documentId: newMention.documentId,
-            pageNumber: newMention.pageNumber,
-          },
-          context.previous
-        );
-      }
-      
-      // Show error toast
-      toast.error(`Failed to create mention: ${err.message}`);
-    },
-    
-    // ON SUCCESS: Replace temp with real data
-    onSuccess: (data, variables) => {
-      // Server returns real mention with ID
-      // Replace optimistic update with real data
-      utils.indexMention.list.setData(
-        {
-          documentId: variables.documentId,
-          pageNumber: variables.pageNumber,
-        },
-        (old) => 
-          (old || []).map(m =>
-            m.id.startsWith('temp-') ? data : m
-          )
-      );
-      
-      toast.success('Mention created');
-    },
-    
-    // ALWAYS: Refetch to sync
-    onSettled: (data, err, variables) => {
-      // Refetch to ensure consistency
-      utils.indexMention.list.invalidate({
-        documentId: variables.documentId,
-        pageNumber: variables.pageNumber,
-      });
-    },
-  });
-};
-```
+4. **[Task 5D-4: Polish & Testing](./task-5d-4-polish-testing.md)** (1-2 days)
+   - Skeleton loaders and loading states
+   - Error boundaries
+   - Network status detection
+   - Confirmation dialogs
+   - Frontend integration tests
 
-### Pattern 2: Update Mention (Optimistic)
+## Key Decisions
 
-```typescript
-// apps/index-pdf-frontend/src/hooks/use-update-mention.ts
+Based on discussions, the following decisions were made:
 
-export const useUpdateMention = () => {
-  const utils = trpc.useContext();
-  
-  return trpc.indexMention.update.useMutation({
-    onMutate: async (update) => {
-      await utils.indexMention.list.cancel();
-      
-      const previous = utils.indexMention.list.getData({
-        documentId: update.documentId,
-      });
-      
-      // Optimistically update the specific mention
-      utils.indexMention.list.setData(
-        { documentId: update.documentId },
-        (old) =>
-          (old || []).map(m =>
-            m.id === update.id
-              ? { ...m, ...update }
-              : m
-          )
-      );
-      
-      return { previous };
-    },
-    
-    onError: (err, update, context) => {
-      if (context?.previous) {
-        utils.indexMention.list.setData(
-          { documentId: update.documentId },
-          context.previous
-        );
-      }
-      toast.error(`Failed to update mention: ${err.message}`);
-    },
-    
-    onSuccess: () => {
-      toast.success('Mention updated');
-    },
-    
-    onSettled: (data, err, variables) => {
-      utils.indexMention.list.invalidate({
-        documentId: variables.documentId,
-      });
-    },
-  });
-};
-```
+### Variants Handling
+**Question:** Where should variants (aliases) be handled?  
+**Answer:** Inline in the entry form. Backend stores them in `indexVariants` table (already implemented in 5B).
 
-### Pattern 3: Delete Mention (Optimistic)
+### Soft Delete Behavior
+**Question:** Should optimistic updates hide items immediately or wait for server?  
+**Answer:** Hide immediately. Users expect instant feedback, and soft delete is already implemented in the backend.
 
-```typescript
-// apps/index-pdf-frontend/src/hooks/use-delete-mention.ts
+### Revision Fields
+**Question:** What are revision fields for?  
+**Answer:** Track edit history version numbers. Not currently used in MVP but reserved for future audit/versioning features. No optimistic update concerns - server increments automatically.
 
-export const useDeleteMention = () => {
-  const utils = trpc.useContext();
-  
-  return trpc.indexMention.delete.useMutation({
-    onMutate: async (deleteInput) => {
-      await utils.indexMention.list.cancel();
-      
-      const previous = utils.indexMention.list.getData({
-        documentId: deleteInput.documentId,
-      });
-      
-      // Optimistically remove from cache
-      utils.indexMention.list.setData(
-        { documentId: deleteInput.documentId },
-        (old) => (old || []).filter(m => m.id !== deleteInput.id)
-      );
-      
-      return { previous };
-    },
-    
-    onError: (err, deleteInput, context) => {
-      if (context?.previous) {
-        utils.indexMention.list.setData(
-          { documentId: deleteInput.documentId },
-          context.previous
-        );
-      }
-      toast.error(`Failed to delete mention: ${err.message}`);
-    },
-    
-    onSuccess: () => {
-      toast.success('Mention deleted');
-    },
-    
-    onSettled: (data, err, variables) => {
-      utils.indexMention.list.invalidate({
-        documentId: variables.documentId,
-      });
-    },
-  });
-};
-```
+### Color Persistence
+**Question:** Does color customization persist?  
+**Answer:** Yes, already implemented! `usePersistColorChange` hook in sidebar components debounces changes and calls `projectIndexType.update`. No additional work needed.
 
-## Error Handling Patterns
+### Draft-to-Mention Boundary
+**Question:** When does draft state transition to mention?  
+**Answer:** When user clicks "Attach" button in mention creation popover. Same for entries - when user clicks "Create" button. Before that, state lives locally in PdfViewer/form components.
 
-### Retry with Exponential Backoff
+## Additional Tasks
 
-```typescript
-// apps/index-pdf-frontend/src/lib/trpc-client.ts
+Beyond the core integration work, this task includes:
 
-import { QueryClient } from '@tanstack/react-query';
+### Mock Data Removal
+- Clear out all Phase 4 mock data generators
+- Remove hardcoded test entries, mentions, highlights
+- Rely solely on backend data via tRPC
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Retry failed queries
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors (client errors)
-        if (error?.data?.httpStatus >= 400 && error?.data?.httpStatus < 500) {
-          return false;
-        }
-        
-        // Retry up to 3 times
-        return failureCount < 3;
-      },
-      
-      // Exponential backoff: 1s, 2s, 4s
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      
-      // Stale time: 5 minutes (data considered fresh for 5 min)
-      staleTime: 5 * 60 * 1000,
-      
-      // Cache time: 10 minutes
-      cacheTime: 10 * 60 * 1000,
-    },
-    mutations: {
-      // Retry mutations only on network errors
-      retry: (failureCount, error) => {
-        if (error?.message?.includes('network')) {
-          return failureCount < 3;
-        }
-        return false;
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    },
-  },
-});
-```
+### Bug Fixes
+- **Project Settings Index Types**: Selected index types in multiselect don't persist when clicking "Update Project"
+  - Root cause: Form state likely missing indexTypes field or mutation not including them
+  - Fix in task 5D-3
 
-### Error Boundaries
+## Success Criteria
 
-```tsx
-// apps/index-pdf-frontend/src/components/error-boundary.tsx
-
-export class ErrorBoundary extends React.Component<Props, State> {
-  state = { hasError: false, error: null };
-  
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-  
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error boundary caught:', error, errorInfo);
-    // Log to error tracking service
-  }
-  
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="error-container">
-          <h2>Something went wrong</h2>
-          <p>{this.state.error?.message}</p>
-          <Button onClick={() => window.location.reload()}>
-            Reload Page
-          </Button>
-        </div>
-      );
-    }
-    
-    return this.props.children;
-  }
-}
-```
-
-### Network Status Detection
-
-```typescript
-// apps/index-pdf-frontend/src/hooks/use-network-status.ts
-
-export const useNetworkStatus = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const utils = trpc.useContext();
-  
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      toast.success('Connection restored');
-      // Retry failed queries
-      utils.invalidate();
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      toast.warning('No internet connection');
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-  
-  return { isOnline };
-};
-
-// Usage in component:
-export const Editor = () => {
-  const { isOnline } = useNetworkStatus();
-  
-  return (
-    <>
-      {!isOnline && (
-        <Banner variant="warning">
-          You're offline. Changes will be saved when connection is restored.
-        </Banner>
-      )}
-      {/* ... rest of editor */}
-    </>
-  );
-};
-```
-
-## Loading States
-
-### Skeleton Loaders
-
-```tsx
-// apps/index-pdf-frontend/src/components/mention-list-skeleton.tsx
-
-export const MentionListSkeleton = () => {
-  return (
-    <div className="space-y-2">
-      {[...Array(5)].map((_, i) => (
-        <div key={i} className="flex items-center gap-2 p-2">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-4 flex-1" />
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Usage:
-export const PageSubjectContent = () => {
-  const { data: mentions, isLoading } = trpc.indexMention.list.useQuery({
-    indexTypes: ['subject'],
-  });
-  
-  if (isLoading) {
-    return <MentionListSkeleton />;
-  }
-  
-  return (
-    <div>
-      {mentions?.map(mention => (
-        <MentionButton key={mention.id} mention={mention} />
-      ))}
-    </div>
-  );
-};
-```
-
-### Inline Loading
-
-```tsx
-// apps/index-pdf-frontend/src/components/mention-details-popover/mention-details-popover.tsx
-
-export const MentionDetailsPopover = ({ mention }: Props) => {
-  const updateMention = useUpdateMention();
-  
-  const handleSave = () => {
-    updateMention.mutate({
-      id: mention.id,
-      entryId: selectedEntry.id,
-      indexTypes: selectedIndexTypes,
-    });
-  };
-  
-  return (
-    <div>
-      {/* ... form fields ... */}
-      
-      <Button
-        onClick={handleSave}
-        disabled={updateMention.isLoading}
-      >
-        {updateMention.isLoading ? (
-          <>
-            <Spinner className="mr-2" />
-            Saving...
-          </>
-        ) : (
-          'Save'
-        )}
-      </Button>
-    </div>
-  );
-};
-```
-
-## State Migration Checklist
-
-### Replace Local State with tRPC
-
-- [ ] **IndexTypes:**
-  - [ ] Replace `useState` with `trpc.indexType.list.useQuery`
-  - [ ] Update create/update/delete to use mutations
-  - [ ] Add optimistic updates
-
-- [ ] **IndexEntries:**
-  - [ ] Replace `useState` with `trpc.indexEntry.list.useQuery`
-  - [ ] Filter by index type
-  - [ ] Update CRUD operations
-  - [ ] Add optimistic updates
-
-- [ ] **IndexMentions:**
-  - [ ] Replace `useState` with `trpc.indexMention.list.useQuery`
-  - [ ] Filter by page and index type
-  - [ ] Update CRUD operations
-  - [ ] Add optimistic updates
-  - [ ] Replace adapter logic
-
-- [ ] **Draft State:**
-  - [ ] Keep draft state local in PdfViewer (doesn't need backend)
-  - [ ] Only persist when confirmed
-
-## Testing Requirements
-
-- [ ] Optimistic updates work for all CRUD operations
-- [ ] Rollback works on error
-- [ ] Retry works with exponential backoff
-- [ ] Network offline detection works
-- [ ] Error toasts display correctly
+Task 5D complete when:
+- [ ] All CRUD operations use tRPC with optimistic updates
+- [ ] Mock data completely removed from frontend
+- [ ] Project settings index types bug fixed
 - [ ] Loading states render properly
-- [ ] Skeleton loaders match content structure
+- [ ] Error handling graceful with user-friendly messages
+- [ ] Network offline detection working
+- [ ] Confirmation dialogs for destructive actions
 - [ ] No flickering during optimistic updates
-- [ ] Cache invalidation works correctly
-- [ ] Concurrent edits don't corrupt data
 - [ ] Performance acceptable (instant perceived latency)
+- [ ] Frontend integration tests passing
 
-## Implementation Checklist
+## Architecture Notes
 
-### Optimistic Updates
-- [ ] Create custom hooks for all mutations
-- [ ] Implement onMutate for instant feedback
-- [ ] Implement onError for rollback
-- [ ] Implement onSuccess for toast notifications
-- [ ] Implement onSettled for cache sync
+### Optimistic Update Pattern
 
-### Error Handling
-- [ ] Configure retry logic in QueryClient
-- [ ] Add error boundaries
-- [ ] Add network status detection
-- [ ] Add error toast notifications
-- [ ] Add validation error display
+All mutations follow this structure:
 
-### Loading States
-- [ ] Create skeleton loaders for lists
-- [ ] Add inline loading spinners
-- [ ] Add disabled states during mutations
-- [ ] Add loading overlays for long operations
+```typescript
+useMutation({
+  onMutate: async (input) => {
+    // 1. Cancel outgoing queries
+    // 2. Snapshot current state
+    // 3. Optimistically update cache
+    // 4. Return context for rollback
+  },
+  onError: (err, input, context) => {
+    // 5. Rollback using snapshot
+    // 6. Show user-friendly error toast
+  },
+  onSuccess: (data) => {
+    // 7. Replace temp data with server response
+    // 8. Show success toast
+  },
+  onSettled: () => {
+    // 9. Invalidate queries to refetch
+  },
+})
+```
 
-### State Migration
-- [ ] Remove all `useState` for backend data
-- [ ] Replace with tRPC queries
-- [ ] Update all components to use queries
-- [ ] Test each component after migration
-- [ ] Remove old state management code
+### Cache Invalidation Strategy
 
-### Polish
-- [ ] Add success toasts
-- [ ] Add error toasts
-- [ ] Add confirmation dialogs for destructive actions
-- [ ] Test offline mode
-- [ ] Test concurrent edits
-- [ ] Performance test with many operations
+- **Single-type operations**: Invalidate queries for that specific projectIndexTypeId
+- **Multi-type operations**: Invalidate queries for all affected index types
+- **Hierarchy operations**: Invalidate parent's projectIndexTypeId queries
+- **Page mentions**: Invalidate by documentId + pageNumber
+- **Project settings**: Invalidate project-level queries
+
+### Error Message Mapping
+
+- **Cycle detection**: "Cannot move entry: Would create a circular hierarchy"
+- **Depth limit**: "Cannot move entry: Maximum hierarchy depth (5 levels) exceeded"
+- **Addon access**: "You need to purchase this index type addon first"
+- **Network errors**: "No internet connection - changes will be saved when restored"
+- **Validation errors**: Use server message or friendly fallback
+
+## Related Documentation
+
+- [Task 5A: Schema Migration](./task-5a-schema-migration.md) - Database schema
+- [Task 5B: IndexEntry Backend](./task-5b-index-entry-backend.md) - Entry endpoints
+- [Task 5C: IndexMention Backend](./task-5c-index-mention-backend.md) - Mention endpoints
+- [Phase 4 README](../phase-4-highlight-management/README.md) - Frontend implementation to replace
+
+## Sub-Task Links
+
+**Implementation Order:**
+
+1. **[Task 5D-1: Core Optimistic Updates](./task-5d-1-core-optimistic-updates.md)**
+   - Entry CRUD with optimistic updates
+   - Mention CRUD with optimistic updates
+   - Adapters (draftToMentionInput, mentionToPdfHighlight)
+   - Query client configuration with retry logic
+
+2. **[Task 5D-2: Advanced Operations](./task-5d-2-advanced-operations.md)**
+   - Multi-type mention cache invalidation
+   - Bulk updateIndexTypes (add/replace/remove)
+   - Hierarchy drag-drop with cycle detection UX
+   - ProjectIndexType enable/disable/reorder
+
+3. **[Task 5D-3: State Migration & Cleanup](./task-5d-3-state-migration-cleanup.md)**
+   - Remove all mock data generators
+   - Replace useState with tRPC useQuery
+   - Fix project settings index types persistence bug
+   - Code cleanup and test updates
+
+4. **[Task 5D-4: Polish & Testing](./task-5d-4-polish-testing.md)**
+   - Skeleton loaders for all data fetching
+   - Error boundaries for graceful degradation
+   - Network status detection and offline banner
+   - Confirmation dialogs for destructive actions
+   - Comprehensive frontend integration tests
 
 ---
 

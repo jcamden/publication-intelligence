@@ -72,6 +72,7 @@ import { WindowManager } from "../window-manager";
 type EditorProps = {
 	fileUrl: string;
 	projectId?: string;
+	documentId?: string; // TODO Phase 5: Make required when backend is integrated
 	initialMentions?: Mention[]; // For testing only
 };
 
@@ -179,6 +180,7 @@ const mockHighlights: PdfHighlight[] = [
 export const Editor = ({
 	fileUrl,
 	projectId,
+	documentId = "mock-document-id", // TODO Phase 5: Make required when backend is integrated
 	initialMentions = [],
 }: EditorProps) => {
 	const hydrated = useHydrated();
@@ -657,6 +659,7 @@ export const Editor = ({
 									}) => (
 										<MentionCreationPopover
 											draft={{
+												documentId,
 												pageNumber,
 												text,
 												bboxes,

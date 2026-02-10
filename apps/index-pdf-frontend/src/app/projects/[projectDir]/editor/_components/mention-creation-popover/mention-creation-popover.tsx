@@ -19,6 +19,7 @@ export type BoundingBox = {
 };
 
 export type MentionDraft = {
+	documentId: string;
 	pageNumber: number;
 	text: string;
 	bboxes: BoundingBox[];

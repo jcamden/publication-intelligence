@@ -82,11 +82,16 @@ IndexEntry CRUD operations, hierarchy management, search/autocomplete, exact mat
 
 IndexMention CRUD with multi-type support, page filtering, bulk operations for "Index As" feature. Validates user has addons for all selected types.
 
-### [5D: Optimistic Updates & Error Handling](./task-5d-optimistic-updates.md)
-**Duration:** 1-2 days  
+### [5D: Frontend Integration & Polish](./task-5d-optimistic-updates.md)
+**Duration:** 4-6 days  
 **Status:** ⚪ Not Started
 
-React Query optimistic updates, error handling, retry logic, loading states, state migration from local to API.
+Frontend integration with backend APIs split into 4 sub-tasks:
+
+- **[5D-1: Core Optimistic Updates](./task-5d-1-core-optimistic-updates.md)** - Entry/mention CRUD, adapters, retry logic
+- **[5D-2: Advanced Operations](./task-5d-2-advanced-operations.md)** - Multi-type, hierarchy, bulk operations
+- **[5D-3: State Migration & Cleanup](./task-5d-3-state-migration-cleanup.md)** - Remove mock data, fix project settings bug
+- **[5D-4: Polish & Testing](./task-5d-4-polish-testing.md)** - Loading states, error boundaries, integration tests
 
 ## Completion Criteria
 

@@ -407,6 +407,7 @@ describe("IndexMention API (Integration)", () => {
 		it("should update mention text span", async ({
 			testUser,
 			authenticatedRequest,
+			testProjectId,
 			testDocumentId,
 			subjectEntryId,
 			subjectIndexTypeId,
@@ -424,6 +425,9 @@ describe("IndexMention API (Integration)", () => {
 				url: "/trpc/indexMention.update",
 				payload: {
 					id: mention.id,
+					projectId: testProjectId,
+					documentId: testDocumentId,
+					pageNumber: mention.pageNumber,
 					textSpan: "updated text",
 				},
 			});
@@ -436,6 +440,7 @@ describe("IndexMention API (Integration)", () => {
 		it("should update mention entry", async ({
 			testUser,
 			authenticatedRequest,
+			testProjectId,
 			testDocumentId,
 			subjectEntryId,
 			authorEntryId,
@@ -453,6 +458,9 @@ describe("IndexMention API (Integration)", () => {
 				url: "/trpc/indexMention.update",
 				payload: {
 					id: mention.id,
+					projectId: testProjectId,
+					documentId: testDocumentId,
+					pageNumber: mention.pageNumber,
 					entryId: authorEntryId,
 				},
 			});
@@ -465,6 +473,7 @@ describe("IndexMention API (Integration)", () => {
 		it("should update mention index types", async ({
 			testUser,
 			authenticatedRequest,
+			testProjectId,
 			testDocumentId,
 			subjectEntryId,
 			subjectIndexTypeId,
@@ -482,6 +491,9 @@ describe("IndexMention API (Integration)", () => {
 				url: "/trpc/indexMention.update",
 				payload: {
 					id: mention.id,
+					projectId: testProjectId,
+					documentId: testDocumentId,
+					pageNumber: mention.pageNumber,
 					projectIndexTypeIds: [subjectIndexTypeId, authorIndexTypeId],
 				},
 			});
@@ -662,6 +674,7 @@ describe("IndexMention API (Integration)", () => {
 		it("should soft delete a mention", async ({
 			testUser,
 			authenticatedRequest,
+			testProjectId,
 			testDocumentId,
 			subjectEntryId,
 			subjectIndexTypeId,
@@ -678,6 +691,9 @@ describe("IndexMention API (Integration)", () => {
 				url: "/trpc/indexMention.delete",
 				payload: {
 					id: mention.id,
+					projectId: testProjectId,
+					documentId: testDocumentId,
+					pageNumber: mention.pageNumber,
 				},
 			});
 
@@ -688,12 +704,17 @@ describe("IndexMention API (Integration)", () => {
 
 		it("should reject deletion of non-existent mention", async ({
 			authenticatedRequest,
+			testProjectId,
+			testDocumentId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/indexMention.delete",
 				payload: {
 					id: "00000000-0000-0000-0000-000000000000",
+					projectId: testProjectId,
+					documentId: testDocumentId,
+					pageNumber: 1,
 				},
 			});
 

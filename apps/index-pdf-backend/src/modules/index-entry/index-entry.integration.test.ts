@@ -300,6 +300,8 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.delete",
 				payload: {
 					id: entry.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
 				},
 			});
 
@@ -366,6 +368,8 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.update",
 				payload: {
 					id: entry.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
 					label: "Systematic Theology",
 				},
 			});
@@ -396,6 +400,8 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.update",
 				payload: {
 					id: entry.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
 					variants: ["Christ", "Jesus", "The Messiah"],
 				},
 			});
@@ -427,6 +433,8 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.update",
 				payload: {
 					id: entry.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
 					label: "Systematic Theology",
 				},
 			});
@@ -746,6 +754,8 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.delete",
 				payload: {
 					id: entry.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
 				},
 			});
 
@@ -783,6 +793,8 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.delete",
 				payload: {
 					id: parent.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
 				},
 			});
 
@@ -820,6 +832,8 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.delete",
 				payload: {
 					id: parent.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
 					cascadeToChildren: true,
 				},
 			});
