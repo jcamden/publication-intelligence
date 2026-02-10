@@ -7,9 +7,12 @@ import { getTestDb } from "../db/client";
 import type * as schema from "../db/schema";
 import {
 	indexEntries,
+	indexMentions,
+	indexMentionTypes,
 	indexVariants,
 	projectIndexTypes,
 	projects,
+	sourceDocuments,
 	userIndexTypeAddons,
 	users,
 } from "../db/schema";
@@ -371,5 +374,122 @@ export const createTestIndexEntry = async ({
 		await tx.execute(sql`RESET ROLE`);
 
 		return entry;
+	});
+};
+
+// ============================================================================
+// Source Document Factory
+// ============================================================================
+
+export const createTestSourceDocument = async ({
+	projectId,
+	userId,
+	title = `Test Document ${randomBytes(4).toString("hex")}`,
+	fileName = "test-document.pdf",
+	storageKey = `test/${randomUUID()}.pdf`,
+	pageCount,
+	testDb,
+}: {
+	projectId: string;
+	userId: string;
+	title?: string;
+	fileName?: string;
+	storageKey?: string;
+	pageCount?: number;
+	testDb?: PgliteDatabase<typeof schema>;
+}) => {
+	const db = testDb || getTestDb();
+	if (!db) {
+		throw new Error(
+			"No test database available. Ensure test is running with proper setup.",
+		);
+	}
+
+	return await db.transaction(async (tx) => {
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
+
+		const [document] = await tx
+			.insert(sourceDocuments)
+			.values({
+				projectId,
+				title,
+				fileName,
+				storageKey,
+				pageCount: pageCount ?? null,
+				status: "uploaded",
+			})
+			.returning();
+
+		await tx.execute(sql`RESET ROLE`);
+
+		return document;
+	});
+};
+
+// ============================================================================
+// Index Mention Factory
+// ============================================================================
+
+export const createTestIndexMention = async ({
+	entryId,
+	documentId,
+	userId,
+	pageNumber = 1,
+	textSpan = "Test mention text",
+	bboxes = [{ x: 100, y: 100, width: 200, height: 20 }],
+	projectIndexTypeIds,
+	mentionType = "text",
+	testDb,
+}: {
+	entryId: string;
+	documentId: string;
+	userId: string;
+	pageNumber?: number;
+	textSpan?: string;
+	bboxes?: Array<{ x: number; y: number; width: number; height: number }>;
+	projectIndexTypeIds: string[];
+	mentionType?: "text" | "region";
+	testDb?: PgliteDatabase<typeof schema>;
+}) => {
+	const db = testDb || getTestDb();
+	if (!db) {
+		throw new Error(
+			"No test database available. Ensure test is running with proper setup.",
+		);
+	}
+
+	return await db.transaction(async (tx) => {
+		await tx.execute(
+			sql`SELECT set_config('request.jwt.claim.sub', ${userId}, TRUE)`,
+		);
+		await tx.execute(sql`SET LOCAL ROLE authenticated`);
+
+		const [mention] = await tx
+			.insert(indexMentions)
+			.values({
+				entryId,
+				documentId,
+				pageNumber,
+				textSpan,
+				bboxes: bboxes as unknown as typeof indexMentions.$inferInsert.bboxes,
+				rangeType: "single_page",
+				mentionType,
+				revision: 1,
+			})
+			.returning();
+
+		await tx.insert(indexMentionTypes).values(
+			projectIndexTypeIds.map((projectIndexTypeId) => ({
+				indexMentionId: mention.id,
+				projectIndexTypeId,
+			})),
+		);
+
+		await tx.execute(sql`RESET ROLE`);
+
+		return mention;
 	});
 };

@@ -1,7 +1,7 @@
 # Task 5C: IndexMention Backend
 
 **Duration:** 2-3 days  
-**Status:** ⚪ Not Started  
+**Status:** ✅ Complete  
 **Dependencies:** Task 5B completion (IndexEntry backend)
 
 ## Overview
@@ -390,30 +390,30 @@ export const BulkIndexAsModal = ({ selectedMentionIds }: Props) => {
 
 ## Testing Requirements
 
-- [ ] Mention CRUD operations work
-- [ ] Multi-type tagging persists correctly
-- [ ] Bulk updateIndexTypes works (add, replace, remove)
-- [ ] Page filtering returns correct mentions
-- [ ] Index type filtering works
-- [ ] Multi-type highlights render with stripes
-- [ ] Single-type highlights render solid color
-- [ ] Coordinates preserved in PDF user space
-- [ ] Region vs text mentions handled correctly
-- [ ] Performance acceptable with 1000+ mentions per page
-- [ ] Adapter functions handle edge cases
+- [x] Mention CRUD operations work
+- [x] Multi-type tagging persists correctly
+- [x] Bulk updateIndexTypes works (add, replace, remove)
+- [x] Page filtering returns correct mentions
+- [x] Index type filtering works
+- [ ] Multi-type highlights render with stripes (frontend)
+- [ ] Single-type highlights render solid color (frontend)
+- [x] Coordinates preserved in PDF user space
+- [x] Region vs text mentions handled correctly
+- [ ] Performance acceptable with 1000+ mentions per page (to be tested in production)
+- [ ] Adapter functions handle edge cases (frontend)
 
 ## Implementation Checklist
 
 ### Backend
-- [ ] Create `indexMention` tRPC router
-- [ ] Implement `list` with filtering
-- [ ] Implement `create` with validation
-- [ ] Implement `update` for entry/text/types
-- [ ] Implement `updateIndexTypes` bulk operation
-- [ ] Implement `bulkCreate` for imports
-- [ ] Implement `delete` (soft delete)
-- [ ] Add access control checks
-- [ ] Write unit tests
+- [x] Create `indexMention` tRPC router
+- [x] Implement `list` with filtering
+- [x] Implement `create` with validation
+- [x] Implement `update` for entry/text/types
+- [x] Implement `updateIndexTypes` bulk operation
+- [x] Implement `bulkCreate` for imports
+- [x] Implement `delete` (soft delete)
+- [x] Add access control checks (via RLS policies)
+- [x] Write integration tests (20 tests, all passing)
 
 ### Adapters
 - [ ] Create `mentionToPdfHighlight` adapter
@@ -430,12 +430,61 @@ export const BulkIndexAsModal = ({ selectedMentionIds }: Props) => {
 - [ ] Add loading and error states
 
 ### Validation
-- [ ] Test all CRUD operations
-- [ ] Test multi-type filtering
-- [ ] Test bulk operations with many mentions
-- [ ] Test coordinate accuracy at different zoom levels
-- [ ] Test performance with many highlights
-- [ ] Test concurrent edits
+- [x] Test all CRUD operations (20 integration tests passing)
+- [x] Test multi-type filtering
+- [x] Test bulk operations with many mentions
+- [ ] Test coordinate accuracy at different zoom levels (frontend integration)
+- [ ] Test performance with many highlights (frontend integration)
+- [ ] Test concurrent edits (future)
+
+---
+
+## Implementation Notes
+
+### Completed (Backend)
+
+**Files Created:**
+- `apps/index-pdf-backend/src/modules/index-mention/index-mention.types.ts` - Type definitions and Zod schemas
+- `apps/index-pdf-backend/src/modules/index-mention/index-mention.repo.ts` - Database queries with multi-type support
+- `apps/index-pdf-backend/src/modules/index-mention/index-mention.service.ts` - Business logic with validation and event logging
+- `apps/index-pdf-backend/src/modules/index-mention/index-mention.router.ts` - tRPC router with 6 endpoints
+- `apps/index-pdf-backend/src/modules/index-mention/index-mention.integration.test.ts` - 20 comprehensive integration tests
+
+**Test Factories Added:**
+- `createTestSourceDocument` - Factory for creating test PDF documents
+- `createTestIndexMention` - Factory for creating test mentions with multi-type support
+
+**Key Implementation Details:**
+- Multi-type support via `index_mention_types` junction table
+- Efficient filtering using post-query filtering for index types (avoids DISTINCT issues)
+- Bulk operations support add/replace/remove modes
+- Coordinate preservation in PDF user space (stored as JSON)
+- Soft delete pattern (deletedAt timestamp)
+- RLS policies inherited from index entries
+- Event logging for all operations
+- Comprehensive input validation with Zod schemas
+
+**Test Coverage:**
+- ✅ All 20 integration tests passing
+- ✅ CRUD operations validated
+- ✅ Multi-type tagging and filtering
+- ✅ Bulk operations (add/replace/remove)
+- ✅ Page and document filtering
+- ✅ Authentication requirements
+- ✅ Error handling
+
+### Pending (Frontend)
+
+**Adapters to implement:**
+- `mentionToPdfHighlight` - Convert DB mentions to PDF highlights with multi-color support
+- `draftToMentionInput` - Convert drafts to mention creation input
+
+**Frontend Integration:**
+- Connect mention creation to tRPC API
+- Implement multi-type highlight rendering (solid color vs diagonal stripes)
+- Build bulk "Index As" modal
+- Replace local state with tRPC queries
+- Add loading and error states
 
 ---
 
