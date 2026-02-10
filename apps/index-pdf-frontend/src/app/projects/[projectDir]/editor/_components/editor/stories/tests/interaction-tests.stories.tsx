@@ -4,82 +4,13 @@ import {
 } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
-import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
+import {
+	TestDecorator,
+	TrpcDecorator,
+} from "@/app/_common/_test-utils/storybook-utils";
 import { awaitHighlights } from "@/test-helpers/interaction-steps";
-import type { Mention } from "../../editor";
 import { Editor } from "../../editor";
 import { SAMPLE_PDF_URL } from "../shared";
-
-// Mock mentions with unique IDs to avoid conflicts with mockHighlights
-// These use "mention-" prefix to distinguish them from the mockHighlights in Editor
-const MOCK_MENTIONS: Mention[] = [
-	{
-		id: "mention-top-left",
-		pageNumber: 1,
-		text: "Should be in top-left corner",
-		entryId: "entry-1",
-		entryLabel: "Test Entry 1",
-		indexTypes: ["subject"],
-		type: "text" as const,
-		bboxes: [{ x: 20, y: 772, width: 100, height: 15 }],
-		createdAt: new Date("2024-01-01"),
-	},
-	{
-		id: "mention-center",
-		pageNumber: 1,
-		text: "Should be centered",
-		entryId: "entry-2",
-		entryLabel: "Test Entry 2",
-		indexTypes: ["author"],
-		type: "text" as const,
-		bboxes: [{ x: 256, y: 388, width: 100, height: 15 }],
-		createdAt: new Date("2024-01-02"),
-	},
-	{
-		id: "mention-bottom-center",
-		pageNumber: 1,
-		text: "Should be bottom center",
-		entryId: "entry-3",
-		entryLabel: "Test Entry 3",
-		indexTypes: ["scripture"],
-		type: "text" as const,
-		bboxes: [{ x: 256, y: 5, width: 100, height: 15 }],
-		createdAt: new Date("2024-01-03"),
-	},
-	{
-		id: "mention-top-center",
-		pageNumber: 1,
-		text: "Should be top center",
-		entryId: "entry-4",
-		entryLabel: "Test Entry 4",
-		indexTypes: ["subject"],
-		type: "text" as const,
-		bboxes: [{ x: 256, y: 772, width: 100, height: 15 }],
-		createdAt: new Date("2024-01-04"),
-	},
-	{
-		id: "mention-left-middle",
-		pageNumber: 1,
-		text: "Should be left middle",
-		entryId: "entry-5",
-		entryLabel: "Test Entry 5",
-		indexTypes: ["author"],
-		type: "text" as const,
-		bboxes: [{ x: 20, y: 388, width: 100, height: 15 }],
-		createdAt: new Date("2024-01-05"),
-	},
-	{
-		id: "mention-right-middle",
-		pageNumber: 1,
-		text: "Should be right middle",
-		entryId: "entry-6",
-		entryLabel: "Test Entry 6",
-		indexTypes: ["scripture"],
-		type: "text" as const,
-		bboxes: [{ x: 492, y: 388, width: 100, height: 15 }],
-		createdAt: new Date("2024-01-06"),
-	},
-];
 
 // Shared helper: Click a highlight and wait for details popover
 const clickHighlightAndWaitForPopover = async ({
@@ -119,11 +50,18 @@ const meta: Meta<typeof Editor> = {
 		...defaultInteractionTestMeta.parameters,
 		layout: "fullscreen",
 	},
-	decorators: [TestDecorator],
+	decorators: [
+		TestDecorator,
+		(Story) => (
+			<TrpcDecorator>
+				<Story />
+			</TrpcDecorator>
+		),
+	],
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
 		projectId: "test-project-id",
-		initialMentions: MOCK_MENTIONS,
+		documentId: "test-document-id",
 	},
 	globals: {
 		...defaultGlobals,
@@ -254,7 +192,8 @@ export const DeleteHighlightFlow: Story = {
 export const CancelDeletion: Story = {
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
-		initialMentions: MOCK_MENTIONS,
+		projectId: "test-project-id",
+		documentId: "test-document-id",
 	},
 	globals: {
 		...defaultGlobals,
@@ -315,7 +254,8 @@ export const CancelDeletion: Story = {
 export const EscapeKeyClosesPopover: Story = {
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
-		initialMentions: MOCK_MENTIONS,
+		projectId: "test-project-id",
+		documentId: "test-document-id",
 	},
 	globals: {
 		...defaultGlobals,
@@ -351,7 +291,8 @@ export const EscapeKeyClosesPopover: Story = {
 export const DeleteKeyShortcut: Story = {
 	args: {
 		fileUrl: SAMPLE_PDF_URL,
-		initialMentions: MOCK_MENTIONS,
+		projectId: "test-project-id",
+		documentId: "test-document-id",
 	},
 	globals: {
 		...defaultGlobals,

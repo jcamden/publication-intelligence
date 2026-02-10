@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { useState } from "react";
 import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
+import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import type { MentionDraft } from "../../mention-creation-popover";
 import { MentionCreationPopover } from "../../mention-creation-popover";
 import { mockDraft, mockDraftNoMatch, mockRegionDraft } from "../shared";
@@ -48,6 +49,8 @@ const InteractiveWrapper = ({
 				<MentionCreationPopover
 					draft={draft}
 					indexType={indexType}
+					entries={mockSubjectEntries}
+					mentions={[]}
 					onAttach={({ entryId, entryLabel, regionName }) => {
 						setResult({ type: "attach", entryId, entryLabel, regionName });
 						setShowPopover(false);
@@ -76,6 +79,8 @@ export const SelectExistingEntry: Story = {
 	args: {
 		draft: mockDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -146,10 +151,12 @@ export const SelectExistingEntry: Story = {
 	},
 };
 
-export const CreateNewEntry: Story = {
+export const CreateNewEntryShowsError: Story = {
 	args: {
 		draft: mockDraftNoMatch,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -176,34 +183,13 @@ export const CreateNewEntry: Story = {
 			await new Promise((resolve) => setTimeout(resolve, 300));
 		});
 
-		await step("Wait for EntryCreationModal to open", async () => {
-			const body = within(document.body);
+		await step("Verify error message appears", async () => {
 			await waitFor(
-				() => {
-					const modal = body.getByRole("dialog", { hidden: true });
-					expect(modal).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-		});
-
-		await step("Submit the modal to create entry", async () => {
-			const body = within(document.body);
-			const createButton = body.getByRole("button", { name: "Create" });
-			await userEvent.click(createButton);
-			await new Promise((resolve) => setTimeout(resolve, 500));
-		});
-
-		await step("Click Attach button", async () => {
-			const attachButton = canvas.getByRole("button", { name: "Attach" });
-			await userEvent.click(attachButton);
-		});
-
-		await step("Verify new entry was attached", async () => {
-			const result = canvas.getByTestId("result");
-			await waitFor(
-				() => {
-					expect(result).toHaveTextContent("Attached: Heidegger");
+				async () => {
+					const errorMessage = canvas.getByText(
+						/Entry "Heidegger" not found.*create it in the project sidebar/i,
+					);
+					await expect(errorMessage).toBeInTheDocument();
 				},
 				{ timeout: 2000 },
 			);
@@ -215,6 +201,8 @@ export const CancelWithButton: Story = {
 	args: {
 		draft: mockDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -240,6 +228,8 @@ export const CancelWithEscape: Story = {
 	args: {
 		draft: mockDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -264,6 +254,8 @@ export const SearchWithNoResults: Story = {
 	args: {
 		draft: mockDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -296,6 +288,8 @@ export const SelectNestedEntry: Story = {
 	args: {
 		draft: mockDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -371,6 +365,8 @@ export const SmartAutocompleteExactMatch: Story = {
 	args: {
 		draft: mockDraft, // "Kant, Immanuel" - exact match in mock data
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -409,6 +405,8 @@ export const CreateRegionMention: Story = {
 	args: {
 		draft: mockRegionDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},

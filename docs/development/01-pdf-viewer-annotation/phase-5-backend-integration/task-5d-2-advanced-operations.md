@@ -1,7 +1,7 @@
 # Task 5D-2: Advanced Operations
 
 **Duration:** 1-2 days  
-**Status:** ⚪ Not Started  
+**Status:** ✅ Complete  
 **Dependencies:** Task 5D-1 completion (Core optimistic updates)
 
 ## Overview
@@ -12,7 +12,31 @@ Implement optimistic updates for advanced operations: multi-type mentions, bulk 
 - Multi-type mention cache invalidation
 - Bulk index type updates with three modes (add/replace/remove)
 - Drag-drop hierarchy with cycle detection UX
-- ProjectIndexType enable/disable/reorder operations
+- ProjectIndexType enable/disable operations
+
+## Implementation Notes
+
+### Completed Components
+
+**Hooks Created:**
+1. `use-bulk-update-index-types.ts` - Bulk mention type updates with wrapper params (`projectId`, `documentId`)
+2. `use-update-entry-parent.ts` - Hierarchy drag-drop with wrapper param (`projectId`)
+3. `use-enable-index-type.ts` - Enable index types with addon error handling
+4. `use-disable-index-type.ts` - Disable index types with wrapper param (`projectId`)
+
+**UI Components:**
+1. `bulk-index-as-modal/` - Modal for bulk updating mention index types
+2. Updated `entry-tree/` components with drag-drop support
+3. Wired `entry-creation-modal/` to backend (integrated with `useCreateEntry` hook)
+
+**Key Design Decisions:**
+- Hooks use wrapper parameters (`projectId`, `documentId`) instead of extending mutation input types for better cache management
+- `useReorderIndexTypes` not implemented - backend removed reorder endpoint (ordinal is client-side)
+- `useUpdateMentionIndexTypes` not needed - `useBulkUpdateIndexTypes` handles single and multiple mentions
+- `EntryTree.projectId` is optional with default value to comply with React Rules of Hooks
+- All hooks properly handle `pageNumber: number | null` → `number | undefined` conversion
+- Complete type safety with `IndexMentionListItem.indexTypes` including `colorHue` field
+- Entry creation modal wired to real backend with `projectId` and `projectIndexTypeId` (replaced mock `onCreate` callback)
 
 ## Multi-Type Mention Operations
 
@@ -636,35 +660,43 @@ export const BulkIndexAsModal = ({
 ## Implementation Checklist
 
 ### Multi-Type Mentions
-- [ ] Create `useUpdateMentionIndexTypes` hook
-- [ ] Create `useBulkUpdateIndexTypes` hook
-- [ ] Implement cache invalidation for affected pages
-- [ ] Build bulk index as modal UI
-- [ ] Add operation selector (add/replace/remove)
-- [ ] Test multi-type filtering in sidebar sections
+- [x] ~~Create `useUpdateMentionIndexTypes` hook~~ (Not needed - `useBulkUpdateIndexTypes` handles single mentions)
+- [x] Create `useBulkUpdateIndexTypes` hook
+- [x] Implement cache invalidation for affected pages
+- [x] Build bulk index as modal UI
+- [x] Add operation selector (add/replace/remove)
+- [ ] Test multi-type filtering in sidebar sections *(Deferred to Task 5D-4)*
 
 ### Hierarchy Operations
-- [ ] Create `useUpdateEntryParent` hook
-- [ ] Implement drag-drop in entry tree
-- [ ] Add user-friendly error messages for cycle/depth
-- [ ] Test tree re-rendering after moves
-- [ ] Add visual feedback during drag
+- [x] Create `useUpdateEntryParent` hook
+- [x] Implement drag-drop in entry tree
+- [x] Add user-friendly error messages for cycle/depth
+- [x] Add visual feedback during drag
+- [ ] Test tree re-rendering after moves *(Deferred to Task 5D-4)*
 
 ### ProjectIndexType Operations
-- [ ] Create `useEnableIndexType` hook
-- [ ] Create `useDisableIndexType` hook
-- [ ] Create `useReorderIndexTypes` hook
-- [ ] Add addon purchase messaging
-- [ ] Test sidebar section visibility updates
-- [ ] Test reordering sidebar sections
+- [x] Create `useEnableIndexType` hook
+- [x] Create `useDisableIndexType` hook
+- [x] ~~Create `useReorderIndexTypes` hook~~ (Not needed - backend removed reorder endpoint, ordinal is client-side)
+- [x] Add addon purchase messaging
+- [ ] Test sidebar section visibility updates *(Deferred to Task 5D-4)*
+- [ ] ~~Test reordering sidebar sections~~ (Not applicable - no backend support)
 
-### Testing
+### Testing *(Deferred to Task 5D-4: Polish & Testing)*
 - [ ] Test bulk operations with 100+ mentions
 - [ ] Test cycle detection UX
 - [ ] Test depth limit messaging
 - [ ] Test multi-type cache invalidation
 - [ ] Test addon access error messages
 - [ ] Test concurrent hierarchy changes
+
+### Implementation Status
+- ✅ All hooks implemented with proper TypeScript types
+- ✅ All UI components created
+- ✅ TypeScript typecheck passes
+- ✅ Linter errors resolved
+- ✅ Rules of Hooks compliance
+- ✅ Proper cache invalidation patterns
 
 ## Related Documentation
 

@@ -224,51 +224,9 @@ export const currentPageAtom = atomWithStorage("pdf-current-page", 1);
 export const totalPagesAtom = atom(0); // Not persisted - recalculated on load
 export const zoomAtom = atomWithStorage("pdf-zoom", 1.7);
 
-// IndexEntry and IndexType atoms (not persisted - document-specific)
-// These are initialized in the Editor component with mock data
-// TODO Phase 5: Replace with tRPC query data
-export const indexTypesAtom = atom<
-	Array<{
-		id: string;
-		name: string;
-		label: string;
-		color: string;
-		ordinal: number;
-		visible: boolean;
-	}>
->([]);
-
-export const indexEntriesAtom = atom<
-	Array<{
-		id: string;
-		indexType: string;
-		label: string;
-		parentId: string | null;
-		metadata?: {
-			aliases?: string[];
-			sortKey?: string;
-		};
-	}>
->([]);
-
-export const mentionsAtom = atom<
-	Array<{
-		id: string;
-		pageNumber: number;
-		text: string;
-		bboxes: Array<{
-			x: number;
-			y: number;
-			width: number;
-			height: number;
-		}>;
-		entryId: string;
-		entryLabel: string;
-		indexTypes: string[];
-		type: "text" | "region";
-		createdAt: Date;
-	}>
->([]);
+// IndexEntry, IndexType, and Mentions state migrated to tRPC queries in Phase 5
+// These atoms have been removed - data is now fetched from backend via tRPC
+// See: editor.tsx for tRPC query usage
 
 // Color configuration for index types (persisted)
 // Migration: Old format had { hue, chroma, lightness }, new format is just { hue }

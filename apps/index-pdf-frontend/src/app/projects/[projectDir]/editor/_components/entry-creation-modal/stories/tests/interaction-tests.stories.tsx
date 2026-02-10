@@ -24,12 +24,9 @@ export const CreateTopLevelEntry: Story = {
 	args: {
 		open: true,
 		onClose: () => {},
-		indexType: "subject",
+		projectId: "mock-project-id",
+		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
-		onCreate: (entry) => {
-			console.log("Created:", entry);
-			return { ...entry, id: crypto.randomUUID() };
-		},
 	},
 	play: async ({ step }) => {
 		const body = within(document.body);
@@ -53,11 +50,9 @@ export const ValidateUniqueLabel: Story = {
 	args: {
 		open: true,
 		onClose: () => {},
-		indexType: "subject",
+		projectId: "mock-project-id",
+		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
-		onCreate: (entry) => {
-			return { ...entry, id: crypto.randomUUID() };
-		},
 	},
 	play: async ({ step }) => {
 		const body = within(document.body);
@@ -104,12 +99,9 @@ export const CreateEntryWithParent: Story = {
 	args: {
 		open: true,
 		onClose: () => {},
-		indexType: "subject",
+		projectId: "mock-project-id",
+		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
-		onCreate: (entry) => {
-			console.log("Created with parent:", entry);
-			return { ...entry, id: crypto.randomUUID() };
-		},
 	},
 	play: async ({ step }) => {
 		const body = within(document.body);
@@ -157,12 +149,9 @@ export const CancelClosesModal: Story = {
 	args: {
 		open: true,
 		onClose: () => console.log("Modal closed"),
-		indexType: "subject",
+		projectId: "mock-project-id",
+		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
-		onCreate: (entry) => {
-			console.log("This should not be called");
-			return { ...entry, id: crypto.randomUUID() };
-		},
 	},
 	play: async ({ step }) => {
 		const body = within(document.body);

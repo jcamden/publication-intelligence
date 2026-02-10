@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
+import { mockSubjectEntries } from "../../../_mocks/index-entries";
 import type { MentionDraft } from "../mention-creation-popover";
 import { MentionCreationPopover } from "../mention-creation-popover";
 
@@ -36,6 +37,8 @@ export const Default: Story = {
 	args: {
 		draft: mockDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: ({ entryId, entryLabel }) => {
 			console.log("Attached mention:", { entryId, entryLabel });
 		},

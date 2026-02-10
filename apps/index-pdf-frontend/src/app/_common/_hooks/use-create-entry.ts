@@ -98,9 +98,13 @@ export const useCreateEntry = () => {
 
 		onSettled: (_data, _err, variables) => {
 			// Refetch to ensure consistency
+			// Invalidate both the specific query (for sidebar) and the general query (for editor)
 			utils.indexEntry.list.invalidate({
 				projectId: variables.projectId,
 				projectIndexTypeId: variables.projectIndexTypeId,
+			});
+			utils.indexEntry.list.invalidate({
+				projectId: variables.projectId,
 			});
 		},
 	});

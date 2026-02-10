@@ -4,11 +4,8 @@ import { Button } from "@pubint/yabasic/components/ui/button";
 import { FieldError } from "@pubint/yabasic/components/ui/field";
 import { FormInput } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
-import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { indexEntriesAtom, mentionsAtom } from "../../_atoms/editor-atoms";
 import { findEntryByText } from "../../_utils/index-entry-utils";
-import { EntryCreationModal } from "../entry-creation-modal";
 import { EntryPicker } from "../entry-picker";
 
 export type BoundingBox = {
@@ -26,9 +23,34 @@ export type MentionDraft = {
 	type: "text" | "region";
 };
 
+type IndexEntry = {
+	id: string;
+	label: string;
+	indexType: string;
+	parentId: string | null;
+	metadata?: {
+		aliases?: string[];
+		sortKey?: string;
+	};
+};
+
+type Mention = {
+	id: string;
+	pageNumber: number;
+	text: string;
+	bboxes: BoundingBox[];
+	entryId: string;
+	entryLabel: string;
+	indexTypes: string[];
+	type: "text" | "region";
+	createdAt: Date;
+};
+
 type MentionCreationPopoverProps = {
 	draft: MentionDraft;
 	indexType: string; // NEW: Current index type context
+	entries: IndexEntry[];
+	mentions: Mention[];
 	onAttach: ({
 		entryId,
 		entryLabel,
@@ -57,26 +79,23 @@ const validateNonEmpty = ({ value }: { value: string }) => {
 export const MentionCreationPopover = ({
 	draft,
 	indexType,
+	entries,
+	mentions,
 	onAttach,
 	onCancel,
 }: MentionCreationPopoverProps) => {
-	const [indexEntries, setIndexEntries] = useAtom(indexEntriesAtom);
-	const mentions = useAtomValue(mentionsAtom);
-
 	const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 	const [selectedEntryLabel, setSelectedEntryLabel] = useState<string | null>(
 		null,
 	);
 	const [inputValue, setInputValue] = useState("");
 	const [entryError, setEntryError] = useState<string | null>(null);
-	const [entryModalOpen, setEntryModalOpen] = useState(false);
-	const [entryModalPrefill, setEntryModalPrefill] = useState("");
 	const regionNameInputRef = useRef<HTMLInputElement>(null);
 
 	// Filter entries to current index type
 	const entriesForType = useMemo(
-		() => indexEntries.filter((e) => e.indexType === indexType),
-		[indexEntries, indexType],
+		() => entries.filter((e) => e.indexType === indexType),
+		[entries, indexType],
 	);
 
 	const form = useForm({
@@ -220,7 +239,7 @@ export const MentionCreationPopover = ({
 				<div className="mb-3">
 					<EntryPicker
 						indexType={indexType}
-						entries={indexEntries}
+						entries={entriesForType}
 						mentions={mentions}
 						onValueChange={(id, label) => {
 							setSelectedEntryId(id);
@@ -228,8 +247,11 @@ export const MentionCreationPopover = ({
 							setEntryError(null);
 						}}
 						onCreateNew={(label) => {
-							setEntryModalPrefill(label);
-							setEntryModalOpen(true);
+							// Entry creation now happens in project sidebar
+							// User should create entries there first
+							setEntryError(
+								`Entry "${label}" not found. Please create it in the project sidebar first.`,
+							);
 						}}
 						inputValue={inputValue}
 						onInputValueChange={setInputValue}
@@ -252,31 +274,6 @@ export const MentionCreationPopover = ({
 					</Button>
 				</div>
 			</form>
-
-			<EntryCreationModal
-				open={entryModalOpen}
-				onClose={() => {
-					setEntryModalOpen(false);
-					setEntryModalPrefill("");
-				}}
-				indexType={indexType}
-				existingEntries={entriesForType}
-				prefillLabel={entryModalPrefill}
-				onCreate={(entry) => {
-					const newEntry = {
-						...entry,
-						id: crypto.randomUUID(),
-					};
-					setIndexEntries((prev) => [...prev, newEntry]);
-
-					// Auto-select the new entry
-					setSelectedEntryId(newEntry.id);
-					setSelectedEntryLabel(newEntry.label);
-					setInputValue(newEntry.label);
-
-					return newEntry;
-				}}
-			/>
 		</>
 	);
 };

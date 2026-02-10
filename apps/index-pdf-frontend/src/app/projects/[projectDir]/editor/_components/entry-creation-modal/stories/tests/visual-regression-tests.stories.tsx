@@ -24,9 +24,9 @@ export const WithParentSelected: Story = {
 	args: {
 		open: true,
 		onClose: () => {},
-		indexType: "subject",
+		projectId: "mock-project-id",
+		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
-		onCreate: (entry) => ({ ...entry, id: "test" }),
 	},
 	play: async () => {
 		const body = within(document.body);

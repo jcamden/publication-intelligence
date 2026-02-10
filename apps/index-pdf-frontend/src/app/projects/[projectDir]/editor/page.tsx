@@ -149,7 +149,11 @@ export default function EditorPage() {
 				onSignOutClick={handleSignOut}
 			/>
 			<div className="h-[calc(100vh-3.5rem-1px)] overflow-hidden bg-neutral-50 dark:bg-neutral-900">
-				<Editor fileUrl={pdfUrl} projectId={projectQuery.data?.id} />
+				<Editor
+					fileUrl={pdfUrl}
+					projectId={projectQuery.data?.id}
+					documentId={projectQuery.data?.source_document?.id}
+				/>
 			</div>
 		</>
 	);

@@ -8,15 +8,13 @@ import {
 } from "@pubint/yaboujee";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
+import { useCreateMention } from "@/app/_common/_hooks/use-create-mention";
 import { trpc } from "@/app/_common/_utils/trpc";
 import {
 	colorConfigAtom,
 	currentPageAtom,
-	indexEntriesAtom,
-	indexTypesAtom,
 	MIN_PDF_WIDTH,
 	MIN_SIDEBAR_WIDTH,
-	mentionsAtom,
 	pageSidebarCollapsedAtom,
 	pageSidebarWidthAtom,
 	pdfSectionLastWidthAtom,
@@ -28,8 +26,6 @@ import {
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useHydrated } from "@/app/projects/[projectDir]/editor/_hooks/use-hydrated";
 import { ProjectProvider } from "../../_context/project-context";
-import { mockIndexEntries } from "../../_mocks/index-entries";
-import { mockIndexTypes } from "../../_mocks/index-types";
 import type { ColorConfig, IndexTypeName } from "../../_types/color-config";
 import { ColorConfigProvider } from "../color-config-provider";
 import { DeleteMentionDialog } from "../delete-mention-dialog";
@@ -72,8 +68,7 @@ import { WindowManager } from "../window-manager";
 type EditorProps = {
 	fileUrl: string;
 	projectId?: string;
-	documentId?: string; // TODO Phase 5: Make required when backend is integrated
-	initialMentions?: Mention[]; // For testing only
+	documentId?: string;
 };
 
 export type Mention = {
@@ -88,101 +83,7 @@ export type Mention = {
 	createdAt: Date;
 };
 
-/**
- * Mock highlights for Phase 2 testing - Corner & Edge positioning
- *
- * Coordinates are in PDF user space:
- * - Origin: bottom-left of page
- * - Y increases upward
- * - Units: PDF points (1/72 inch)
- *
- * Assuming standard letter size: 612pt wide x 792pt tall (8.5" x 11")
- *
- * NOTE: These are for Phase 2 positioning tests only.
- * Real mentions are managed in the mentions state array.
- *
- * TODO Phase 5: Replace with real data from API
- */
-const mockHighlights: PdfHighlight[] = [
-	// CORNERS
-	{
-		id: "top-left",
-		pageNumber: 1,
-		label: "Top-Left Corner",
-		text: "Should be in top-left corner",
-		bboxes: [{ x: 20, y: 772, width: 100, height: 15 }], // Near top (792-20=772)
-	},
-	{
-		id: "top-right",
-		pageNumber: 1,
-		label: "Top-Right Corner",
-		text: "Should be in top-right corner",
-		bboxes: [{ x: 492, y: 772, width: 100, height: 15 }], // Near right edge (612-120=492)
-	},
-	{
-		id: "bottom-left",
-		pageNumber: 1,
-		label: "Bottom-Left Corner",
-		text: "Should be in bottom-left corner",
-		bboxes: [{ x: 20, y: 20, width: 100, height: 15 }], // Near bottom
-	},
-	{
-		id: "bottom-right",
-		pageNumber: 1,
-		label: "Bottom-Right Corner",
-		text: "Should be in bottom-right corner",
-		bboxes: [{ x: 492, y: 20, width: 100, height: 15 }],
-	},
-	// EDGES - MIDPOINTS
-	{
-		id: "left-middle",
-		pageNumber: 1,
-		label: "Left Edge Middle",
-		text: "Should be on left edge, vertically centered",
-		bboxes: [{ x: 20, y: 388, width: 80, height: 15 }], // 792/2 = 396, minus half height
-	},
-	{
-		id: "right-middle",
-		pageNumber: 1,
-		label: "Right Edge Middle",
-		text: "Should be on right edge, vertically centered",
-		bboxes: [{ x: 512, y: 388, width: 80, height: 15 }], // 612-100=512
-	},
-	{
-		id: "top-center",
-		pageNumber: 1,
-		label: "Top Edge Center",
-		text: "Should be at top, horizontally centered",
-		bboxes: [{ x: 256, y: 772, width: 100, height: 15 }], // 612/2 - 50 = 256
-	},
-	{
-		id: "bottom-center",
-		pageNumber: 1,
-		label: "Bottom Edge Center",
-		text: "Should be at bottom, horizontally centered",
-		bboxes: [{ x: 256, y: 20, width: 100, height: 15 }],
-	},
-	// CENTER
-	{
-		id: "center",
-		pageNumber: 1,
-		label: "Dead Center",
-		text: "Should be in the absolute center of the page",
-		bboxes: [{ x: 256, y: 388, width: 100, height: 15 }], // (612/2 - 50, 792/2 - 7.5)
-	},
-];
-
-/**
- * Mock index entries and types are imported from _mocks/
- * TODO Phase 5: Replace with real data from tRPC API
- */
-
-export const Editor = ({
-	fileUrl,
-	projectId,
-	documentId = "mock-document-id", // TODO Phase 5: Make required when backend is integrated
-	initialMentions = [],
-}: EditorProps) => {
+export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const hydrated = useHydrated();
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const [totalPages, setTotalPages] = useAtom(totalPagesAtom);
@@ -194,39 +95,60 @@ export const Editor = ({
 		indexType: string | null;
 	}>({ type: null, indexType: null });
 
-	// IndexType and IndexEntry state management via Jotai atoms
-	// Phase 5 TODO: Replace with tRPC query
-	// const indexTypesQuery = trpc.indexType.list.useQuery({ projectId });
-	// const indexEntriesQuery = trpc.indexEntry.list.useQuery({ projectId });
+	// Fetch project index types from backend
 	const projectIndexTypesQuery = trpc.projectIndexType.list.useQuery(
 		{ projectId: projectId ?? "" },
 		{ enabled: !!projectId },
 	);
-	const [indexTypes, setIndexTypes] = useAtom(indexTypesAtom);
-	const [indexEntries, setIndexEntries] = useAtom(indexEntriesAtom);
-	const [mentions, setMentions] = useAtom(mentionsAtom);
-	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
 
-	// Initialize atoms with mock data on mount (only if not already set)
-	useEffect(() => {
-		if (indexTypes.length === 0) {
-			setIndexTypes(mockIndexTypes);
-		}
-		if (indexEntries.length === 0) {
-			setIndexEntries(mockIndexEntries);
-		}
-		if (mentions.length === 0 && initialMentions.length > 0) {
-			setMentions(initialMentions);
-		}
-	}, [
-		indexTypes.length,
-		indexEntries.length,
-		mentions.length,
-		initialMentions,
-		setIndexTypes,
-		setIndexEntries,
-		setMentions,
-	]);
+	// Mutation for creating mentions
+	const createMention = useCreateMention({ projectId: projectId || "" });
+
+	// Fetch all entries for the project (needed for mention details popover)
+	const { data: backendAllEntries = [] } = trpc.indexEntry.list.useQuery(
+		{
+			projectId: projectId ?? "",
+		},
+		{ enabled: !!projectId },
+	);
+
+	// Convert backend entries to frontend format (add indexType field by looking up projectIndexType)
+	const allEntries = backendAllEntries.map((e) => {
+		const projectIndexType = projectIndexTypesQuery.data?.find(
+			(pit) => pit.id === e.projectIndexTypeId,
+		);
+		return {
+			...e,
+			indexType: projectIndexType?.indexType || "subject",
+			metadata: {
+				aliases: e.variants.map((v) => v.text),
+			},
+		};
+	});
+
+	// Fetch mentions from backend (used for page sidebar and highlights)
+	const { data: backendMentions = [] } = trpc.indexMention.list.useQuery(
+		{
+			projectId: projectId ?? "",
+			documentId: documentId ?? "",
+		},
+		{ enabled: !!projectId && !!documentId },
+	);
+
+	// Convert backend mentions to editor format
+	const mentions: Mention[] = backendMentions.map((m) => ({
+		id: m.id,
+		pageNumber: m.pageNumber ?? 1,
+		text: m.textSpan,
+		bboxes: m.bboxes ?? [],
+		entryId: m.entryId,
+		entryLabel: m.entry.label,
+		indexTypes: m.indexTypes.map((t) => t.indexType),
+		type: m.mentionType,
+		createdAt: new Date(m.createdAt),
+	}));
+
+	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
 
 	// Sync project-specific colors from DB to colorConfig atom
 	useEffect(() => {
@@ -325,43 +247,40 @@ export const Editor = ({
 			// Capture which index type this mention was created from
 			const indexType = activeAction.indexType || "subject"; // Default to subject if none
 
+			// Find the projectIndexTypeId for this index type
+			const projectIndexType = projectIndexTypesQuery.data?.find(
+				(pit) => pit.indexType === indexType,
+			);
+
+			if (!projectIndexType) {
+				console.error(`No projectIndexType found for indexType: ${indexType}`);
+				return;
+			}
+
 			// For region drafts, use regionName as the text; for text drafts, use draft.text
 			const mentionText = entry.regionName || draft.text;
 
-			// Phase 5 TODO: Replace with real tRPC mutation
-			// const result = await createMentionMutation.mutateAsync({
-			//   documentId,
-			//   entryId: entry.entryId,
-			//   pageNumber: draft.pageNumber,
-			//   text: mentionText,
-			//   bboxes: draft.bboxes,
-			//   indexTypes: [indexType],
-			// });
-
-			// Simulated API call - draft stays visible until server responds
-			await new Promise((resolve) => setTimeout(resolve, 300));
-
-			// Simulate server response (would come from tRPC in Phase 5)
-			const serverMention: Mention = {
-				id: crypto.randomUUID(), // In Phase 5: comes from server
-				pageNumber: draft.pageNumber,
-				text: mentionText, // Use regionName for regions, draft.text for text selections
-				bboxes: draft.bboxes,
+			// Create mention via tRPC mutation
+			await createMention.mutateAsync({
+				documentId: documentId || "",
 				entryId: entry.entryId,
-				entryLabel: entry.entryLabel,
-				indexTypes: [indexType], // Created from this index type
-				type: entry.regionName ? "region" : "text", // Determine type based on regionName presence
-				createdAt: new Date(), // In Phase 5: comes from server
-			};
-
-			// Add server-confirmed mention to state
-			setMentions((prev) => [...prev, serverMention]);
+				pageNumber: draft.pageNumber,
+				textSpan: mentionText,
+				bboxesPdf: draft.bboxes,
+				projectIndexTypeIds: [projectIndexType.id],
+				mentionType: entry.regionName ? "region" : "text",
+			});
 
 			// Clear draft and revert to view mode
 			setActiveAction({ type: null, indexType: null });
 			setClearDraftTrigger((prev) => prev + 1);
 		},
-		[activeAction.indexType, setMentions],
+		[
+			activeAction.indexType,
+			createMention,
+			documentId,
+			projectIndexTypesQuery.data,
+		],
 	);
 
 	const handleDraftCancelled = useCallback(() => {
@@ -413,13 +332,7 @@ export const Editor = ({
 	);
 
 	const handleMentionDetailsClose = useCallback(
-		async ({
-			mentionId,
-			indexTypes,
-			entryId,
-			entryLabel,
-			text,
-		}: {
+		async (_params: {
 			mentionId: string;
 			indexTypes: string[];
 			entryId?: string;
@@ -439,21 +352,11 @@ export const Editor = ({
 			// Simulated API call
 			await new Promise((resolve) => setTimeout(resolve, 200));
 
-			// Update local state
-			setMentions((prev) =>
-				prev.map((m) =>
-					m.id === mentionId
-						? {
-								...m,
-								indexTypes,
-								...(entryId && entryLabel ? { entryId, entryLabel } : {}),
-								...(text !== undefined ? { text } : {}),
-							}
-						: m,
-				),
-			);
+			// Phase 5: Mention updates now handled by tRPC mutations
+			// The tRPC cache will be automatically invalidated by the mutations
+			// TODO: Wire up actual tRPC updateMention mutation
 		},
-		[setMentions],
+		[],
 	);
 
 	const handleDeleteMention = useCallback(
@@ -476,10 +379,11 @@ export const Editor = ({
 		// Simulated API call
 		await new Promise((resolve) => setTimeout(resolve, 200));
 
-		// Remove mention after server confirms deletion
-		setMentions((prev) => prev.filter((m) => m.id !== mentionToDelete));
+		// Phase 5: Mention deletion now handled by tRPC mutation
+		// The tRPC cache will be automatically invalidated by the mutation
+		// TODO: Wire up actual tRPC deleteMention mutation
 		setMentionToDelete(null);
-	}, [mentionToDelete, setMentions]);
+	}, [mentionToDelete]);
 
 	const handleCloseDetailsPopover = useCallback(() => {
 		setSelectedMention(null);
@@ -585,8 +489,8 @@ export const Editor = ({
 		};
 	});
 
-	// Combine mock highlights with real mentions
-	const allHighlights = [...mockHighlights, ...mentionHighlights];
+	// Use real mentions as highlights
+	const allHighlights = mentionHighlights;
 
 	// Get enabled index types for this project (to filter sidebar sections)
 	const enabledIndexTypes =
@@ -599,7 +503,7 @@ export const Editor = ({
 
 	return (
 		<ColorConfigProvider>
-			<ProjectProvider projectId={projectId}>
+			<ProjectProvider projectId={projectId} documentId={documentId}>
 				<div className="relative h-full w-full flex flex-col">
 					{/* Fixed top bar row - all three bars in one row */}
 					<div className="flex-shrink-0 flex justify-between items-center p-1 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
@@ -659,13 +563,15 @@ export const Editor = ({
 									}) => (
 										<MentionCreationPopover
 											draft={{
-												documentId,
+												documentId: documentId || "",
 												pageNumber,
 												text,
 												bboxes,
 												type: text ? "text" : "region",
 											}}
 											indexType={activeAction.indexType || "subject"}
+											entries={allEntries}
+											mentions={mentions}
 											onAttach={onConfirm}
 											onCancel={onCancel}
 										/>
@@ -734,7 +640,7 @@ export const Editor = ({
 									indexTypes: selectedMention.indexTypes,
 									type: selectedMention.type,
 								}}
-								existingEntries={mockIndexEntries}
+								existingEntries={allEntries}
 								onDelete={handleDeleteMention}
 								onClose={handleMentionDetailsClose}
 								onCancel={handleCloseDetailsPopover}

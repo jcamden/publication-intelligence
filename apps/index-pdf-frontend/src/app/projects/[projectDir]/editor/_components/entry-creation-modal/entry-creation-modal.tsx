@@ -12,6 +12,7 @@ import {
 import { FormInput, Modal } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useCallback, useMemo } from "react";
+import { useCreateEntry } from "@/app/_common/_hooks/use-create-entry";
 import type { IndexEntry } from "../../_types/index-entry";
 import {
 	getAvailableParents,
@@ -21,50 +22,61 @@ import {
 export type EntryCreationModalProps = {
 	open: boolean;
 	onClose: () => void;
-	indexType: string; // Current index type context
+	projectId: string;
+	projectIndexTypeId: string;
 	existingEntries: IndexEntry[]; // For parent selection and validation
-	onCreate: (entry: Omit<IndexEntry, "id">) => IndexEntry;
 	prefillLabel?: string; // Optional pre-filled label
 };
 
 export const EntryCreationModal = ({
 	open,
 	onClose,
-	indexType,
+	projectId,
+	projectIndexTypeId,
 	existingEntries,
-	onCreate,
 	prefillLabel = "",
 }: EntryCreationModalProps) => {
+	const createEntry = useCreateEntry();
+
 	const availableParents = useMemo(
-		() => getAvailableParents({ entries: existingEntries, indexType }),
-		[existingEntries, indexType],
+		() =>
+			getAvailableParents({
+				entries: existingEntries,
+				indexType: existingEntries[0]?.indexType || "",
+			}),
+		[existingEntries],
 	);
 
 	const form = useForm({
 		defaultValues: {
 			label: prefillLabel,
 			parentId: null as string | null,
-			aliases: "", // Comma-separated string
+			aliases: "", // Comma-separated string (will be variants)
 		},
 		onSubmit: async ({ value }) => {
-			// Create entry
-			onCreate({
-				indexType,
-				label: value.label.trim(),
-				parentId: value.parentId,
-				metadata: {
-					aliases: value.aliases
-						.split(",")
-						.map((s) => s.trim())
-						.filter(Boolean),
+			const label = value.label.trim();
+			const slug = label.toLowerCase().replace(/\s+/g, "-");
+			const variants = value.aliases
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean);
+
+			createEntry.mutate(
+				{
+					projectId,
+					projectIndexTypeId,
+					label,
+					slug,
+					parentId: value.parentId || undefined,
+					variants: variants.length > 0 ? variants : undefined,
 				},
-			});
-
-			// Close modal on success
-			onClose();
-
-			// Reset form for next time
-			form.reset();
+				{
+					onSuccess: () => {
+						onClose();
+						form.reset();
+					},
+				},
+			);
 		},
 	});
 
@@ -110,11 +122,9 @@ export const EntryCreationModal = ({
 								return "Label is required";
 							}
 
-							// Check for duplicate label within index type
+							// Check for duplicate label within existing entries
 							const exists = existingEntries.some(
-								(e) =>
-									e.indexType === indexType &&
-									e.label.toLowerCase() === value.trim().toLowerCase(),
+								(e) => e.label.toLowerCase() === value.trim().toLowerCase(),
 							);
 
 							if (exists) {

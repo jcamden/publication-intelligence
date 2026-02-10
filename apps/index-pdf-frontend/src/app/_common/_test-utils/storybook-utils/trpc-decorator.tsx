@@ -228,6 +228,85 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
+					if (urlString.includes("indexEntry.list")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [
+										{
+											id: "mock-entry-1",
+											label: "Test Entry",
+											slug: "test-entry",
+											parentId: null,
+											createdAt: new Date().toISOString(),
+											updatedAt: new Date().toISOString(),
+											variants: [{ text: "Test Alias" }],
+										},
+									],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					if (urlString.includes("indexMention.list")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [
+										{
+											id: "mention-top-center",
+											entryId: "mock-entry-1",
+											pageNumber: 1,
+											textSpan: "Should be top center",
+											bboxes: [{ x: 150, y: 50, width: 100, height: 12 }],
+											mentionType: "text",
+											createdAt: new Date().toISOString(),
+											entry: {
+												id: "mock-entry-1",
+												label: "Test Entry",
+												slug: "test-entry",
+											},
+											indexTypes: [
+												{
+													id: "mock-pit-subject-id",
+													colorHue: 230,
+													indexType: "subject",
+												},
+											],
+										},
+										{
+											id: "mention-bottom-center",
+											entryId: "mock-entry-1",
+											pageNumber: 1,
+											textSpan: "Should be bottom center",
+											bboxes: [{ x: 150, y: 750, width: 120, height: 12 }],
+											mentionType: "text",
+											createdAt: new Date().toISOString(),
+											entry: {
+												id: "mock-entry-1",
+												label: "Test Entry",
+												slug: "test-entry",
+											},
+											indexTypes: [
+												{
+													id: "mock-pit-subject-id",
+													colorHue: 230,
+													indexType: "subject",
+												},
+											],
+										},
+									],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
 					// Default mock response for other endpoints
 					return new Response(
 						JSON.stringify({

@@ -17,17 +17,15 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * Default entry creation modal for Subject index
+ * Note: In Storybook, the tRPC mutation will fail gracefully without a backend
  */
 export const Default: Story = {
 	args: {
 		open: true,
 		onClose: fn(),
-		indexType: "subject",
+		projectId: "mock-project-id",
+		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
-		onCreate: (entry) => {
-			console.log("Created entry:", entry);
-			return { ...entry, id: crypto.randomUUID() };
-		},
 	},
 };
 

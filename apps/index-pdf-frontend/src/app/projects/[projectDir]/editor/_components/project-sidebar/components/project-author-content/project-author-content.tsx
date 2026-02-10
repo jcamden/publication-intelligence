@@ -1,25 +1,71 @@
 "use client";
 
 import { OklchColorPicker } from "@pubint/yabasic/components/ui/oklch-color-picker";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom } from "jotai";
 import { useMemo, useState } from "react";
-import {
-	colorConfigAtom,
-	indexEntriesAtom,
-	mentionsAtom,
-} from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
+import { trpc } from "@/app/_common/_utils/trpc";
+import { colorConfigAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
 import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
 
 export const ProjectAuthorContent = () => {
-	const [indexEntries, setIndexEntries] = useAtom(indexEntriesAtom);
-	const mentions = useAtomValue(mentionsAtom);
 	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
-	const { projectId } = useProjectContext();
+	const { projectId, documentId } = useProjectContext();
 
 	const [modalOpen, setModalOpen] = useState(false);
+
+	const { data: projectIndexTypes } = trpc.projectIndexType.list.useQuery(
+		{ projectId: projectId || "" },
+		{ enabled: !!projectId },
+	);
+
+	const authorProjectIndexTypeId = useMemo(
+		() =>
+			projectIndexTypes?.find((t) => t.indexType === "author")?.id || undefined,
+		[projectIndexTypes],
+	);
+
+	// Fetch entries from backend
+	const { data: backendEntries = [] } = trpc.indexEntry.list.useQuery(
+		{
+			projectId: projectId || "",
+			projectIndexTypeId: authorProjectIndexTypeId,
+		},
+		{ enabled: !!projectId && !!authorProjectIndexTypeId },
+	);
+
+	// Convert backend entries to frontend format (add indexType field)
+	const entries = backendEntries.map((e) => ({
+		...e,
+		indexType: "author",
+		metadata: {
+			aliases: e.variants.map((v) => v.text),
+		},
+	}));
+
+	// Fetch mentions for this document
+	const { data: backendMentions = [] } = trpc.indexMention.list.useQuery(
+		{
+			projectId: projectId || "",
+			documentId: documentId || "",
+		},
+		{ enabled: !!projectId && !!documentId },
+	);
+
+	// Convert backend mentions to frontend format
+	const allMentions = backendMentions.map((m) => ({
+		id: m.id,
+		pageNumber: m.pageNumber ?? 1,
+		text: m.textSpan,
+		bboxes: m.bboxes ?? [],
+		entryId: m.entryId,
+		entryLabel: m.entry.label,
+		indexTypes: m.indexTypes.map((t) => t.indexType),
+		type: m.mentionType as "text" | "region",
+		createdAt: new Date(m.createdAt),
+	}));
 
 	// Persist color changes to backend
 	usePersistColorChange({
@@ -28,11 +74,6 @@ export const ProjectAuthorContent = () => {
 		colorHue: colorConfig.author.hue,
 		enabled: !!projectId,
 	});
-
-	const authorEntries = useMemo(
-		() => indexEntries.filter((e) => e.indexType === "author"),
-		[indexEntries],
-	);
 
 	return (
 		<>
@@ -54,24 +95,20 @@ export const ProjectAuthorContent = () => {
 				</div>
 			</div>
 			<EntryTree
-				entries={authorEntries}
-				mentions={mentions}
+				entries={entries}
+				mentions={allMentions}
+				projectId={projectId}
 				onCreateEntry={() => setModalOpen(true)}
 			/>
-			<EntryCreationModal
-				open={modalOpen}
-				onClose={() => setModalOpen(false)}
-				indexType="author"
-				existingEntries={authorEntries}
-				onCreate={(entry) => {
-					const newEntry = {
-						...entry,
-						id: crypto.randomUUID(),
-					};
-					setIndexEntries((prev) => [...prev, newEntry]);
-					return newEntry;
-				}}
-			/>
+			{authorProjectIndexTypeId && projectId && (
+				<EntryCreationModal
+					open={modalOpen}
+					onClose={() => setModalOpen(false)}
+					projectId={projectId}
+					projectIndexTypeId={authorProjectIndexTypeId}
+					existingEntries={entries}
+				/>
+			)}
 		</>
 	);
 };

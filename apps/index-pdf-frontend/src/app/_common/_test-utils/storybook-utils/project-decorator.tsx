@@ -2,22 +2,26 @@ import { ProjectContext } from "@/app/projects/[projectDir]/editor/_context/proj
 
 type ProjectContextType = {
 	projectId: string | undefined;
+	documentId: string | undefined;
 };
 
 /**
  * Mock ProjectProvider for Storybook stories
  * Uses the same ProjectContext as the real ProjectProvider so useProjectContext() works correctly
- * Provides a static projectId value for testing
+ * Provides static projectId and documentId values for testing
  */
 export const MockProjectProvider = ({
 	children,
 	projectId,
+	documentId,
 }: {
 	children: React.ReactNode;
 	projectId?: string;
+	documentId?: string;
 }) => {
 	const contextValue: ProjectContextType = {
 		projectId,
+		documentId,
 	};
 
 	return (

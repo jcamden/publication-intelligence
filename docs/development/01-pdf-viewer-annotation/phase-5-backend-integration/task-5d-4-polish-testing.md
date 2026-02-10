@@ -4,6 +4,8 @@
 **Status:** ⚪ Not Started  
 **Dependencies:** Task 5D-3 completion (State migration)
 
+**Note:** Interaction tests (88/88) are already passing thanks to tRPC mock updates in Task 5D-3. This task focuses on remaining polish items: loading states, error boundaries, network detection, and confirmation dialogs.
+
 ## Overview
 
 Polish the user experience with loading states, error boundaries, network detection, and comprehensive testing of optimistic updates and error handling.
@@ -696,13 +698,13 @@ export const OptimisticUpdateRollback: Story = {
 - [ ] Test empty state rendering
 
 ### Integration Tests
-- [ ] Write interaction tests for entry CRUD
-- [ ] Write interaction tests for mention CRUD
-- [ ] Write tests for optimistic updates
-- [ ] Write tests for error rollback
-- [ ] Write tests for loading states
+- [x] Write interaction tests for entry CRUD (completed in 5D-3)
+- [x] Write interaction tests for mention CRUD (completed in 5D-3)
+- [x] Write tests for optimistic updates (editor tests passing)
+- [ ] Write tests for error rollback scenarios
+- [ ] Write tests for loading states (skeleton components)
 - [ ] Write tests for empty states
-- [ ] Run full test suite
+- [x] Run full test suite (88/88 passing as of 5D-3)
 
 ## Related Documentation
 

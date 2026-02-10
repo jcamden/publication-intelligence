@@ -2,6 +2,7 @@ import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
+import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import { MentionCreationPopover } from "../../mention-creation-popover";
 import { mockDraft, mockRegionDraft } from "../shared";
 
@@ -28,6 +29,8 @@ export const Default: Story = {
 	args: {
 		draft: mockDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -96,6 +99,8 @@ export const RegionDraft: Story = {
 	args: {
 		draft: mockRegionDraft,
 		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},

@@ -4,6 +4,7 @@ import { createContext, useContext } from "react";
 
 type ProjectContextType = {
 	projectId: string | undefined;
+	documentId: string | undefined;
 };
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -13,13 +14,15 @@ export { ProjectContext };
 
 export const ProjectProvider = ({
 	projectId,
+	documentId,
 	children,
 }: {
 	projectId: string | undefined;
+	documentId: string | undefined;
 	children: React.ReactNode;
 }) => {
 	return (
-		<ProjectContext.Provider value={{ projectId }}>
+		<ProjectContext.Provider value={{ projectId, documentId }}>
 			{children}
 		</ProjectContext.Provider>
 	);

@@ -24,7 +24,6 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 			const queryParams = {
 				projectId,
 				documentId: newMention.documentId,
-				pageNumber: newMention.pageNumber,
 			};
 
 			await utils.indexMention.list.cancel(queryParams);
