@@ -3,7 +3,7 @@
  *
  * Main logic for computing canonical page numbers with proper precedence:
  * 1. User-defined rules (positive/negative)
- * 2. Context-derived page numbers
+ * 2. Region-derived page numbers
  * 3. Document page number (baseline)
  */
 
@@ -14,40 +14,40 @@ import type {
 	CanonicalPageSource,
 } from "./canonical-page.types";
 import { generateCanonicalPageSequence } from "./canonical-page.utils";
-import type { Context, ContextDerivedPageNumber } from "./context.types";
-import { detectPageNumberConflicts } from "./context.utils";
+import type { Region, RegionDerivedPageNumber } from "./region.types";
+import { detectPageNumberConflicts } from "./region.utils";
 
 /**
  * Compute canonical page numbers for all document pages
  * Returns a map of document page → canonical page info
  *
  * Precedence:
- * 1. Check for context conflicts - if any exist, return empty map
+ * 1. Check for region conflicts - if any exist, return empty map
  * 2. User-defined rules (positive/negative) - highest priority
- * 3. Context-derived page numbers
+ * 3. Region-derived page numbers
  * 4. Unaccounted (document page number) - lowest priority
  */
 export const computeCanonicalPages = ({
 	documentPageCount,
-	contexts,
+	regions,
 	rules,
-	contextDerivedPageNumbers,
+	regionDerivedPageNumbers,
 }: {
 	documentPageCount: number;
-	contexts: Context[];
+	regions: Region[];
 	rules: CanonicalPageRule[];
-	contextDerivedPageNumbers: ContextDerivedPageNumber[];
+	regionDerivedPageNumbers: RegionDerivedPageNumber[];
 }): Map<number, CanonicalPageInfo> => {
 	const result = new Map<number, CanonicalPageInfo>();
 
-	// Step 1: Check for context conflicts
+	// Step 1: Check for region conflicts
 	// If ANY page has conflicts, canonical pages cannot be computed
-	// Pass contextDerivedPageNumbers so we only flag conflicts when multiple
-	// contexts have actual detected text on the same page
+	// Pass regionDerivedPageNumbers so we only flag conflicts when multiple
+	// regions have actual detected text on the same page
 	const conflicts = detectPageNumberConflicts({
-		contexts,
+		regions,
 		maxPage: documentPageCount,
-		contextDerivedPageNumbers,
+		regionDerivedPageNumbers,
 	});
 
 	if (conflicts.length > 0) {
@@ -64,26 +64,26 @@ export const computeCanonicalPages = ({
 		});
 	}
 
-	// Step 3: Apply context-derived page numbers (blue)
-	const contextDerivedMap = new Map<number, ContextDerivedPageNumber>();
-	for (const derived of contextDerivedPageNumbers) {
-		contextDerivedMap.set(derived.documentPage, derived);
+	// Step 3: Apply region-derived page numbers (blue)
+	const regionDerivedMap = new Map<number, RegionDerivedPageNumber>();
+	for (const derived of regionDerivedPageNumbers) {
+		regionDerivedMap.set(derived.documentPage, derived);
 	}
 
 	for (let page = 1; page <= documentPageCount; page++) {
-		const contextDerived = contextDerivedMap.get(page);
-		if (contextDerived) {
+		const regionDerived = regionDerivedMap.get(page);
+		if (regionDerived) {
 			result.set(page, {
-				canonicalPage: contextDerived.canonicalPage,
-				source: "context",
-				sourceId: contextDerived.contextId,
+				canonicalPage: regionDerived.canonicalPage,
+				source: "region",
+				sourceId: regionDerived.regionId,
 				color: "green",
 			});
 		}
 	}
 
 	// Step 4: Apply user-defined rules (blue for positive, gray for negative)
-	// These OVERRIDE context-derived page numbers
+	// These OVERRIDE region-derived page numbers
 	for (const rule of rules) {
 		const pageCount = rule.documentPageEnd - rule.documentPageStart + 1;
 
@@ -154,12 +154,12 @@ export const getCanonicalPagesStatistics = ({
 }): {
 	totalPages: number;
 	unaccountedPages: number;
-	contextDerivedPages: number;
+	regionDerivedPages: number;
 	userDefinedPositivePages: number;
 	userDefinedNegativePages: number;
 } => {
 	let unaccountedPages = 0;
-	let contextDerivedPages = 0;
+	let regionDerivedPages = 0;
 	let userDefinedPositivePages = 0;
 	let userDefinedNegativePages = 0;
 
@@ -168,8 +168,8 @@ export const getCanonicalPagesStatistics = ({
 			case "unaccounted":
 				unaccountedPages++;
 				break;
-			case "context":
-				contextDerivedPages++;
+			case "region":
+				regionDerivedPages++;
 				break;
 			case "rule-positive":
 				userDefinedPositivePages++;
@@ -183,7 +183,7 @@ export const getCanonicalPagesStatistics = ({
 	return {
 		totalPages: canonicalPagesMap.size,
 		unaccountedPages,
-		contextDerivedPages,
+		regionDerivedPages,
 		userDefinedPositivePages,
 		userDefinedNegativePages,
 	};
@@ -198,23 +198,23 @@ export type CanonicalPageSegment = {
 	source: CanonicalPageSource;
 	color: CanonicalPageColor;
 	ruleId?: string;
-	contextIds?: string[]; // Can be multiple contexts for merged context-derived ranges
-	contextNames?: string[]; // Corresponding context names
+	regionIds?: string[]; // Can be multiple regions for merged region-derived ranges
+	regionNames?: string[]; // Corresponding region names
 	label?: string;
 };
 
 /**
  * Format canonical pages with metadata for rich UI display
- * Returns segments with rule/context information for popovers
+ * Returns segments with rule/region information for popovers
  */
 export const formatCanonicalPagesWithMetadata = ({
 	canonicalPagesMap,
 	rules,
-	contexts,
+	regions,
 }: {
 	canonicalPagesMap: Map<number, CanonicalPageInfo>;
 	rules: CanonicalPageRule[];
-	contexts: Context[];
+	regions: Region[];
 }): CanonicalPageSegment[] => {
 	if (canonicalPagesMap.size === 0) {
 		return [];
@@ -227,9 +227,9 @@ export const formatCanonicalPagesWithMetadata = ({
 		([a], [b]) => a - b,
 	);
 
-	// Create lookup maps for rules and contexts
+	// Create lookup maps for rules and regions
 	const rulesMap = new Map(rules.map((rule) => [rule.id, rule]));
-	const contextsMap = new Map(contexts.map((ctx) => [ctx.id, ctx]));
+	const regionsMap = new Map(regions.map((reg) => [reg.id, reg]));
 
 	for (const [docPage, info] of sortedEntries) {
 		// Check if we can extend the current segment
@@ -239,9 +239,9 @@ export const formatCanonicalPagesWithMetadata = ({
 			currentSegment &&
 			docPage === currentSegment.documentPageRange.end + 1
 		) {
-			if (info.source === "context") {
-				// For context-derived: merge if source is context (even if different contexts)
-				canExtend = currentSegment.source === "context";
+			if (info.source === "region") {
+				// For region-derived: merge if source is region (even if different regions)
+				canExtend = currentSegment.source === "region";
 			} else {
 				// For rules: merge only if same source and same rule ID
 				canExtend =
@@ -258,20 +258,20 @@ export const formatCanonicalPagesWithMetadata = ({
 
 			// Get metadata based on source
 			let ruleId: string | undefined;
-			let contextIds: string[] | undefined;
-			let contextNames: string[] | undefined;
+			let regionIds: string[] | undefined;
+			let regionNames: string[] | undefined;
 			let label: string | undefined;
 
 			if (info.source === "rule-positive" || info.source === "rule-negative") {
 				ruleId = info.sourceId;
 				const rule = info.sourceId ? rulesMap.get(info.sourceId) : undefined;
 				label = rule?.label || undefined;
-			} else if (info.source === "context") {
-				// Start with current context
+			} else if (info.source === "region") {
+				// Start with current region
 				if (info.sourceId) {
-					const context = contextsMap.get(info.sourceId);
-					contextIds = [info.sourceId];
-					contextNames = context?.name ? [context.name] : [];
+					const region = regionsMap.get(info.sourceId);
+					regionIds = [info.sourceId];
+					regionNames = region?.name ? [region.name] : [];
 				}
 			}
 
@@ -284,8 +284,8 @@ export const formatCanonicalPagesWithMetadata = ({
 				source: info.source,
 				color: info.color,
 				ruleId,
-				contextIds,
-				contextNames,
+				regionIds,
+				regionNames,
 				label,
 			};
 		} else {
@@ -293,21 +293,21 @@ export const formatCanonicalPagesWithMetadata = ({
 			currentSegment.documentPageRange.end = docPage;
 			currentSegment.canonicalPageRange.end = info.canonicalPage;
 
-			// For context-derived, add context if it's new
-			if (info.source === "context" && info.sourceId) {
-				if (!currentSegment.contextIds) {
-					currentSegment.contextIds = [];
+			// For region-derived, add region if it's new
+			if (info.source === "region" && info.sourceId) {
+				if (!currentSegment.regionIds) {
+					currentSegment.regionIds = [];
 				}
-				if (!currentSegment.contextNames) {
-					currentSegment.contextNames = [];
+				if (!currentSegment.regionNames) {
+					currentSegment.regionNames = [];
 				}
 
 				// Only add if not already in the list
-				if (!currentSegment.contextIds.includes(info.sourceId)) {
-					const context = contextsMap.get(info.sourceId);
-					currentSegment.contextIds.push(info.sourceId);
-					if (context?.name) {
-						currentSegment.contextNames.push(context.name);
+				if (!currentSegment.regionIds.includes(info.sourceId)) {
+					const region = regionsMap.get(info.sourceId);
+					currentSegment.regionIds.push(info.sourceId);
+					if (region?.name) {
+						currentSegment.regionNames.push(region.name);
 					}
 				}
 			}

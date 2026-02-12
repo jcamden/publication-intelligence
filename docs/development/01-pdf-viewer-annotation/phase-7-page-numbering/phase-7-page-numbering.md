@@ -1,13 +1,13 @@
 # Phase 7: Canonical Page Numbering System
 
 **Status:** ⚪ Not Started  
-**Dependencies:** Phase 6 completion (Context System) ✅ (including all extended features)  
+**Dependencies:** Phase 6 completion (Region System) ✅ (including all extended features)  
 **Duration:** 4-5 days
 
 ## Overview
 
 Implement a rules-based canonical page numbering system with:
-- **Context-derived page numbers** - Automatic extraction from page number contexts
+- **Region-derived page numbers** - Automatic extraction from page number regions
 - **User-defined rules** - Manual positive rules (define page numbers) and negative rules (ignore pages)
 - **Visual feedback** - Color-coded display showing which pages are indexed and why
 - **Rule conflict resolution** - Smart handling of overlapping rules with user confirmation
@@ -15,9 +15,9 @@ Implement a rules-based canonical page numbering system with:
 
 **Phase 6 Completion Status (February 10, 2026):**
 - ✅ User-named contexts (e.g., "Top-right page number", "Bottom-center page number")
-- ✅ `page_number` context type with region drawing
+- ✅ `page_number` region type with region drawing
 - ✅ **Page exclusion** (`exceptPages` field) - enables "Remove from page" functionality
-- ✅ **Conflict detection** (client-side via `useMemo`) - ensures only ONE page_number context per page
+- ✅ **Conflict detection** (client-side via `useMemo`) - ensures only ONE page_number region per page
 - ✅ **Conflict resolution UI** - displays conflicts inline with clickable page numbers
 - ✅ "Every other page" with optional `endPage` parameter
 - ✅ "Except pages" input in Create/Edit Context modal
@@ -31,7 +31,7 @@ Implement a rules-based canonical page numbering system with:
 - Page-level and project-level rule creation UI
 
 **Key Principles:**
-- **User rules override contexts** - User-defined rules take precedence over context-derived page numbers
+- **User rules override contexts** - User-defined rules take precedence over region-derived page numbers
 - **One rule per document page** - Same document page cannot exist in multiple user-defined rules
 - **Auto-merge contiguous rules** - Rules that are contiguous in both document pages AND canonical pages are automatically joined
 - **Computed, not stored** - Canonical page numbers are always computed on-demand
@@ -46,12 +46,12 @@ Implement a rules-based canonical page numbering system with:
 - **Display:** Red background = unaccounted/unindexed (error state)
 
 ### 2. Context-Derived Page Numbers
-- Extracted from page number context bboxes (contexts with `contextType: 'page_number'`)
+- Extracted from page number context bboxes (contexts with `regionType: 'page_number'`)
 - Each context has a user-provided name (e.g., "Top-right page number")
 - Automatic extraction from PDF text layer (OCR deferred for MVP)
 - Extracted values computed on-demand, not stored persistently
 - Can include: numbers, Roman numerals, alphabetic
-- **Display:** Blue = context-derived page numbers
+- **Display:** Blue = region-derived page numbers
 - **Overridden by:** User-defined rules (positive or negative)
 
 ### 3. User-Defined Rules (two types)
@@ -74,7 +74,7 @@ Implement a rules-based canonical page numbering system with:
 
 - Optional label field (e.g., "Appendix", "Index Section")
 - **Display:** Green = user-defined positive rule
-- **Takes precedence over:** Context-derived page numbers
+- **Takes precedence over:** Region-derived page numbers
 
 #### Negative Rules (ignore pages)
 - User marks document pages to be ignored (not indexed)
@@ -82,18 +82,18 @@ Implement a rules-based canonical page numbering system with:
 - Optional label field (e.g., "Cover pages", "Blank pages")
 - Commonly used for: cover pages, blank pages, non-content pages
 - **Display:** Gray with strikethrough = ignored
-- **Takes precedence over:** Context-derived page numbers
+- **Takes precedence over:** Region-derived page numbers
 
 ### Final (Canonical) Page Number
 - **Always computed/derived**, never stored as persistent data
-- **Precedence:** User-defined rules (positive/negative) > Context-derived > Document page number
-- Only computed when NO page_number context conflicts exist
+- **Precedence:** User-defined rules (positive/negative) > Region-derived > Document page number
+- Only computed when NO page_number region conflicts exist
 - Used for indexing mentions (stored as reference to document page number)
 - Displayed in index export
 
 ### Visual Indicators (Color Legend)
 - **🔴 Red:** Unaccounted document pages (no context, no rule) - ERROR state
-- **🔵 Blue:** Context-derived page numbers
+- **🔵 Blue:** Region-derived page numbers
 - **🟢 Green:** User-defined positive rules (manual canonical pages)
 - **⚪ Gray with strikethrough:** Ignored pages (user-defined negative rules)
 
@@ -114,7 +114,7 @@ Implement a rules-based canonical page numbering system with:
 
 #### Step 2: Add Context-Derived Page Numbers
 
-**User creates two page_number contexts:**
+**User creates two page_number regions:**
 1. Context A: Detects page numbers on every other page starting at page 20, ending at page 500 (pages 20, 22, 24... 500)
 2. Context B: Detects page numbers on every other page starting at page 21, ending at page 499 (pages 21, 23, 25... 499)
 
@@ -123,15 +123,15 @@ Implement a rules-based canonical page numbering system with:
 **Canonical Pages Display:**
 ```
 1-19 🔴 (red)
-i-x 🔵 (blue - context-derived)
-1-480 🔵 (blue - context-derived)
+i-x 🔵 (blue - region-derived)
+1-480 🔵 (blue - region-derived)
 501-600 🔴 (red)
 ```
 
 **Explanation:** 
 - Pages 1-19: Still unaccounted (no context covers them)
-- Pages 20-29: Context-derived Roman numerals i-x
-- Pages 30-500: Context-derived Arabic 1-480  
+- Pages 20-29: Region-derived Roman numerals i-x
+- Pages 30-500: Region-derived Arabic 1-480  
 - Pages 501-600: Still unaccounted (no context covers them)
 
 ---
@@ -153,7 +153,7 @@ i-x 🔵 (blue)
 i-c 🟢 (green - user-defined positive rule)
 ```
 
-**Explanation:** Pages 501-600 now have user-defined canonical page numbers (i-c), shown in green. User rules take precedence over context-derived.
+**Explanation:** Pages 501-600 now have user-defined canonical page numbers (i-c), shown in green. User rules take precedence over region-derived.
 
 ---
 
@@ -264,15 +264,15 @@ Are you sure you want to proceed?
 
 ### User Rules vs Context-Derived
 
-**Important:** User-defined rules DO NOT conflict with context-derived page numbers. User rules always take precedence and override context-derived page numbers.
+**Important:** User-defined rules DO NOT conflict with region-derived page numbers. User rules always take precedence and override region-derived page numbers.
 
 **Example:**
-- Context-derived: Pages 50-100 → i-li
+- Region-derived: Pages 50-100 → i-li
 - User creates positive rule: Pages 60-80 → 1-21
 - **Result:**
-  - Pages 50-59: i-x (blue - context-derived)
+  - Pages 50-59: i-x (blue - region-derived)
   - Pages 60-80: 1-21 (green - user-defined, overrides context)
-  - Pages 81-100: xxxi-li (blue - context-derived)
+  - Pages 81-100: xxxi-li (blue - region-derived)
 
 ## UI Architecture
 
@@ -282,19 +282,19 @@ Are you sure you want to proceed?
 
 **Display:**
 - Document page number (always)
-- Context-derived page number (if exists, with context name)
+- Region-derived page number (if exists, with region name)
 - User-defined rule (if exists, with rule description)
 - Quick rule creation input
 - Final canonical page number (computed, read-only)
 
-**Mockup Example 1 - Page with only context-derived page number:**
+**Mockup Example 1 - Page with only region-derived page number:**
 ```
 ┌─────────────────────────────────┐
 │ Page Numbering                  │
 │                                 │
 │ Document page: 42               │
 │                                 │
-│ Context-derived: xiv 🔵         │
+│ Region-derived: xiv 🔵         │
 │   from "Top-right Page Number"  │
 │                                 │
 │ Index as canonical page:        │
@@ -314,7 +314,7 @@ Are you sure you want to proceed?
 │                                 │
 │ Document page: 42               │
 │                                 │
-│ Context-derived: xiv 🔵         │
+│ Region-derived: xiv 🔵         │
 │   from "Top-right Page Number"  │
 │   (strikethrough style)         │
 │                                 │
@@ -369,7 +369,7 @@ Are you sure you want to proceed?
 │ Statistics:                     │
 │ • Total pages: 600              │
 │ • Unaccounted: 0 pages          │
-│ • Context-derived: 490 pages    │
+│ • Region-derived: 490 pages    │
 │ • User-defined: 110 pages       │
 │   - Indexed: 100 pages          │
 │   - Ignored: 10 pages           │
@@ -391,7 +391,7 @@ Are you sure you want to proceed?
 
 **Color Legend:**
 - 🔴 **Red:** Unaccounted pages (error - need context or rule)
-- 🔵 **Blue:** Context-derived page numbers
+- 🔵 **Blue:** Region-derived page numbers
 - 🟢 **Green:** User-defined positive rules
 - ⚪ **Gray with strikethrough:** Ignored pages (negative rules)
 
@@ -482,7 +482,7 @@ The canonical pages string provides a compressed visual overview showing which p
    1-600 🔴
    ```
 
-2. **With context-derived pages:**
+2. **With region-derived pages:**
    ```
    1-19 🔴  i-x 🔵  1-480 🔵  501-600 🔴
    ```
@@ -504,7 +504,7 @@ The canonical pages string provides a compressed visual overview showing which p
 
 **Mixed Sources:**
 - Each source gets its own segment in the display
-- Example: Pages 1-10 ignored, 11-20 context-derived, 21-30 user-defined:
+- Example: Pages 1-10 ignored, 11-20 region-derived, 21-30 user-defined:
   ```
   1-10 ⚪  11-20 🔵  21-30 🟢
   ```
@@ -625,40 +625,40 @@ function detectSequenceContinuity(values: string[]): boolean {
 
 ## Context Conflicts (Phase 6 - Already Implemented)
 
-### Page Number Context Conflicts
+### Page Number Region Conflicts
 
-**Constraint:** Only ONE `page_number` context can apply to any page. Multiple overlapping `ignore` contexts are allowed.
+**Constraint:** Only ONE `page_number` region can apply to any page. Multiple overlapping `exclude` regions are allowed.
 
-**Detection Logic:** Client-side using `@pubint/core/context.utils.ts` utility (✅ completed in Phase 6)
+**Detection Logic:** Client-side using `@pubint/core/region.utils.ts` utility (✅ completed in Phase 6)
 
 ```typescript
 type PageNumberConflict = {
   pageNumber: number;
-  contexts: Context[];
+  regions: Region[];
 };
 
 function detectPageNumberConflicts({ 
   contexts, 
   maxPage 
 }: {
-  contexts: Context[];
+  regions: Region[];
   maxPage: number;
 }): PageNumberConflict[] {
-  const pageNumberContexts = contexts.filter(
-    ctx => ctx.contextType === 'page_number'
+  const pageNumberRegions = contexts.filter(
+    ctx => ctx.regionType === 'page_number'
   );
   
   const conflicts: PageNumberConflict[] = [];
   
   for (let page = 1; page <= maxPage; page++) {
-    const contextsForPage = pageNumberContexts.filter(ctx =>
+    const regionsForPage = pageNumberRegions.filter(ctx =>
       appliesToPage({ context: ctx, targetPage: page })
     );
     
-    if (contextsForPage.length > 1) {
+    if (regionsForPage.length > 1) {
       conflicts.push({
         pageNumber: page,
-        contexts: contextsForPage,
+        contexts: regionsForPage,
       });
     }
   }
@@ -685,11 +685,11 @@ Page Sidebar shows conflict warning:
 ┌─────────────────────────────────┐
 │ ⚠️ PAGE NUMBER CONFLICT          │
 │                                 │
-│ Multiple page number contexts:  │
+│ Multiple page number regions:  │
 │ • Top-right Page Number         │
 │ • Bottom-center Page Number     │
 │                                 │
-│ Only one page_number context    │
+│ Only one page_number region    │
 │ can apply per page. Please      │
 │ resolve to enable indexing.     │
 └─────────────────────────────────┘
@@ -697,26 +697,26 @@ Page Sidebar shows conflict warning:
 
 ### Page Exclusion ("Remove from Page") (✅ Implemented in Phase 6)
 
-Users can click "Remove from this page" to add page to context's `exceptPages` array. This works for both `ignore` and `page_number` contexts.
+Users can click "Remove from this page" to add page to region's `exceptPages` array. This works for both `ignore` and `page_number` regions.
 
-**Note:** Page number context conflicts MUST be resolved before canonical page numbers can be computed. User-defined rules are disabled until conflicts are resolved.
+**Note:** Page number region conflicts MUST be resolved before canonical page numbers can be computed. User-defined rules are disabled until conflicts are resolved.
 
 ## Implementation Strategy
 
-**Note:** Phase 6 extensions (page exclusion, context conflict detection, conflict resolution UI) are complete. Phase 7 focuses on page number extraction, user-defined rules, and canonical page visualization.
+**Note:** Phase 6 extensions (page exclusion, region conflict detection, conflict resolution UI) are complete. Phase 7 focuses on page number extraction, user-defined rules, and canonical page visualization.
 
 ### 1. Page Number Extraction from Contexts (1 day)
 - Text extraction from page number context bboxes (PDF text layer only, OCR deferred)
 - Numeral type detection (Roman, Arabic, arbitrary)
 - Sequence validation
-- Compute context-derived page numbers on-demand (not persisted)
-- Only compute when no context conflicts exist (Phase 6 constraint)
+- Compute region-derived page numbers on-demand (not persisted)
+- Only compute when no region conflicts exist (Phase 6 constraint)
 
 **Deliverables:**
 - `extractPageNumberFromBbox()` utility
 - `detectNumeralType()` utility
 - `detectSequenceContinuity()` utility
-- Context-derived page numbers appear in Project Sidebar canonical pages display (blue)
+- Region-derived page numbers appear in Project Sidebar canonical pages display (blue)
 
 ### 2. User-Defined Rules System (1.5 days)
 
@@ -762,7 +762,7 @@ type CanonicalPageRule = {
 
 #### Project Sidebar - Canonical Pages Section
 - Color-coded canonical pages string display
-- Statistics (unaccounted, context-derived, user-defined, ignored)
+- Statistics (unaccounted, region-derived, user-defined, ignored)
 - List of user-defined rules with edit/delete actions
 - "Create Rule" button opening modal
 
@@ -786,7 +786,7 @@ type CanonicalPageRule = {
 
 #### Page Sidebar - Page Numbering Section
 - Display document page number
-- Display context-derived page number (if exists) with context name
+- Display region-derived page number (if exists) with region name
 - Display user-defined rule (if exists) with rule description
 - Show when user rule overrides context (strikethrough context)
 - "Index as canonical page" input for quick rule creation
@@ -804,7 +804,7 @@ type CanonicalPageRule = {
 - `PageNumberingSection` component in Page Sidebar
 - Quick rule creation form
 - Integration with rule conflict resolution
-- Strikethrough styling for overridden context-derived pages
+- Strikethrough styling for overridden region-derived pages
 
 ### 5. Canonical Page Computation (0.5 days)
 
@@ -816,7 +816,7 @@ function computeCanonicalPages({
   rules
 }: {
   documentPageCount: number;
-  contexts: Context[];
+  regions: Region[];
   rules: CanonicalPageRule[];
 }): Map<number, {
   canonicalPage: string | null;
@@ -824,18 +824,18 @@ function computeCanonicalPages({
   sourceId?: string;
   color: 'red' | 'blue' | 'green' | 'gray';
 }> {
-  // 1. Check for context conflicts - if any exist, return empty map
-  // 2. Extract context-derived page numbers
-  // 3. Apply user-defined rules (override context-derived)
+  // 1. Check for region conflicts - if any exist, return empty map
+  // 2. Extract region-derived page numbers
+  // 3. Apply user-defined rules (override region-derived)
   // 4. Mark unaccounted pages as red
   // 5. Return map of document page → canonical page with metadata
 }
 ```
 
 **Priority:**
-1. Check context conflicts first (Phase 6 constraint)
+1. Check region conflicts first (Phase 6 constraint)
 2. User-defined rules (highest priority)
-3. Context-derived page numbers
+3. Region-derived page numbers
 4. Unaccounted (document page number, red)
 
 **Caching Strategy:**
@@ -851,7 +851,7 @@ function computeCanonicalPages({
 - `computeCanonicalPages()` utility
 - Integration with Project Sidebar and Page Sidebar
 - Cache invalidation logic
-- Real-time updates when rules or contexts change
+- Real-time updates when rules or regions change
 
 ## Backend Schema
 
@@ -863,7 +863,7 @@ function computeCanonicalPages({
 type Context {
   id: string;
   projectId: string;
-  contextType: 'page_number' | 'ignore';
+  regionType: 'page_number' | 'exclude';
   name: string; // e.g., "Top-right Page Number"
   pageConfig: PageConfig;
   exceptPages?: number[]; // Pages to exclude (✅ Phase 6)
@@ -915,10 +915,10 @@ type CanonicalPageRule {
 
 The following are NEVER stored in the database:
 
-- **`context_derived_page_number`** - Extracted on-demand from page_number context bboxes
-- **`canonical_page_number`** - Computed from: user rules > context-derived > document page
+- **`context_derived_page_number`** - Extracted on-demand from page_number region bboxes
+- **`canonical_page_number`** - Computed from: user rules > region-derived > document page
 - **`is_indexable`** - Computed from canonical page (false if negative rule applies)
-- **`has_context_conflicts`** - Computed client-side from overlapping page_number contexts (Phase 6)
+- **`has_context_conflicts`** - Computed client-side from overlapping page_number regions (Phase 6)
 
 ### Index Mentions (Unchanged)
 
@@ -935,14 +935,14 @@ type IndexMention {
 
 **Rationale for Computed Approach:**
 - **Flexibility:** Page number rules can change without migrating mention data
-- **Conflict awareness:** Can't compute canonical if context conflicts exist (forces resolution)
+- **Conflict awareness:** Can't compute canonical if region conflicts exist (forces resolution)
 - **Single source of truth:** Document page number is authoritative
-- **User rule priority:** User-defined rules always override context-derived
+- **User rule priority:** User-defined rules always override region-derived
 - **Performance:** Canonical page numbers cached in memory/query layer if needed
 
 ## Testing Requirements
 
-**Note:** Phase 6 tests (page exclusion, context conflict detection) are documented in `phase-6-testing.md`.
+**Note:** Phase 6 tests (page exclusion, region conflict detection) are documented in `phase-6-testing.md`.
 
 ### Page Number Extraction from Contexts
 - [ ] Extract Arabic numbers from context bboxes (text layer)
@@ -951,7 +951,7 @@ type IndexMention {
 - [ ] Numeral type detection works correctly
 - [ ] Sequence continuity detection works (i, ii, iii vs i, iii, v)
 - [ ] Failed extraction returns null
-- [ ] Context-derived page numbers only computed when NO context conflicts exist (Phase 6 constraint)
+- [ ] Region-derived page numbers only computed when NO region conflicts exist (Phase 6 constraint)
 
 ### User-Defined Rules - CRUD Operations
 - [ ] Create positive rule with auto-generated sequence
@@ -993,17 +993,17 @@ type IndexMention {
 - [ ] Join multiple rules if all are contiguous (3+ rules → 1)
 
 ### Canonical Page Computation
-- [ ] Return empty if context conflicts exist (Phase 6 constraint)
+- [ ] Return empty if region conflicts exist (Phase 6 constraint)
 - [ ] Unaccounted pages show as red (document page number)
-- [ ] Context-derived pages show as blue
+- [ ] Region-derived pages show as blue
 - [ ] User-defined positive rules show as green
 - [ ] User-defined negative rules show as gray with strikethrough
-- [ ] User rules override context-derived (not conflict)
+- [ ] User rules override region-derived (not conflict)
 - [ ] Final canonical page computed correctly (user rules > context > document)
 
 ### UI - Project Sidebar Canonical Pages Section
 - [ ] Color-coded canonical pages string displays correctly
-- [ ] Statistics show correct counts (unaccounted, context-derived, user-defined, ignored)
+- [ ] Statistics show correct counts (unaccounted, region-derived, user-defined, ignored)
 - [ ] "Create Rule" button opens modal
 - [ ] List of user-defined rules displays correctly
 - [ ] Edit rule opens modal with pre-filled values
@@ -1022,9 +1022,9 @@ type IndexMention {
 
 ### UI - Page Sidebar Page Numbering Section
 - [ ] Document page number always displays
-- [ ] Context-derived page number displays (if exists) with context name
+- [ ] Region-derived page number displays (if exists) with region name
 - [ ] User-defined rule displays (if exists) with rule description
-- [ ] Strikethrough on context-derived when overridden by user rule
+- [ ] Strikethrough on region-derived when overridden by user rule
 - [ ] "Index as canonical page" input creates quick rule
 - [ ] Auto-detects numeral type from input
 - [ ] Edit/Delete buttons for existing rules
@@ -1039,11 +1039,11 @@ type IndexMention {
 
 ## Success Criteria
 
-### Phase 6 (Context System) - ✅ Complete
+### Phase 6 (Region System) - ✅ Complete
 - ✅ `exceptPages` field added to schema with `endPage` for "every other" mode
-- ✅ "Remove from page" functionality works for both ignore and page_number contexts
+- ✅ "Remove from page" functionality works for both ignore and page_number regions
 - ✅ Page exclusions display in page config summary via `getPageConfigSummary()`
-- ✅ Conflict detection identifies overlapping page_number contexts (client-side)
+- ✅ Conflict detection identifies overlapping page_number regions (client-side)
 - ✅ Conflicts display inline with clickable page numbers in Project Sidebar
 - ✅ Conflict warning shows in Page Sidebar when on conflicting page
 - ✅ User can resolve conflicts by removing pages or editing contexts
@@ -1066,23 +1066,23 @@ type IndexMention {
 - [ ] Numeral type detection (Arabic/Roman/Arbitrary)
 - [ ] Sequence continuity detection
 - [ ] Failed extraction returns null
-- [ ] Only compute when NO context conflicts exist (Phase 6 constraint)
+- [ ] Only compute when NO region conflicts exist (Phase 6 constraint)
 
 #### Canonical Page Computation
 - [ ] Canonical pages are COMPUTED, never stored
-- [ ] User rules take precedence over context-derived
+- [ ] User rules take precedence over region-derived
 - [ ] Unaccounted pages show red (error state)
-- [ ] Context-derived pages show blue
+- [ ] Region-derived pages show blue
 - [ ] User-defined positive rules show green
 - [ ] User-defined negative rules show gray with strikethrough
-- [ ] Computation respects Phase 6 context conflicts (returns empty if conflicts exist)
+- [ ] Computation respects Phase 6 region conflicts (returns empty if conflicts exist)
 
 #### UI - Project Sidebar
 - [ ] Canonical Pages section displays color-coded string
 - [ ] Statistics show correct counts (unaccounted, context, user-defined, ignored)
 - [ ] "Create Rule" button opens modal
 - [ ] List of user-defined rules with edit/delete actions
-- [ ] Real-time updates when rules or contexts change
+- [ ] Real-time updates when rules or regions change
 
 #### UI - Create/Edit Rule Modal
 - [ ] Rule type selection (positive/negative)
@@ -1100,9 +1100,9 @@ type IndexMention {
 
 #### UI - Page Sidebar
 - [ ] Document page number always displayed
-- [ ] Context-derived page number displayed with context name (if exists)
+- [ ] Region-derived page number displayed with region name (if exists)
 - [ ] User-defined rule displayed with rule description (if exists)
-- [ ] Strikethrough on context-derived when overridden by user rule
+- [ ] Strikethrough on region-derived when overridden by user rule
 - [ ] "Index as canonical page" input creates quick rule
 - [ ] Edit/Delete buttons for existing rules
 - [ ] Final canonical page displayed correctly
@@ -1150,9 +1150,9 @@ The following features are deferred for post-MVP implementation:
 ---
 
 ### Notification When Context Changes Affect Rules
-**Feature:** When user edits a context bbox after rules have been created based on that context, show notification: "Context extraction changed. X pages now differ from your rules. Review?"
+**Feature:** When user edits a region bbox after rules have been created based on that context, show notification: "Context extraction changed. X pages now differ from your rules. Review?"
 
-**Benefit:** Prevents confusion when context-derived pages change but user rules remain.
+**Benefit:** Prevents confusion when region-derived pages change but user rules remain.
 
 ---
 
@@ -1171,12 +1171,12 @@ After Phase 7 completion, Epic 1 (PDF Viewer + Annotation System) is complete.
 
 ### Epic 1 Complete Deliverables:
 - ✅ Phase 1-5: PDF viewer with text selection and region drawing
-- ✅ Phase 6: Context system (page_number and ignore contexts)
+- ✅ Phase 6: Region system (page_number and exclude regions)
 - [ ] Phase 7: Canonical page numbering (user-defined rules + context extraction)
 
 ### Next Epics:
 - **Epic 2:** Concept Detection
-  - Respect ignore contexts (don't detect on ignored pages)
+  - Respect exclude regions (don't detect on ignored pages)
   - Extract concepts from visible text
   - Generate index entries per index type
   - Reference document page numbers (canonical computed at display time)

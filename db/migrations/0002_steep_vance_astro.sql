@@ -1,1 +1,0 @@
-ALTER TABLE "contexts" ADD COLUMN "end_page" integer;

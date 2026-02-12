@@ -73,7 +73,7 @@ Persist mentions, entries, and index types to database with CRUD operations and 
 - ✅ ProjectIndexType table with customization fields
 - ✅ IndexEntry.project_index_type_id field
 - ✅ IndexMention multi-type support via junction table
-- ✅ Context table (simplified schema)
+- ✅ Region table (simplified schema)
 - ✅ Full tRPC CRUD endpoints (list, enable, update, reorder, disable)
 - ✅ Integration and security tests
 
@@ -110,7 +110,7 @@ Phase 5 complete when:
 - [x] Schema created (Index type enum, UserIndexTypeAddon, ProjectIndexType, etc.)
 - [x] ProjectIndexType CRUD working (enable/disable/reorder)
 - [x] Addon access control working (RLS policies enforce addon ownership)
-- [x] Context schema ready for Phase 6
+- [x] Region schema ready for Phase 6
 - [x] Default addon grants working (all users get Subject, Author, Scripture)
 - [x] IndexEntry CRUD working (filtered by accessible types)
 - [x] IndexMention CRUD working (multi-type support, addon validation)
@@ -206,8 +206,8 @@ All criteria met:
 ## Related Documentation
 
 - [Phase 4 README](../phase-4-highlight-management/README.md) - Frontend implementation (complete)
-- [Phase 6 Context System](../phase-6-context-system/) - Next phase uses Context schema
+- [Phase 6 Region System](../phase-6-region-system/) - Next phase uses Region schema
 
 ## Next Phase
 
-[Phase 6: Context System](../phase-6-context-system/) builds on the Context schema created in Task 5A, adding UI for ignore/page-number regions.
+[Phase 6: Region System](../phase-6-region-system/) builds on the Region schema created in Task 5A, adding UI for ignore/page-number regions.

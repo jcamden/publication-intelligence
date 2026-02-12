@@ -28,7 +28,7 @@ export type CanonicalPageRule = {
 
 export type CanonicalPageSource =
 	| "unaccounted"
-	| "context"
+	| "region"
 	| "rule-positive"
 	| "rule-negative";
 

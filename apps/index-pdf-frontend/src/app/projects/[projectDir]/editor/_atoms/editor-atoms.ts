@@ -2,6 +2,8 @@ import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import type { ColorConfig } from "../_types/color-config";
 import { DEFAULT_COLOR_CONFIG } from "../_types/color-config";
+import type { RegionTypeColorConfig } from "../_types/region-type-color-config";
+import { DEFAULT_REGION_TYPE_COLOR_CONFIG } from "../_types/region-type-color-config";
 
 // Section IDs
 export type SectionId =
@@ -10,14 +12,14 @@ export type SectionId =
 	| "project-author"
 	| "project-scripture"
 	| "project-biblio"
-	| "project-contexts"
+	| "project-regions"
 	| "page-info"
 	| "page-pages"
 	| "page-subject"
 	| "page-author"
 	| "page-scripture"
 	| "page-biblio"
-	| "page-contexts";
+	| "page-regions";
 
 // Section state type
 export type SectionState = {
@@ -39,12 +41,12 @@ const initialSections = new Map<SectionId, SectionState>([
 	["project-subject", { visible: true, popped: false }], // visible by default
 	["project-author", { visible: false, popped: false }],
 	["project-scripture", { visible: false, popped: false }],
-	["project-contexts", { visible: false, popped: false }],
+	["project-regions", { visible: false, popped: false }],
 	["page-pages", { visible: false, popped: false }],
 	["page-subject", { visible: true, popped: false }], // visible by default
 	["page-author", { visible: false, popped: false }],
 	["page-scripture", { visible: false, popped: false }],
-	["page-contexts", { visible: false, popped: false }],
+	["page-regions", { visible: false, popped: false }],
 ]);
 
 // Main sections state with localStorage persistence
@@ -57,7 +59,35 @@ export const sectionsStateAtom = atomWithStorage<Map<SectionId, SectionState>>(
 			if (!stored) return initialValue;
 			try {
 				const parsed = JSON.parse(stored);
-				return new Map(Object.entries(parsed)) as Map<SectionId, SectionState>;
+				const storedMap = new Map(Object.entries(parsed)) as Map<
+					SectionId,
+					SectionState
+				>;
+
+				// Migration: Add new region sections if they don't exist
+				// Also migrate old context sections to regions
+				if (!storedMap.has("project-regions")) {
+					const oldContextState = storedMap.get(
+						"project-contexts" as SectionId,
+					);
+					storedMap.set(
+						"project-regions",
+						oldContextState ?? { visible: false, popped: false },
+					);
+					// Clean up old context section
+					storedMap.delete("project-contexts" as SectionId);
+				}
+				if (!storedMap.has("page-regions")) {
+					const oldContextState = storedMap.get("page-contexts" as SectionId);
+					storedMap.set(
+						"page-regions",
+						oldContextState ?? { visible: false, popped: false },
+					);
+					// Clean up old context section
+					storedMap.delete("page-contexts" as SectionId);
+				}
+
+				return storedMap;
 			} catch {
 				return initialValue;
 			}
@@ -84,10 +114,48 @@ export const pageSidebarCollapsedAtom = atomWithStorage(
 export const projectSidebarLastVisibleAtom = atomWithStorage<SectionId[]>(
 	"project-sidebar-last-visible",
 	[],
+	{
+		getItem: (key, initialValue) => {
+			const stored = localStorage.getItem(key);
+			if (!stored) return initialValue;
+			try {
+				const parsed = JSON.parse(stored) as SectionId[];
+				// Migration: Replace old context section with regions
+				return parsed.map((id) =>
+					id === ("project-contexts" as SectionId) ? "project-regions" : id,
+				) as SectionId[];
+			} catch {
+				return initialValue;
+			}
+		},
+		setItem: (key, value) => {
+			localStorage.setItem(key, JSON.stringify(value));
+		},
+		removeItem: (key) => localStorage.removeItem(key),
+	},
 );
 export const pageSidebarLastVisibleAtom = atomWithStorage<SectionId[]>(
 	"page-sidebar-last-visible",
 	[],
+	{
+		getItem: (key, initialValue) => {
+			const stored = localStorage.getItem(key);
+			if (!stored) return initialValue;
+			try {
+				const parsed = JSON.parse(stored) as SectionId[];
+				// Migration: Replace old context section with regions
+				return parsed.map((id) =>
+					id === ("page-contexts" as SectionId) ? "page-regions" : id,
+				) as SectionId[];
+			} catch {
+				return initialValue;
+			}
+		},
+		setItem: (key, value) => {
+			localStorage.setItem(key, JSON.stringify(value));
+		},
+		removeItem: (key) => localStorage.removeItem(key),
+	},
 );
 
 // Track which accordion items are expanded (persisted)
@@ -103,7 +171,7 @@ export const pageAccordionExpandedAtom = atomWithStorage<string[]>(
 // Track section ordering (persisted) - only the section IDs, not the toggle button
 const defaultProjectOrder: SectionId[] = [
 	"project-pages",
-	"project-contexts",
+	"project-regions",
 	"project-subject",
 	"project-author",
 	"project-scripture",
@@ -113,16 +181,54 @@ const defaultPageOrder: SectionId[] = [
 	"page-scripture",
 	"page-author",
 	"page-subject",
-	"page-contexts",
+	"page-regions",
 ];
 
 export const projectSectionOrderAtom = atomWithStorage<SectionId[]>(
 	"project-section-order",
 	defaultProjectOrder,
+	{
+		getItem: (key, initialValue) => {
+			const stored = localStorage.getItem(key);
+			if (!stored) return initialValue;
+			try {
+				const parsed = JSON.parse(stored) as SectionId[];
+				// Migration: Replace old context section with regions
+				return parsed.map((id) =>
+					id === ("project-contexts" as SectionId) ? "project-regions" : id,
+				) as SectionId[];
+			} catch {
+				return initialValue;
+			}
+		},
+		setItem: (key, value) => {
+			localStorage.setItem(key, JSON.stringify(value));
+		},
+		removeItem: (key) => localStorage.removeItem(key),
+	},
 );
 export const pageSectionOrderAtom = atomWithStorage<SectionId[]>(
 	"page-section-order",
 	defaultPageOrder,
+	{
+		getItem: (key, initialValue) => {
+			const stored = localStorage.getItem(key);
+			if (!stored) return initialValue;
+			try {
+				const parsed = JSON.parse(stored) as SectionId[];
+				// Migration: Replace old context section with regions
+				return parsed.map((id) =>
+					id === ("page-contexts" as SectionId) ? "page-regions" : id,
+				) as SectionId[];
+			} catch {
+				return initialValue;
+			}
+		},
+		setItem: (key, value) => {
+			localStorage.setItem(key, JSON.stringify(value));
+		},
+		removeItem: (key) => localStorage.removeItem(key),
+	},
 );
 
 // Sidebar widths in rem (persisted)
@@ -251,9 +357,6 @@ export const colorConfigAtom = atomWithStorage<ColorConfig>(
 					scripture: {
 						hue: parsed.scripture?.hue ?? DEFAULT_COLOR_CONFIG.scripture.hue,
 					},
-					context: {
-						hue: parsed.context?.hue ?? DEFAULT_COLOR_CONFIG.context.hue,
-					},
 				};
 				return migrated;
 			} catch {
@@ -265,4 +368,10 @@ export const colorConfigAtom = atomWithStorage<ColorConfig>(
 		},
 		removeItem: (key) => localStorage.removeItem(key),
 	},
+);
+
+// Region type color configuration (persisted)
+export const regionTypeColorConfigAtom = atomWithStorage<RegionTypeColorConfig>(
+	"region-type-color-config",
+	DEFAULT_REGION_TYPE_COLOR_CONFIG,
 );

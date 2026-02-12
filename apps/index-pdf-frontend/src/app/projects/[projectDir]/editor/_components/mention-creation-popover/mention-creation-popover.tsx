@@ -5,7 +5,9 @@ import { FieldError } from "@pubint/yabasic/components/ui/field";
 import { FormInput } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { IndexEntry } from "../../_types/index-entry";
 import { findEntryByText } from "../../_utils/index-entry-utils";
+import type { Mention } from "../editor/editor";
 import { EntryPicker } from "../entry-picker";
 
 export type BoundingBox = {
@@ -21,29 +23,6 @@ export type MentionDraft = {
 	text: string;
 	bboxes: BoundingBox[];
 	type: "text" | "region";
-};
-
-type IndexEntry = {
-	id: string;
-	label: string;
-	indexType: string;
-	parentId: string | null;
-	metadata?: {
-		aliases?: string[];
-		sortKey?: string;
-	};
-};
-
-type Mention = {
-	id: string;
-	pageNumber: number;
-	text: string;
-	bboxes: BoundingBox[];
-	entryId: string;
-	entryLabel: string;
-	indexTypes: string[];
-	type: "text" | "region";
-	createdAt: Date;
 };
 
 type MentionCreationPopoverProps = {

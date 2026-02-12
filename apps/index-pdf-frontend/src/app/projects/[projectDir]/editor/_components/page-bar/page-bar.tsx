@@ -11,7 +11,7 @@ type PageBarProps = {
  * Page Bar Component
  *
  * Controls which panels are visible in the page sidebar (right side).
- * Shows toggle buttons for: Info, Contexts, Bibliography, Authors, Scripture, Subject
+ * Shows toggle buttons for: Info, Regions, Bibliography, Authors, Scripture, Subject
  */
 export const PageBar = ({ enabledIndexTypes }: PageBarProps) => {
 	const { buttons, onReorder } = usePageBarButtons({ enabledIndexTypes });

@@ -381,18 +381,18 @@ Unlike a simple "concept extraction" tool, we're building a **mention detection 
    - Multi-document projects are post-MVP
    - Simpler schema and UI
 
-8. **Ignore Contexts with Auto-Actions**
+8. **Exclude Regions with Auto-Actions**
    - **Pre-extraction**: Don't send non-indexable text to LLM
    - **Post-acceptance**: Configurable action:
      - **Warn** (default): Show warning, let user decide
      - **Auto-reject**: Automatically suppress overlapping mentions
    - Ignored pages skipped entirely in sliding windows
-   - User can set per-context auto-action rules
+   - User can set per-region auto-action rules
 
 ## Dependencies
 
 - Epic 1: PDF Viewer (document upload + storage)
-- Epic 1: Phase 6 (Context system for ignore regions)
+- Epic 1: Phase 6 (Region system for exclude regions)
 - Infrastructure: PyMuPDF, OpenRouter API, WordNet DB, Wikidata API
 
 ## Meaning Resolution Strategy
@@ -553,8 +553,8 @@ Hover over badge → Show full gloss + link to WordNet/Wikidata entry.
 ### 1. **Upload PDF** (Epic 1)
 User uploads manuscript PDF to project.
 
-### 2. **Set Up Ignore Contexts** (Epic 1, Phase 6)
-User marks headers, footers, page numbers as ignore contexts.
+### 2. **Set Up Exclude Regions** (Epic 1, Phase 6)
+User marks headers, footers, page numbers as exclude regions.
 
 ### 3. **Extract Text** (Task 1)
 ```
@@ -568,7 +568,7 @@ Project Settings → Text Extraction Panel
 **What Happens:**
 - PyMuPDF extracts text from each page
 - Word-level bounding boxes captured (TextAtoms in memory)
-- Text within ignore context bboxes filtered out
+- Text within exclude region bboxes filtered out
 - Only `indexable_text` persisted per page
 - `extraction_version` computed (hash of all `indexableText`)
 - Takes ~1-2 minutes for 200-page book
@@ -737,7 +737,7 @@ Final index with accepted entries, meanings, hierarchy, and page numbers.
 - [ ] UI: Extraction trigger button + progress indicator
 - [ ] Bbox conversion utilities (PyMuPDF ↔ PDF.js)
 
-**Checkpoint:** User can extract text from PDF, respecting ignore contexts. TextAtoms can be re-extracted deterministically.
+**Checkpoint:** User can extract text from PDF, respecting exclude regions. TextAtoms can be re-extracted deterministically.
 
 ### Phase 2: Mention Detection (Task 2) - 6-7 days
 **Status:** Not Started  
@@ -841,7 +841,7 @@ Final index with accepted entries, meanings, hierarchy, and page numbers.
 ### Testing Strategy
 
 **Unit Tests:**
-- Text extraction with ignore contexts
+- Text extraction with exclude regions
 - TextAtom re-extraction determinism
 - Stage A validation (textQuote substring check)
 - Stage B char range mapping
@@ -864,7 +864,7 @@ Final index with accepted entries, meanings, hierarchy, and page numbers.
 - Test WordNet coverage for common terms
 - Test Wikidata coverage for proper nouns
 - Test suppression persistence across runs
-- Test extraction_version detection after ignore context changes
+- Test extraction_version detection after exclude region changes
 
 **Performance Tests:**
 - Extraction: < 3min for 200-page book
@@ -982,7 +982,7 @@ const findBestMatch = ({ pageText, textQuote, expectedCharStart, contextWindow =
 
 ### Extraction Changes After Detection
 
-**Problem**: User adds new ignore context → `indexable_text` changes → `char_range` no longer valid.
+**Problem**: User adds new exclude region → `indexable_text` changes → `char_range` no longer valid.
 
 **Detection**:
 ```sql
@@ -1080,9 +1080,9 @@ const startDetection = async ({ projectId, indexTypes }) => {
   if (totalIndexableChars < 100) {
     throw new UserError({
       code: 'NO_INDEXABLE_TEXT',
-      message: 'No indexable text found. Check ignore contexts or document content.',
+      message: 'No indexable text found. Check exclude regions or document content.',
       actions: [
-        { label: 'Review ignore contexts', href: '/contexts' },
+        { label: 'Review exclude regions', href: '/contexts' },
         { label: 'Re-extract text', action: 'reExtract' }
       ]
     });
@@ -1130,7 +1130,7 @@ const resolveMeaning = async ({ label, context, candidates }) => {
 - **Reproducible Mention Detection**: Every mention stores `text_quote` + `char_range` for reconstruction
 - **Two-Stage Detection**: Text-only prompts (Stage A) + local mapping (Stage B) = 60% cost savings
 - **Canonical Meanings**: WordNet/Wikidata IDs prevent homonym collapse and enable stable merging
-- **Context-Aware Extraction**: Respects ignore contexts with configurable auto-actions
+- **Context-Aware Extraction**: Respects exclude regions with configurable auto-actions
 - **Multi-Index Type Support**: Separate detection for Subject, Author, Scripture, etc.
 - **Sliding Window Context**: Cross-page understanding without duplicate mentions
 
@@ -1149,7 +1149,7 @@ const resolveMeaning = async ({ label, context, candidates }) => {
 
 ### Production-Ready
 - **Edge Case Handling**: Page-boundary mentions, ambiguous mappings, extraction changes
-- **Validation**: Check if `char_range` still valid after ignore context updates
+- **Validation**: Check if `char_range` still valid after exclude region updates
 - **Error Recovery**: Partial JSON parsing, LLM repair attempts, graceful fallbacks
 - **Performance**: 12-18 min end-to-end for 200-page book ($0.50-$0.70 baseline)
 
@@ -1160,12 +1160,12 @@ const resolveMeaning = async ({ label, context, candidates }) => {
 **Duration:** 2-3 days  
 **Priority:** P0 (Critical path)
 
-Extract text from PDF using PyMuPDF, create TextAtoms in memory, filter by ignore contexts, prepare for LLM processing.
+Extract text from PDF using PyMuPDF, create TextAtoms in memory, filter by exclude regions, prepare for LLM processing.
 
 **Key Deliverables:**
 - Python service with PyMuPDF integration
 - In-memory TextAtom extraction (word, bbox, sequence, page)
-- Context-aware filtering (mark `isIndexable` based on ignore contexts)
+- Context-aware filtering (mark `isIndexable` based on exclude regions)
 - Store only `indexableText` per page (for re-filtering without re-extraction)
 - Store page dimensions for bbox conversion
 - API: `document.extractText`, `getExtractionStatus`
@@ -1456,7 +1456,7 @@ Optional refinements for power users: fuzzy matching, hierarchy inference, quali
 - [ ] Quality metrics dashboard
 
 ### Overall Epic Success
-- [ ] User extracts text respecting ignore contexts and ignored pages
+- [ ] User extracts text respecting exclude regions and ignored pages
 - [ ] `extraction_version` computed and stored for validation
 - [ ] User manually initiates detection with cost warning (including variability note)
 - [ ] **Pass 1**: AI detects mentions with validated char ranges (text-only, cheap)
@@ -1487,11 +1487,11 @@ Optional refinements for power users: fuzzy matching, hierarchy inference, quali
 ### Text Extraction (Phase 1)
 - **PyMuPDF over PDF.js**: More reliable extraction, better bbox support, industry standard
 - **TextAtoms are ephemeral**: Created in memory during detection, then discarded (not persisted)
-- **Store indexable text only**: Allows re-filtering when ignore contexts change (no re-extraction needed)
+- **Store indexable text only**: Allows re-filtering when exclude regions change (no re-extraction needed)
 - **Page dimensions stored**: Required for PyMuPDF ↔ PDF.js bbox conversion
 - **Two-stage ignore filtering**:
   - Pre-extraction: Mark TextAtoms `isIndexable=false` if within ignore bbox
-  - Post-acceptance: Warn if accepted mention overlaps ignore context
+  - Post-acceptance: Warn if accepted mention overlaps exclude region
 - **Ignored pages skipped**: Don't create TextAtoms, don't include in sliding windows
 
 ### Mention Detection (Phase 2)
@@ -1568,7 +1568,7 @@ A dense theological text might cost $0.80-$1.00 vs $0.50-$0.60 for sparse conten
 ├─────────────────────────────────────────────────────────────────┤
 │ • Upload PDF (Epic 1)                                           │
 │ • Configure index types (Subject, Author, Scripture)            │
-│ • Mark ignore contexts (headers, footers)                       │
+│ • Mark exclude regions (headers, footers)                       │
 │ • Mark ignored pages (title pages, TOC)                         │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
@@ -1578,7 +1578,7 @@ A dense theological text might cost $0.80-$1.00 vs $0.50-$0.60 for sparse conten
 │ PyMuPDF extracts text:                                          │
 │ • For each page (except ignored):                               │
 │   → Extract word-level TextAtoms (word, bbox, sequence)         │
-│   → Filter by ignore context bboxes → mark isIndexable         │
+│   → Filter by exclude region bboxes → mark isIndexable         │
 │   → Store indexableText per page                                │
 │   → Store page dimensions                                       │
 │ • TextAtoms kept in memory (not persisted)                      │
@@ -1737,7 +1737,7 @@ With meaning IDs:
 
 Merge key becomes: `(project_id, index_type, meaning_id)` → No homonym collisions.
 
-### What if ignore contexts change after detection?
+### What if exclude regions change after detection?
 
 **Answer:** **Reproducibility + extraction versioning enables re-validation.**
 
@@ -1848,7 +1848,7 @@ const totalIndexableChars = pages.reduce(
 
 if (totalIndexableChars < 100) {
   throw new Error(
-    "No indexable text found. Check ignore contexts or document content."
+    "No indexable text found. Check exclude regions or document content."
   );
 }
 ```
@@ -2272,7 +2272,7 @@ WHERE suggested_by_run_id = ?
 - [ ] Design "Change meaning..." action flow
 - [ ] Design suppression UI (button + confirmation)
 - [ ] Plan mention deduplication: `page + text_quote + bbox_iou > 0.8`
-- [ ] Design ignore context auto-actions (warn | auto-reject | auto-suppress)
+- [ ] Design exclude region auto-actions (warn | auto-reject | auto-suppress)
 - [ ] Design PDF preview with bbox highlighting (from stored bbox or reconstructed)
 
 ### Before Starting Task 4 (Optional)

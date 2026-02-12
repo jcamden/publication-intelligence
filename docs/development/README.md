@@ -25,7 +25,7 @@ Interactive PDF viewer with multi-type mentions, contexts, and page numbering sy
 **Priority:** P0 (Critical path)
 
 ### 2. [Concept Detection & Indexing](./02-concept-detection/) ⚪ Not Started
-AI-powered concept extraction and index entry generation per index type, respecting ignore contexts.
+AI-powered concept extraction and index entry generation per index type, respecting exclude regions.
 
 **Status:** Waiting on PDF viewer completion  
 **Priority:** P0 (Critical path)

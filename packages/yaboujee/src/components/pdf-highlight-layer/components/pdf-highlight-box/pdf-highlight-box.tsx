@@ -4,16 +4,16 @@ import type { PdfHighlight } from "../../../../types";
 import { formatOklchColor } from "../../../../utils/index-type-colors";
 
 /**
- * Get highlight style based on hues array or context color from metadata
+ * Get highlight style based on hues array or region color from metadata
  * Computes OKLCH colors locally with PDF-specific lightness/chroma
  */
 const getHighlightStyle = ({
 	hues,
-	contextColor,
+	regionColor,
 	isDraft = false,
 }: {
 	hues?: number[];
-	contextColor?: string;
+	regionColor?: string;
 	isDraft?: boolean;
 }): React.CSSProperties => {
 	if (isDraft) {
@@ -21,9 +21,9 @@ const getHighlightStyle = ({
 		return {};
 	}
 
-	// If contextColor is provided (for context regions), use it directly
-	if (contextColor) {
-		return { backgroundColor: contextColor };
+	// If regionColor is provided (for region highlights), use it directly
+	if (regionColor) {
+		return { backgroundColor: regionColor };
 	}
 
 	// Convert hues to OKLCH colors with PDF-specific parameters
@@ -76,9 +76,9 @@ export const PdfHighlightBox = ({
 	const { bboxes, label, text, metadata } = highlight;
 	const isDraft = metadata?.isDraft === true;
 	const hues = metadata?.hues as number[] | undefined;
-	const contextColor = metadata?.contextColor as string | undefined;
+	const regionColor = metadata?.regionColor as string | undefined;
 
-	const highlightStyle = getHighlightStyle({ hues, contextColor, isDraft });
+	const highlightStyle = getHighlightStyle({ hues, regionColor, isDraft });
 
 	return (
 		<>

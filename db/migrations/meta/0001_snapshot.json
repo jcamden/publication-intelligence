@@ -1,11 +1,11 @@
 {
-	"id": "7ced6550-7cfb-4e25-8b4f-b24076c18bc9",
+	"id": "da8b0d2a-e229-48d8-aa05-d9b722b51582",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
 	"tables": {
-		"public.contexts": {
-			"name": "contexts",
+		"public.canonical_page_rules": {
+			"name": "canonical_page_rules",
 			"schema": "",
 			"columns": {
 				"id": {
@@ -21,73 +21,47 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"name": {
-					"name": "name",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"context_type": {
-					"name": "context_type",
-					"type": "context_type",
+				"rule_type": {
+					"name": "rule_type",
+					"type": "canonical_page_rule_type",
 					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": true
 				},
-				"page_config_mode": {
-					"name": "page_config_mode",
-					"type": "page_config_mode",
+				"document_page_start": {
+					"name": "document_page_start",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"document_page_end": {
+					"name": "document_page_end",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"label": {
+					"name": "label",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"numeral_type": {
+					"name": "numeral_type",
+					"type": "numeral_type",
 					"typeSchema": "public",
 					"primaryKey": false,
-					"notNull": true
-				},
-				"page_number": {
-					"name": "page_number",
-					"type": "integer",
-					"primaryKey": false,
 					"notNull": false
 				},
-				"page_range": {
-					"name": "page_range",
+				"starting_canonical_page": {
+					"name": "starting_canonical_page",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": false
 				},
-				"every_other": {
-					"name": "every_other",
-					"type": "boolean",
-					"primaryKey": false,
-					"notNull": true,
-					"default": false
-				},
-				"start_page": {
-					"name": "start_page",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false
-				},
-				"bbox": {
-					"name": "bbox",
-					"type": "json",
-					"primaryKey": false,
-					"notNull": false
-				},
-				"color": {
-					"name": "color",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"visible": {
-					"name": "visible",
-					"type": "boolean",
-					"primaryKey": false,
-					"notNull": true,
-					"default": true
-				},
-				"except_pages": {
-					"name": "except_pages",
-					"type": "integer[]",
+				"arbitrary_sequence": {
+					"name": "arbitrary_sequence",
+					"type": "text[]",
 					"primaryKey": false,
 					"notNull": false
 				},
@@ -113,9 +87,9 @@
 			},
 			"indexes": {},
 			"foreignKeys": {
-				"contexts_project_id_projects_id_fk": {
-					"name": "contexts_project_id_projects_id_fk",
-					"tableFrom": "contexts",
+				"canonical_page_rules_project_id_projects_id_fk": {
+					"name": "canonical_page_rules_project_id_projects_id_fk",
+					"tableFrom": "canonical_page_rules",
 					"tableTo": "projects",
 					"columnsFrom": ["project_id"],
 					"columnsTo": ["id"],
@@ -126,12 +100,12 @@
 			"compositePrimaryKeys": {},
 			"uniqueConstraints": {},
 			"policies": {
-				"contexts_project_access": {
-					"name": "contexts_project_access",
+				"canonical_page_rules_project_access": {
+					"name": "canonical_page_rules_project_access",
 					"as": "PERMISSIVE",
 					"for": "ALL",
 					"to": ["authenticated"],
-					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"contexts\".\"project_id\"\n\t\t\t)"
+					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"canonical_page_rules\".\"project_id\"\n\t\t\t)"
 				}
 			},
 			"checkConstraints": {},
@@ -223,6 +197,145 @@
 					"for": "ALL",
 					"to": ["authenticated"],
 					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM source_documents\n\t\t\t\tWHERE source_documents.id = \"document_pages\".\"document_id\"\n\t\t\t)"
+				}
+			},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.regions": {
+			"name": "regions",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"project_id": {
+					"name": "project_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"region_type": {
+					"name": "region_type",
+					"type": "region_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"page_config_mode": {
+					"name": "page_config_mode",
+					"type": "page_config_mode",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"page_number": {
+					"name": "page_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"page_range": {
+					"name": "page_range",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"every_other": {
+					"name": "every_other",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": false
+				},
+				"start_page": {
+					"name": "start_page",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"end_page": {
+					"name": "end_page",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"bbox": {
+					"name": "bbox",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"color": {
+					"name": "color",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"visible": {
+					"name": "visible",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"except_pages": {
+					"name": "except_pages",
+					"type": "integer[]",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"deleted_at": {
+					"name": "deleted_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"regions_project_id_projects_id_fk": {
+					"name": "regions_project_id_projects_id_fk",
+					"tableFrom": "regions",
+					"tableTo": "projects",
+					"columnsFrom": ["project_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {
+				"regions_project_access": {
+					"name": "regions_project_access",
+					"as": "PERMISSIVE",
+					"for": "ALL",
+					"to": ["authenticated"],
+					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"regions\".\"project_id\"\n\t\t\t)"
 				}
 			},
 			"checkConstraints": {},
@@ -1759,10 +1872,10 @@
 		}
 	},
 	"enums": {
-		"public.context_type": {
-			"name": "context_type",
+		"public.canonical_page_rule_type": {
+			"name": "canonical_page_rule_type",
 			"schema": "public",
-			"values": ["ignore", "page_number"]
+			"values": ["positive", "negative"]
 		},
 		"public.entity_type": {
 			"name": "entity_type",
@@ -1807,10 +1920,20 @@
 			"schema": "public",
 			"values": ["text", "region"]
 		},
+		"public.numeral_type": {
+			"name": "numeral_type",
+			"schema": "public",
+			"values": ["arabic", "roman", "arbitrary"]
+		},
 		"public.page_config_mode": {
 			"name": "page_config_mode",
 			"schema": "public",
 			"values": ["this_page", "all_pages", "page_range", "custom"]
+		},
+		"public.region_type": {
+			"name": "region_type",
+			"schema": "public",
+			"values": ["exclude", "page_number"]
 		},
 		"public.relation_type": {
 			"name": "relation_type",

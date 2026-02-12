@@ -757,7 +757,7 @@ export const OptimisticUpdateRollback: Story = {
   - `ProjectSubjectContent`
   - `ProjectAuthorContent`
   - `ProjectScriptureContent`
-  - `ProjectContextsContent`
+  - `ProjectRegionsContent`
   - Each now tracks loading/error states and passes to EntryTree
 
 - `EntryCreationModal` enhanced with loading spinner on submit button

@@ -16,7 +16,7 @@
 		"test:watch": "vitest",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest run --coverage",
-		"test:interaction": "vitest run --config=vitest.storybook.config.ts; VITEST_EXIT=$?; tsx ../../scripts/format-interaction-test-results.ts test-results/interaction-tests.json test-results/interaction-summary.md; exit $VITEST_EXIT",
+		"test:interaction": "vitest run --config=vitest.storybook.config.ts; VITEST_EXIT=$?; pnpx tsx ../../scripts/format-interaction-test-results.ts test-results/interaction-tests.json test-results/interaction-summary.md; exit $VITEST_EXIT",
 		"test:interaction:watch": "vitest --config=vitest.storybook.config.ts --watch",
 		"storybook": "storybook dev -p 6006",
 		"storybook:vrt": "storybook dev -p 6006 --config-dir .storybook-vrt",

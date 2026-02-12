@@ -12,22 +12,8 @@
 		{
 			"idx": 1,
 			"version": "7",
-			"when": 1770747813422,
-			"tag": "0001_odd_beyonder",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1770750956559,
-			"tag": "0002_steep_vance_astro",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1770759702180,
-			"tag": "0003_neat_marvel_apes",
+			"when": 1770911068894,
+			"tag": "0001_open_tomorrow_man",
 			"breakpoints": true
 		}
 	]

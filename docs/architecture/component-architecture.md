@@ -46,20 +46,20 @@ An IndexMention can belong to multiple index types simultaneously.
 
 ### 2. Contexts (region only)
 
-#### Ignore Context
+#### Exclude Region
 - Marks regions to exclude from text extraction
-- If text atom bbox is 100% within ignore context bbox → ignore it
+- If text atom bbox is 100% within exclude region bbox → ignore it
 - Use case: Headers, footers, captions, page numbers (if not indexing them)
 
-#### Page Number Context
+#### Page Number Region
 - Marks region containing page number
 - Auto-extracts text to establish canonical page number
 - Use case: Roman numerals in preface, alternating corners, custom pagination
 
-**Context Properties:**
-- Type: 'ignore' | 'page-number'
+**Region Properties:**
+- Type: 'exclude' | 'page-number'
 - Page config: 'this-page' | 'all-pages' | 'range' | 'custom' | 'every-other'
-- Color (per context)
+- Color (per region)
 - Visibility toggle
 - Managed at project level, created from page or project sidebar
 
@@ -70,7 +70,7 @@ An IndexMention can belong to multiple index types simultaneously.
 1. **Document page number** (always present)
    - Sequential: 1, 2, 3... (PDF page order)
 
-2. **Context-derived page number** (from page number contexts)
+2. **Region-derived page number** (from page number regions)
    - Extracted from context bbox
    - Example: "i, ii, iii, iv, 1, 2, 3..."
    - Pages in brackets [1-3] are non-indexable
@@ -98,7 +98,7 @@ Sections by index type (dynamic based on user subscriptions):
 - **Subject** (`page-subject-content`) - Subject mentions on this page
 - **Author** (`page-author-content`) - Author mentions on this page
 - **Scripture** (`page-scripture-content`) - Scripture mentions on this page
-- **Contexts** (`page-contexts-content`) - Contexts that apply to this page
+- **Regions** (`page-regions-content`) - Regions that apply to this page
 - **Page Info** (`page-info-content`) - Page numbering display/override
 
 **Actions:**
@@ -113,19 +113,19 @@ Sections by index type:
 - **Subject** (`project-subject-content`) - Subject index config (color, visibility)
 - **Author** (`project-author-content`) - Author index config
 - **Scripture** (`project-scripture-content`) - Scripture index config
-- **Contexts** (`project-contexts-content`) - All contexts (create, edit, delete)
+- **Regions** (`project-regions-content`) - All contexts (create, edit, delete)
 - **Pages** (`project-pages-content`) - Page numbering display/override (project-level)
 
 **Contexts Management:**
-- View all contexts
-- Edit context (page config, color, visibility)
+- View all regions
+- Edit region (page config, color, visibility)
 - Delete context
 - Apply to pages configuration
 
 **Page Numbering Display:**
 ```
 Document pages: 1-200
-Context-derived: [1-3] i-xxxii, 1-140
+Region-derived: [1-3] i-xxxii, 1-140
 Project overrides: [1-3] i-xxxii, 1-130, a-m
 Final: [1-3] i-xxxii, 1-100, *i-v*, 106-130, a-m
 ```
@@ -204,7 +204,7 @@ Final: [1-3] i-xxxii, 1-100, *i-v*, 106-130, a-m
 - 4th index type: Purple (#C4B5FD)
 - 5th index type: Pink (#F9A8D4)
 
-**Context defaults:**
+**Region defaults:**
 - Ignore context: Red (#FCA5A5)
 - Page number context: Purple (#C4B5FD)
 

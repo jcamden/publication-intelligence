@@ -12,8 +12,8 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import {
-	contextTypeEnum,
 	pageConfigModeEnum,
+	regionTypeEnum,
 	sourceDocumentStatusEnum,
 } from "./enums";
 import { indexMentions } from "./indexing";
@@ -112,16 +112,16 @@ export const documentPagesRelations = relations(
 	}),
 );
 
-// Context - Regions for text extraction configuration
-export const contexts = pgTable(
-	"contexts",
+// Region - Regions for text extraction configuration
+export const regions = pgTable(
+	"regions",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		projectId: uuid("project_id")
 			.references(() => projects.id, { onDelete: "cascade" })
 			.notNull(),
-		name: text("name").notNull(), // User-provided name for the context
-		contextType: contextTypeEnum("context_type").notNull(),
+		name: text("name").notNull(), // User-provided name for the region
+		regionType: regionTypeEnum("region_type").notNull(),
 		pageConfigMode: pageConfigModeEnum("page_config_mode").notNull(),
 		pageNumber: integer("page_number"), // For this_page mode
 		pageRange: text("page_range"), // For page_range/custom modes
@@ -131,7 +131,7 @@ export const contexts = pgTable(
 		bbox: json("bbox"), // BoundingBox coordinates
 		color: text("color").notNull(), // Hex color (e.g., "#FCA5A5")
 		visible: boolean("visible").default(true).notNull(),
-		exceptPages: integer("except_pages").array(), // Pages to exclude from this context
+		exceptPages: integer("except_pages").array(), // Pages to exclude from this region
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -140,7 +140,7 @@ export const contexts = pgTable(
 	},
 	(table) => [
 		// RLS: Inherit access from project
-		pgPolicy("contexts_project_access", {
+		pgPolicy("regions_project_access", {
 			for: "all",
 			to: authenticatedRole,
 			using: sql`EXISTS (
@@ -151,10 +151,10 @@ export const contexts = pgTable(
 	],
 );
 
-// Context relations
-export const contextsRelations = relations(contexts, ({ one }) => ({
+// Region relations
+export const regionsRelations = relations(regions, ({ one }) => ({
 	project: one(projects, {
-		fields: [contexts.projectId],
+		fields: [regions.projectId],
 		references: [projects.id],
 	}),
 }));

@@ -4,7 +4,7 @@
  * Functions for generating, detecting, and validating canonical page numbers.
  */
 
-import type { BoundingBox } from "./context.types";
+import type { BoundingBox } from "./region.types";
 
 export type NumeralType = "arabic" | "roman" | "arbitrary";
 

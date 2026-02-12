@@ -6,8 +6,8 @@ import { useAtom, useAtomValue } from "jotai";
 import {
 	BookOpen,
 	File,
-	FolderTree,
 	type LucideIcon,
+	SquaresSubtract,
 	Tags,
 	User,
 } from "lucide-react";
@@ -23,8 +23,8 @@ import {
 	updateSectionAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { PageAuthorContent } from "./components/page-author-content";
-import { PageContextsContent } from "./components/page-contexts-content";
 import { PagePagesContent } from "./components/page-pages-content";
+import { PageRegionsContent } from "./components/page-regions-content";
 import { PageScriptureContent } from "./components/page-scripture-content";
 import { PageSubjectContent } from "./components/page-subject-content";
 
@@ -135,12 +135,12 @@ export const PageSidebar = ({
 		>
 	> = {
 		"page-pages": {
-			title: "Page",
+			title: "Pages",
 			icon: File,
 			content: PagePagesContent,
 		},
 		"page-subject": {
-			title: "Page Subject Index",
+			title: "Subject Index",
 			icon: Tags,
 			content: () => (
 				<PageSubjectContent
@@ -156,7 +156,7 @@ export const PageSidebar = ({
 			},
 		},
 		"page-author": {
-			title: "Page Author Index",
+			title: "Author Index",
 			icon: User,
 			content: () => (
 				<PageAuthorContent
@@ -172,7 +172,7 @@ export const PageSidebar = ({
 			},
 		},
 		"page-scripture": {
-			title: "Page Scripture Index",
+			title: "Scripture Index",
 			icon: BookOpen,
 			content: () => (
 				<PageScriptureContent
@@ -187,18 +187,18 @@ export const PageSidebar = ({
 				onDrawRegion,
 			},
 		},
-		"page-contexts": {
-			title: "Page Contexts",
-			icon: FolderTree,
-			content: () => <PageContextsContent currentPage={currentPage} />,
+		"page-regions": {
+			title: "Regions",
+			icon: SquaresSubtract,
+			content: () => <PageRegionsContent currentPage={currentPage} />,
 		},
 	};
 
 	// Filter sections to only include index types enabled for this project
 	const sectionMetadata = Object.fromEntries(
 		Object.entries(allSectionMetadata).filter(([sectionId]) => {
-			// Always include non-index sections (pages, contexts)
-			if (sectionId === "page-pages" || sectionId === "page-contexts") {
+			// Always include non-index sections (pages, regions)
+			if (sectionId === "page-pages" || sectionId === "page-regions") {
 				return true;
 			}
 			// For index type sections, check if enabled for project
@@ -223,6 +223,7 @@ export const PageSidebar = ({
 			side="right"
 			colorConfig={colorConfig}
 			isDarkMode={isDarkMode}
+			header="Page"
 		/>
 	);
 };

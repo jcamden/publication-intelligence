@@ -10,7 +10,7 @@ const meta: Meta<typeof PageBar> = {
 		docs: {
 			description: {
 				component:
-					"Controls which panels are visible in the page sidebar (right side). Shows toggle buttons for: Info, Contexts, Bibliography, Authors, Scripture, Subject. Note: This component requires Jotai Provider to function.",
+					"Controls which panels are visible in the page sidebar (right side). Shows toggle buttons for: Info, Regions, Bibliography, Authors, Scripture, Subject. Note: This component requires Jotai Provider to function.",
 			},
 		},
 	},

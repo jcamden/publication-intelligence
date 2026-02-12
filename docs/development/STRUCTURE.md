@@ -16,7 +16,7 @@ docs/development/
 │   ├── phase-3-selection-capture/     # ✅ Complete
 │   ├── phase-4-highlight-management/  # ✅ Complete (directory with sub-tasks)
 │   ├── phase-5-backend-integration/   # ⚪ Not Started (directory with sub-tasks)
-│   ├── phase-6-context-system/        # ⚪ Not Started
+│   ├── phase-6-region-system/        # ⚪ Not Started
 │   └── phase-7-page-numbering/        # ⚪ Not Started
 │
 ├── 02-concept-detection/              # Epic 2

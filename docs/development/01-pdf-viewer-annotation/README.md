@@ -2,15 +2,15 @@
 
 ## Goal
 
-Build interactive PDF viewer with multi-type mentions, context system, and page numbering for professional indexing workflows.
+Build interactive PDF viewer with multi-type mentions, region system, and page numbering for professional indexing workflows.
 
 ## User Stories
 
 **As an indexer:**
 - I want to create mentions for different index types (subject, author, scripture), so I can generate multiple indices from one document
 - I want to mark a mention as belonging to multiple index types, so it appears in multiple indices
-- I want to define ignore contexts (headers/footers), so they don't interfere with text extraction
-- I want to define page number contexts, so the AI can extract canonical page numbers
+- I want to define exclude regions (headers/footers), so they don't interfere with text extraction
+- I want to define page number regions, so the AI can extract canonical page numbers
 - I want to override page numbers at project or page level, so I can handle complex pagination (Roman numerals, alphabetic, etc.)
 
 ## Phases
@@ -89,7 +89,7 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 - ✅ Database migration (EdgeDB → Drizzle + PostgreSQL)
 - ✅ Index type enum + addon access model
 - ✅ IndexEntry, IndexMention schemas with multi-type support
-- ✅ Context schema ready for Phase 6
+- ✅ Region schema ready for Phase 6
 - ✅ tRPC CRUD endpoints with RLS policies
 - ✅ Optimistic updates (instant perceived latency)
 - ✅ Error handling with rollback
@@ -99,14 +99,14 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 **Dependencies:** Phase 4 completion ✅  
 **Actual Duration:** 7-10 days
 
-### ⚪ Phase 6: Context System ([phase-6-context-system/](./phase-6-context-system/))
+### ⚪ Phase 6: Region System ([phase-6-region-system/](./phase-6-region-system/))
 **Status:** Not Started  
-**Summary:** Draw regions for ignore/page-number contexts, apply to pages
+**Summary:** Draw regions for ignore/page-number regions, apply to pages
 
 **Deliverables:**
 - Draw region mode (rectangle drawing)
-- Context creation UI (type, page config)
-- Context management (project sidebar)
+- Region creation UI (type, page config)
+- Region management (project sidebar)
 - Page-level context display (page sidebar)
 - Apply to pages configuration (this-page, all-pages, range, custom, every-other)
 - Context visibility toggles
@@ -120,7 +120,7 @@ Build interactive PDF viewer with multi-type mentions, context system, and page 
 
 **Deliverables:**
 - Document page display
-- Context-derived page extraction and display
+- Region-derived page extraction and display
 - Project-level override UI (editable string)
 - Page-level override UI (single-page)
 - Final page number computation
@@ -171,8 +171,8 @@ Epic 1 complete when:
 - ✅ User can select text and draw regions
 - ✅ User can create mentions for different index types
 - ✅ User can mark mentions as multiple types (diagonal stripes)
-- ⚪ User can create ignore contexts (exclude from extraction)
-- ⚪ User can create page number contexts (auto-extract page numbers)
+- ⚪ User can create exclude regions (exclude from extraction)
+- ⚪ User can create page number regions (auto-extract page numbers)
 - ⚪ User can configure contexts to apply to multiple pages
 - ⚪ Page numbering system works (4 layers with overrides)
 - ✅ Mentions persist to database with optimistic updates

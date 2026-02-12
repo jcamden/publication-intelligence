@@ -6,7 +6,7 @@ import type React from "react";
 import { useMemo } from "react";
 import { DraggableSidebar } from "./draggable-sidebar";
 
-type IndexTypeName = "subject" | "author" | "scripture" | "context";
+type IndexTypeName = "subject" | "author" | "scripture";
 
 type ColorConfig = {
 	[K in IndexTypeName]: { hue: number };
@@ -41,6 +41,7 @@ type DraggableSidebarContainerProps<TSectionId extends string> = {
 	side: "left" | "right";
 	colorConfig: ColorConfig;
 	isDarkMode?: boolean; // Optional dark mode flag from parent
+	header?: string;
 };
 
 const extractIndexType = ({
@@ -51,7 +52,6 @@ const extractIndexType = ({
 	if (sectionId.includes("subject")) return "subject";
 	if (sectionId.includes("author")) return "author";
 	if (sectionId.includes("scripture")) return "scripture";
-	if (sectionId.includes("context")) return "context";
 	return null;
 };
 

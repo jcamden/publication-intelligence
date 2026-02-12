@@ -37,6 +37,7 @@ type DraggableSidebarProps<TSectionId extends string> = {
 	onPop: (args: { id: TSectionId }) => void;
 	droppableId: string;
 	side: "left" | "right";
+	header?: string;
 };
 
 export const DraggableSidebar = <TSectionId extends string>({
@@ -48,11 +49,21 @@ export const DraggableSidebar = <TSectionId extends string>({
 	onPop,
 	droppableId,
 	side,
+	header,
 }: DraggableSidebarProps<TSectionId>) => {
 	return (
 		<ScrollArea
 			className={`h-full ${side === "left" ? "border-r" : "border-l"} border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 w-full`}
 		>
+			{header && (
+				<div
+					className={`px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 ${side === "left" ? "text-left" : "text-right"}`}
+				>
+					<h2 className="text-md font-semibold text-neutral-900 dark:text-neutral-100">
+						{header}
+					</h2>
+				</div>
+			)}
 			<DragDropContext onDragEnd={onDragEnd}>
 				<Droppable droppableId={droppableId}>
 					{(provided) => (

@@ -26,9 +26,9 @@ export const mockIndexTypes: IndexType[] = [
 		visible: true,
 	},
 	{
-		id: "idx-type-context",
-		name: "context",
-		label: "Contexts",
+		id: "idx-type-region",
+		name: "region",
+		label: "Regions",
 		color: "#FCA5A5", // Red
 		ordinal: 3,
 		visible: true,

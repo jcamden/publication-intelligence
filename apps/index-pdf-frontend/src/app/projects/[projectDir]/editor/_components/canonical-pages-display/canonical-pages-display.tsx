@@ -15,7 +15,7 @@ type CanonicalPagesDisplayProps = {
 	onEditRule: ({ ruleId }: { ruleId: string }) => void;
 	onDeleteRule: ({ ruleId }: { ruleId: string }) => void;
 	onNavigateToPage: ({ page }: { page: number }) => void;
-	isLoadingContexts?: boolean;
+	isLoadingRegions?: boolean;
 };
 
 export const CanonicalPagesDisplay = ({
@@ -24,14 +24,14 @@ export const CanonicalPagesDisplay = ({
 	onEditRule,
 	onDeleteRule,
 	onNavigateToPage,
-	isLoadingContexts = false,
+	isLoadingRegions = false,
 }: CanonicalPagesDisplayProps) => {
-	if (isLoadingContexts) {
+	if (isLoadingRegions) {
 		return (
 			<div className="flex items-center justify-center py-4">
 				<div className="flex items-center gap-2 text-sm text-muted-foreground">
 					<div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-					<span>Extracting page numbers from contexts...</span>
+					<span>Extracting page numbers from regions...</span>
 				</div>
 			</div>
 		);
@@ -41,8 +41,8 @@ export const CanonicalPagesDisplay = ({
 		<div className="flex flex-wrap gap-2">
 			{segments.map((segment) => {
 				// Generate unique key from segment data
-				const contextKey = segment.contextIds?.join(",") || "";
-				const segmentKey = `${segment.source}-${segment.documentPageRange.start}-${segment.documentPageRange.end}-${segment.ruleId || contextKey}`;
+				const regionKey = segment.regionIds?.join(",") || "";
+				const segmentKey = `${segment.source}-${segment.documentPageRange.start}-${segment.documentPageRange.end}-${segment.ruleId || regionKey}`;
 
 				// Get rule for rule-based segments
 				const rule = segment.ruleId
@@ -183,7 +183,7 @@ const RuleDetailsPopover = ({
 					<p className="text-xs text-muted-foreground mb-1">Rule type</p>
 					<p className="text-sm font-medium">Ignored</p>
 				</div>
-			) : segment.source === "context" ? (
+			) : segment.source === "region" ? (
 				<>
 					<div>
 						<p className="text-xs text-muted-foreground mb-1">
@@ -198,15 +198,15 @@ const RuleDetailsPopover = ({
 					</div>
 					<div>
 						<p className="text-xs text-muted-foreground mb-1">
-							{segment.contextNames && segment.contextNames.length > 1
-								? "Contexts"
-								: "Context"}
+							{segment.regionNames && segment.regionNames.length > 1
+								? "Regions"
+								: "Region"}
 						</p>
 						<div className="text-sm space-y-1">
-							{segment.contextNames && segment.contextNames.length > 0 ? (
-								segment.contextNames.map((name) => <p key={name}>{name}</p>)
+							{segment.regionNames && segment.regionNames.length > 0 ? (
+								segment.regionNames.map((name) => <p key={name}>{name}</p>)
 							) : (
-								<p>Unknown context</p>
+								<p>Unknown region</p>
 							)}
 						</div>
 					</div>

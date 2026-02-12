@@ -6,8 +6,8 @@ import {
 	BookOpen,
 	ChevronRight,
 	File,
-	Filter,
 	type LucideIcon,
+	SquaresSubtract,
 	Tag,
 	User,
 } from "lucide-react";
@@ -83,10 +83,10 @@ export const useProjectBarButtons = ({
 			icon: File as LucideIcon,
 			tooltip: "Project Pages",
 		},
-		"project-contexts": {
-			name: "projectContexts",
-			icon: Filter as LucideIcon,
-			tooltip: "Project Contexts",
+		"project-regions": {
+			name: "projectRegions",
+			icon: SquaresSubtract as LucideIcon,
+			tooltip: "Project Regions",
 		},
 		"project-author": {
 			name: "projectAuthors",
@@ -124,7 +124,7 @@ export const useProjectBarButtons = ({
 			if (!meta) return null;
 
 			// Filter out index type sections that aren't enabled for this project
-			if (sectionId !== "project-pages" && sectionId !== "project-contexts") {
+			if (sectionId !== "project-pages" && sectionId !== "project-regions") {
 				const indexType = sectionId.replace("project-", "");
 				if (!enabledIndexTypesSet.has(indexType)) {
 					return null;

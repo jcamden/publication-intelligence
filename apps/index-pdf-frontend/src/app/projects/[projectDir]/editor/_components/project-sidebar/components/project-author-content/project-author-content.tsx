@@ -44,7 +44,7 @@ export const ProjectAuthorContent = () => {
 	// Convert backend entries to frontend format (add indexType field)
 	const entries = backendEntries.map((e) => ({
 		...e,
-		indexType: "author",
+		indexType: "author" as const,
 		projectId: projectId || undefined,
 		projectIndexTypeId: authorProjectIndexTypeId,
 		metadata: {

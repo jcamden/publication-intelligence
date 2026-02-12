@@ -46,9 +46,9 @@ Implement critical schema changes (IndexType, IndexEntry.index_type, IndexMentio
 **Reason:** A single highlight can be tagged for Subject AND Author (diagonal stripes with both colors). But user must have addons for all selected types.
 
 ### 6. Context System
-**Decision:** Separate Context entities for ignore/page-number regions, independent color customization.
+**Decision:** Separate Region entities for ignore/page-number regions, independent color customization.
 
-**Reason:** Different purpose than mentions/entries. Need per-context colors, not tied to index types.
+**Reason:** Different purpose than mentions/entries. Need per-region colors, not tied to index types.
 
 ---
 
@@ -542,23 +542,23 @@ ALTER TABLE "index_mention_types" ENABLE ROW LEVEL SECURITY;
 
 ---
 
-### 6. Context Table ✅ **IMPLEMENTED** (Simplified)
+### 6. Region Table ✅ **IMPLEMENTED** (Simplified)
 
 **Location:** `apps/index-pdf-backend/src/db/schema/documents.ts`
 
-**Implementation Note:** The Context table was created with a simpler schema than originally designed. Color and visibility are handled at the UI layer, not stored in the database.
+**Implementation Note:** The Region table was created with a simpler schema than originally designed. Color and visibility are handled at the UI layer, not stored in the database.
 
 **Drizzle Schema:**
 
 ```typescript
-export const contexts = pgTable(
+export const regions = pgTable(
   "contexts",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     documentId: uuid("document_id")
       .references(() => sourceDocuments.id, { onDelete: "cascade" })
       .notNull(),
-    contextType: contextTypeEnum("context_type").notNull(),
+    regionType: regionTypeEnum("region_type").notNull(),
     pageConfigMode: pageConfigModeEnum("page_config_mode").notNull(),
     pageNumber: integer("page_number"), // For this_page mode
     pageRange: text("page_range"), // For page_range/custom modes (e.g., "1-50" or "1-2,5-6,8")
@@ -587,14 +587,14 @@ export const contexts = pgTable(
 
 ```sql
 -- Enums
-CREATE TYPE "context_type" AS ENUM('ignore', 'page_number');
+CREATE TYPE "region_type" AS ENUM('exclude', 'page_number');
 CREATE TYPE "page_config_mode" AS ENUM('this_page', 'all_pages', 'page_range', 'custom');
 
 -- Table
-CREATE TABLE "contexts" (
+CREATE TABLE "regions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "document_id" uuid NOT NULL,
-  "context_type" "context_type" NOT NULL,
+  "region_type" "region_type" NOT NULL,
   "page_config_mode" "page_config_mode" NOT NULL,
   "page_number" integer,
   "page_range" text,
@@ -604,10 +604,10 @@ CREATE TABLE "contexts" (
   "deleted_at" timestamp with time zone
 );
 
-ALTER TABLE "contexts" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "regions" ENABLE ROW LEVEL SECURITY;
 
 -- Foreign key
-ALTER TABLE "contexts"
+ALTER TABLE "regions"
   ADD CONSTRAINT "fk_document"
   FOREIGN KEY ("document_id") REFERENCES "source_documents"("id") ON DELETE CASCADE;
 
@@ -641,7 +641,7 @@ CREATE POLICY "contexts_document_access"
 
 **Planned Features:**
 - Multi-layer page numbering system
-- Context-extracted page numbers (from page-number contexts)
+- Region-extracted page numbers (from page-number regions)
 - Project-level override strings (e.g., "i,ii,iii,iv,1-150")
 - Page-level manual overrides
 - Canonical page number computation with priority layers
@@ -693,7 +693,7 @@ CREATE TABLE "document_pages" (
 - [x] **Critical:** Created `project_index_types` table
 - [x] **Critical:** Updated `index_entries` with `project_index_type_id` field
 - [x] **Critical:** Created `index_mention_types` junction table for multi-type mentions
-- [x] **Critical:** Created `contexts` table (simplified schema)
+- [x] **Critical:** Created `regions` table (simplified schema)
 - [x] Grant default addons to existing users:
   - [x] Addon system implemented (grants managed via tRPC endpoints)
   - [x] Default addon seeding can be done during user signup
@@ -706,9 +706,9 @@ CREATE TABLE "document_pages" (
 
 - [ ] Add page numbering fields to DocumentPage
 - [ ] Add override fields to Project
-- [ ] Implement page number extraction logic using Context table
+- [ ] Implement page number extraction logic using Region table
 - [ ] Build override string parser
-- [ ] Extract page numbers from page-number contexts
+- [ ] Extract page numbers from page-number regions
 
 ---
 
@@ -727,7 +727,7 @@ CREATE TABLE "document_pages" (
 - ✅ Addon system for user entitlements
 - ✅ Project-specific index type configuration
 - ✅ Multi-type mention support via junction table
-- ✅ Context system for ignore/page-number regions
+- ✅ Region system for ignore/page-number regions
 
 ### No Breaking Changes
 
@@ -892,7 +892,7 @@ Per-project color editing is **already fully implemented** in the PDF editor sid
   - `project-subject-content/project-subject-content.tsx`
   - `project-author-content/project-author-content.tsx`
   - `project-scripture-content/project-scripture-content.tsx`
-  - `project-contexts-content/project-contexts-content.tsx`
+  - `project-regions-content/project-regions-content.tsx`
 - **UI Component:** Each sidebar section has an `OklchColorPicker` from `@pubint/yabasic`
 - **State Management:** Uses Jotai atom (`colorConfigAtom`) for local state
 - **Backend Persistence:** `usePersistColorChange` hook debounces changes (500ms) and calls `trpc.projectIndexType.update`
@@ -976,7 +976,7 @@ Test files exist in `apps/index-pdf-backend/src/modules/project-index-type/`:
 - [x] Multi-type mention support via junction table
 
 **Outstanding Test Items:**
-- [ ] Context creation and rendering (Phase 7)
+- [ ] Region creation and rendering (Phase 7)
 - [ ] Page number extraction from contexts (Phase 7)
 - [ ] Parent entry same-index-type validation (application layer, needs test)
 - [x] ~~Color editing UI~~ → Already implemented in editor sidebar
@@ -1027,7 +1027,7 @@ Test files exist in `apps/index-pdf-backend/src/modules/project-index-type/`:
 - User addon system
 - Project-specific index type configuration
 - Multi-type mention support (junction table)
-- Context system for ignore/page-number regions
+- Region system for ignore/page-number regions
 - Full tRPC CRUD endpoints
 - Row Level Security policies
 - Integration and security tests

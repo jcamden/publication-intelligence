@@ -15,15 +15,15 @@ import {
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { PageAuthorContent } from "../page-sidebar/components/page-author-content";
 import { PageBiblioContent } from "../page-sidebar/components/page-biblio-content";
-import { PageContextsContent } from "../page-sidebar/components/page-contexts-content";
 import { PageInfoContent } from "../page-sidebar/components/page-info-content";
 import { PagePagesContent } from "../page-sidebar/components/page-pages-content";
+import { PageRegionsContent } from "../page-sidebar/components/page-regions-content";
 import { PageScriptureContent } from "../page-sidebar/components/page-scripture-content";
 import { PageSubjectContent } from "../page-sidebar/components/page-subject-content";
 import { ProjectAuthorContent } from "../project-sidebar/components/project-author-content";
 import { ProjectBiblioContent } from "../project-sidebar/components/project-biblio-content";
-import { ProjectContextsContent } from "../project-sidebar/components/project-contexts-content";
 import { ProjectPagesContent } from "../project-sidebar/components/project-pages-content";
+import { ProjectRegionsContent } from "../project-sidebar/components/project-regions-content";
 import { ProjectScriptureContent } from "../project-sidebar/components/project-scripture-content";
 import { ProjectSubjectContent } from "../project-sidebar/components/project-subject-content";
 
@@ -41,8 +41,7 @@ type WindowManagerProps = {
 	activeAction: { type: string | null; indexType: string | null };
 	onSelectText: ({ indexType }: { indexType: string }) => void;
 	onDrawRegion: ({ indexType }: { indexType: string }) => void;
-	onDrawContext?: () => void;
-	onEditContext?: (contextId: string) => void;
+	onEditRegion?: (regionId: string) => void;
 	mentions: Mention[];
 	currentPage: number;
 	onMentionClick: ({ mentionId }: { mentionId: string }) => void;
@@ -74,9 +73,9 @@ const windowRegistry: Record<
 		title: "Project Bibliography",
 		component: ProjectBiblioContent,
 	},
-	"project-contexts": {
-		title: "Project Contexts",
-		component: ProjectContextsContent,
+	"project-regions": {
+		title: "Project Regions",
+		component: ProjectRegionsContent,
 	},
 	"page-info": { title: "Page Info", component: PageInfoContent },
 	"page-pages": { title: "Page Pages", component: PagePagesContent },
@@ -90,7 +89,7 @@ const windowRegistry: Record<
 		component: PageScriptureContent,
 	},
 	"page-biblio": { title: "Page Bibliography", component: PageBiblioContent },
-	"page-contexts": { title: "Page Contexts", component: PageContextsContent },
+	"page-regions": { title: "Page Regions", component: PageRegionsContent },
 };
 
 const DEFAULT_WINDOW_SIZE = { width: 25, height: 18.75 }; // rem
@@ -110,8 +109,7 @@ export const WindowManager = ({
 	activeAction,
 	onSelectText,
 	onDrawRegion,
-	onDrawContext,
-	onEditContext,
+	onEditRegion,
 	mentions,
 	currentPage,
 	onMentionClick,
@@ -129,10 +127,10 @@ export const WindowManager = ({
 
 	// Filter windows to only include enabled index types for this project
 	const filteredWindows = windowsToRender.filter(({ id }) => {
-		// Always include non-index sections (pages, contexts, info)
+		// Always include non-index sections (pages, regions, info)
 		if (
 			id.includes("-pages") ||
-			id.includes("-contexts") ||
+			id.includes("-regions") ||
 			id.includes("-info")
 		) {
 			return true;
@@ -167,8 +165,8 @@ export const WindowManager = ({
 					"page-scripture",
 				].includes(id);
 
-				// Special case for project-contexts
-				const isProjectContexts = id === "project-contexts";
+				// Special case for project-regions
+				const isProjectRegionsWindow = id === "project-regions";
 
 				const contentProps = needsActionProps
 					? {
@@ -179,8 +177,8 @@ export const WindowManager = ({
 							currentPage,
 							onMentionClick,
 						}
-					: isProjectContexts
-						? { activeAction, onDrawContext, onEditContext }
+					: isProjectRegionsWindow
+						? { activeAction, onDrawRegion, onEditRegion }
 						: {};
 
 				return (

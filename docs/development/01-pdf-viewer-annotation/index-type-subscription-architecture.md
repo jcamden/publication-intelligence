@@ -17,7 +17,7 @@ This document describes the architecture for subscription-based index type acces
 - Subject (hue=230 blue, base_tier=true)
 - Author (hue=30 orange, base_tier=false)
 - Scripture (hue=120 green, base_tier=false)
-- Context (hue=340 pink, base_tier=false)
+- Region (hue=340 pink, base_tier=false)
 
 **Properties:**
 - `name`: System-wide unique identifier
@@ -519,4 +519,4 @@ async function migrateLocalStorageColors({ projectId, userId }) {
 ## Related Documentation
 
 - [Phase 5 Schema Changes](./phase-5-schema-changes.md) - Database schema
-- [Phase 6 Context System](./phase-6-context-system.md) - Context-specific features
+- [Phase 6 Region System](./phase-6-region-system.md) - Region-specific features

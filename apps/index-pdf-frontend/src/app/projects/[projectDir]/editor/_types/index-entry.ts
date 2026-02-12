@@ -1,6 +1,6 @@
 export type IndexEntry = {
 	id: string;
-	indexType: string; // 'subject' | 'author' | 'scripture' | 'context'
+	indexType: "subject" | "author" | "scripture";
 	label: string; // "Kant, Immanuel"
 	parentId: string | null; // For hierarchy within same index type
 	projectId?: string; // Optional project ID for mutations

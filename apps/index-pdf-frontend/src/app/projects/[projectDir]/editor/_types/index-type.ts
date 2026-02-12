@@ -1,6 +1,6 @@
 export type IndexType = {
 	id: string;
-	name: string; // 'subject', 'author', 'scripture', 'context'
+	name: string; // 'subject', 'author', 'scripture', 'region'
 	label: string; // 'Subject Index', 'Author Index', etc.
 	color: string; // Hex color, user-customizable
 	ordinal: number; // For default color assignment and display order

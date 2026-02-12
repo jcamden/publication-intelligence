@@ -307,7 +307,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
-					if (urlString.includes("context.list")) {
+					if (urlString.includes("region.list")) {
 						return new Response(
 							JSON.stringify({
 								result: {
@@ -320,7 +320,20 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
-					if (urlString.includes("context.getForPage")) {
+					if (urlString.includes("region.getForPage")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					if (urlString.includes("canonicalPageRule.list")) {
 						return new Response(
 							JSON.stringify({
 								result: {

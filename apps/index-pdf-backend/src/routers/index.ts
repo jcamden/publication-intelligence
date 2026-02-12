@@ -1,10 +1,10 @@
 import { authRouter } from "../modules/auth/auth.router";
 import { canonicalPageRuleRouter } from "../modules/canonical-page-rule/canonical-page-rule.router";
-import { contextRouter } from "../modules/context/context.router";
 import { indexEntryRouter } from "../modules/index-entry/index-entry.router";
 import { indexMentionRouter } from "../modules/index-mention/index-mention.router";
 import { projectRouter } from "../modules/project/project.router";
 import { projectIndexTypeRouter } from "../modules/project-index-type/project-index-type.router";
+import { regionRouter } from "../modules/region/region.router";
 import { sourceDocumentRouter } from "../modules/source-document/sourceDocument.router";
 import { userRouter } from "../modules/user/user.router";
 import { router } from "../trpc";
@@ -12,7 +12,7 @@ import { router } from "../trpc";
 export const appRouter = router({
 	auth: authRouter,
 	canonicalPageRule: canonicalPageRuleRouter,
-	context: contextRouter,
+	region: regionRouter,
 	indexEntry: indexEntryRouter,
 	indexMention: indexMentionRouter,
 	project: projectRouter,
@@ -32,15 +32,6 @@ export type {
 	RuleConflict,
 	UpdateRuleInput,
 } from "../modules/canonical-page-rule/canonical-page-rule.types";
-
-export type {
-	Context,
-	ContextListItem,
-	CreateContextInput,
-	DeleteContextInput,
-	UpdateContextInput,
-} from "../modules/context/context.types";
-
 export type {
 	CreateIndexEntryInput,
 	DeleteIndexEntryInput,
@@ -48,7 +39,6 @@ export type {
 	IndexEntryListItem,
 	UpdateIndexEntryInput,
 } from "../modules/index-entry/index-entry.types";
-
 export type {
 	CreateIndexMentionInput,
 	DeleteIndexMentionInput,
@@ -56,3 +46,10 @@ export type {
 	IndexMentionListItem,
 	UpdateIndexMentionInput,
 } from "../modules/index-mention/index-mention.types";
+export type {
+	CreateRegionInput,
+	DeleteRegionInput,
+	Region,
+	RegionListItem,
+	UpdateRegionInput,
+} from "../modules/region/region.types";

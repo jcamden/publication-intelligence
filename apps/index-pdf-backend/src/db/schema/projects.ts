@@ -8,7 +8,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { canonicalPageRules } from "./canonical-page-rules";
-import { contexts, sourceDocuments } from "./documents";
+import { regions, sourceDocuments } from "./documents";
 import { projectIndexTypes } from "./index-types";
 import { indexEntries } from "./indexing";
 import { authenticatedRole, users } from "./users";
@@ -59,6 +59,6 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 	sourceDocuments: many(sourceDocuments),
 	indexEntries: many(indexEntries),
 	projectIndexTypes: many(projectIndexTypes),
-	contexts: many(contexts),
+	regions: many(regions),
 	canonicalPageRules: many(canonicalPageRules),
 }));

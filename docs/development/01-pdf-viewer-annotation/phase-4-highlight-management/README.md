@@ -135,7 +135,7 @@ type Mention = {
 ### Sidebar Navigation
 
 **Mention Lists:**
-- Each index type section (Subject, Author, Scripture, Contexts) displays filtered mentions
+- Each index type section (Subject, Author, Scripture, Regions) displays filtered mentions
 - Click mention button → scrolls highlight into view (smooth scroll, centered)
 - Shows mention details popover anchored to highlight
 - Mention buttons styled differently for text vs region mentions:

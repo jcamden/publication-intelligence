@@ -10,7 +10,7 @@ const meta: Meta<typeof ProjectBar> = {
 		docs: {
 			description: {
 				component:
-					"Controls which panels are visible in the project sidebar (left side). Shows toggle buttons for: Pages, Contexts, Bibliography, Authors, Scripture, Subject. Note: This component requires Jotai Provider to function.",
+					"Controls which panels are visible in the project sidebar (left side). Shows toggle buttons for: Pages, Regions, Bibliography, Authors, Scripture, Subject. Note: This component requires Jotai Provider to function.",
 			},
 		},
 	},

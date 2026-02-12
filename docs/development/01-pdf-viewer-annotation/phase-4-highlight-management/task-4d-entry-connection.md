@@ -82,7 +82,7 @@ If the same concept appears in multiple indexes (e.g., "Kant, Immanuel" in both 
 
 ### Entry Creation Form
 
-**Primary Location:** Project sidebar, within each index type section (Subject, Author, Scripture, Contexts)
+**Primary Location:** Project sidebar, within each index type section (Subject, Author, Scripture, Regions)
 
 **Secondary Location:** During mention creation (quick create from autocomplete)
 
@@ -122,7 +122,7 @@ If the same concept appears in multiple indexes (e.g., "Kant, Immanuel" in both 
 
 **Color Customization UI:**
 - Project settings: Edit index type colors
-- Context settings: Custom colors per context (independent of index type colors)
+- Context settings: Custom colors per region (independent of index type colors)
 
 ## UI Mockup
 
@@ -404,5 +404,5 @@ After this task, Phase 4 is complete. See [Phase 4 README](./README.md) for comp
 - New IndexType table
 - IndexEntry.index_type field (breaking change)
 - IndexMention.index_types array
-- Context table for ignore/page-number regions
+- Region table for ignore/page-number regions
 - Migration strategy and testing requirements

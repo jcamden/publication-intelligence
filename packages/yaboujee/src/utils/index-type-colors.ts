@@ -5,7 +5,7 @@
  * not by ordinal position in an array.
  */
 
-export type IndexTypeName = "subject" | "author" | "scripture" | "context";
+export type IndexTypeName = "subject" | "author" | "scripture" | "region";
 
 export type IndexTypeHue = {
 	hue: number; // 0-360
@@ -19,7 +19,7 @@ export const DEFAULT_INDEX_TYPE_HUES: Record<IndexTypeName, IndexTypeHue> = {
 	author: { hue: 270 }, // Purple
 	subject: { hue: 230 }, // Blue
 	scripture: { hue: 160 }, // Green
-	context: { hue: 340 }, // Pink
+	region: { hue: 340 }, // Pink
 };
 
 /**

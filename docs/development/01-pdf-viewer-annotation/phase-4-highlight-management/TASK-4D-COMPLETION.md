@@ -13,7 +13,7 @@
 **Created:**
 - `_types/index-entry.ts` - IndexEntry type with indexType, label, parentId, metadata
 - `_types/index-type.ts` - IndexType type with color configuration
-- `_mocks/index-types.ts` - 4 index types (Subject, Author, Scripture, Context) with colors
+- `_mocks/index-types.ts` - 4 index types (Subject, Author, Scripture, Region) with colors
 - `_mocks/index-entries.ts` - Rich mock data with hierarchies
   - 9 Subject entries (Philosophy → Kant, Immanuel → Ancient Philosophy → Plato, Aristotle)
   - 6 Author entries (German Authors → Kant, Immanuel; Greek Authors → Plato, Aristotle)

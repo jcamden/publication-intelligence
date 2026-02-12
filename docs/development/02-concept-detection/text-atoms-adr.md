@@ -71,7 +71,7 @@ If you do persist, avoid row explosion by storing **per-page packed blobs** (arr
   * If you only store `char_range` and not atoms, then any time you need to compute or re-compute bbox unions you need PyMuPDF again (at least per page).
 * **Harder to guarantee determinism**
 
-  * Small extraction changes (ignore contexts, library version) can shift tokenization/bboxes. Your `char_range` might remain valid but bbox mapping could differ.
+  * Small extraction changes (ignore regions, library version) can shift tokenization/bboxes. Your `char_range` might remain valid but bbox mapping could differ.
 * **Weaker debugging for geometry**
 
   * You can prove the text anchor (`indexable_text[range]`), but not the exact atom boundaries that produced the bbox unless you log them at the time.
@@ -102,6 +102,6 @@ Given you already plan to store:
 
 > Bboxes are computed once during detection and treated as the canonical render geometry; if extraction rules change, you validate via `char_range` and optionally mark mentions “needs review” rather than trying to perfectly recompute geometry.
 
-If you anticipate lots of “change ignore contexts → revalidate and re-render everything” or you want very strong explainability, consider storing **packed per-page atoms** (not rows) as a middle ground.
+If you anticipate lots of “change exclude regions → revalidate and re-render everything” or you want very strong explainability, consider storing **packed per-page atoms** (not rows) as a middle ground.
 
 If you tell me your expected scale (books per user, retention needs), I can suggest whether ephemeral is likely to stay comfortable or whether you’ll regret not persisting within the first few months.

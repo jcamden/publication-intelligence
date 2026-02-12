@@ -18,7 +18,7 @@ import {
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { CanonicalPageRuleModal } from "@/app/projects/[projectDir]/editor/_components/canonical-page-rule-modal";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { useContextDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-context-derived-page-numbers";
+import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 
 export const PagePagesContent = () => {
 	const { projectId } = useProjectContext();
@@ -31,8 +31,8 @@ export const PagePagesContent = () => {
 	const [ruleModalOpen, setRuleModalOpen] = useState(false);
 	const [editingRuleId, setEditingRuleId] = useState<string | undefined>();
 
-	// Fetch contexts
-	const { data: contexts = [] } = trpc.context.list.useQuery(
+	// Fetch regions
+	const { data: regions = [] } = trpc.region.list.useQuery(
 		{ projectId: projectId || "" },
 		{ enabled: !!projectId },
 	);
@@ -58,9 +58,9 @@ export const PagePagesContent = () => {
 		},
 	});
 
-	// Extract context-derived page numbers from PDF
-	const { contextDerivedPageNumbers } = useContextDerivedPageNumbers({
-		contexts,
+	// Extract region-derived page numbers from PDF
+	const { regionDerivedPageNumbers } = useRegionDerivedPageNumbers({
+		regions,
 		pdfUrl: pdfUrl || undefined,
 		totalPages,
 		enabled: totalPages > 0 && !!pdfUrl,
@@ -73,18 +73,18 @@ export const PagePagesContent = () => {
 
 		return computeCanonicalPages({
 			documentPageCount: totalPages,
-			contexts: contexts.map((ctx) => ({
-				...ctx,
-				createdAt: new Date(ctx.createdAt),
+			regions: regions.map((reg) => ({
+				...reg,
+				createdAt: new Date(reg.createdAt),
 			})),
 			rules: rules.map((rule) => ({
 				...rule,
 				createdAt: rule.createdAt,
 				updatedAt: rule.updatedAt,
 			})),
-			contextDerivedPageNumbers,
+			regionDerivedPageNumbers,
 		});
-	}, [totalPages, contexts, rules, contextDerivedPageNumbers, projectId]);
+	}, [totalPages, regions, rules, regionDerivedPageNumbers, projectId]);
 
 	// Get info for current page
 	const pageInfo = useMemo(() => {
@@ -103,12 +103,12 @@ export const PagePagesContent = () => {
 		);
 	}, [rules, currentPage]);
 
-	// Find context-derived for current page
-	const contextDerived = useMemo(() => {
-		return contextDerivedPageNumbers.find(
+	// Find region-derived for current page
+	const regionDerived = useMemo(() => {
+		return regionDerivedPageNumbers.find(
 			(derived) => derived.documentPage === currentPage,
 		);
-	}, [contextDerivedPageNumbers, currentPage]);
+	}, [regionDerivedPageNumbers, currentPage]);
 
 	const handleQuickCreate = async () => {
 		if (!quickCreateValue.trim() || !projectId) return;
@@ -157,10 +157,10 @@ export const PagePagesContent = () => {
 			<div className="p-4">
 				<div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
 					<p className="text-sm text-red-900 dark:text-red-100 font-semibold mb-1">
-						⚠️ Context Conflicts
+						⚠️ Region Conflicts
 					</p>
 					<p className="text-xs text-red-800 dark:text-red-200">
-						Resolve context conflicts in the Contexts section before canonical
+						Resolve region conflicts in the Regions section before canonical
 						pages can be displayed.
 					</p>
 				</div>
@@ -183,19 +183,19 @@ export const PagePagesContent = () => {
 				<p className="text-lg font-semibold">{currentPage}</p>
 			</div>
 
-			{/* Context-Derived Page Number */}
-			{contextDerived && (
+			{/* Region-Derived Page Number */}
+			{regionDerived && (
 				<div>
-					<p className="text-xs text-muted-foreground mb-1">Context-derived</p>
+					<p className="text-xs text-muted-foreground mb-1">Region-derived</p>
 					<p
 						className={`text-lg font-semibold ${
 							currentPageRule ? "line-through opacity-50" : ""
 						} ${colorClasses.blue}`}
 					>
-						{contextDerived.canonicalPage} 🔵
+						{regionDerived.canonicalPage} 🔵
 					</p>
 					<p className="text-xs text-muted-foreground mt-1">
-						from "{contextDerived.contextName}"
+						from "{regionDerived.regionName}"
 					</p>
 					{currentPageRule && (
 						<p className="text-xs text-muted-foreground mt-1 italic">

@@ -6,6 +6,7 @@ import {
 	PdfViewer,
 	PdfViewerToolbar,
 } from "@pubint/yaboujee";
+import { formatOklchColor } from "@pubint/yaboujee/utils/index-type-colors";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { useCreateMention } from "@/app/_common/_hooks/use-create-mention";
@@ -22,14 +23,15 @@ import {
 	pdfUrlAtom,
 	projectSidebarCollapsedAtom,
 	projectSidebarWidthAtom,
+	regionTypeColorConfigAtom,
 	totalPagesAtom,
 	zoomAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useHydrated } from "@/app/projects/[projectDir]/editor/_hooks/use-hydrated";
 import { ProjectProvider } from "../../_context/project-context";
 import type { ColorConfig, IndexTypeName } from "../../_types/color-config";
+import type { IndexEntry } from "../../_types/index-entry";
 import { ColorConfigProvider } from "../color-config-provider";
-import { ContextCreationModal } from "../context-creation-modal";
 import { DeleteMentionDialog } from "../delete-mention-dialog";
 import {
 	type BoundingBox,
@@ -40,6 +42,7 @@ import { PageBar } from "../page-bar";
 import { PageSidebar } from "../page-sidebar";
 import { ProjectBar } from "../project-bar";
 import { ProjectSidebar } from "../project-sidebar";
+import { RegionCreationModal } from "../region-creation-modal";
 import { ResizableSidebar } from "../resizable-sidebar";
 import { WindowManager } from "../window-manager";
 
@@ -91,17 +94,18 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const [totalPages, setTotalPages] = useAtom(totalPagesAtom);
 	const [zoom, setZoom] = useAtom(zoomAtom);
 	const [, setPdfUrl] = useAtom(pdfUrlAtom);
+	const regionTypeColorConfig = useAtomValue(regionTypeColorConfigAtom);
 
 	// Transient action state (replaces persistent annotationMode)
 	const [activeAction, setActiveAction] = useState<{
-		type: "select-text" | "draw-region" | "draw-context" | null;
+		type: "select-text" | "draw-region" | "draw-region" | null;
 		indexType: string | null;
 	}>({ type: null, indexType: null });
 
 	// Context creation/edit state
-	const [contextModalOpen, setContextModalOpen] = useState(false);
-	const [contextToEdit, setContextToEdit] = useState<string | null>(null); // Context ID for editing
-	const [drawnContextBbox, setDrawnContextBbox] = useState<BoundingBox | null>(
+	const [regionModalOpen, setRegionModalOpen] = useState(false);
+	const [regionToEdit, setRegionToEdit] = useState<string | null>(null); // Region ID for editing
+	const [drawnRegionBbox, setDrawnRegionBbox] = useState<BoundingBox | null>(
 		null,
 	);
 
@@ -134,7 +138,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		);
 		return {
 			...e,
-			indexType: projectIndexType?.indexType || "subject",
+			indexType: (projectIndexType?.indexType ||
+				"subject") as IndexEntry["indexType"],
 			metadata: {
 				aliases: e.variants.map((v) => v.text),
 			},
@@ -163,8 +168,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		createdAt: new Date(m.createdAt),
 	}));
 
-	// Fetch contexts for current page
-	const { data: contextsForPage = [] } = trpc.context.getForPage.useQuery(
+	// Fetch regions for current page
+	const { data: regionsForPage = [] } = trpc.region.getForPage.useQuery(
 		{
 			projectId: projectId ?? "",
 			pageNumber: currentPage,
@@ -172,13 +177,13 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		{ enabled: !!projectId && currentPage > 0 },
 	);
 
-	// TODO Phase 6: Integrate ContextLayer into PdfViewer
+	// TODO Phase 6: Integrate RegionLayer into PdfViewer
 	// Contexts are fetched above but need to be rendered on the PDF.
-	// Similar to how PdfHighlightLayer renders mentions, contexts need:
-	// 1. Add renderContextLayer prop to PdfViewer (in yaboujee)
-	// 2. Pass contextsForPage and onContextClick handler
-	// 3. ContextLayer needs page dimensions (width/height) from PDF.js
-	// For now, contexts are managed via sidebar but not rendered on PDF yet.
+	// Similar to how PdfHighlightLayer renders mentions, regions need:
+	// 1. Add renderRegionLayer prop to PdfViewer (in yaboujee)
+	// 2. Pass contextsForPage and onRegionClick handler
+	// 3. RegionLayer needs page dimensions (width/height) from PDF.js
+	// For now, regions are managed via sidebar but not rendered on PDF yet.
 
 	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
 
@@ -271,16 +276,16 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const handleDrawContext = useCallback(() => {
 		setActiveAction((current) => {
 			// Toggle off if already active
-			if (current.type === "draw-context") {
+			if (current.type === "draw-region") {
 				return { type: null, indexType: null };
 			}
-			return { type: "draw-context", indexType: null };
+			return { type: "draw-region", indexType: null };
 		});
 	}, []);
 
-	const handleEditContext = useCallback((contextId: string) => {
-		setContextToEdit(contextId);
-		setContextModalOpen(true);
+	const handleEditRegion = useCallback((regionId: string) => {
+		setRegionToEdit(regionId);
+		setRegionModalOpen(true);
 	}, []);
 
 	const handleDraftConfirmed = useCallback(
@@ -291,12 +296,12 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			draft: { pageNumber: number; text: string; bboxes: BoundingBox[] };
 			entry: { entryId: string; entryLabel: string; regionName?: string };
 		}) => {
-			// Check if this is context creation mode
-			if (activeAction.type === "draw-context") {
-				// Store the bbox and open context creation modal
-				setDrawnContextBbox(draft.bboxes[0] || null);
-				setContextToEdit(null); // Clear edit mode
-				setContextModalOpen(true);
+			// Check if this is region creation mode
+			if (activeAction.type === "draw-region") {
+				// Store the bbox and open region creation modal
+				setDrawnRegionBbox(draft.bboxes[0] || null);
+				setRegionToEdit(null); // Clear edit mode
+				setRegionModalOpen(true);
 				setActiveAction({ type: null, indexType: null });
 				setClearDraftTrigger((prev) => prev + 1);
 				return;
@@ -350,13 +355,13 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 
 	const handleHighlightClick = useCallback(
 		(highlight: PdfHighlight) => {
-			// Check if this is a context click
-			if (highlight.metadata?.isContext) {
-				const contextId = highlight.id.replace("context-", "");
-				const context = contextsForPage.find((c) => c.id === contextId);
-				if (context) {
-					setContextToEdit(contextId);
-					setContextModalOpen(true);
+			// Check if this is a region click
+			if (highlight.metadata?.isRegion) {
+				const regionId = highlight.id.replace("region-", "");
+				const region = regionsForPage.find((r) => r.id === regionId);
+				if (region) {
+					setRegionToEdit(regionId);
+					setRegionModalOpen(true);
 					return;
 				}
 			}
@@ -374,7 +379,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				}
 			}
 		},
-		[mentions, contextsForPage],
+		[mentions, regionsForPage],
 	);
 
 	const handleMentionClickFromSidebar = useCallback(
@@ -560,25 +565,35 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		};
 	});
 
-	// Convert contexts to highlight format for rendering
-	// TODO: Create dedicated context rendering in yaboujee for better styling (dashed borders)
-	const contextHighlights: PdfHighlight[] = contextsForPage
-		.filter((ctx) => ctx.visible)
-		.map((ctx) => ({
-			id: `context-${ctx.id}`,
-			pageNumber: currentPage,
-			label: ctx.contextType === "ignore" ? "Ignore" : "Page Number",
-			text: "",
-			bboxes: [ctx.bbox],
-			metadata: {
-				isContext: true,
-				contextType: ctx.contextType,
-				contextColor: ctx.color,
-			},
-		}));
+	// Convert regions to highlight format for rendering
+	// TODO: Create dedicated region rendering in yaboujee for better styling (dashed borders)
+	const regionHighlights: PdfHighlight[] = regionsForPage
+		.filter((reg) => reg.visible)
+		.map((reg) => {
+			// Get color from region type config
+			const hue = regionTypeColorConfig[reg.regionType].hue;
+			const color = formatOklchColor({
+				hue,
+				lightness: 0.8,
+				chroma: 0.2,
+			});
 
-	// Combine mentions and contexts for rendering
-	const allHighlights = [...mentionHighlights, ...contextHighlights];
+			return {
+				id: `region-${reg.id}`,
+				pageNumber: currentPage,
+				label: reg.regionType === "exclude" ? "Exclude" : "Page Number",
+				text: "",
+				bboxes: [reg.bbox],
+				metadata: {
+					isRegion: true,
+					regionType: reg.regionType,
+					regionColor: color,
+				},
+			};
+		});
+
+	// Combine mentions and regions for rendering
+	const allHighlights = [...mentionHighlights, ...regionHighlights];
 
 	// Get enabled index types for this project (to filter sidebar sections)
 	const enabledIndexTypes =
@@ -617,8 +632,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 								<ProjectSidebar
 									enabledIndexTypes={enabledIndexTypes}
 									activeAction={activeAction}
-									onDrawContext={handleDrawContext}
-									onEditContext={handleEditContext}
+									onDrawRegion={handleDrawContext}
+									onEditRegion={handleEditRegion}
 								/>
 							</div>
 						) : (
@@ -630,8 +645,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 								<ProjectSidebar
 									enabledIndexTypes={enabledIndexTypes}
 									activeAction={activeAction}
-									onDrawContext={handleDrawContext}
-									onEditContext={handleEditContext}
+									onDrawRegion={handleDrawContext}
+									onEditRegion={handleEditRegion}
 								/>
 							</ResizableSidebar>
 						)}
@@ -648,10 +663,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									highlights={allHighlights}
 									onHighlightClick={handleHighlightClick}
 									textLayerInteractive={activeAction.type === "select-text"}
-									regionDrawingActive={
-										activeAction.type === "draw-region" ||
-										activeAction.type === "draw-context"
-									}
+									regionDrawingActive={activeAction.type === "draw-region"}
 									onDraftConfirmed={handleDraftConfirmed}
 									onDraftCancelled={handleDraftCancelled}
 									clearDraftTrigger={clearDraftTrigger}
@@ -663,7 +675,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 										onCancel,
 									}) => {
 										// For context drawing, don't show mention popover - just auto-confirm
-										if (activeAction.type === "draw-context") {
+										if (activeAction.type === "draw-region") {
 											// Auto-confirm to trigger handleDraftConfirmed
 											onConfirm({
 												entryId: "",
@@ -731,8 +743,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						activeAction={activeAction}
 						onSelectText={handleSelectText}
 						onDrawRegion={handleDrawRegion}
-						onDrawContext={handleDrawContext}
-						onEditContext={handleEditContext}
+						onEditRegion={handleEditRegion}
 						mentions={mentions}
 						currentPage={currentPage}
 						onMentionClick={handleMentionClickFromSidebar}
@@ -771,19 +782,19 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						onConfirm={handleConfirmDelete}
 					/>
 
-					{/* Context creation/edit modal */}
-					<ContextCreationModal
-						open={contextModalOpen}
+					{/* Region creation/edit modal */}
+					<RegionCreationModal
+						open={regionModalOpen}
 						onClose={() => {
-							setContextModalOpen(false);
-							setContextToEdit(null);
-							setDrawnContextBbox(null);
+							setRegionModalOpen(false);
+							setRegionToEdit(null);
+							setDrawnRegionBbox(null);
 						}}
 						projectId={projectId || ""}
 						currentPage={currentPage}
 						documentPageCount={totalPages}
-						drawnBbox={drawnContextBbox}
-						contextId={contextToEdit || undefined}
+						drawnBbox={drawnRegionBbox}
+						regionId={regionToEdit || undefined}
 					/>
 				</div>
 			</ProjectProvider>

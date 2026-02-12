@@ -1,10 +1,7 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-// Context types for text extraction configuration
-export const contextTypeEnum = pgEnum("context_type", [
-	"ignore",
-	"page_number",
-]);
+// Region types for text extraction configuration
+export const regionTypeEnum = pgEnum("region_type", ["exclude", "page_number"]);
 
 // Page configuration application modes
 export const pageConfigModeEnum = pgEnum("page_config_mode", [

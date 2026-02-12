@@ -6,8 +6,8 @@ import { useAtom, useAtomValue } from "jotai";
 import {
 	BookOpen,
 	File,
-	FolderTree,
 	type LucideIcon,
+	SquaresSubtract,
 	Tags,
 	User,
 } from "lucide-react";
@@ -23,16 +23,16 @@ import {
 	updateSectionAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { ProjectAuthorContent } from "./components/project-author-content";
-import { ProjectContextsContent } from "./components/project-contexts-content";
 import { ProjectPagesContent } from "./components/project-pages-content";
+import { ProjectRegionsContent } from "./components/project-regions-content";
 import { ProjectScriptureContent } from "./components/project-scripture-content";
 import { ProjectSubjectContent } from "./components/project-subject-content";
 
 type ProjectSidebarProps = {
 	enabledIndexTypes: string[]; // Index types enabled for this project
 	activeAction?: { type: string | null; indexType: string | null }; // Current active action
-	onDrawContext?: () => void; // Callback to activate context drawing mode
-	onEditContext?: (contextId: string) => void; // Callback to edit context
+	onDrawRegion?: () => void; // Callback to activate region drawing mode
+	onEditRegion?: (regionId: string) => void; // Callback to edit region
 };
 
 /**
@@ -43,8 +43,8 @@ type ProjectSidebarProps = {
 export const ProjectSidebar = ({
 	enabledIndexTypes,
 	activeAction,
-	onDrawContext,
-	onEditContext,
+	onDrawRegion,
+	onEditRegion,
 }: ProjectSidebarProps) => {
 	const { resolvedTheme } = useTheme();
 	const isDarkMode = resolvedTheme === "dark";
@@ -106,33 +106,33 @@ export const ProjectSidebar = ({
 		>
 	> = {
 		"project-pages": {
-			title: "Project Pages",
+			title: "Pages",
 			icon: File,
 			content: ProjectPagesContent,
 		},
 		"project-subject": {
-			title: "Project Subject Index",
+			title: "Subject Index",
 			icon: Tags,
 			content: ProjectSubjectContent,
 		},
 		"project-author": {
-			title: "Project Author Index",
+			title: "Author Index",
 			icon: User,
 			content: ProjectAuthorContent,
 		},
 		"project-scripture": {
-			title: "Project Scripture Index",
+			title: "Scripture Index",
 			icon: BookOpen,
 			content: ProjectScriptureContent,
 		},
-		"project-contexts": {
-			title: "Project Contexts",
-			icon: FolderTree,
+		"project-regions": {
+			title: "Regions",
+			icon: SquaresSubtract,
 			content: () => (
-				<ProjectContextsContent
+				<ProjectRegionsContent
 					activeAction={activeAction}
-					onDrawContext={onDrawContext}
-					onEditContext={onEditContext}
+					onDrawRegion={onDrawRegion}
+					onEditRegion={onEditRegion}
 				/>
 			),
 		},
@@ -141,8 +141,8 @@ export const ProjectSidebar = ({
 	// Filter sections to only include index types enabled for this project
 	const sectionMetadata = Object.fromEntries(
 		Object.entries(allSectionMetadata).filter(([sectionId]) => {
-			// Always include non-index sections (pages, contexts)
-			if (sectionId === "project-pages" || sectionId === "project-contexts") {
+			// Always include non-index sections (pages, regions)
+			if (sectionId === "project-pages" || sectionId === "project-regions") {
 				return true;
 			}
 			// For index type sections, check if enabled for project
@@ -167,6 +167,7 @@ export const ProjectSidebar = ({
 			side="left"
 			colorConfig={colorConfig}
 			isDarkMode={isDarkMode}
+			header="Project"
 		/>
 	);
 };

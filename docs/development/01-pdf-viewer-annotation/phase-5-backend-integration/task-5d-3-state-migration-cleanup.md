@@ -32,7 +32,7 @@ Successfully migrated the entire editor from mock Jotai atoms to real tRPC queri
 - `project-subject-content/` - Now fetches entries and mentions via tRPC
 - `project-author-content/` - Now fetches entries and mentions via tRPC
 - `project-scripture-content/` - Now fetches entries and mentions via tRPC
-- `project-contexts-content/` - Now fetches entries and mentions via tRPC
+- `project-regions-content/` - Now fetches entries and mentions via tRPC
 
 **Editor Component:**
 - `editor/editor.tsx` - Removed mock data initialization, fetches real data from backend

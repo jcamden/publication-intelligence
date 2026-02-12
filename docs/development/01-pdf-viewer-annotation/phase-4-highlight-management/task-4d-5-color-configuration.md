@@ -45,7 +45,7 @@ const assignDefaultColor = ({ ordinal }: { ordinal: number }): string => {
 - Subject (ordinal: 0) → Yellow (#FCD34D)
 - Author (ordinal: 1) → Blue (#93C5FD)
 - Scripture (ordinal: 2) → Green (#86EFAC)
-- Context (ordinal: 3) → Red (#FCA5A5)
+- Region (ordinal: 3) → Red (#FCA5A5)
 - Additional types → Generated colors
 
 ### Color Flow

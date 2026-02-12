@@ -6,14 +6,12 @@ export type ColorConfig = {
 	author: IndexTypeColor;
 	subject: IndexTypeColor;
 	scripture: IndexTypeColor;
-	context: IndexTypeColor;
 };
 
 export const DEFAULT_COLOR_CONFIG: ColorConfig = {
 	author: { hue: 30 }, // Orange
 	subject: { hue: 230 }, // Blue
 	scripture: { hue: 120 }, // Green
-	context: { hue: 340 }, // Pink
 };
 
 export const formatOklch = ({

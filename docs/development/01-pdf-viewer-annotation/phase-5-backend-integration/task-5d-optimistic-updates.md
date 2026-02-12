@@ -172,4 +172,4 @@ useMutation({
 
 After this task, Phase 5 is complete! All backend integration is functional with polished UX.
 
-**Next Phase:** [Phase 6: Context System](../../phase-6-context-system/) - Build UI for ignore/page-number contexts using the Context schema from Task 5A.
+**Next Phase:** [Phase 6: Region System](../../phase-6-region-system/) - Build UI for ignore/page-number regions using the Region schema from Task 5A.

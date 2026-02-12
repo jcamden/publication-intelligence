@@ -6,8 +6,8 @@ import {
 	BookOpen,
 	ChevronLeft,
 	File,
-	Filter,
 	type LucideIcon,
+	SquaresSubtract,
 	Tag,
 	User,
 } from "lucide-react";
@@ -83,10 +83,10 @@ export const usePageBarButtons = ({
 			icon: File as LucideIcon,
 			tooltip: "Page",
 		},
-		"page-contexts": {
-			name: "pageContexts",
-			icon: Filter as LucideIcon,
-			tooltip: "Page Contexts",
+		"page-regions": {
+			name: "pageRegions",
+			icon: SquaresSubtract as LucideIcon,
+			tooltip: "Page Regions",
 		},
 		"page-author": {
 			name: "pageAuthors",
@@ -126,7 +126,7 @@ export const usePageBarButtons = ({
 			// Filter out index type sections that aren't enabled for this project
 			if (
 				sectionId !== "page-pages" &&
-				sectionId !== "page-contexts" &&
+				sectionId !== "page-regions" &&
 				sectionId !== "page-info"
 			) {
 				const indexType = sectionId.replace("page-", "");

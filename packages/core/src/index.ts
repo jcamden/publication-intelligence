@@ -26,7 +26,7 @@ export const createDocument = ({
 export * from "./canonical-page.computation";
 export * from "./canonical-page.types";
 export * from "./canonical-page.utils";
-export * from "./context.types";
-export * from "./context.utils";
 export * from "./logger.types";
+export * from "./region.types";
+export * from "./region.utils";
 export * from "./validation";

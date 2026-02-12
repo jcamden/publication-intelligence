@@ -18,7 +18,7 @@ import {
 import { CanonicalPageRuleModal } from "@/app/projects/[projectDir]/editor/_components/canonical-page-rule-modal";
 import { CanonicalPagesDisplay } from "@/app/projects/[projectDir]/editor/_components/canonical-pages-display";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { useContextDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-context-derived-page-numbers";
+import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 
 export const ProjectPagesContent = () => {
 	const { projectId } = useProjectContext();
@@ -30,8 +30,8 @@ export const ProjectPagesContent = () => {
 	const [ruleModalOpen, setRuleModalOpen] = useState(false);
 	const [editingRuleId, setEditingRuleId] = useState<string | undefined>();
 
-	// Fetch contexts for this project
-	const { data: contexts = [] } = trpc.context.list.useQuery(
+	// Fetch regions for this project
+	const { data: regions = [] } = trpc.region.list.useQuery(
 		{ projectId: projectId || "" },
 		{ enabled: !!projectId },
 	);
@@ -50,10 +50,10 @@ export const ProjectPagesContent = () => {
 		},
 	});
 
-	// Extract context-derived page numbers from PDF
-	const { contextDerivedPageNumbers, isLoading: contextNumbersLoading } =
-		useContextDerivedPageNumbers({
-			contexts,
+	// Extract region-derived page numbers from PDF
+	const { regionDerivedPageNumbers, isLoading: regionNumbersLoading } =
+		useRegionDerivedPageNumbers({
+			regions,
 			pdfUrl: pdfUrl || undefined,
 			totalPages,
 			enabled: totalPages > 0 && !!pdfUrl,
@@ -66,18 +66,18 @@ export const ProjectPagesContent = () => {
 
 		return computeCanonicalPages({
 			documentPageCount: totalPages,
-			contexts: contexts.map((ctx) => ({
-				...ctx,
-				createdAt: new Date(ctx.createdAt),
+			regions: regions.map((reg) => ({
+				...reg,
+				createdAt: new Date(reg.createdAt),
 			})),
 			rules: rules.map((rule) => ({
 				...rule,
 				createdAt: rule.createdAt,
 				updatedAt: rule.updatedAt,
 			})),
-			contextDerivedPageNumbers,
+			regionDerivedPageNumbers,
 		});
-	}, [totalPages, contexts, rules, contextDerivedPageNumbers, projectId]);
+	}, [totalPages, regions, rules, regionDerivedPageNumbers, projectId]);
 
 	// Get statistics
 	const statistics = useMemo(() => {
@@ -93,12 +93,12 @@ export const ProjectPagesContent = () => {
 				createdAt: rule.createdAt,
 				updatedAt: rule.updatedAt,
 			})),
-			contexts: contexts.map((ctx) => ({
-				...ctx,
-				createdAt: new Date(ctx.createdAt),
+			regions: regions.map((reg) => ({
+				...reg,
+				createdAt: new Date(reg.createdAt),
 			})),
 		});
-	}, [canonicalPagesMap, rules, contexts]);
+	}, [canonicalPagesMap, rules, regions]);
 
 	const handleDelete = async ({ ruleId }: { ruleId: string }) => {
 		if (!confirm("Are you sure you want to delete this rule?")) {
@@ -143,11 +143,11 @@ export const ProjectPagesContent = () => {
 			{hasConflicts && (
 				<div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
 					<p className="text-sm text-red-900 dark:text-red-100 font-semibold mb-1">
-						⚠️ Context Conflicts Detected
+						⚠️ Regions Conflicts Detected
 					</p>
 					<p className="text-xs text-red-800 dark:text-red-200">
-						Multiple page number contexts apply to some pages. Resolve conflicts
-						in the Contexts section before canonical pages can be computed.
+						Multiple page number regions apply to some pages. Resolve conflicts
+						in the Regions section before canonical pages can be computed.
 					</p>
 				</div>
 			)}
@@ -169,7 +169,7 @@ export const ProjectPagesContent = () => {
 							onEditRule={handleEdit}
 							onDeleteRule={handleDelete}
 							onNavigateToPage={handleNavigateToPage}
-							isLoadingContexts={contextNumbersLoading}
+							isLoadingRegions={regionNumbersLoading}
 						/>
 					</div>
 				</div>
@@ -192,11 +192,11 @@ export const ProjectPagesContent = () => {
 								</span>
 							</div>
 						)}
-						{statistics.contextDerivedPages > 0 && (
+						{statistics.regionDerivedPages > 0 && (
 							<div className="flex justify-between">
-								<span className="text-muted-foreground">Context-derived:</span>
+								<span className="text-muted-foreground">Region-derived:</span>
 								<span className="font-medium">
-									{statistics.contextDerivedPages}
+									{statistics.regionDerivedPages}
 								</span>
 							</div>
 						)}
@@ -234,7 +234,7 @@ export const ProjectPagesContent = () => {
 				</Button>
 				{hasConflicts && (
 					<p className="text-xs text-muted-foreground mt-1">
-						Resolve context conflicts first
+						Resolve region conflicts first
 					</p>
 				)}
 			</div>
@@ -262,7 +262,7 @@ export const ProjectPagesContent = () => {
 									description = `Define as ${rule.startingCanonicalPage}...`;
 								}
 							} else {
-								description = "Ignore";
+								description = "Exclude";
 							}
 
 							return (
