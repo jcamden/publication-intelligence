@@ -1,4 +1,5 @@
 import { authRouter } from "../modules/auth/auth.router";
+import { canonicalPageRuleRouter } from "../modules/canonical-page-rule/canonical-page-rule.router";
 import { contextRouter } from "../modules/context/context.router";
 import { indexEntryRouter } from "../modules/index-entry/index-entry.router";
 import { indexMentionRouter } from "../modules/index-mention/index-mention.router";
@@ -10,6 +11,7 @@ import { router } from "../trpc";
 
 export const appRouter = router({
 	auth: authRouter,
+	canonicalPageRule: canonicalPageRuleRouter,
 	context: contextRouter,
 	indexEntry: indexEntryRouter,
 	indexMention: indexMentionRouter,
@@ -22,6 +24,15 @@ export const appRouter = router({
 export type AppRouter = typeof appRouter;
 
 // Re-export types for frontend consumption
+export type {
+	CanonicalPageRule,
+	CanonicalPageRuleListItem,
+	CreateRuleInput,
+	DeleteRuleInput,
+	RuleConflict,
+	UpdateRuleInput,
+} from "../modules/canonical-page-rule/canonical-page-rule.types";
+
 export type {
 	Context,
 	ContextListItem,

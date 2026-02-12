@@ -4,7 +4,7 @@
  * Functions for determining which pages a context applies to.
  */
 
-import type { Context } from "./context.types";
+import type { Context, ContextDerivedPageNumber } from "./context.types";
 
 /**
  * Parse a page range string into an array of page numbers
@@ -271,18 +271,37 @@ export type PageNumberConflict = {
 /**
  * Detect conflicts where multiple page_number contexts apply to the same page
  * Returns array of conflicts (pages with 2+ page_number contexts)
+ *
+ * When contextDerivedPageNumbers is provided, only considers contexts that have
+ * detected text (i.e., contexts that appear in the contextDerivedPageNumbers array).
+ * This avoids false positives where multiple contexts apply to a page but only
+ * one has actual text in its bounding box.
  */
 export const detectPageNumberConflicts = ({
 	contexts,
 	maxPage,
+	contextDerivedPageNumbers,
 }: {
 	contexts: Context[];
 	maxPage: number;
+	contextDerivedPageNumbers?: ContextDerivedPageNumber[];
 }): PageNumberConflict[] => {
 	// Filter to only page_number contexts
 	const pageNumberContexts = contexts.filter(
 		(ctx) => ctx.contextType === "page_number",
 	);
+
+	// If contextDerivedPageNumbers provided, build a map of page -> contextIds with detected text
+	let contextsWithTextPerPage: Map<number, Set<string>> | undefined;
+	if (contextDerivedPageNumbers) {
+		contextsWithTextPerPage = new Map();
+		for (const derived of contextDerivedPageNumbers) {
+			if (!contextsWithTextPerPage.has(derived.documentPage)) {
+				contextsWithTextPerPage.set(derived.documentPage, new Set());
+			}
+			contextsWithTextPerPage.get(derived.documentPage)?.add(derived.contextId);
+		}
+	}
 
 	// Map: pageNumber -> contexts that apply to that page
 	const conflictsByPage = new Map<number, Context[]>();
@@ -290,6 +309,14 @@ export const detectPageNumberConflicts = ({
 	for (const context of pageNumberContexts) {
 		const applicablePages = getApplicablePages({ context, maxPage });
 		for (const page of applicablePages) {
+			// If we have contextDerivedPageNumbers, only count this context if it has detected text on this page
+			if (
+				contextsWithTextPerPage &&
+				!contextsWithTextPerPage.get(page)?.has(context.id)
+			) {
+				continue;
+			}
+
 			if (!conflictsByPage.has(page)) {
 				conflictsByPage.set(page, []);
 			}

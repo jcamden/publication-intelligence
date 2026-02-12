@@ -109,11 +109,11 @@ const defaultProjectOrder: SectionId[] = [
 	"project-scripture",
 ];
 const defaultPageOrder: SectionId[] = [
+	"page-pages",
 	"page-scripture",
 	"page-author",
 	"page-subject",
 	"page-contexts",
-	"page-pages",
 ];
 
 export const projectSectionOrderAtom = atomWithStorage<SectionId[]>(
@@ -223,6 +223,7 @@ export const activeResponsiveSectionAtom = atom<SectionId | null>(null);
 export const currentPageAtom = atomWithStorage("pdf-current-page", 1);
 export const totalPagesAtom = atom(0); // Not persisted - recalculated on load
 export const zoomAtom = atomWithStorage("pdf-zoom", 1.7);
+export const pdfUrlAtom = atom<string | null>(null); // Not persisted - set on load
 
 // IndexEntry, IndexType, and Mentions state migrated to tRPC queries in Phase 5
 // These atoms have been removed - data is now fetched from backend via tRPC

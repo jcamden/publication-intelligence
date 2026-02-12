@@ -1,5 +1,6 @@
 // Export all schemas and configs
 
+export * from "./canonical-page-rules";
 export * from "./documents";
 export * from "./enums";
 export * from "./events";

@@ -38,12 +38,12 @@ export const ProjectNavbar = ({
 
 	const navItems = [
 		{
-			label: "Editor",
-			href: projectDir ? `/projects/${projectDir}/editor` : "/projects/editor",
-		},
-		{
 			label: "Index",
 			href: projectDir ? `/projects/${projectDir}/index` : "/projects/index",
+		},
+		{
+			label: "Editor",
+			href: projectDir ? `/projects/${projectDir}/editor` : "/projects/editor",
 		},
 		{ label: "Projects", href: "/projects" },
 	];

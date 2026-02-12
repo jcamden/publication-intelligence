@@ -19,9 +19,11 @@ import { useMemo } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
 import {
 	currentPageAtom,
+	pdfUrlAtom,
 	totalPagesAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
+import { useContextDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-context-derived-page-numbers";
 
 type ProjectContextsContentProps = {
 	activeAction?: { type: string | null; indexType: string | null };
@@ -38,6 +40,7 @@ export const ProjectContextsContent = ({
 	const utils = trpc.useUtils();
 	const setCurrentPage = useSetAtom(currentPageAtom);
 	const totalPages = useAtomValue(totalPagesAtom);
+	const pdfUrl = useAtomValue(pdfUrlAtom);
 
 	// Fetch contexts for this project
 	const {
@@ -49,7 +52,24 @@ export const ProjectContextsContent = ({
 		{ enabled: !!projectId },
 	);
 
+	// Extract context-derived page numbers from PDF
+	const {
+		contextDerivedPageNumbers,
+		isLoading: contextNumbersLoading,
+		error: contextNumbersError,
+	} = useContextDerivedPageNumbers({
+		contexts: contexts.map((ctx) => ({
+			...ctx,
+			createdAt: new Date(ctx.createdAt),
+		})),
+		pdfUrl: pdfUrl || undefined,
+		totalPages,
+		enabled: totalPages > 0 && !!pdfUrl,
+		projectId: projectId || undefined,
+	});
+
 	// Detect conflicts client-side
+	// Only flag conflicts when multiple contexts have detected text on the same page
 	const conflictsData = useMemo(() => {
 		if (!totalPages || contexts.length === 0) {
 			return [];
@@ -64,8 +84,9 @@ export const ProjectContextsContent = ({
 		return detectPageNumberConflicts({
 			contexts: coreContexts,
 			maxPage: totalPages,
+			contextDerivedPageNumbers,
 		});
-	}, [contexts, totalPages]);
+	}, [contexts, totalPages, contextDerivedPageNumbers]);
 
 	// Build a map of contextId -> conflicting pages
 	const conflictsByContext = useMemo(() => {
@@ -146,6 +167,14 @@ export const ProjectContextsContent = ({
 		);
 	}
 
+	if (contextNumbersError) {
+		return (
+			<div className="p-4 text-sm text-red-600 dark:text-red-400">
+				Error extracting page numbers: {contextNumbersError}
+			</div>
+		);
+	}
+
 	const isDrawContextActive = activeAction?.type === "draw-context";
 
 	return (
@@ -199,6 +228,13 @@ export const ProjectContextsContent = ({
 
 										{/* Conflicts Display */}
 										{context.contextType === "page_number" &&
+											contextNumbersLoading && (
+												<div className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 italic">
+													Checking for conflicts...
+												</div>
+											)}
+										{context.contextType === "page_number" &&
+											!contextNumbersLoading &&
 											conflictsByContext.has(context.id) && (
 												<div className="mt-1.5 text-xs">
 													<span className="text-gray-600 dark:text-gray-400">

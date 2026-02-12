@@ -100,3 +100,16 @@ export const indexTypeEnum = pgEnum("index_type", [
 	// "CAS Registry",
 	// "incipit", // music and poetry
 ]);
+
+// Canonical page rule types
+export const canonicalPageRuleTypeEnum = pgEnum("canonical_page_rule_type", [
+	"positive", // Define canonical page numbers
+	"negative", // Ignore pages (don't index)
+]);
+
+// Numeral types for canonical page rules
+export const numeralTypeEnum = pgEnum("numeral_type", [
+	"arabic", // 1, 2, 3...
+	"roman", // i, ii, iii...
+	"arbitrary", // Custom values (e.g., 10a, 10b, A-1, etc.)
+]);

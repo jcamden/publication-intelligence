@@ -11,3 +11,7 @@ fix up Create/Edit context form
 move no entries yet to below the Create Entry button
 
 order z index of highlights from smallest to largest (so smaller are never unclickable/obscured)?
+
+testid surfaces for parent of child entry when creating child entry
+
+https://github.com/ocrmypdf/OCRmyPDF

@@ -89,3 +89,14 @@ export const DEFAULT_CONTEXT_COLORS: Record<ContextType, string> = {
 	ignore: "#FCA5A5", // Red
 	page_number: "#C4B5FD", // Purple
 };
+
+/**
+ * Context-derived page numbers for a specific page
+ * Represents a page number that was extracted from a page_number context's bounding box
+ */
+export type ContextDerivedPageNumber = {
+	documentPage: number;
+	canonicalPage: string;
+	contextId: string;
+	contextName: string;
+};

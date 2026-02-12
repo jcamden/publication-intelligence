@@ -111,14 +111,3 @@ export const DeleteContextSchema = z.object({
 });
 
 export type DeleteContextInput = z.infer<typeof DeleteContextSchema>;
-
-export const DetectConflictsSchema = z.object({
-	projectId: z.string().uuid(),
-});
-
-export type DetectConflictsInput = z.infer<typeof DetectConflictsSchema>;
-
-export type PageNumberConflict = {
-	pageNumber: number;
-	contexts: Array<{ id: string; name: string }>;
-};

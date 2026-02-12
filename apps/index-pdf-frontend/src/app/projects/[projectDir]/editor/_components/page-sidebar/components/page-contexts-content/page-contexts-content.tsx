@@ -2,9 +2,15 @@
 
 import { getPageConfigSummary } from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
+import { useAtomValue } from "jotai";
 import { AlertTriangle, Eye, EyeOff, X } from "lucide-react";
 import { trpc } from "@/app/_common/_utils/trpc";
+import {
+	pdfUrlAtom,
+	totalPagesAtom,
+} from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
+import { useContextDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-context-derived-page-numbers";
 
 type PageContextsContentProps = {
 	currentPage: number;
@@ -15,6 +21,8 @@ export const PageContextsContent = ({
 }: PageContextsContentProps) => {
 	const { projectId } = useProjectContext();
 	const utils = trpc.useUtils();
+	const totalPages = useAtomValue(totalPagesAtom);
+	const pdfUrl = useAtomValue(pdfUrlAtom);
 
 	// Fetch contexts for current page
 	const {
@@ -25,6 +33,22 @@ export const PageContextsContent = ({
 		{ projectId: projectId || "", pageNumber: currentPage },
 		{ enabled: !!projectId && currentPage > 0 },
 	);
+
+	// Extract context-derived page numbers from PDF
+	const {
+		contextDerivedPageNumbers,
+		isLoading: contextNumbersLoading,
+		error: contextNumbersError,
+	} = useContextDerivedPageNumbers({
+		contexts: contexts.map((ctx) => ({
+			...ctx,
+			createdAt: new Date(ctx.createdAt),
+		})),
+		pdfUrl: pdfUrl || undefined,
+		totalPages,
+		enabled: totalPages > 0 && !!pdfUrl,
+		projectId: projectId || undefined,
+	});
 
 	const updateContext = trpc.context.update.useMutation({
 		onSuccess: () => {
@@ -85,10 +109,19 @@ export const PageContextsContent = ({
 	};
 
 	// Check for page_number conflicts on current page
+	// Only flag as conflict if 2+ contexts have detected text
 	const pageNumberContexts = contexts.filter(
 		(ctx) => ctx.contextType === "page_number",
 	);
-	const hasConflict = pageNumberContexts.length > 1;
+
+	// Get contexts with detected text on the current page
+	const contextsWithTextOnCurrentPage = contextDerivedPageNumbers.filter(
+		(derived) => derived.documentPage === currentPage,
+	);
+
+	// Conflict exists if 2+ contexts have detected text on this page
+	const hasConflict =
+		!contextNumbersLoading && contextsWithTextOnCurrentPage.length > 1;
 
 	if (isLoading) {
 		return (
@@ -106,6 +139,14 @@ export const PageContextsContent = ({
 		);
 	}
 
+	if (contextNumbersError) {
+		return (
+			<div className="p-4 text-sm text-red-600 dark:text-red-400">
+				Error extracting page numbers: {contextNumbersError}
+			</div>
+		);
+	}
+
 	if (contexts.length === 0) {
 		return (
 			<div className="p-4 text-sm text-center text-gray-500 dark:text-gray-400">
@@ -116,6 +157,19 @@ export const PageContextsContent = ({
 
 	return (
 		<div className="space-y-0">
+			{/* Loading conflict check */}
+			{pageNumberContexts.length > 1 && contextNumbersLoading && (
+				<div className="p-3 border-b border-gray-300 bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
+					<div className="flex items-start gap-2">
+						<div className="flex-1 min-w-0">
+							<p className="text-xs text-gray-600 dark:text-gray-400 italic">
+								Checking for conflicts...
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{/* Conflict Warning */}
 			{hasConflict && (
 				<div className="p-3 border-b border-yellow-600 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800">
@@ -126,12 +180,16 @@ export const PageContextsContent = ({
 								⚠️ PAGE NUMBER CONFLICT
 							</h4>
 							<p className="text-xs text-yellow-800 dark:text-yellow-200 mb-2">
-								Multiple page number contexts:
+								Multiple contexts have detected page numbers on this page:
 							</p>
 							<ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1 mb-2">
-								{pageNumberContexts.map((ctx) => (
-									<li key={ctx.id} className="flex items-center gap-1">
-										• {ctx.name}
+								{contextsWithTextOnCurrentPage.map((derived) => (
+									<li
+										key={derived.contextId}
+										className="flex items-center gap-1"
+									>
+										• {derived.contextName} (detected: "{derived.canonicalPage}
+										")
 									</li>
 								))}
 							</ul>

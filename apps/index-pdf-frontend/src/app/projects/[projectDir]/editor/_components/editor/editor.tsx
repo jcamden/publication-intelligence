@@ -19,6 +19,7 @@ import {
 	pageSidebarWidthAtom,
 	pdfSectionLastWidthAtom,
 	pdfSectionVisibleAtom,
+	pdfUrlAtom,
 	projectSidebarCollapsedAtom,
 	projectSidebarWidthAtom,
 	totalPagesAtom,
@@ -89,6 +90,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
 	const [totalPages, setTotalPages] = useAtom(totalPagesAtom);
 	const [zoom, setZoom] = useAtom(zoomAtom);
+	const [, setPdfUrl] = useAtom(pdfUrlAtom);
 
 	// Transient action state (replaces persistent annotationMode)
 	const [activeAction, setActiveAction] = useState<{
@@ -102,6 +104,11 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const [drawnContextBbox, setDrawnContextBbox] = useState<BoundingBox | null>(
 		null,
 	);
+
+	// Set PDF URL atom when fileUrl changes
+	useEffect(() => {
+		setPdfUrl(fileUrl);
+	}, [fileUrl, setPdfUrl]);
 
 	// Fetch project index types from backend
 	const projectIndexTypesQuery = trpc.projectIndexType.list.useQuery(

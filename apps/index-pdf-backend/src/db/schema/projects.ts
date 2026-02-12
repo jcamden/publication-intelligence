@@ -7,6 +7,7 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { canonicalPageRules } from "./canonical-page-rules";
 import { contexts, sourceDocuments } from "./documents";
 import { projectIndexTypes } from "./index-types";
 import { indexEntries } from "./indexing";
@@ -59,4 +60,5 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 	indexEntries: many(indexEntries),
 	projectIndexTypes: many(projectIndexTypes),
 	contexts: many(contexts),
+	canonicalPageRules: many(canonicalPageRules),
 }));
