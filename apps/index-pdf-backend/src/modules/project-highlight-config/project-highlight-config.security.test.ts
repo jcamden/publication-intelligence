@@ -62,7 +62,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 						url: "/trpc/projectIndexType.enable",
 						payload: {
 							projectId: project.id,
-							indexType: "scripture",
+							highlightType: "scripture",
 							colorHue: 160, // Green hue
 						},
 					}),
@@ -94,7 +94,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 						url: "/trpc/projectIndexType.enable",
 						payload: {
 							projectId: project.id,
-							indexType: "subject",
+							highlightType: "subject",
 							colorHue: 230, // Blue hue
 						},
 					}),
@@ -131,7 +131,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 						url: "/trpc/projectIndexType.enable",
 						payload: {
 							projectId: project.id,
-							indexType: "scripture",
+							highlightType: "scripture",
 							colorHue: 160, // Green hue
 						},
 					}),

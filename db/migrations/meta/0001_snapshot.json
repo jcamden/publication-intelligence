@@ -1,5 +1,5 @@
 {
-	"id": "da8b0d2a-e229-48d8-aa05-d9b722b51582",
+	"id": "0111256a-e68d-438d-83cc-504721c6eb07",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -630,8 +630,8 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
-		"public.project_index_types": {
-			"name": "project_index_types",
+		"public.project_highlight_configs": {
+			"name": "project_highlight_configs",
 			"schema": "",
 			"columns": {
 				"id": {
@@ -647,9 +647,9 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"index_type": {
-					"name": "index_type",
-					"type": "index_type",
+				"highlight_type": {
+					"name": "highlight_type",
+					"type": "highlight_type",
 					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": true
@@ -688,8 +688,8 @@
 				}
 			},
 			"indexes": {
-				"unique_project_index_type": {
-					"name": "unique_project_index_type",
+				"unique_project_highlight_type": {
+					"name": "unique_project_highlight_type",
 					"columns": [
 						{
 							"expression": "project_id",
@@ -698,23 +698,23 @@
 							"nulls": "last"
 						},
 						{
-							"expression": "index_type",
+							"expression": "highlight_type",
 							"isExpression": false,
 							"asc": true,
 							"nulls": "last"
 						}
 					],
 					"isUnique": true,
-					"where": "\"project_index_types\".\"deleted_at\" IS NULL",
+					"where": "\"project_highlight_configs\".\"deleted_at\" IS NULL",
 					"concurrently": false,
 					"method": "btree",
 					"with": {}
 				}
 			},
 			"foreignKeys": {
-				"project_index_types_project_id_projects_id_fk": {
-					"name": "project_index_types_project_id_projects_id_fk",
-					"tableFrom": "project_index_types",
+				"project_highlight_configs_project_id_projects_id_fk": {
+					"name": "project_highlight_configs_project_id_projects_id_fk",
+					"tableFrom": "project_highlight_configs",
 					"tableTo": "projects",
 					"columnsFrom": ["project_id"],
 					"columnsTo": ["id"],
@@ -725,12 +725,12 @@
 			"compositePrimaryKeys": {},
 			"uniqueConstraints": {},
 			"policies": {
-				"project_index_types_project_access": {
-					"name": "project_index_types_project_access",
+				"project_highlight_configs_project_access": {
+					"name": "project_highlight_configs_project_access",
 					"as": "PERMISSIVE",
 					"for": "ALL",
 					"to": ["authenticated"],
-					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"project_index_types\".\"project_id\"\n\t\t\t)"
+					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"project_highlight_configs\".\"project_id\"\n\t\t\t)"
 				}
 			},
 			"checkConstraints": {},
@@ -943,10 +943,10 @@
 					"onDelete": "cascade",
 					"onUpdate": "no action"
 				},
-				"index_entries_project_index_type_id_project_index_types_id_fk": {
-					"name": "index_entries_project_index_type_id_project_index_types_id_fk",
+				"index_entries_project_index_type_id_project_highlight_configs_id_fk": {
+					"name": "index_entries_project_index_type_id_project_highlight_configs_id_fk",
 					"tableFrom": "index_entries",
-					"tableTo": "project_index_types",
+					"tableTo": "project_highlight_configs",
 					"columnsFrom": ["project_index_type_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
@@ -1031,10 +1031,10 @@
 					"onDelete": "cascade",
 					"onUpdate": "no action"
 				},
-				"index_mention_types_project_index_type_id_project_index_types_id_fk": {
-					"name": "index_mention_types_project_index_type_id_project_index_types_id_fk",
+				"index_mention_types_project_index_type_id_project_highlight_configs_id_fk": {
+					"name": "index_mention_types_project_index_type_id_project_highlight_configs_id_fk",
 					"tableFrom": "index_mention_types",
-					"tableTo": "project_index_types",
+					"tableTo": "project_highlight_configs",
 					"columnsFrom": ["project_index_type_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
@@ -1894,6 +1894,11 @@
 			"name": "export_format",
 			"schema": "public",
 			"values": ["book_index", "json", "xml"]
+		},
+		"public.highlight_type": {
+			"name": "highlight_type",
+			"schema": "public",
+			"values": ["subject", "author", "scripture", "exclude", "page_number"]
 		},
 		"public.index_entry_status": {
 			"name": "index_entry_status",

@@ -3,7 +3,7 @@ import { canonicalPageRuleRouter } from "../modules/canonical-page-rule/canonica
 import { indexEntryRouter } from "../modules/index-entry/index-entry.router";
 import { indexMentionRouter } from "../modules/index-mention/index-mention.router";
 import { projectRouter } from "../modules/project/project.router";
-import { projectIndexTypeRouter } from "../modules/project-index-type/project-index-type.router";
+import { projectIndexTypeRouter } from "../modules/project-highlight-config/project-highlight-config.router";
 import { regionRouter } from "../modules/region/region.router";
 import { sourceDocumentRouter } from "../modules/source-document/sourceDocument.router";
 import { userRouter } from "../modules/user/user.router";

@@ -8,12 +8,13 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { indexTypeEnum } from "./enums";
+import { highlightTypeEnum, indexTypeEnum } from "./enums";
 import { indexEntries, indexMentions } from "./indexing";
 import { projects } from "./projects";
 import { authenticatedRole, users } from "./users";
 
 // UserIndexTypeAddon - User's purchased addons (entitlements)
+// Note: Only for index types (subject, author, scripture), not region types
 export const userIndexTypeAddons = pgTable(
 	"user_index_type_addons",
 	{
@@ -50,15 +51,16 @@ export const userIndexTypeAddonsRelations = relations(
 	}),
 );
 
-// ProjectIndexType - Enabled index types in a project with customization
-export const projectIndexTypes = pgTable(
-	"project_index_types",
+// ProjectHighlightConfig - Unified config for both index types and region types
+// Replaces the old project_index_types table
+export const projectHighlightConfigs = pgTable(
+	"project_highlight_configs",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		projectId: uuid("project_id")
 			.references(() => projects.id, { onDelete: "cascade" })
 			.notNull(),
-		indexType: indexTypeEnum("index_type").notNull(),
+		highlightType: highlightTypeEnum("highlight_type").notNull(),
 		colorHue: smallint("color_hue").notNull(), // Hue value 0-360
 		isVisible: boolean("is_visible").default(true).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
@@ -68,14 +70,14 @@ export const projectIndexTypes = pgTable(
 		deletedAt: timestamp("deleted_at", { withTimezone: true }), // soft delete
 	},
 	(table) => [
-		// Unique constraint: one index type per project (for non-deleted)
-		uniqueIndex("unique_project_index_type")
-			.on(table.projectId, table.indexType)
+		// Unique constraint: one highlight type per project (for non-deleted)
+		uniqueIndex("unique_project_highlight_type")
+			.on(table.projectId, table.highlightType)
 			.where(sql`${table.deletedAt} IS NULL`),
 
 		// RLS: Inherit access from project
 		// The projects table RLS already handles owner access
-		pgPolicy("project_index_types_project_access", {
+		pgPolicy("project_highlight_configs_project_access", {
 			for: "all",
 			to: authenticatedRole,
 			using: sql`EXISTS (
@@ -86,15 +88,20 @@ export const projectIndexTypes = pgTable(
 	],
 );
 
-// ProjectIndexType relations
-export const projectIndexTypesRelations = relations(
-	projectIndexTypes,
+// ProjectHighlightConfig relations
+export const projectHighlightConfigsRelations = relations(
+	projectHighlightConfigs,
 	({ one, many }) => ({
 		project: one(projects, {
-			fields: [projectIndexTypes.projectId],
+			fields: [projectHighlightConfigs.projectId],
 			references: [projects.id],
 		}),
 		indexEntries: many(indexEntries),
 		indexMentions: many(indexMentions),
 	}),
 );
+
+// Legacy export for backwards compatibility during migration
+// TODO: Remove after all references are updated
+export const projectIndexTypes = projectHighlightConfigs;
+export const projectIndexTypesRelations = projectHighlightConfigsRelations;

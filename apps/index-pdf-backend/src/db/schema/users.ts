@@ -1,6 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import { pgPolicy, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { userIndexTypeAddons } from "./index-types";
+import { userIndexTypeAddons } from "./highlight-configs";
 import { projects } from "./projects";
 
 // Authenticated role (used for RLS policies)

@@ -1,9 +1,16 @@
 import { useEffect, useRef } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
 
+type HighlightType =
+	| "subject"
+	| "author"
+	| "scripture"
+	| "exclude"
+	| "page_number";
+
 type UsePersistColorChangeParams = {
 	projectId: string | undefined;
-	indexType: string;
+	highlightType: HighlightType;
 	colorHue: number;
 	enabled?: boolean;
 };
@@ -12,30 +19,25 @@ type UsePersistColorChangeParams = {
  * Hook to debounce and persist color changes to the database
  *
  * Debounces color changes by 500ms before sending to backend
+ * Works for both index types and region types
  */
 export const usePersistColorChange = ({
 	projectId,
-	indexType,
+	highlightType,
 	colorHue,
 	enabled = true,
 }: UsePersistColorChangeParams) => {
-	const utils = trpc.useUtils();
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const previousHueRef = useRef<number | null>(null);
 
-	// Query to get the projectIndexType ID for this index type
-	const projectIndexTypesQuery = trpc.projectIndexType.list.useQuery(
+	// Query to get the project highlight config ID for this highlight type
+	const projectConfigsQuery = trpc.projectIndexType.list.useQuery(
 		{ projectId: projectId ?? "" },
 		{ enabled: !!projectId && enabled },
 	);
 
 	// Mutation to update color
-	const updateColorMutation = trpc.projectIndexType.update.useMutation({
-		onSuccess: () => {
-			// Refetch to ensure UI is in sync
-			utils.projectIndexType.list.invalidate({ projectId: projectId ?? "" });
-		},
-	});
+	const updateColorMutation = trpc.projectIndexType.update.useMutation();
 
 	// Debounce effect
 	// biome-ignore lint/correctness/useExhaustiveDependencies: updateColorMutation is intentionally omitted - it's recreated on every render and would reset the debounce timer
@@ -50,13 +52,13 @@ export const usePersistColorChange = ({
 
 		// Set new timeout
 		timeoutRef.current = setTimeout(() => {
-			const projectIndexType = projectIndexTypesQuery.data?.find(
-				(pit) => pit.indexType === indexType,
+			const config = projectConfigsQuery.data?.find(
+				(pit) => pit.indexType === highlightType,
 			);
 
-			if (projectIndexType) {
+			if (config) {
 				updateColorMutation.mutate({
-					id: projectIndexType.id,
+					id: config.id,
 					data: { colorHue },
 				});
 				previousHueRef.current = colorHue;
@@ -69,7 +71,7 @@ export const usePersistColorChange = ({
 				clearTimeout(timeoutRef.current);
 			}
 		};
-	}, [colorHue, enabled, projectId, indexType, projectIndexTypesQuery.data]);
+	}, [colorHue, enabled, projectId, highlightType, projectConfigsQuery.data]);
 
 	return {
 		isPersisting: updateColorMutation.isPending,

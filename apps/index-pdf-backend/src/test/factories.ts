@@ -295,7 +295,7 @@ export const createTestProjectIndexType = async ({
 			.insert(projectIndexTypes)
 			.values({
 				projectId,
-				indexType,
+				highlightType: indexType,
 				colorHue: colorHue ?? defaultColorHue,
 				isVisible,
 			})

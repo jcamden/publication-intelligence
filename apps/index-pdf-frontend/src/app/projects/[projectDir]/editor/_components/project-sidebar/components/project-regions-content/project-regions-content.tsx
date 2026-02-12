@@ -6,8 +6,8 @@ import {
 	type Region,
 } from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
-import { OklchColorPicker } from "@pubint/yabasic/components/ui/oklch-color-picker";
 import { StyledButton } from "@pubint/yaboujee";
+import { OklchColorPicker } from "@pubint/yaboujee/components/ui/oklch-color-picker/oklch-color-picker";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
 	Edit,
@@ -25,6 +25,7 @@ import {
 	totalPagesAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
+import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 
 type ProjectRegionsContentProps = {
@@ -56,6 +57,22 @@ export const ProjectRegionsContent = ({
 		{ projectId: projectId || "" },
 		{ enabled: !!projectId },
 	);
+
+	// Persist color changes to backend for exclude region type
+	usePersistColorChange({
+		projectId,
+		highlightType: "exclude",
+		colorHue: regionTypeColorConfig.exclude.hue,
+		enabled: !!projectId,
+	});
+
+	// Persist color changes to backend for page_number region type
+	usePersistColorChange({
+		projectId,
+		highlightType: "page_number",
+		colorHue: regionTypeColorConfig.page_number.hue,
+		enabled: !!projectId,
+	});
 
 	// Extract region-derived page numbers from PDF
 	const {

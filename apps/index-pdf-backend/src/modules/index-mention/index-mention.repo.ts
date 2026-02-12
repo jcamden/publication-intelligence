@@ -75,7 +75,7 @@ export const listIndexMentions = async ({
 		.select({
 			mentionId: indexMentionTypes.indexMentionId,
 			projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-			indexType: projectIndexTypes.indexType,
+			indexType: projectIndexTypes.highlightType,
 			colorHue: projectIndexTypes.colorHue,
 		})
 		.from(indexMentionTypes)
@@ -175,7 +175,7 @@ export const getIndexMentionById = async ({
 			projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
 			projectIndexType: {
 				id: projectIndexTypes.id,
-				indexType: projectIndexTypes.indexType,
+				indexType: projectIndexTypes.highlightType,
 				colorHue: projectIndexTypes.colorHue,
 			},
 		})
@@ -261,7 +261,7 @@ export const createIndexMention = async ({
 					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
 					projectIndexType: {
 						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.indexType,
+						indexType: projectIndexTypes.highlightType,
 						colorHue: projectIndexTypes.colorHue,
 					},
 				})
@@ -391,7 +391,7 @@ export const updateIndexMention = async ({
 					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
 					projectIndexType: {
 						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.indexType,
+						indexType: projectIndexTypes.highlightType,
 						colorHue: projectIndexTypes.colorHue,
 					},
 				})
@@ -538,7 +538,7 @@ export const updateIndexMentionTypes = async ({
 					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
 					projectIndexType: {
 						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.indexType,
+						indexType: projectIndexTypes.highlightType,
 						colorHue: projectIndexTypes.colorHue,
 					},
 				})
@@ -641,7 +641,7 @@ export const bulkCreateIndexMentions = async ({
 					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
 					projectIndexType: {
 						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.indexType,
+						indexType: projectIndexTypes.highlightType,
 						colorHue: projectIndexTypes.colorHue,
 					},
 				})
@@ -747,7 +747,7 @@ export const deleteIndexMention = async ({
 					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
 					projectIndexType: {
 						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.indexType,
+						indexType: projectIndexTypes.highlightType,
 						colorHue: projectIndexTypes.colorHue,
 					},
 				})

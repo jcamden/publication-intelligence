@@ -47,6 +47,11 @@ export type {
 	StyledToggleButtonGroupProps,
 } from "./styled-toggle-button-group";
 export { StyledToggleButtonGroup } from "./styled-toggle-button-group";
+export type {
+	OklchColor,
+	OklchColorPickerProps,
+} from "./ui/oklch-color-picker/oklch-color-picker";
+export { OklchColorPicker } from "./ui/oklch-color-picker/oklch-color-picker";
 export type { UserDropdownProps } from "./user-dropdown";
 export { UserDropdown } from "./user-dropdown";
 export type { WindowProps } from "./window";

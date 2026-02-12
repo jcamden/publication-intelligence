@@ -129,7 +129,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "subject",
+					highlightType: "subject",
 					colorHue: 230, // Blue hue (subject default)
 				},
 			});
@@ -149,7 +149,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "author",
+					highlightType: "author",
 					colorHue: 120, // Green hue
 				},
 			});
@@ -169,7 +169,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "scripture",
+					highlightType: "scripture",
 					colorHue: 160, // Green hue
 				},
 			});
@@ -189,7 +189,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "subject",
+					highlightType: "subject",
 					colorHue: 230, // Blue hue
 				},
 			});
@@ -199,7 +199,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "author",
+					highlightType: "author",
 					colorHue: 270, // Purple hue
 				},
 			});
@@ -227,7 +227,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "subject",
+					highlightType: "subject",
 					colorHue: 230, // Blue hue
 				},
 			});
@@ -267,7 +267,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "subject",
+					highlightType: "subject",
 					colorHue: 230, // Blue hue
 				},
 			});
@@ -310,7 +310,7 @@ describe("ProjectIndexType API (Integration)", () => {
 				url: "/trpc/projectIndexType.enable",
 				payload: {
 					projectId: testProjectId,
-					indexType: "subject",
+					highlightType: "subject",
 					colorHue: 230, // Blue hue
 				},
 			});

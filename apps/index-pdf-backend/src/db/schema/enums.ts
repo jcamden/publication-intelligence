@@ -98,6 +98,15 @@ export const indexTypeEnum = pgEnum("index_type", [
 	// "incipit", // music and poetry
 ]);
 
+// Highlight types - unified enum for both index types and region types
+export const highlightTypeEnum = pgEnum("highlight_type", [
+	"subject",
+	"author",
+	"scripture",
+	"exclude",
+	"page_number",
+]);
+
 // Canonical page rule types
 export const canonicalPageRuleTypeEnum = pgEnum("canonical_page_rule_type", [
 	"positive", // Define canonical page numbers

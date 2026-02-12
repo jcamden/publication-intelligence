@@ -253,12 +253,27 @@ export const ProjectForm = ({
 
 						return enableIndexTypeMutation.mutateAsync({
 							projectId: project.id,
-							indexType: indexType as (typeof ALL_INDEX_TYPES)[number]["id"],
+							highlightType:
+								indexType as (typeof ALL_INDEX_TYPES)[number]["id"],
 							colorHue: config.defaultHue,
 						});
 					});
 
-					await Promise.all(indexTypePromises);
+					// Also enable region types with default hues
+					const regionTypePromises = [
+						enableIndexTypeMutation.mutateAsync({
+							projectId: project.id,
+							highlightType: "exclude",
+							colorHue: 0, // Red
+						}),
+						enableIndexTypeMutation.mutateAsync({
+							projectId: project.id,
+							highlightType: "page_number",
+							colorHue: 270, // Purple
+						}),
+					];
+
+					await Promise.all([...indexTypePromises, ...regionTypePromises]);
 
 					// 3. Upload the PDF document
 					const formData = new FormData();

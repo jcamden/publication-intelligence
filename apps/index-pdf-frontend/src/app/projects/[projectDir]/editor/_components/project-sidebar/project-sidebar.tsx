@@ -12,6 +12,7 @@ import {
 	User,
 } from "lucide-react";
 import type React from "react";
+import { useMemo } from "react";
 import { useTheme } from "@/app/_common/_providers/theme-provider";
 import {
 	colorConfigAtom,
@@ -104,39 +105,42 @@ export const ProjectSidebar = ({
 				content: React.ComponentType;
 			}
 		>
-	> = {
-		"project-pages": {
-			title: "Pages",
-			icon: File,
-			content: ProjectPagesContent,
-		},
-		"project-subject": {
-			title: "Subject Index",
-			icon: Tags,
-			content: ProjectSubjectContent,
-		},
-		"project-author": {
-			title: "Author Index",
-			icon: User,
-			content: ProjectAuthorContent,
-		},
-		"project-scripture": {
-			title: "Scripture Index",
-			icon: BookOpen,
-			content: ProjectScriptureContent,
-		},
-		"project-regions": {
-			title: "Regions",
-			icon: SquaresSubtract,
-			content: () => (
-				<ProjectRegionsContent
-					activeAction={activeAction}
-					onDrawRegion={onDrawRegion}
-					onEditRegion={onEditRegion}
-				/>
-			),
-		},
-	};
+	> = useMemo(
+		() => ({
+			"project-pages": {
+				title: "Pages",
+				icon: File,
+				content: ProjectPagesContent,
+			},
+			"project-subject": {
+				title: "Subject Index",
+				icon: Tags,
+				content: ProjectSubjectContent,
+			},
+			"project-author": {
+				title: "Author Index",
+				icon: User,
+				content: ProjectAuthorContent,
+			},
+			"project-scripture": {
+				title: "Scripture Index",
+				icon: BookOpen,
+				content: ProjectScriptureContent,
+			},
+			"project-regions": {
+				title: "Regions",
+				icon: SquaresSubtract,
+				content: () => (
+					<ProjectRegionsContent
+						activeAction={activeAction}
+						onDrawRegion={onDrawRegion}
+						onEditRegion={onEditRegion}
+					/>
+				),
+			},
+		}),
+		[activeAction, onDrawRegion, onEditRegion],
+	);
 
 	// Filter sections to only include index types enabled for this project
 	const sectionMetadata = Object.fromEntries(

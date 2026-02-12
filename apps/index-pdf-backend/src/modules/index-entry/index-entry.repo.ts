@@ -41,7 +41,7 @@ export const listIndexEntries = async ({
 			updatedAt: indexEntries.updatedAt,
 			projectIndexType: {
 				id: projectIndexTypes.id,
-				indexType: projectIndexTypes.indexType,
+				indexType: projectIndexTypes.highlightType,
 				colorHue: projectIndexTypes.colorHue,
 			},
 		})

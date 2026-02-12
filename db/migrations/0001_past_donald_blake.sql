@@ -1,6 +1,7 @@
 CREATE TYPE "public"."canonical_page_rule_type" AS ENUM('positive', 'negative');--> statement-breakpoint
 CREATE TYPE "public"."entity_type" AS ENUM('IndexEntry', 'IndexMention', 'SourceDocument', 'DocumentPage', 'LLMRun', 'ExportedIndex', 'Project');--> statement-breakpoint
 CREATE TYPE "public"."export_format" AS ENUM('book_index', 'json', 'xml');--> statement-breakpoint
+CREATE TYPE "public"."highlight_type" AS ENUM('subject', 'author', 'scripture', 'exclude', 'page_number');--> statement-breakpoint
 CREATE TYPE "public"."index_entry_status" AS ENUM('suggested', 'active', 'deprecated', 'merged');--> statement-breakpoint
 CREATE TYPE "public"."index_type" AS ENUM('subject', 'author', 'scripture');--> statement-breakpoint
 CREATE TYPE "public"."llm_run_status" AS ENUM('pending', 'running', 'completed', 'failed');--> statement-breakpoint
@@ -99,10 +100,10 @@ CREATE TABLE "exported_indexes" (
 );
 --> statement-breakpoint
 ALTER TABLE "exported_indexes" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-CREATE TABLE "project_index_types" (
+CREATE TABLE "project_highlight_configs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
-	"index_type" "index_type" NOT NULL,
+	"highlight_type" "highlight_type" NOT NULL,
 	"color_hue" smallint NOT NULL,
 	"is_visible" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -110,7 +111,7 @@ CREATE TABLE "project_index_types" (
 	"deleted_at" timestamp with time zone
 );
 --> statement-breakpoint
-ALTER TABLE "project_index_types" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "project_highlight_configs" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "user_index_type_addons" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -248,12 +249,12 @@ ALTER TABLE "events" ADD CONSTRAINT "events_project_id_projects_id_fk" FOREIGN K
 ALTER TABLE "events" ADD CONSTRAINT "events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "exported_indexes" ADD CONSTRAINT "exported_indexes_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "exported_indexes" ADD CONSTRAINT "exported_indexes_exported_by_user_id_users_id_fk" FOREIGN KEY ("exported_by_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_index_types" ADD CONSTRAINT "project_index_types_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_highlight_configs" ADD CONSTRAINT "project_highlight_configs_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_index_type_addons" ADD CONSTRAINT "user_index_type_addons_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_project_index_type_id_project_index_types_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_index_types"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_project_index_type_id_project_highlight_configs_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_highlight_configs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mention_types" ADD CONSTRAINT "index_mention_types_index_mention_id_index_mentions_id_fk" FOREIGN KEY ("index_mention_id") REFERENCES "public"."index_mentions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "index_mention_types" ADD CONSTRAINT "index_mention_types_project_index_type_id_project_index_types_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_index_types"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "index_mention_types" ADD CONSTRAINT "index_mention_types_project_index_type_id_project_highlight_configs_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_highlight_configs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_entry_id_index_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_document_id_source_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."source_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_page_id_document_pages_id_fk" FOREIGN KEY ("page_id") REFERENCES "public"."document_pages"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -265,7 +266,7 @@ ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_document_id_source_documents_id_
 ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_executed_by_user_id_users_id_fk" FOREIGN KEY ("executed_by_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "projects" ADD CONSTRAINT "projects_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_document_page" ON "document_pages" USING btree ("document_id","page_number");--> statement-breakpoint
-CREATE UNIQUE INDEX "unique_project_index_type" ON "project_index_types" USING btree ("project_id","index_type") WHERE "project_index_types"."deleted_at" IS NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "unique_project_highlight_type" ON "project_highlight_configs" USING btree ("project_id","highlight_type") WHERE "project_highlight_configs"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_user_index_type" ON "user_index_type_addons" USING btree ("user_id","index_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_index_type_slug" ON "index_entries" USING btree ("project_id","project_index_type_id","slug");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_mention_type" ON "index_mention_types" USING btree ("index_mention_id","project_index_type_id");--> statement-breakpoint
@@ -301,9 +302,9 @@ CREATE POLICY "exported_indexes_project_access" ON "exported_indexes" AS PERMISS
 				SELECT 1 FROM projects
 				WHERE projects.id = "exported_indexes"."project_id"
 			));--> statement-breakpoint
-CREATE POLICY "project_index_types_project_access" ON "project_index_types" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
+CREATE POLICY "project_highlight_configs_project_access" ON "project_highlight_configs" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
 				SELECT 1 FROM projects
-				WHERE projects.id = "project_index_types"."project_id"
+				WHERE projects.id = "project_highlight_configs"."project_id"
 			));--> statement-breakpoint
 CREATE POLICY "user_index_type_addons_own_access" ON "user_index_type_addons" AS PERMISSIVE FOR ALL TO "authenticated" USING ("user_index_type_addons"."user_id" = auth.user_id());--> statement-breakpoint
 CREATE POLICY "index_entries_project_access" ON "index_entries" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (

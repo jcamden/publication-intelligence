@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { canonicalPageRules } from "./canonical-page-rules";
 import { regions, sourceDocuments } from "./documents";
-import { projectIndexTypes } from "./index-types";
+import { projectIndexTypes } from "./highlight-configs";
 import { indexEntries } from "./indexing";
 import { authenticatedRole, users } from "./users";
 

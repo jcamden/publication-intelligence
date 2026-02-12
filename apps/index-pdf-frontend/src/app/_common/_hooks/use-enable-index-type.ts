@@ -25,11 +25,18 @@ export const useEnableIndexType = () => {
 			});
 
 			// Optimistically add to list
+			const isIndexType = ["subject", "author", "scripture"].includes(
+				input.highlightType,
+			);
 			const optimisticItem = {
 				id: `temp-${Date.now()}`,
-				indexType: input.indexType,
+				highlightType: input.highlightType,
+				indexType: isIndexType
+					? (input.highlightType as "subject" | "author" | "scripture")
+					: ("subject" as const),
 				displayName:
-					input.indexType.charAt(0).toUpperCase() + input.indexType.slice(1),
+					input.highlightType.charAt(0).toUpperCase() +
+					input.highlightType.slice(1),
 				colorHue: input.colorHue,
 				visible: true,
 				entry_count: 0,

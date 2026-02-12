@@ -17,7 +17,7 @@ import {
 	relationTypeEnum,
 	variantTypeEnum,
 } from "./enums";
-import { projectIndexTypes } from "./index-types";
+import { projectIndexTypes } from "./highlight-configs";
 import { projects } from "./projects";
 import { authenticatedRole } from "./users";
 

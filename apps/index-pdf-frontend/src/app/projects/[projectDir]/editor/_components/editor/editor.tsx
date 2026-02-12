@@ -14,6 +14,7 @@ import { trpc } from "@/app/_common/_utils/trpc";
 import {
 	colorConfigAtom,
 	currentPageAtom,
+	highlightColorConfigAtom,
 	MIN_PDF_WIDTH,
 	MIN_SIDEBAR_WIDTH,
 	pageSidebarCollapsedAtom,
@@ -29,7 +30,10 @@ import {
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { useHydrated } from "@/app/projects/[projectDir]/editor/_hooks/use-hydrated";
 import { ProjectProvider } from "../../_context/project-context";
-import type { ColorConfig, IndexTypeName } from "../../_types/color-config";
+import type {
+	HighlightColorConfig,
+	IndexTypeName,
+} from "../../_types/highlight-config";
 import type { IndexEntry } from "../../_types/index-entry";
 import { ColorConfigProvider } from "../color-config-provider";
 import { DeleteMentionDialog } from "../delete-mention-dialog";
@@ -185,29 +189,31 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	// 3. RegionLayer needs page dimensions (width/height) from PDF.js
 	// For now, regions are managed via sidebar but not rendered on PDF yet.
 
-	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
+	const [colorConfig] = useAtom(colorConfigAtom);
+	const [, setHighlightColorConfig] = useAtom(highlightColorConfigAtom);
 
-	// Sync project-specific colors from DB to colorConfig atom
+	// Sync project-specific colors from DB to unified highlight config atom
 	useEffect(() => {
 		if (!projectIndexTypesQuery.data) return;
 
-		const dbColorConfig = projectIndexTypesQuery.data.reduce(
+		const dbConfig = projectIndexTypesQuery.data.reduce(
 			(acc, pit) => {
 				if (pit.colorHue !== null) {
-					const indexTypeName = pit.indexType as IndexTypeName;
-					acc[indexTypeName] = {
+					// Works for both index types and region types
+					const typeName = pit.indexType as keyof HighlightColorConfig;
+					acc[typeName] = {
 						hue: pit.colorHue,
 					};
 				}
 				return acc;
 			},
-			{} as Partial<ColorConfig>,
+			{} as Partial<HighlightColorConfig>,
 		);
 
-		if (Object.keys(dbColorConfig).length > 0) {
-			setColorConfig((prev) => ({ ...prev, ...dbColorConfig }));
+		if (Object.keys(dbConfig).length > 0) {
+			setHighlightColorConfig((prev) => ({ ...prev, ...dbConfig }));
 		}
-	}, [projectIndexTypesQuery.data, setColorConfig]);
+	}, [projectIndexTypesQuery.data, setHighlightColorConfig]);
 
 	const [clearDraftTrigger, setClearDraftTrigger] = useState(0);
 

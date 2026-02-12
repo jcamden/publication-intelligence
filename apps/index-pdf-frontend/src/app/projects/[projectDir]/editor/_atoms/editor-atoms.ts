@@ -1,9 +1,11 @@
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
-import type { ColorConfig } from "../_types/color-config";
-import { DEFAULT_COLOR_CONFIG } from "../_types/color-config";
-import type { RegionTypeColorConfig } from "../_types/region-type-color-config";
-import { DEFAULT_REGION_TYPE_COLOR_CONFIG } from "../_types/region-type-color-config";
+import type {
+	ColorConfig,
+	HighlightColorConfig,
+	RegionTypeColorConfig,
+} from "../_types/highlight-config";
+import { DEFAULT_HIGHLIGHT_COLOR_CONFIG } from "../_types/highlight-config";
 
 // Section IDs
 export type SectionId =
@@ -335,33 +337,70 @@ export const pdfUrlAtom = atom<string | null>(null); // Not persisted - set on l
 // These atoms have been removed - data is now fetched from backend via tRPC
 // See: editor.tsx for tRPC query usage
 
-// Color configuration for index types (persisted)
-// Migration: Old format had { hue, chroma, lightness }, new format is just { hue }
-export const colorConfigAtom = atomWithStorage<ColorConfig>(
-	"color-config",
-	DEFAULT_COLOR_CONFIG,
+// Unified highlight color configuration (persisted)
+// Includes both index types (subject, author, scripture) and region types (exclude, page_number)
+export const highlightColorConfigAtom = atomWithStorage<HighlightColorConfig>(
+	"highlight-color-config",
+	DEFAULT_HIGHLIGHT_COLOR_CONFIG,
 	{
 		getItem: (key, initialValue) => {
 			const stored = localStorage.getItem(key);
-			if (!stored) return initialValue;
-			try {
-				const parsed = JSON.parse(stored);
-				// Migrate old format to new format by extracting only hue
-				const migrated: ColorConfig = {
-					author: {
-						hue: parsed.author?.hue ?? DEFAULT_COLOR_CONFIG.author.hue,
-					},
-					subject: {
-						hue: parsed.subject?.hue ?? DEFAULT_COLOR_CONFIG.subject.hue,
-					},
-					scripture: {
-						hue: parsed.scripture?.hue ?? DEFAULT_COLOR_CONFIG.scripture.hue,
-					},
-				};
-				return migrated;
-			} catch {
-				return initialValue;
+			if (stored) {
+				try {
+					const parsed = JSON.parse(stored);
+					// Migrate from new unified format
+					if (
+						parsed.subject &&
+						parsed.author &&
+						parsed.scripture &&
+						parsed.exclude &&
+						parsed.page_number
+					) {
+						return parsed as HighlightColorConfig;
+					}
+				} catch {
+					// Fall through to migration
+				}
 			}
+
+			// Try migrating from old separate configs
+			const oldColorConfig = localStorage.getItem("color-config");
+			const oldRegionConfig = localStorage.getItem("region-type-color-config");
+
+			let migrated = { ...initialValue };
+
+			if (oldColorConfig) {
+				try {
+					const parsed = JSON.parse(oldColorConfig);
+					migrated = {
+						...migrated,
+						subject: { hue: parsed.subject?.hue ?? initialValue.subject.hue },
+						author: { hue: parsed.author?.hue ?? initialValue.author.hue },
+						scripture: {
+							hue: parsed.scripture?.hue ?? initialValue.scripture.hue,
+						},
+					};
+				} catch {
+					// Keep defaults
+				}
+			}
+
+			if (oldRegionConfig) {
+				try {
+					const parsed = JSON.parse(oldRegionConfig);
+					migrated = {
+						...migrated,
+						exclude: { hue: parsed.exclude?.hue ?? initialValue.exclude.hue },
+						page_number: {
+							hue: parsed.page_number?.hue ?? initialValue.page_number.hue,
+						},
+					};
+				} catch {
+					// Keep defaults
+				}
+			}
+
+			return migrated;
 		},
 		setItem: (key, value) => {
 			localStorage.setItem(key, JSON.stringify(value));
@@ -370,8 +409,57 @@ export const colorConfigAtom = atomWithStorage<ColorConfig>(
 	},
 );
 
-// Region type color configuration (persisted)
-export const regionTypeColorConfigAtom = atomWithStorage<RegionTypeColorConfig>(
-	"region-type-color-config",
-	DEFAULT_REGION_TYPE_COLOR_CONFIG,
+// Legacy atoms for backward compatibility (derived from unified atom)
+export const colorConfigAtom = atom(
+	(get) => {
+		const config = get(highlightColorConfigAtom);
+		return {
+			subject: config.subject,
+			author: config.author,
+			scripture: config.scripture,
+		} as ColorConfig;
+	},
+	(get, set, update: ColorConfig | ((prev: ColorConfig) => ColorConfig)) => {
+		const current = get(highlightColorConfigAtom);
+		const currentColorConfig = {
+			subject: current.subject,
+			author: current.author,
+			scripture: current.scripture,
+		} as ColorConfig;
+		const newConfig =
+			typeof update === "function" ? update(currentColorConfig) : update;
+		set(highlightColorConfigAtom, {
+			...current,
+			...newConfig,
+		});
+	},
+);
+
+export const regionTypeColorConfigAtom = atom(
+	(get) => {
+		const config = get(highlightColorConfigAtom);
+		return {
+			exclude: config.exclude,
+			page_number: config.page_number,
+		} as RegionTypeColorConfig;
+	},
+	(
+		get,
+		set,
+		update:
+			| RegionTypeColorConfig
+			| ((prev: RegionTypeColorConfig) => RegionTypeColorConfig),
+	) => {
+		const current = get(highlightColorConfigAtom);
+		const currentRegionConfig = {
+			exclude: current.exclude,
+			page_number: current.page_number,
+		} as RegionTypeColorConfig;
+		const newConfig =
+			typeof update === "function" ? update(currentRegionConfig) : update;
+		set(highlightColorConfigAtom, {
+			...current,
+			...newConfig,
+		});
+	},
 );

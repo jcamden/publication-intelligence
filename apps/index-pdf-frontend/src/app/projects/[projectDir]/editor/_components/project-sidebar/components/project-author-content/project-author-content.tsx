@@ -1,6 +1,6 @@
 "use client";
 
-import { OklchColorPicker } from "@pubint/yabasic/components/ui/oklch-color-picker";
+import { OklchColorPicker } from "@pubint/yaboujee/components/ui/oklch-color-picker/oklch-color-picker";
 import { useAtom } from "jotai";
 import { useMemo, useState } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
@@ -78,7 +78,7 @@ export const ProjectAuthorContent = () => {
 	// Persist color changes to backend
 	usePersistColorChange({
 		projectId,
-		indexType: "author",
+		highlightType: "author",
 		colorHue: colorConfig.author.hue,
 		enabled: !!projectId,
 	});
