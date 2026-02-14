@@ -1,12 +1,30 @@
 # Phase 2: Mention Detection & Meaning Resolution
 
-**Duration:** 6-7 days  
-**Priority:** P0 (Critical path)  
-**Status:** Not Started
+**Status:** ⚠️ NEEDS REWRITE - See Simplified Architecture  
+**Priority:** P0 (Critical path)
 
-## Overview
+## 🚨 Architecture Update (2026-02-12)
 
-Integrate OpenRouter to detect mentions with precise char ranges, resolve canonical meanings using WordNet/Wikidata, and optionally rate confidence. Uses two-stage detection (Stage A: text-only LLM → Stage B: local mapping) to reduce costs by ~60%.
+This document is **outdated**. The implementation approach has been simplified to use **on-demand extraction with sliding windows** instead of pre-extraction.
+
+**Current approach:** [../SIMPLIFIED-ARCHITECTURE.md](../SIMPLIFIED-ARCHITECTURE.md)
+
+**Key changes:**
+- ❌ No pre-extraction phase (Phase 1 obsolete)
+- ❌ No `indexable_text` storage
+- ❌ No `extraction_version` tracking
+- ✅ Extract on-demand during detection (2-3 pages at a time)
+- ✅ Keep TextAtoms in memory only
+- ✅ 25% context from adjacent pages
+- ✅ Simpler flow: Extract → Detect → Map → Persist → Discard
+
+---
+
+## Overview (Legacy - For Reference Only)
+
+**This section documents the original approach. Refer to SIMPLIFIED-ARCHITECTURE.md for current implementation.**
+
+Integrate LLM to detect mentions using sliding window extraction (no pre-extraction phase). Extract text on-demand, send to LLM, map charAt references to bboxes, persist suggestions, discard TextAtoms. Optionally resolve canonical meanings using WordNet/Wikidata.
 
 ## Goals
 
@@ -87,7 +105,7 @@ WHERE project_id = ?
 
 ## Database Schema Changes
 
-### New Table: `detection_runs`
+### New Table: `detection_runs` (UPDATED)
 
 ```sql
 CREATE TABLE detection_runs (
@@ -102,7 +120,7 @@ CREATE TABLE detection_runs (
   model text NOT NULL,                    -- e.g., "anthropic/claude-3.5-sonnet"
   prompt_version text NOT NULL,           -- e.g., "2024-02-v1"
   settings_hash text NOT NULL,            -- Hash of detection settings
-  extraction_version text NOT NULL,       -- Hash of indexable_text state
+  -- ❌ REMOVED: extraction_version (no pre-extraction phase)
   index_types text[] NOT NULL,            -- e.g., ["subject", "author"]
   error_message text,
   cost_estimate_usd numeric(10,4),
@@ -111,6 +129,10 @@ CREATE TABLE detection_runs (
   mentions_created integer DEFAULT 0
 );
 ```
+
+**Changes from original design:**
+- ❌ Removed `extraction_version` - No pre-extraction means no version to track
+- ✅ Kept `progress_page` for resumability during sliding window processing
 
 ### New Table: `suppressed_suggestions`
 
@@ -166,27 +188,29 @@ CREATE UNIQUE INDEX idx_entries_unique_label_custom
   WHERE meaning_id IS NULL AND deleted_at IS NULL;
 ```
 
-### Extend `index_mentions` (5 new columns)
+### Extend `index_mentions` (UPDATED)
 
 ```sql
 ALTER TABLE index_mentions
   ADD COLUMN is_suggestion boolean DEFAULT false NOT NULL,
   ADD COLUMN suggested_by_run_id uuid REFERENCES detection_runs(id),
-  ADD COLUMN text_quote text NOT NULL,                  -- Exact matched string
-  ADD COLUMN char_range int4range NOT NULL,             -- Start/end in indexable_text
-  ADD COLUMN validation_status text DEFAULT 'valid';    -- valid|needs_review|invalid
-
--- Index for reproducibility queries
-CREATE INDEX idx_mentions_char_range ON index_mentions USING gist(char_range);
+  ADD COLUMN text_quote text NOT NULL,                  -- Exact matched string from page text
+  ADD COLUMN char_start integer NOT NULL,               -- Start position in page text (0-indexed)
+  ADD COLUMN char_end integer NOT NULL;                 -- End position in page text (0-indexed)
+  -- ❌ REMOVED: validation_status (no pre-extraction = no extraction changes)
 
 -- Index for merge-key deduplication
 CREATE INDEX idx_mentions_merge_key ON index_mentions(entry_id, page_number, text_quote) 
   WHERE deleted_at IS NULL;
-
--- Index for flagged mentions
-CREATE INDEX idx_mentions_needs_review ON index_mentions(validation_status)
-  WHERE validation_status != 'valid';
 ```
+
+**Changes from original design:**
+- ✅ Changed `char_range int4range` to simple `char_start/char_end integers` (simpler)
+- ❌ Removed `validation_status` - No extraction versioning means no invalidation
+- ❌ Removed char_range GIS index - Not using PostgreSQL range type
+- ✅ charAt references are relative to **extracted page text** (not stored indexable_text)
+
+**Note on charAt:** The char positions reference the in-memory page text extracted during detection, NOT a pre-stored `indexable_text` field. These are used for bbox mapping during detection only.
 
 ## Pass 1: Mention Detection (Stage A + Stage B)
 

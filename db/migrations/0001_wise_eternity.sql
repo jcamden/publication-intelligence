@@ -1,4 +1,5 @@
 CREATE TYPE "public"."canonical_page_rule_type" AS ENUM('positive', 'negative');--> statement-breakpoint
+CREATE TYPE "public"."detection_run_status" AS ENUM('queued', 'running', 'completed', 'failed', 'cancelled');--> statement-breakpoint
 CREATE TYPE "public"."entity_type" AS ENUM('IndexEntry', 'IndexMention', 'SourceDocument', 'DocumentPage', 'LLMRun', 'ExportedIndex', 'Project');--> statement-breakpoint
 CREATE TYPE "public"."export_format" AS ENUM('book_index', 'json', 'xml');--> statement-breakpoint
 CREATE TYPE "public"."highlight_type" AS ENUM('subject', 'author', 'scripture', 'exclude', 'page_number');--> statement-breakpoint
@@ -29,16 +30,44 @@ CREATE TABLE "canonical_page_rules" (
 );
 --> statement-breakpoint
 ALTER TABLE "canonical_page_rules" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-CREATE TABLE "document_pages" (
+CREATE TABLE "detection_runs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"document_id" uuid NOT NULL,
-	"page_number" integer NOT NULL,
-	"text_content" text,
-	"metadata" json,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"project_id" uuid NOT NULL,
+	"status" "detection_run_status" DEFAULT 'queued' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"started_at" timestamp with time zone,
+	"finished_at" timestamp with time zone,
+	"progress_page" integer,
+	"total_pages" integer,
+	"page_range_start" integer,
+	"page_range_end" integer,
+	"model" text NOT NULL,
+	"prompt_version" text NOT NULL,
+	"settings_hash" text NOT NULL,
+	"index_type" text NOT NULL,
+	"error_message" text,
+	"cost_estimate_usd" numeric(10, 4),
+	"actual_cost_usd" numeric(10, 4),
+	"entries_created" integer DEFAULT 0,
+	"mentions_created" integer DEFAULT 0
 );
 --> statement-breakpoint
-ALTER TABLE "document_pages" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "detection_runs" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "suppressed_suggestions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"project_id" uuid NOT NULL,
+	"index_type" text NOT NULL,
+	"normalized_label" text NOT NULL,
+	"meaning_type" text,
+	"meaning_id" text,
+	"scope" text DEFAULT 'project',
+	"suppression_mode" text DEFAULT 'block_suggestion',
+	"suppressed_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"suppressed_by" uuid,
+	"reason" text
+);
+--> statement-breakpoint
+ALTER TABLE "suppressed_suggestions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "regions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
@@ -131,6 +160,9 @@ CREATE TABLE "index_entries" (
 	"status" "index_entry_status" DEFAULT 'active' NOT NULL,
 	"revision" integer DEFAULT 1 NOT NULL,
 	"parent_id" uuid,
+	"detection_run_id" uuid,
+	"meaning_type" text,
+	"meaning_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone,
 	"deleted_at" timestamp with time zone
@@ -149,8 +181,7 @@ CREATE TABLE "index_mentions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"entry_id" uuid NOT NULL,
 	"document_id" uuid NOT NULL,
-	"page_id" uuid,
-	"page_number" integer,
+	"page_number" integer NOT NULL,
 	"page_number_end" integer,
 	"text_span" text NOT NULL,
 	"start_offset" integer,
@@ -159,6 +190,7 @@ CREATE TABLE "index_mentions" (
 	"range_type" "mention_range_type" DEFAULT 'single_page' NOT NULL,
 	"mention_type" "mention_type" DEFAULT 'text' NOT NULL,
 	"suggested_by_llm_id" uuid,
+	"detection_run_id" uuid,
 	"note" text,
 	"revision" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -217,6 +249,17 @@ CREATE TABLE "prompts" (
 );
 --> statement-breakpoint
 ALTER TABLE "prompts" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "project_settings" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"project_id" uuid NOT NULL,
+	"openrouter_api_key" text,
+	"default_detection_model" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone,
+	CONSTRAINT "project_settings_project_id_unique" UNIQUE("project_id")
+);
+--> statement-breakpoint
+ALTER TABLE "project_settings" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "projects" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"title" text NOT NULL,
@@ -242,7 +285,9 @@ CREATE TABLE "users" (
 --> statement-breakpoint
 ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "canonical_page_rules" ADD CONSTRAINT "canonical_page_rules_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "document_pages" ADD CONSTRAINT "document_pages_document_id_source_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."source_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "detection_runs" ADD CONSTRAINT "detection_runs_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "suppressed_suggestions" ADD CONSTRAINT "suppressed_suggestions_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "suppressed_suggestions" ADD CONSTRAINT "suppressed_suggestions_suppressed_by_users_id_fk" FOREIGN KEY ("suppressed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "regions" ADD CONSTRAINT "regions_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "source_documents" ADD CONSTRAINT "source_documents_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -253,19 +298,21 @@ ALTER TABLE "project_highlight_configs" ADD CONSTRAINT "project_highlight_config
 ALTER TABLE "user_index_type_addons" ADD CONSTRAINT "user_index_type_addons_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_project_index_type_id_project_highlight_configs_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_highlight_configs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_detection_run_id_detection_runs_id_fk" FOREIGN KEY ("detection_run_id") REFERENCES "public"."detection_runs"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mention_types" ADD CONSTRAINT "index_mention_types_index_mention_id_index_mentions_id_fk" FOREIGN KEY ("index_mention_id") REFERENCES "public"."index_mentions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mention_types" ADD CONSTRAINT "index_mention_types_project_index_type_id_project_highlight_configs_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_highlight_configs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_entry_id_index_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_document_id_source_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."source_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_page_id_document_pages_id_fk" FOREIGN KEY ("page_id") REFERENCES "public"."document_pages"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_detection_run_id_detection_runs_id_fk" FOREIGN KEY ("detection_run_id") REFERENCES "public"."detection_runs"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_relations" ADD CONSTRAINT "index_relations_from_entry_id_index_entries_id_fk" FOREIGN KEY ("from_entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_relations" ADD CONSTRAINT "index_relations_to_entry_id_index_entries_id_fk" FOREIGN KEY ("to_entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_variants" ADD CONSTRAINT "index_variants_entry_id_index_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_prompt_id_prompts_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_document_id_source_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."source_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_executed_by_user_id_users_id_fk" FOREIGN KEY ("executed_by_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "project_settings" ADD CONSTRAINT "project_settings_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "projects" ADD CONSTRAINT "projects_owner_id_users_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "unique_document_page" ON "document_pages" USING btree ("document_id","page_number");--> statement-breakpoint
+CREATE UNIQUE INDEX "unique_suppression" ON "suppressed_suggestions" USING btree ("project_id","index_type","normalized_label","meaning_type","meaning_id","scope");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_highlight_type" ON "project_highlight_configs" USING btree ("project_id","highlight_type") WHERE "project_highlight_configs"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_user_index_type" ON "user_index_type_addons" USING btree ("user_id","index_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_index_type_slug" ON "index_entries" USING btree ("project_id","project_index_type_id","slug");--> statement-breakpoint
@@ -279,9 +326,13 @@ CREATE POLICY "canonical_page_rules_project_access" ON "canonical_page_rules" AS
 				SELECT 1 FROM projects
 				WHERE projects.id = "canonical_page_rules"."project_id"
 			));--> statement-breakpoint
-CREATE POLICY "document_pages_document_access" ON "document_pages" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
-				SELECT 1 FROM source_documents
-				WHERE source_documents.id = "document_pages"."document_id"
+CREATE POLICY "detection_runs_project_access" ON "detection_runs" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
+				SELECT 1 FROM projects
+				WHERE projects.id = "detection_runs"."project_id"
+			));--> statement-breakpoint
+CREATE POLICY "suppressed_suggestions_project_access" ON "suppressed_suggestions" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
+				SELECT 1 FROM projects
+				WHERE projects.id = "suppressed_suggestions"."project_id"
 			));--> statement-breakpoint
 CREATE POLICY "regions_project_access" ON "regions" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
 				SELECT 1 FROM projects
@@ -335,6 +386,10 @@ CREATE POLICY "llm_runs_user_or_document_access" ON "llm_runs" AS PERMISSIVE FOR
 				)
 			));--> statement-breakpoint
 CREATE POLICY "prompts_select_authenticated" ON "prompts" AS PERMISSIVE FOR SELECT TO "authenticated" USING (true);--> statement-breakpoint
+CREATE POLICY "project_settings_project_access" ON "project_settings" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
+				SELECT 1 FROM projects
+				WHERE projects.id = "project_settings"."project_id"
+			));--> statement-breakpoint
 CREATE POLICY "projects_owner_full_access" ON "projects" AS PERMISSIVE FOR ALL TO "authenticated" USING ("projects"."owner_id" = auth.user_id());--> statement-breakpoint
 CREATE POLICY "users_select_all" ON "users" AS PERMISSIVE FOR SELECT TO public USING (TRUE);--> statement-breakpoint
 CREATE POLICY "users_insert_own" ON "users" AS PERMISSIVE FOR INSERT TO "authenticated" WITH CHECK ("users"."id" = auth.user_id());--> statement-breakpoint

@@ -127,6 +127,16 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	// Mutation for creating mentions
 	const createMention = useCreateMention({ projectId: projectId || "" });
 
+	// Get tRPC utils for cache invalidation
+	const utils = trpc.useUtils();
+
+	// Mutation for deleting mentions
+	const deleteMentionMutation = trpc.indexMention.delete.useMutation({
+		onSuccess: () => {
+			utils.indexMention.list.invalidate();
+		},
+	});
+
 	// Fetch all entries for the project (needed for mention details popover)
 	const { data: backendAllEntries = [] } = trpc.indexEntry.list.useQuery(
 		{
@@ -453,19 +463,21 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	);
 
 	const handleConfirmDelete = useCallback(async () => {
-		if (!mentionToDelete) return;
+		if (!mentionToDelete || !projectId || !documentId) return;
 
-		// Phase 5 TODO: Replace with real tRPC mutation
-		// await deleteMentionMutation.mutateAsync({ id: mentionToDelete });
+		const mention = mentions.find((m) => m.id === mentionToDelete);
+		if (!mention) return;
 
-		// Simulated API call
-		await new Promise((resolve) => setTimeout(resolve, 200));
+		await deleteMentionMutation.mutateAsync({
+			id: mentionToDelete,
+			projectId,
+			documentId,
+			pageNumber: mention.pageNumber,
+		});
 
-		// Phase 5: Mention deletion now handled by tRPC mutation
-		// The tRPC cache will be automatically invalidated by the mutation
-		// TODO: Wire up actual tRPC deleteMention mutation
 		setMentionToDelete(null);
-	}, [mentionToDelete]);
+		setShowDeleteConfirm(false);
+	}, [mentionToDelete, projectId, documentId, mentions, deleteMentionMutation]);
 
 	const handleCloseDetailsPopover = useCallback(() => {
 		setSelectedMention(null);

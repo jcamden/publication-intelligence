@@ -23,10 +23,12 @@ export const createDocument = ({
 	metadata,
 });
 
+export * from "./bbox-conversion";
 export * from "./canonical-page.computation";
 export * from "./canonical-page.types";
 export * from "./canonical-page.utils";
 export * from "./logger.types";
 export * from "./region.types";
 export * from "./region.utils";
+export * from "./text-atom.types";
 export * from "./validation";

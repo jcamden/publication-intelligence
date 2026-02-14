@@ -15,13 +15,15 @@ export type SectionId =
 	| "project-scripture"
 	| "project-biblio"
 	| "project-regions"
+	| "project-ai"
 	| "page-info"
 	| "page-pages"
 	| "page-subject"
 	| "page-author"
 	| "page-scripture"
 	| "page-biblio"
-	| "page-regions";
+	| "page-regions"
+	| "page-ai";
 
 // Section state type
 export type SectionState = {
@@ -44,11 +46,13 @@ const initialSections = new Map<SectionId, SectionState>([
 	["project-author", { visible: false, popped: false }],
 	["project-scripture", { visible: false, popped: false }],
 	["project-regions", { visible: false, popped: false }],
+	["project-ai", { visible: false, popped: false }],
 	["page-pages", { visible: false, popped: false }],
 	["page-subject", { visible: true, popped: false }], // visible by default
 	["page-author", { visible: false, popped: false }],
 	["page-scripture", { visible: false, popped: false }],
 	["page-regions", { visible: false, popped: false }],
+	["page-ai", { visible: false, popped: false }],
 ]);
 
 // Main sections state with localStorage persistence
@@ -87,6 +91,14 @@ export const sectionsStateAtom = atomWithStorage<Map<SectionId, SectionState>>(
 					);
 					// Clean up old context section
 					storedMap.delete("page-contexts" as SectionId);
+				}
+
+				// Migration: Add new AI sections if they don't exist
+				if (!storedMap.has("project-ai")) {
+					storedMap.set("project-ai", { visible: false, popped: false });
+				}
+				if (!storedMap.has("page-ai")) {
+					storedMap.set("page-ai", { visible: false, popped: false });
 				}
 
 				return storedMap;
@@ -174,16 +186,18 @@ export const pageAccordionExpandedAtom = atomWithStorage<string[]>(
 const defaultProjectOrder: SectionId[] = [
 	"project-pages",
 	"project-regions",
+	"project-ai",
 	"project-subject",
 	"project-author",
 	"project-scripture",
 ];
 const defaultPageOrder: SectionId[] = [
 	"page-pages",
-	"page-scripture",
-	"page-author",
-	"page-subject",
 	"page-regions",
+	"page-ai",
+	"page-subject",
+	"page-author",
+	"page-scripture",
 ];
 
 export const projectSectionOrderAtom = atomWithStorage<SectionId[]>(

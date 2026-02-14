@@ -25,6 +25,7 @@ export const uploadSourceDocument = async ({
 	projectId,
 	file,
 	title,
+	pageCount,
 	userId,
 	requestId,
 }: {
@@ -32,6 +33,7 @@ export const uploadSourceDocument = async ({
 	projectId: string;
 	file: UploadFileInput;
 	title?: string;
+	pageCount?: number;
 	userId: string;
 	requestId: string;
 }): Promise<SourceDocument> => {
@@ -78,6 +80,7 @@ export const uploadSourceDocument = async ({
 			fileSize: sizeBytes,
 			contentHash,
 			storageKey,
+			pageCount,
 		},
 	});
 

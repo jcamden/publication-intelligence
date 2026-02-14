@@ -8,7 +8,6 @@ import {
 	pgTable,
 	text,
 	timestamp,
-	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 import {
@@ -62,51 +61,6 @@ export const sourceDocumentsRelations = relations(
 		project: one(projects, {
 			fields: [sourceDocuments.projectId],
 			references: [projects.id],
-		}),
-		pages: many(documentPages),
-		indexMentions: many(indexMentions),
-	}),
-);
-
-// DocumentPage - Single page within a source document
-export const documentPages = pgTable(
-	"document_pages",
-	{
-		id: uuid("id").primaryKey().defaultRandom(),
-		documentId: uuid("document_id")
-			.references(() => sourceDocuments.id, { onDelete: "cascade" })
-			.notNull(),
-		pageNumber: integer("page_number").notNull(),
-		textContent: text("text_content"),
-		metadata: json("metadata"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.defaultNow()
-			.notNull(),
-	},
-	(table) => [
-		// Each page number appears exactly once per document
-		uniqueIndex("unique_document_page").on(table.documentId, table.pageNumber),
-
-		// RLS: Inherit access from source document
-		// source_documents RLS inherits from projects RLS
-		pgPolicy("document_pages_document_access", {
-			for: "all",
-			to: authenticatedRole,
-			using: sql`EXISTS (
-				SELECT 1 FROM source_documents
-				WHERE source_documents.id = ${table.documentId}
-			)`,
-		}),
-	],
-);
-
-// DocumentPage relations
-export const documentPagesRelations = relations(
-	documentPages,
-	({ one, many }) => ({
-		document: one(sourceDocuments, {
-			fields: [documentPages.documentId],
-			references: [sourceDocuments.id],
 		}),
 		indexMentions: many(indexMentions),
 	}),

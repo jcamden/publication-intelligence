@@ -3,11 +3,21 @@
 **Duration:** 3-4 days  
 **Priority:** P0 (Critical path)  
 **Status:** Not Started  
-**Parallelization:** ✅ **Can run in parallel with Phase 2**
+**Parallelization:** ✅ **Can start immediately (no Phase 1 dependency)**
+
+## 🚨 Architecture Update (2026-02-12)
+
+With simplified architecture, this phase has **no dependencies** - can start immediately with mock data.
+
+**Changes:**
+- ❌ No validation status badges (no extraction change detection)
+- ✅ Everything else unchanged
+
+---
 
 ## Overview
 
-Build UI components for the mention review interface using mock data. This phase can start as soon as Phase 1 completes and schema is defined. No backend integration required - purely frontend component development.
+Build UI components for the mention review interface using mock data. No backend integration required - purely frontend component development with mock data.
 
 ## Goals
 

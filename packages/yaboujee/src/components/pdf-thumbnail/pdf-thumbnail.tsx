@@ -15,6 +15,7 @@ export type PdfThumbnailProps = {
 	alt: string;
 	aspectRatio?: "a4" | "letter" | "square";
 	className?: string;
+	onLoadPdf?: ({ numPages }: { numPages: number }) => void;
 };
 
 const ASPECT_RATIOS = {
@@ -28,6 +29,7 @@ export const PdfThumbnail = ({
 	alt,
 	aspectRatio = "a4",
 	className = "",
+	onLoadPdf,
 }: PdfThumbnailProps) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [loadingState, setLoadingState] = useState<LoadingState>("idle");
@@ -58,6 +60,11 @@ export const PdfThumbnail = ({
 				if (isCancelled) {
 					await pdf.destroy();
 					return;
+				}
+
+				// Notify parent component of page count
+				if (onLoadPdf) {
+					onLoadPdf({ numPages: pdf.numPages });
 				}
 
 				const page = await pdf.getPage(1);
@@ -115,7 +122,7 @@ export const PdfThumbnail = ({
 				URL.revokeObjectURL(objectUrl);
 			}
 		};
-	}, [source]);
+	}, [source, onLoadPdf]);
 
 	const ratio = ASPECT_RATIOS[aspectRatio];
 

@@ -58,16 +58,23 @@ export const registerUploadRoutes = async (
 				const buffer = await data.toBuffer();
 				const { projectId } = request.params as UploadRouteParams;
 
-				// Extract title from multipart fields
+				// Extract title and pageCount from multipart fields
 				const titleField = data.fields.title;
 				const title =
 					typeof titleField === "object" && "value" in titleField
 						? (titleField.value as string)
 						: undefined;
 
+				const pageCountField = data.fields.pageCount;
+				const pageCount =
+					typeof pageCountField === "object" && "value" in pageCountField
+						? Number.parseInt(pageCountField.value as string, 10)
+						: undefined;
+
 				const validationResult = UploadSourceDocumentSchema.safeParse({
 					projectId,
 					title,
+					pageCount,
 				});
 
 				if (!validationResult.success) {
@@ -86,6 +93,7 @@ export const registerUploadRoutes = async (
 						mimeType: data.mimetype,
 					},
 					title,
+					pageCount,
 					userId,
 					requestId: request.id,
 				});

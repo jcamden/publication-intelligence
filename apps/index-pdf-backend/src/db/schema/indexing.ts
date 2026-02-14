@@ -9,7 +9,8 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { documentPages, sourceDocuments } from "./documents";
+import { detectionRuns } from "./detection";
+import { sourceDocuments } from "./documents";
 import {
 	indexEntryStatusEnum,
 	mentionRangeTypeEnum,
@@ -38,6 +39,14 @@ export const indexEntries = pgTable(
 		status: indexEntryStatusEnum("status").default("active").notNull(),
 		revision: integer("revision").default(1).notNull(),
 		parentId: uuid("parent_id"), // Self-referential, nullable for top-level entries
+		detectionRunId: uuid("detection_run_id").references(
+			() => detectionRuns.id,
+			{
+				onDelete: "set null",
+			},
+		), // null if manually created
+		meaningType: text("meaning_type"), // e.g., "wordnet", "wikidata"
+		meaningId: text("meaning_id"), // external canonical ID
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -81,6 +90,10 @@ export const indexEntriesRelations = relations(
 			fields: [indexEntries.parentId],
 			references: [indexEntries.id],
 			relationName: "entryHierarchy",
+		}),
+		detectionRun: one(detectionRuns, {
+			fields: [indexEntries.detectionRunId],
+			references: [detectionRuns.id],
 		}),
 		children: many(indexEntries, { relationName: "entryHierarchy" }),
 		variants: many(indexVariants),
@@ -196,10 +209,7 @@ export const indexMentions = pgTable(
 		documentId: uuid("document_id")
 			.references(() => sourceDocuments.id, { onDelete: "cascade" })
 			.notNull(),
-		pageId: uuid("page_id").references(() => documentPages.id, {
-			onDelete: "cascade",
-		}),
-		pageNumber: integer("page_number"), // Denormalized for fast queries
+		pageNumber: integer("page_number").notNull(), // Page number (validated against sourceDocuments.pageCount)
 		pageNumberEnd: integer("page_number_end"), // For page ranges
 		textSpan: text("text_span").notNull(), // The actual text
 		startOffset: integer("start_offset"),
@@ -209,7 +219,13 @@ export const indexMentions = pgTable(
 			.default("single_page")
 			.notNull(),
 		mentionType: mentionTypeEnum("mention_type").default("text").notNull(),
-		suggestedByLlmId: uuid("suggested_by_llm_id"), // References llm_runs
+		suggestedByLlmId: uuid("suggested_by_llm_id"), // References llm_runs (legacy)
+		detectionRunId: uuid("detection_run_id").references(
+			() => detectionRuns.id,
+			{
+				onDelete: "set null",
+			},
+		), // null if manually created
 		note: text("note"),
 		revision: integer("revision").default(1).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
@@ -244,9 +260,9 @@ export const indexMentionsRelations = relations(
 			fields: [indexMentions.documentId],
 			references: [sourceDocuments.id],
 		}),
-		page: one(documentPages, {
-			fields: [indexMentions.pageId],
-			references: [documentPages.id],
+		detectionRun: one(detectionRuns, {
+			fields: [indexMentions.detectionRunId],
+			references: [detectionRuns.id],
 		}),
 		mentionTypes: many(indexMentionTypes),
 	}),

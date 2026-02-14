@@ -1,5 +1,5 @@
 {
-	"id": "0111256a-e68d-438d-83cc-504721c6eb07",
+	"id": "a5c68da1-de97-44cd-b680-79e55eda6ad7",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -111,8 +111,8 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
-		"public.document_pages": {
-			"name": "document_pages",
+		"public.detection_runs": {
+			"name": "detection_runs",
 			"schema": "",
 			"columns": {
 				"id": {
@@ -122,29 +122,19 @@
 					"notNull": true,
 					"default": "gen_random_uuid()"
 				},
-				"document_id": {
-					"name": "document_id",
+				"project_id": {
+					"name": "project_id",
 					"type": "uuid",
 					"primaryKey": false,
 					"notNull": true
 				},
-				"page_number": {
-					"name": "page_number",
-					"type": "integer",
+				"status": {
+					"name": "status",
+					"type": "detection_run_status",
+					"typeSchema": "public",
 					"primaryKey": false,
-					"notNull": true
-				},
-				"text_content": {
-					"name": "text_content",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": false
-				},
-				"metadata": {
-					"name": "metadata",
-					"type": "json",
-					"primaryKey": false,
-					"notNull": false
+					"notNull": true,
+					"default": "'queued'"
 				},
 				"created_at": {
 					"name": "created_at",
@@ -152,20 +142,237 @@
 					"primaryKey": false,
 					"notNull": true,
 					"default": "now()"
+				},
+				"started_at": {
+					"name": "started_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"finished_at": {
+					"name": "finished_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"progress_page": {
+					"name": "progress_page",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"total_pages": {
+					"name": "total_pages",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"page_range_start": {
+					"name": "page_range_start",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"page_range_end": {
+					"name": "page_range_end",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"model": {
+					"name": "model",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"prompt_version": {
+					"name": "prompt_version",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"settings_hash": {
+					"name": "settings_hash",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"index_type": {
+					"name": "index_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"error_message": {
+					"name": "error_message",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"cost_estimate_usd": {
+					"name": "cost_estimate_usd",
+					"type": "numeric(10, 4)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"actual_cost_usd": {
+					"name": "actual_cost_usd",
+					"type": "numeric(10, 4)",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"entries_created": {
+					"name": "entries_created",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"default": 0
+				},
+				"mentions_created": {
+					"name": "mentions_created",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"default": 0
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"detection_runs_project_id_projects_id_fk": {
+					"name": "detection_runs_project_id_projects_id_fk",
+					"tableFrom": "detection_runs",
+					"tableTo": "projects",
+					"columnsFrom": ["project_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {
+				"detection_runs_project_access": {
+					"name": "detection_runs_project_access",
+					"as": "PERMISSIVE",
+					"for": "ALL",
+					"to": ["authenticated"],
+					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"detection_runs\".\"project_id\"\n\t\t\t)"
+				}
+			},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.suppressed_suggestions": {
+			"name": "suppressed_suggestions",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"project_id": {
+					"name": "project_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"index_type": {
+					"name": "index_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"normalized_label": {
+					"name": "normalized_label",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"meaning_type": {
+					"name": "meaning_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"meaning_id": {
+					"name": "meaning_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"scope": {
+					"name": "scope",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'project'"
+				},
+				"suppression_mode": {
+					"name": "suppression_mode",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'block_suggestion'"
+				},
+				"suppressed_at": {
+					"name": "suppressed_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"suppressed_by": {
+					"name": "suppressed_by",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"reason": {
+					"name": "reason",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
 				}
 			},
 			"indexes": {
-				"unique_document_page": {
-					"name": "unique_document_page",
+				"unique_suppression": {
+					"name": "unique_suppression",
 					"columns": [
 						{
-							"expression": "document_id",
+							"expression": "project_id",
 							"isExpression": false,
 							"asc": true,
 							"nulls": "last"
 						},
 						{
-							"expression": "page_number",
+							"expression": "index_type",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "normalized_label",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "meaning_type",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "meaning_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "scope",
 							"isExpression": false,
 							"asc": true,
 							"nulls": "last"
@@ -178,25 +385,34 @@
 				}
 			},
 			"foreignKeys": {
-				"document_pages_document_id_source_documents_id_fk": {
-					"name": "document_pages_document_id_source_documents_id_fk",
-					"tableFrom": "document_pages",
-					"tableTo": "source_documents",
-					"columnsFrom": ["document_id"],
+				"suppressed_suggestions_project_id_projects_id_fk": {
+					"name": "suppressed_suggestions_project_id_projects_id_fk",
+					"tableFrom": "suppressed_suggestions",
+					"tableTo": "projects",
+					"columnsFrom": ["project_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"suppressed_suggestions_suppressed_by_users_id_fk": {
+					"name": "suppressed_suggestions_suppressed_by_users_id_fk",
+					"tableFrom": "suppressed_suggestions",
+					"tableTo": "users",
+					"columnsFrom": ["suppressed_by"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
 					"onUpdate": "no action"
 				}
 			},
 			"compositePrimaryKeys": {},
 			"uniqueConstraints": {},
 			"policies": {
-				"document_pages_document_access": {
-					"name": "document_pages_document_access",
+				"suppressed_suggestions_project_access": {
+					"name": "suppressed_suggestions_project_access",
 					"as": "PERMISSIVE",
 					"for": "ALL",
 					"to": ["authenticated"],
-					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM source_documents\n\t\t\t\tWHERE source_documents.id = \"document_pages\".\"document_id\"\n\t\t\t)"
+					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"suppressed_suggestions\".\"project_id\"\n\t\t\t)"
 				}
 			},
 			"checkConstraints": {},
@@ -884,6 +1100,24 @@
 					"primaryKey": false,
 					"notNull": false
 				},
+				"detection_run_id": {
+					"name": "detection_run_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"meaning_type": {
+					"name": "meaning_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"meaning_id": {
+					"name": "meaning_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"created_at": {
 					"name": "created_at",
 					"type": "timestamp with time zone",
@@ -950,6 +1184,15 @@
 					"columnsFrom": ["project_index_type_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"index_entries_detection_run_id_detection_runs_id_fk": {
+					"name": "index_entries_detection_run_id_detection_runs_id_fk",
+					"tableFrom": "index_entries",
+					"tableTo": "detection_runs",
+					"columnsFrom": ["detection_run_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
 					"onUpdate": "no action"
 				}
 			},
@@ -1078,17 +1321,11 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"page_id": {
-					"name": "page_id",
-					"type": "uuid",
-					"primaryKey": false,
-					"notNull": false
-				},
 				"page_number": {
 					"name": "page_number",
 					"type": "integer",
 					"primaryKey": false,
-					"notNull": false
+					"notNull": true
 				},
 				"page_number_end": {
 					"name": "page_number_end",
@@ -1138,6 +1375,12 @@
 				},
 				"suggested_by_llm_id": {
 					"name": "suggested_by_llm_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"detection_run_id": {
+					"name": "detection_run_id",
 					"type": "uuid",
 					"primaryKey": false,
 					"notNull": false
@@ -1195,13 +1438,13 @@
 					"onDelete": "cascade",
 					"onUpdate": "no action"
 				},
-				"index_mentions_page_id_document_pages_id_fk": {
-					"name": "index_mentions_page_id_document_pages_id_fk",
+				"index_mentions_detection_run_id_detection_runs_id_fk": {
+					"name": "index_mentions_detection_run_id_detection_runs_id_fk",
 					"tableFrom": "index_mentions",
-					"tableTo": "document_pages",
-					"columnsFrom": ["page_id"],
+					"tableTo": "detection_runs",
+					"columnsFrom": ["detection_run_id"],
 					"columnsTo": ["id"],
-					"onDelete": "cascade",
+					"onDelete": "set null",
 					"onUpdate": "no action"
 				}
 			},
@@ -1651,6 +1894,81 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
+		"public.project_settings": {
+			"name": "project_settings",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"project_id": {
+					"name": "project_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"openrouter_api_key": {
+					"name": "openrouter_api_key",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"default_detection_model": {
+					"name": "default_detection_model",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"project_settings_project_id_projects_id_fk": {
+					"name": "project_settings_project_id_projects_id_fk",
+					"tableFrom": "project_settings",
+					"tableTo": "projects",
+					"columnsFrom": ["project_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"project_settings_project_id_unique": {
+					"name": "project_settings_project_id_unique",
+					"nullsNotDistinct": false,
+					"columns": ["project_id"]
+				}
+			},
+			"policies": {
+				"project_settings_project_access": {
+					"name": "project_settings_project_access",
+					"as": "PERMISSIVE",
+					"for": "ALL",
+					"to": ["authenticated"],
+					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM projects\n\t\t\t\tWHERE projects.id = \"project_settings\".\"project_id\"\n\t\t\t)"
+				}
+			},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
 		"public.projects": {
 			"name": "projects",
 			"schema": "",
@@ -1876,6 +2194,11 @@
 			"name": "canonical_page_rule_type",
 			"schema": "public",
 			"values": ["positive", "negative"]
+		},
+		"public.detection_run_status": {
+			"name": "detection_run_status",
+			"schema": "public",
+			"values": ["queued", "running", "completed", "failed", "cancelled"]
 		},
 		"public.entity_type": {
 			"name": "entity_type",

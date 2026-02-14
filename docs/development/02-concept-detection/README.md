@@ -1,12 +1,18 @@
 # Epic 2: Mention Detection & Indexing
 
-**Status**: Ready for implementation  
-**Duration**: 12-15 days (with parallelization) | 15-19 days (sequential)  
-**Cost**: $0.50-$0.80 per 200-page book (60% cheaper than original design)
+**Status**: In Progress  
+**Duration**: 8-10 days (simplified architecture)  
+**Cost**: $0.50-$0.80 per 200-page book
+
+## 🚨 ARCHITECTURE UPDATE (2026-02-12)
+
+**See [SIMPLIFIED-ARCHITECTURE.md](./SIMPLIFIED-ARCHITECTURE.md) for the current implementation approach.**
+
+The original design (with pre-extraction phase) has been simplified to use **on-demand extraction with sliding windows**. This eliminates Phase 1 and streamlines the entire flow.
 
 ## Goal
 
-Extract text from PDFs and use LLM to detect specific mentions of indexable concepts with precise bounding boxes and canonical meanings, creating suggested IndexEntries and IndexMentions that users can review and accept.
+Use LLM to detect specific mentions of indexable concepts with precise bounding boxes and canonical meanings, creating suggested IndexEntries and IndexMentions that users can review and accept.
 
 ## User Story
 
@@ -26,24 +32,25 @@ This epic implements **mention-level detection** with:
 2. **Meaning resolution** ($0.10-$0.20): Batch disambiguation with WordNet/Wikidata
 3. **Confidence rating** ($0.05-$0.10, optional): Filter low-quality suggestions
 
-## Phase Documents
+## Phase Documents (UPDATED)
 
-This epic is broken into 4 phases for implementation:
+**⚠️ Phase 1 has been eliminated** - See [SIMPLIFIED-ARCHITECTURE.md](./SIMPLIFIED-ARCHITECTURE.md)
 
-- **[Phase 1: Text Extraction](./phase-1-text-extraction/phase-1-text-extraction.md)** (2-3 days, P0)
-  - PyMuPDF integration for word-level extraction
-  - TextAtom ephemeral pattern (in-memory only)
-  - Ignore context filtering + extraction versioning
-  - Bbox conversion utilities
-  - **Blocks:** Phase 2, Phase 3
+This epic is now broken into 3 phases:
 
-- **[Phase 2: Mention Detection](./phase-2-mention-detection/phase-2-mention-detection.md)** (6-7 days, P0)
-  - Two-stage detection (Stage A: text-only → Stage B: local mapping)
-  - OpenRouter integration with modular prompts
+- ~~**[Phase 1: Text Extraction](./phase-1-text-extraction/phase-1-text-extraction.md)**~~ **OBSOLETE**
+  - Replaced by on-demand extraction during detection
+  - No pre-extraction phase needed
+  - No extraction versioning
+  - No storage of `indexable_text` or page dimensions
+
+- **[Phase 2: Mention Detection](./phase-2-mention-detection/phase-2-mention-detection.md)** (6-7 days, P0) ⚠️ NEEDS REWRITE
+  - Sliding window extraction (on-demand, 2-3 pages at a time)
+  - Text-only LLM prompts with charAt references
+  - In-memory TextAtom mapping to bboxes
   - Meaning resolution (WordNet + Wikidata)
   - detection_runs table + suppression rules
-  - **Depends on:** Phase 1 (needs `indexable_text` + `extraction_version`)
-  - **Can parallelize with:** Phase 3 UI components
+  - **No dependencies** (starts immediately)
 
 - **[Phase 3: Mention Review](./phase-3-mention-review/phase-3-mention-review.md)** (4-5 days, P0)
   - Split into 3a (parallel) + 3b (serial) for faster delivery
@@ -53,14 +60,15 @@ This epic is broken into 4 phases for implementation:
   - Two-column layout with mock data
   - EntryCard, MentionCard, MeaningBadge components
   - Storybook stories + interaction tests
-  - **Depends on:** Phase 1 only
+  - **No dependencies** - Can start immediately ⚡
   - **Runs in parallel with:** Phase 2 ⚡
 
 - **[Phase 3b: Backend Integration](./phase-3-mention-review/phase-3b-backend-integration.md)** (1-2 days, P0)
   - Replace mock data with real tRPC queries
   - Implement mutations + optimistic updates
-  - PDF viewer integration + extraction change detection
+  - PDF viewer integration for highlighting
   - **Depends on:** Phase 2 + Phase 3a
+  - **Removed:** Extraction change detection (not needed)
 
 - **[Phase 4: Optional Enhancements](./phase-4-optional-enhancements/phase-4-optional-enhancements.md)** (2-3 days, P2)
   - Fuzzy matching for similar entries
@@ -68,12 +76,10 @@ This epic is broken into 4 phases for implementation:
   - Quality metrics dashboard
   - **Depends on:** Phase 3b (post-MVP)
 
-## Parallelization Strategy
+## Parallelization Strategy (UPDATED)
 
 **Sequential (No Parallelization):**
 ```
-Phase 1 (3 days)
-    ↓
 Phase 2 (7 days)
     ↓
 Phase 3a (4 days)
@@ -82,28 +88,28 @@ Phase 3b (2 days)
     ↓
 Phase 4 (3 days, optional)
 
-Total: 19 days MVP (22 days with Phase 4)
+Total: 13 days MVP (16 days with Phase 4)
 ```
 
 **Parallel (Optimized):**
 ```
-Phase 1 (3 days)
-    ↓
-    ├─→ Phase 2 Backend (7 days) ────┐
-    │                                 ├─→ Phase 3b Integration (2 days)
-    └─→ Phase 3a UI (4 days) ────────┘
-                                      ↓
-                                 Phase 4 (3 days, optional)
+Phase 2 Backend (7 days) ─────────┐
+                                   ├─→ Phase 3b Integration (2 days)
+Phase 3a UI (4 days) ─────────────┘
+                                   ↓
+                              Phase 4 (3 days, optional)
 
-Total: 12 days MVP (15 days with Phase 4)
-Savings: 7 days (37% faster!)
+Total: 9 days MVP (12 days with Phase 4)
+Savings: 4 days (31% faster than sequential)
 ```
+
+**Key improvement:** Phase 3a can start **immediately** (no Phase 1 dependency with new architecture).
 
 ### What Can Be Parallelized
 
-The key insight: **Phase 3a (UI Components) only needs Phase 1 schema, not Phase 2 backend.**
+The key insight: **Phase 3a (UI Components) needs NO prerequisites** - can start immediately with mock data.
 
-**Phase 3a (Parallel with Phase 2) - No Backend Needed:**
+**Phase 3a (Parallel with Phase 2) - No Dependencies:**
 - ✅ UI component structure (EntryCard, MentionCard, MeaningBadge)
 - ✅ Two-column layout skeleton
 - ✅ Mock data structures (match Phase 2 schema)
@@ -123,44 +129,33 @@ The key insight: **Phase 3a (UI Components) only needs Phase 1 schema, not Phase
 
 **Single Engineer (Sequential):**
 ```
-Phase 1 (3d) → Phase 2 (7d) → Phase 3a (4d) → Phase 3b (2d) = 16 days
+Phase 2 (7d) → Phase 3a (4d) → Phase 3b (2d) = 13 days
 ```
 
 **Two Engineers (Parallel):**
 ```
-Engineer A: Phase 1 (3d) → Phase 2 (7d) ─────────────┐
-                                                      ├─→ Phase 3b (2d)
-Engineer B: [Wait 3d] → Phase 3a (4d) [Wait 3d] ────┘
+Engineer A: Phase 2 (7d) ──────────────────┐
+                                            ├─→ Phase 3b (2d)
+Engineer B: Phase 3a (4d) [Idle 3d] ───────┘
 
-Critical path: 3 + 7 + 2 = 12 days
-Engineer B utilization: 4/12 = 33% (7 days idle)
+Critical path: 7 + 2 = 9 days
+Engineer B utilization: 4/9 = 44% (5 days idle)
 ```
 
 **Optimized Two Engineers:**
 ```
-Engineer A: Phase 1 (3d) → Phase 2 (7d) ───────────────┐
-                                                        ├─→ Phase 3b (2d)
-Engineer B: [Wait 3d] → Phase 3a (4d) → Help Phase 2 (3d)┘
+Engineer A: Phase 2 (7d) ──────────────────────┐
+                                                ├─→ Phase 3b (2d)
+Engineer B: Phase 3a (4d) → Help Phase 2 (3d) ─┘
 
-Critical path: 12 days
-Engineer B utilization: 7/12 = 58% (5 days idle)
-```
-
-**Three Engineers (Maximum Parallelization):**
-```
-Engineer A: Phase 1 (3d) → Phase 2 Backend (7d) ────────┐
-                                                         ├─→ Phase 3b (2d)
-Engineer B: [Wait 3d] → Phase 3a Frontend (4d) ─────────┘
-Engineer C: [Wait 3d] → Phase 2 Meaning Service (7d) ───┘
-
-Critical path: 12 days
-All engineers productive after Phase 1
+Critical path: 9 days
+Engineer B utilization: 7/9 = 78% (2 days idle)
 ```
 
 **Time Savings:**
-- 1 engineer: 16 days (baseline)
-- 2 engineers: 12 days (25% faster)
-- 3 engineers: 12 days (no additional savings, bottleneck is Phase 2)
+- 1 engineer: 13 days (baseline)
+- 2 engineers: 9 days (31% faster)
+- Improvement from old design: Eliminated 3 days of Phase 1
 
 ## ⚠️ Architecture Overview
 
@@ -225,7 +220,30 @@ This architecture is built on **5 core principles** for production-ready mention
 - **Robust**: Suppression rules + merge keys handle re-detection intelligently
 - **Resumable**: Jobs table enables pause/resume across deploys
 
-## Critical Improvements from Review
+---
+
+## ⚠️ LEGACY DOCUMENTATION BELOW
+
+**The sections below document the original architecture for historical reference.**
+
+Many details are now obsolete due to the simplified architecture (see [SIMPLIFIED-ARCHITECTURE.md](./SIMPLIFIED-ARCHITECTURE.md)).
+
+**Key changes:**
+- ❌ No Phase 1 (pre-extraction)
+- ❌ No `indexable_text` storage
+- ❌ No `extraction_version` tracking
+- ✅ On-demand extraction with sliding windows
+- ✅ In-memory TextAtoms only
+- ✅ Simpler schema and flow
+
+**These sections may still be useful for:**
+- Understanding the design evolution
+- Reviewing feature requirements (accept/reject/suppress logic)
+- Reference for LLM prompt design
+
+---
+
+## Critical Improvements from Review (LEGACY)
 
 Based on deep architectural review, we made **9 critical changes** that prevent future pain:
 
@@ -565,13 +583,13 @@ Project Settings → Text Extraction Panel
 → Completion: "Extracted 45,230 words (3,120 filtered by contexts)"
 ```
 
-**What Happens:**
-- PyMuPDF extracts text from each page
-- Word-level bounding boxes captured (TextAtoms in memory)
-- Text within exclude region bboxes filtered out
-- Only `indexable_text` persisted per page
-- `extraction_version` computed (hash of all `indexableText`)
-- Takes ~1-2 minutes for 200-page book
+**What Happens (Updated):**
+- ❌ No pre-extraction step anymore
+- ✅ Extraction happens on-demand during detection
+- ✅ TextAtoms kept in memory (2-3 pages at a time)
+- ✅ Text filtered by exclude regions before sending to LLM
+- ✅ No storage of `indexable_text` or `extraction_version`
+- ✅ Immediate readiness (~0 seconds instead of 1-2 minutes)
 
 ### 4. **Configure Detection Settings** (Task 2)
 ```
@@ -687,24 +705,24 @@ Filters: [Confidence ▼] [Meaning ▼] [Pages ▼]
 
 **What Happens:**
 - User reviews AI suggestions with canonical meanings
-- Mentions flagged if `extraction_version` changed since detection
+- ~~Mentions flagged if `extraction_version` changed~~ (Removed - no extraction versioning)
 - High-confidence suggestions likely accurate
 - Suppressed entries won't re-appear in future runs
 - Accepted suggestions become real IndexEntries
 
-### 9. **Re-Detection (Future Runs)**
+### 9. **Re-Detection (Future Runs)** (UPDATED)
 ```
 User clicks "Run Detection" again
 
 → System checks:
-   - Compare current extraction_version to previous runs
    - Query existing suggested entries
    - Check suppressed_suggestions table
+   ❌ No extraction_version comparison (removed)
 
 → For each new detected entry:
    - Primary merge key: meaning_id (if present)
    - Fallback merge key: normalized_label (for custom)
-   - If match: Merge mentions (dedupe by page + text_quote + bbox_iou)
+   - If match: Merge mentions (dedupe by page + text_quote)
    - If suppressed: Skip (don't create)
    - If new: Create suggested entry
 ```
@@ -713,6 +731,7 @@ User clicks "Run Detection" again
 - Intelligent merging prevents duplicate suggestions
 - Suppressed entries stay suppressed
 - User only sees new suggestions
+- ✅ Simpler: No extraction version staleness checks
 
 ### 10. **Link Additional Mentions** (Epic 1)
 User can manually highlight text in PDF → link to accepted entries (existing workflow).
@@ -722,50 +741,59 @@ Final index with accepted entries, meanings, hierarchy, and page numbers.
 
 ## Implementation Phases
 
-### Phase 1: Text Extraction (Task 1) - 2-3 days
+### ~~Phase 1: Text Extraction (Task 1)~~ (OBSOLETE - ELIMINATED)
+**Status:** ❌ **Phase Eliminated - See SIMPLIFIED-ARCHITECTURE.md**  
+**Reason:** Pre-extraction unnecessary with sliding windows
+
+**What replaced it:**
+- ✅ On-demand extraction during detection (now part of Phase 2)
+- ✅ Sliding windows (2-3 pages at a time)
+- ✅ In-memory TextAtoms (discard after use)
+- ✅ No extraction UI needed
+
+**Original Deliverables (for reference):**
+- [x] ~~PyMuPDF integration~~ (✅ Complete, used during detection)
+- [x] ~~TextAtom in-memory structure~~ (✅ Complete)
+- [x] ~~Ignore context filtering~~ (✅ Complete, applied during detection)
+- [ ] ~~Store `indexable_text`~~ (❌ Removed - not stored)
+- [ ] ~~Store page dimensions~~ (❌ Removed)
+- [ ] ~~Compute `extraction_version`~~ (❌ Removed)
+- [ ] ~~tRPC endpoints~~ (❌ Removed)
+- [ ] ~~UI: Extraction trigger~~ (❌ Removed)
+- [x] ~~Bbox conversion utilities~~ (✅ Complete)
+
+**Checkpoint (Original):** ~~User can extract text from PDF~~ → **New:** Text extracted on-demand during detection (Phase 2).
+
+### Phase 2: Mention Detection (UPDATED) - 6-7 days
 **Status:** Not Started  
-**Priority:** P0 (Critical path)
+**Priority:** P0 (Critical path)  
+**Dependencies:** ✅ None - Can start immediately
 
-**Deliverables:**
-- [ ] PyMuPDF integration for word-level text extraction
-- [ ] TextAtom in-memory structure (word, bbox, sequence, page)
-- [ ] Ignore context filtering (mark `isIndexable=false`)
-- [ ] Store only `indexable_text` per page (no TextAtom table)
-- [ ] Store page dimensions for bbox conversion
-- [ ] Compute `extraction_version` (hash of all `indexableText`)
-- [ ] tRPC endpoints: `document.extractText`, `getExtractionStatus`
-- [ ] UI: Extraction trigger button + progress indicator
-- [ ] Bbox conversion utilities (PyMuPDF ↔ PDF.js)
-
-**Checkpoint:** User can extract text from PDF, respecting exclude regions. TextAtoms can be re-extracted deterministically.
-
-### Phase 2: Mention Detection (Task 2) - 6-7 days
-**Status:** Not Started  
-**Priority:** P0 (Critical path)
-
-**Deliverables:**
+**Deliverables (Updated):**
+- [ ] **On-demand extraction**: Extract 2-3 pages at a time during detection
+- [ ] **Sliding window**: Previous 25% + current + next 25% for context
 - [ ] OpenRouter API client with rate limiting
-- [ ] **Stage A**: Text-only prompt with explicit `pageText` + validation
-- [ ] **Stage B**: Re-extract TextAtoms for primary page → map char ranges → bboxes
+- [ ] **Text-only LLM prompts**: Send page text with charAt instructions
+- [ ] **In-memory bbox mapping**: charAt → TextAtoms → bbox union
 - [ ] Modular prompt system (composable per index type)
-- [ ] Sliding window processing (primary page only)
-- [ ] Create IndexEntry + IndexMentions with `text_quote` + `char_range` + `bbox`
+- [ ] Create IndexEntry + IndexMentions with `text_quote` + `char_start` + `char_end` + `bbox`
 - [ ] **Meaning resolution service**:
   - [ ] WordNet local DB setup + candidate retrieval
   - [ ] Wikidata API client + cache
   - [ ] Batch disambiguation (10-30 entries/call)
   - [ ] Hard-case retry (<0.65 confidence)
 - [ ] Optional confidence rating pass (Indexability + Specificity)
-- [ ] `detection_runs` table with `extraction_version`
+- [ ] `detection_runs` table ~~with `extraction_version`~~ (removed)
 - [ ] Cost estimation modal with variability note
 - [ ] tRPC endpoints: `detection.start`, `detection.status`, `detection.rateConfidence`
 - [ ] UI: Detection settings modal + progress tracking
 
-**Checkpoint:** User can run detection, get suggested entries with canonical meanings and precise mentions.
+**Checkpoint:** User can run detection immediately, get suggested entries with canonical meanings and precise mentions.
 
 ### Phase 3a: UI Components - 3-4 days
 **Status:** Not Started  
 **Priority:** P0 (Critical path)  
+**Dependencies:** ✅ None - Can start immediately (no Phase 1)  
 **Parallelization:** ✅ Can run in parallel with Phase 2
 
 **Deliverables (Frontend Only, Mock Data):**
@@ -775,7 +803,7 @@ Final index with accepted entries, meanings, hierarchy, and page numbers.
 - [ ] MeaningBadge component (WordNet/Wikidata/Custom with tooltips)
 - [ ] ConfidenceDisplay component (bar + breakdown)
 - [ ] ActionButtons component (→, ←, 🔗, 🚫 with disabled states)
-- [ ] FiltersPanel component (confidence, meaning type, search, validation status)
+- [ ] FiltersPanel component (confidence, meaning type, search, ~~validation status~~ removed)
 - [ ] Mock data generator matching Phase 2 schema
 - [ ] Jotai atoms for state (selection, filters, expanded)
 - [ ] Storybook documentation stories for all components
@@ -791,11 +819,11 @@ Final index with accepted entries, meanings, hierarchy, and page numbers.
 **Priority:** P0 (Critical path)  
 **Parallelization:** ❌ Must wait for Phase 2 + Phase 3a
 
-**Deliverables (Backend Integration):**
+**Deliverables (Backend Integration - Updated):**
 - [ ] Replace mock data with real tRPC queries:
   - [ ] `entry.listSuggestions` with filters
   - [ ] `entry.listAccepted` for accepted column
-  - [ ] `detection.validateExtractionVersion` for warnings
+  - [ ] ~~`detection.validateExtractionVersion`~~ (Removed - no extraction versioning)
 - [ ] Implement mutations with optimistic updates:
   - [ ] `entry.acceptSuggestion` (flip `is_suggestion=false`)
   - [ ] `entry.rejectSuggestion` (soft delete)
@@ -811,9 +839,9 @@ Final index with accepted entries, meanings, hierarchy, and page numbers.
 - [ ] PDF viewer integration:
   - [ ] Preview mention navigates to PDF viewer
   - [ ] Mention highlights render using stored bbox
-- [ ] Extraction change detection:
-  - [ ] Show warning banner if `extraction_version` mismatch
-  - [ ] Flag mentions with `validation_status='needs_review'`
+- [ ] ~~Extraction change detection~~ (Removed - no extraction versioning):
+  - [ ] ~~Show warning banner~~ (Not needed)
+  - [ ] ~~Flag mentions with validation_status~~ (Not needed)
 - [ ] Re-detection merge preview:
   - [ ] Show conflicts before re-running detection
 - [ ] Error handling and rollback for failed mutations

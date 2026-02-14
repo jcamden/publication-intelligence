@@ -117,6 +117,7 @@ export const ProjectForm = ({
 
 	const { authToken } = useAuthToken();
 	const [selectedFile, setSelectedFile] = useState<File | undefined>();
+	const [pdfPageCount, setPdfPageCount] = useState<number | undefined>();
 	const [isProjectDirManual, setIsProjectDirManual] = useState(
 		isEditMode || false,
 	);
@@ -279,6 +280,9 @@ export const ProjectForm = ({
 					const formData = new FormData();
 					formData.append("file", selectedFile);
 					formData.append("title", selectedFile.name);
+					if (pdfPageCount !== undefined) {
+						formData.append("pageCount", pdfPageCount.toString());
+					}
 
 					const response = await fetch(
 						`${API_URL}/projects/${project.id}/source-documents/upload`,
@@ -327,6 +331,7 @@ export const ProjectForm = ({
 
 	const handleFileClear = () => {
 		setSelectedFile(undefined);
+		setPdfPageCount(undefined);
 	};
 
 	const isSubmitting = createProjectMutation.isPending;
@@ -358,7 +363,11 @@ export const ProjectForm = ({
 									<div>
 										<FieldLabel>Preview</FieldLabel>
 										<div className="mt-2 w-full">
-											<PdfThumbnail source={selectedFile} alt="PDF preview" />
+											<PdfThumbnail
+												source={selectedFile}
+												alt="PDF preview"
+												onLoadPdf={({ numPages }) => setPdfPageCount(numPages)}
+											/>
 										</div>
 									</div>
 								)}

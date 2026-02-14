@@ -7,6 +7,7 @@ import {
 	ChevronRight,
 	File,
 	type LucideIcon,
+	Sparkles,
 	SquaresSubtract,
 	Tag,
 	User,
@@ -88,6 +89,11 @@ export const useProjectBarButtons = ({
 			icon: SquaresSubtract as LucideIcon,
 			tooltip: "Project Regions",
 		},
+		"project-ai": {
+			name: "projectAi",
+			icon: Sparkles as LucideIcon,
+			tooltip: "AI",
+		},
 		"project-author": {
 			name: "projectAuthors",
 			icon: User as LucideIcon,
@@ -124,7 +130,11 @@ export const useProjectBarButtons = ({
 			if (!meta) return null;
 
 			// Filter out index type sections that aren't enabled for this project
-			if (sectionId !== "project-pages" && sectionId !== "project-regions") {
+			if (
+				sectionId !== "project-pages" &&
+				sectionId !== "project-regions" &&
+				sectionId !== "project-ai"
+			) {
 				const indexType = sectionId.replace("project-", "");
 				if (!enabledIndexTypesSet.has(indexType)) {
 					return null;

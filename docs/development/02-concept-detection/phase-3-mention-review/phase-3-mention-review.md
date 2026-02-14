@@ -4,9 +4,22 @@
 **Priority:** P0 (Critical path)  
 **Status:** Not Started
 
+## 🚨 Architecture Update (2026-02-12)
+
+This phase remains largely unchanged, but **extraction change detection** has been removed.
+
+**See:** [../SIMPLIFIED-ARCHITECTURE.md](../SIMPLIFIED-ARCHITECTURE.md)
+
+**What changed:**
+- ❌ No extraction change detection (no pre-extraction = no version tracking)
+- ❌ No validation status badges on mentions
+- ✅ Everything else stays the same (accept/reject/suppress, meanings, etc.)
+
+---
+
 ## Overview
 
-Two-column interface for reviewing suggested IndexEntries and their IndexMentions, accepting/rejecting at both entry and mention levels. Displays canonical meanings, handles re-detection merging, supports suppression rules, and detects extraction changes.
+Two-column interface for reviewing suggested IndexEntries and their IndexMentions, accepting/rejecting at both entry and mention levels. Displays canonical meanings, handles re-detection merging, and supports suppression rules.
 
 **This phase is split into two sub-phases to enable parallelization:**
 
@@ -78,9 +91,10 @@ Phase 1 (3 days) → [Phase 2 (7 days) || Phase 3a (4 days)] → Phase 3b (2 day
 
 ## Dependencies
 
-- **Phase 1**: Must complete first (both 3a and 3b need schema)
-- **Phase 2**: Only Phase 3b depends on it (3a can run parallel)
+- **Phase 2**: Only Phase 3b depends on it (3a can be built with mock data)
 - **Phase 3a → Phase 3b**: Sequential (integration needs components)
+
+**Note:** With simplified architecture, Phase 3a can start immediately (no Phase 1 dependency).
 
 ## Next Steps
 

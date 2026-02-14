@@ -13,6 +13,7 @@ import {
 	updateSectionAtom,
 	windowsToRenderAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
+import { PageAiContent } from "../page-sidebar/components/page-ai-content";
 import { PageAuthorContent } from "../page-sidebar/components/page-author-content";
 import { PageBiblioContent } from "../page-sidebar/components/page-biblio-content";
 import { PageInfoContent } from "../page-sidebar/components/page-info-content";
@@ -20,6 +21,7 @@ import { PagePagesContent } from "../page-sidebar/components/page-pages-content"
 import { PageRegionsContent } from "../page-sidebar/components/page-regions-content";
 import { PageScriptureContent } from "../page-sidebar/components/page-scripture-content";
 import { PageSubjectContent } from "../page-sidebar/components/page-subject-content";
+import { ProjectAiContent } from "../project-sidebar/components/project-ai-content";
 import { ProjectAuthorContent } from "../project-sidebar/components/project-author-content";
 import { ProjectBiblioContent } from "../project-sidebar/components/project-biblio-content";
 import { ProjectPagesContent } from "../project-sidebar/components/project-pages-content";
@@ -77,6 +79,10 @@ const windowRegistry: Record<
 		title: "Project Regions",
 		component: ProjectRegionsContent,
 	},
+	"project-ai": {
+		title: "AI",
+		component: ProjectAiContent,
+	},
 	"page-info": { title: "Page Info", component: PageInfoContent },
 	"page-pages": { title: "Page Pages", component: PagePagesContent },
 	"page-subject": {
@@ -90,6 +96,7 @@ const windowRegistry: Record<
 	},
 	"page-biblio": { title: "Page Bibliography", component: PageBiblioContent },
 	"page-regions": { title: "Page Regions", component: PageRegionsContent },
+	"page-ai": { title: "AI", component: PageAiContent },
 };
 
 const DEFAULT_WINDOW_SIZE = { width: 25, height: 18.75 }; // rem
@@ -127,11 +134,12 @@ export const WindowManager = ({
 
 	// Filter windows to only include enabled index types for this project
 	const filteredWindows = windowsToRender.filter(({ id }) => {
-		// Always include non-index sections (pages, regions, info)
+		// Always include non-index sections (pages, regions, info, ai)
 		if (
 			id.includes("-pages") ||
 			id.includes("-regions") ||
-			id.includes("-info")
+			id.includes("-info") ||
+			id.includes("-ai")
 		) {
 			return true;
 		}

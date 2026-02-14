@@ -7,6 +7,7 @@ import {
 	ChevronLeft,
 	File,
 	type LucideIcon,
+	Sparkles,
 	SquaresSubtract,
 	Tag,
 	User,
@@ -88,6 +89,11 @@ export const usePageBarButtons = ({
 			icon: SquaresSubtract as LucideIcon,
 			tooltip: "Page Regions",
 		},
+		"page-ai": {
+			name: "pageAi",
+			icon: Sparkles as LucideIcon,
+			tooltip: "AI",
+		},
 		"page-author": {
 			name: "pageAuthors",
 			icon: User as LucideIcon,
@@ -127,7 +133,8 @@ export const usePageBarButtons = ({
 			if (
 				sectionId !== "page-pages" &&
 				sectionId !== "page-regions" &&
-				sectionId !== "page-info"
+				sectionId !== "page-info" &&
+				sectionId !== "page-ai"
 			) {
 				const indexType = sectionId.replace("page-", "");
 				if (!enabledIndexTypesSet.has(indexType)) {

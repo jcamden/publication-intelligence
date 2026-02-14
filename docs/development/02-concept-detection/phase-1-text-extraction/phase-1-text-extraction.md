@@ -1,10 +1,19 @@
 # Phase 1: Text Extraction
 
-**Duration:** 2-3 days  
-**Priority:** P0 (Critical path)  
-**Status:** Not Started
+**Status:** ⚠️ OBSOLETE - Replaced by Simplified Architecture  
+**Date Deprecated:** 2026-02-12
 
-## Overview
+## 🚨 Architecture Change
+
+This phase has been **replaced** by on-demand extraction with sliding windows. Pre-extraction is no longer needed.
+
+**See:** [../SIMPLIFIED-ARCHITECTURE.md](../SIMPLIFIED-ARCHITECTURE.md) for the current approach.
+
+---
+
+## Original Design (For Reference Only)
+
+**This section documents the original pre-extraction approach for historical reference.**
 
 Extract text from PDF using PyMuPDF, create TextAtoms in memory, filter by exclude regions, and prepare for LLM processing. TextAtoms are ephemeral (not persisted) but enable deterministic re-extraction for Stage B mention detection.
 
@@ -332,6 +341,219 @@ export const TextExtractionPanel = () => {
   );
 };
 ```
+
+## Implementation Tasks
+
+### Task 1: Integrate PyMuPDF Extractor with Backend
+
+**Goal:** Call the existing `index-pdf-extractor` Python service from the Node.js backend.
+
+**Files to modify:**
+- `apps/index-pdf-backend/src/modules/source-document/text-extraction.service.ts`
+
+**Implementation:**
+1. Add function to call Python extractor via subprocess:
+   ```typescript
+   const callPythonExtractor = async ({ 
+     pdfPath, 
+     pageNumber 
+   }: { 
+     pdfPath: string; 
+     pageNumber?: number;
+   }): Promise<ExtractionResult> => {
+     const pythonPath = path.join(__dirname, '../../../index-pdf-extractor/venv/bin/python');
+     const scriptPath = path.join(__dirname, '../../../index-pdf-extractor/extract_pdf.py');
+     
+     // Call: python extract_pdf.py /path/to/pdf
+     const result = await execPromise(`${pythonPath} ${scriptPath} ${pdfPath}`);
+     return JSON.parse(result.stdout);
+   };
+   ```
+
+2. Get PDF path from storage service using `storageKey`
+3. Call extractor and parse JSON response
+4. Handle errors (file not found, invalid PDF, extraction failure)
+
+**Status:** Not Started
+
+---
+
+### Task 2: Convert Spans to TextAtoms
+
+**Goal:** Transform PyMuPDF spans into in-memory TextAtom objects with proper indexing.
+
+**Files to modify:**
+- `apps/index-pdf-backend/src/modules/source-document/text-extraction.service.ts`
+
+**Implementation:**
+1. For each page's spans from extractor, create TextAtoms:
+   ```typescript
+   const createTextAtomsFromSpans = ({ 
+     spans, 
+     pageNumber, 
+     pageText 
+   }: {
+     spans: Span[];
+     pageNumber: number;
+     pageText: string;
+   }): TextAtom[] => {
+     let charOffset = 0;
+     
+     return spans.map((span, idx) => {
+       const charStart = charOffset;
+       const charEnd = charOffset + span.text.length;
+       charOffset = charEnd + 1; // +1 for space between spans
+       
+       return {
+         id: `atom_${pageNumber}_${idx}`,
+         word: span.text,
+         bbox: convertToPyMuPdfFormat(span.bbox),
+         charStart,
+         charEnd,
+         pageNumber,
+         sequence: idx,
+         isIndexable: true, // Will be filtered in Task 3
+       };
+     });
+   };
+   ```
+
+2. Compute character offsets from spans
+3. Generate unique atom IDs
+4. Convert bbox format (extractor uses {x, y, width, height}, TextAtom needs {x0, y0, x1, y1})
+
+**Status:** Not Started
+
+---
+
+### Task 3: Apply Exclude Region Filtering
+
+**Goal:** Mark TextAtoms as `isIndexable: false` if they overlap with exclude regions.
+
+**Files to modify:**
+- `apps/index-pdf-backend/src/modules/source-document/text-extraction.service.ts`
+
+**Implementation:**
+1. Use existing `bboxOverlaps` function (already implemented)
+2. For each TextAtom, check against page's exclude regions:
+   ```typescript
+   const applyRegionFiltering = ({
+     textAtoms,
+     excludeRegions,
+     pageNumber,
+   }: {
+     textAtoms: TextAtom[];
+     excludeRegions: Region[];
+     pageNumber: number;
+   }): TextAtom[] => {
+     const pageExcludeRegions = excludeRegions.filter((region) => {
+       // Use existing page config logic (lines 365-375)
+       if (region.pageConfigMode === "this_page") {
+         return region.pageNumber === pageNumber;
+       }
+       if (region.pageConfigMode === "all_pages") {
+         return !region.exceptPages?.includes(pageNumber);
+       }
+       return false;
+     });
+     
+     return textAtoms.map((atom) => ({
+       ...atom,
+       isIndexable: !pageExcludeRegions.some((region) => {
+         if (!region.bbox) return false;
+         const regionBbox: BBox = {
+           x0: region.bbox.x,
+           y0: region.bbox.y,
+           x1: region.bbox.x + region.bbox.width,
+           y1: region.bbox.y + region.bbox.height,
+         };
+         return bboxOverlaps({ bbox1: atom.bbox, bbox2: regionBbox });
+       }),
+     }));
+   };
+   ```
+
+3. Filter out atoms with `isIndexable: false` before creating `indexableText`
+4. Log filtering stats for debugging
+
+**Status:** Not Started
+
+---
+
+### Task 4: Extract and Store Real Page Dimensions
+
+**Goal:** Get actual page dimensions from PyMuPDF instead of using hardcoded values.
+
+**Files to modify:**
+- `apps/index-pdf-extractor/extract_pdf.py` (add dimensions to output)
+- `apps/index-pdf-backend/src/modules/source-document/text-extraction.service.ts`
+
+**Implementation:**
+1. Update Python extractor to include dimensions:
+   ```python
+   # In extract_pdf.py, add to Page TypedDict:
+   class Page(TypedDict):
+       page_number: int
+       text: str
+       spans: list[Span]
+       dimensions: dict  # NEW
+   
+   # In extraction loop:
+   page_rect = page.rect  # PyMuPDF rectangle
+   page_data: Page = {
+       "page_number": page_num + 1,
+       "text": page_text,
+       "spans": spans,
+       "dimensions": {
+           "width": float(page_rect.width),
+           "height": float(page_rect.height),
+       },
+   }
+   ```
+
+2. Update backend to use real dimensions:
+   ```typescript
+   const dimensions: PageDimensions = {
+     width: extractionResult.pages[pageIdx].dimensions.width,
+     height: extractionResult.pages[pageIdx].dimensions.height,
+   };
+   ```
+
+3. Store in `document_pages.dimensions` column
+
+**Status:** Not Started
+
+---
+
+### Task 5: Create `indexableText` from Filtered TextAtoms
+
+**Goal:** Generate the filtered text string that will be stored and used for re-extraction.
+
+**Files to modify:**
+- `apps/index-pdf-backend/src/modules/source-document/text-extraction.service.ts`
+
+**Implementation:**
+1. Filter TextAtoms to only indexable ones
+2. Join words with spaces to create `indexableText`:
+   ```typescript
+   const createIndexableText = ({ textAtoms }: { textAtoms: TextAtom[] }): string => {
+     return textAtoms
+       .filter((atom) => atom.isIndexable)
+       .sort((a, b) => a.sequence - b.sequence)
+       .map((atom) => atom.word)
+       .join(' ');
+   };
+   ```
+
+3. Store in `document_pages.indexable_text`
+4. This string is used for:
+   - Computing `extraction_version`
+   - Re-extracting TextAtoms in Stage B (deterministic)
+   - Re-filtering when regions change
+
+**Status:** Not Started
+
+---
 
 ## Success Criteria
 

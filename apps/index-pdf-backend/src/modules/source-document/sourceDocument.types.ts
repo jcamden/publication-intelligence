@@ -7,6 +7,7 @@ import { z } from "zod";
 export const UploadSourceDocumentSchema = z.object({
 	projectId: z.string().uuid("Invalid project ID"),
 	title: z.string().min(1, "Title is required").max(500).optional(),
+	pageCount: z.number().int().positive().optional(),
 });
 
 export type UploadSourceDocumentInput = z.infer<

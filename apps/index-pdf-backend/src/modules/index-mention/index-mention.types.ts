@@ -16,8 +16,7 @@ export type IndexMention = {
 	id: string;
 	entryId: string;
 	documentId: string;
-	pageId: string | null;
-	pageNumber: number | null;
+	pageNumber: number;
 	pageNumberEnd: number | null;
 	textSpan: string;
 	startOffset: number | null;
@@ -57,7 +56,7 @@ export type IndexMentionListItem = {
 		id: string;
 		label: string;
 	};
-	pageNumber: number | null;
+	pageNumber: number;
 	textSpan: string;
 	bboxes: BoundingBox[] | null;
 	mentionType: "text" | "region";

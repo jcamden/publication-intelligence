@@ -29,8 +29,8 @@ import type {
 
 // Default hues for each highlight type
 const DEFAULT_HUES: Record<HighlightType, number> = {
-	subject: 230, // Blue
-	author: 270, // Purple
+	subject: 85, // Yellow
+	author: 230, // Blue
 	scripture: 160, // Green
 	exclude: 0, // Red
 	page_number: 270, // Purple

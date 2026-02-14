@@ -7,6 +7,7 @@ import {
 	BookOpen,
 	File,
 	type LucideIcon,
+	Sparkles,
 	SquaresSubtract,
 	Tags,
 	User,
@@ -22,6 +23,7 @@ import {
 	sectionsStateAtom,
 	updateSectionAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
+import { PageAiContent } from "./components/page-ai-content";
 import { PageAuthorContent } from "./components/page-author-content";
 import { PagePagesContent } from "./components/page-pages-content";
 import { PageRegionsContent } from "./components/page-regions-content";
@@ -139,6 +141,16 @@ export const PageSidebar = ({
 			icon: File,
 			content: PagePagesContent,
 		},
+		"page-regions": {
+			title: "Regions",
+			icon: SquaresSubtract,
+			content: () => <PageRegionsContent currentPage={currentPage} />,
+		},
+		"page-ai": {
+			title: "AI",
+			icon: Sparkles,
+			content: PageAiContent,
+		},
 		"page-subject": {
 			title: "Subject Index",
 			icon: Tags,
@@ -187,18 +199,17 @@ export const PageSidebar = ({
 				onDrawRegion,
 			},
 		},
-		"page-regions": {
-			title: "Regions",
-			icon: SquaresSubtract,
-			content: () => <PageRegionsContent currentPage={currentPage} />,
-		},
 	};
 
 	// Filter sections to only include index types enabled for this project
 	const sectionMetadata = Object.fromEntries(
 		Object.entries(allSectionMetadata).filter(([sectionId]) => {
-			// Always include non-index sections (pages, regions)
-			if (sectionId === "page-pages" || sectionId === "page-regions") {
+			// Always include non-index sections (pages, regions, ai)
+			if (
+				sectionId === "page-pages" ||
+				sectionId === "page-regions" ||
+				sectionId === "page-ai"
+			) {
 				return true;
 			}
 			// For index type sections, check if enabled for project

@@ -5,6 +5,18 @@
 **Status:** Not Started  
 **Parallelization:** ❌ **Must wait for Phase 2 to complete**
 
+## 🚨 Architecture Update (2026-02-12)
+
+With simplified architecture, **extraction change detection** is removed from this phase.
+
+**Changes:**
+- ❌ No extraction change detection UI
+- ❌ No validation status warnings
+- ✅ Accept/reject/suppress workflows unchanged
+- ✅ Meaning resolution unchanged
+
+---
+
 ## Overview
 
 Integrate Phase 3a UI components with Phase 2 backend. Replace mock data with real tRPC queries, implement mutations, add PDF viewer integration, and wire up meaning resolution.

@@ -35,6 +35,15 @@ export const llmRunStatusEnum = pgEnum("llm_run_status", [
 	"failed",
 ]);
 
+// Detection run status
+export const detectionRunStatusEnum = pgEnum("detection_run_status", [
+	"queued",
+	"running",
+	"completed",
+	"failed",
+	"cancelled",
+]);
+
 // Entity types for event logging
 export const entityTypeEnum = pgEnum("entity_type", [
 	"IndexEntry",

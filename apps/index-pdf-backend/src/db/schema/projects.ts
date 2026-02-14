@@ -11,6 +11,7 @@ import { canonicalPageRules } from "./canonical-page-rules";
 import { regions, sourceDocuments } from "./documents";
 import { projectIndexTypes } from "./highlight-configs";
 import { indexEntries } from "./indexing";
+import { projectSettings } from "./project-settings";
 import { authenticatedRole, users } from "./users";
 
 // Project - Container for indexing work
@@ -61,4 +62,8 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 	projectIndexTypes: many(projectIndexTypes),
 	regions: many(regions),
 	canonicalPageRules: many(canonicalPageRules),
+	settings: one(projectSettings, {
+		fields: [projects.id],
+		references: [projectSettings.projectId],
+	}),
 }));

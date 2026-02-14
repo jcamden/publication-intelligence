@@ -7,6 +7,7 @@ import {
 	BookOpen,
 	File,
 	type LucideIcon,
+	Sparkles,
 	SquaresSubtract,
 	Tags,
 	User,
@@ -23,6 +24,7 @@ import {
 	sectionsStateAtom,
 	updateSectionAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
+import { ProjectAiContent } from "./components/project-ai-content";
 import { ProjectAuthorContent } from "./components/project-author-content";
 import { ProjectPagesContent } from "./components/project-pages-content";
 import { ProjectRegionsContent } from "./components/project-regions-content";
@@ -112,6 +114,22 @@ export const ProjectSidebar = ({
 				icon: File,
 				content: ProjectPagesContent,
 			},
+			"project-regions": {
+				title: "Regions",
+				icon: SquaresSubtract,
+				content: () => (
+					<ProjectRegionsContent
+						activeAction={activeAction}
+						onDrawRegion={onDrawRegion}
+						onEditRegion={onEditRegion}
+					/>
+				),
+			},
+			"project-ai": {
+				title: "AI",
+				icon: Sparkles,
+				content: ProjectAiContent,
+			},
 			"project-subject": {
 				title: "Subject Index",
 				icon: Tags,
@@ -127,17 +145,6 @@ export const ProjectSidebar = ({
 				icon: BookOpen,
 				content: ProjectScriptureContent,
 			},
-			"project-regions": {
-				title: "Regions",
-				icon: SquaresSubtract,
-				content: () => (
-					<ProjectRegionsContent
-						activeAction={activeAction}
-						onDrawRegion={onDrawRegion}
-						onEditRegion={onEditRegion}
-					/>
-				),
-			},
 		}),
 		[activeAction, onDrawRegion, onEditRegion],
 	);
@@ -145,8 +152,12 @@ export const ProjectSidebar = ({
 	// Filter sections to only include index types enabled for this project
 	const sectionMetadata = Object.fromEntries(
 		Object.entries(allSectionMetadata).filter(([sectionId]) => {
-			// Always include non-index sections (pages, regions)
-			if (sectionId === "project-pages" || sectionId === "project-regions") {
+			// Always include non-index sections (pages, regions, ai)
+			if (
+				sectionId === "project-pages" ||
+				sectionId === "project-regions" ||
+				sectionId === "project-ai"
+			) {
 				return true;
 			}
 			// For index type sections, check if enabled for project
