@@ -22,6 +22,7 @@ export type IndexMention = {
 	page_number: number;
 	page_number_end?: number;
 	text_span: string;
+	page_sublocation?: string;
 	start_offset?: number;
 	end_offset?: number;
 	bboxes: BoundingBox[];

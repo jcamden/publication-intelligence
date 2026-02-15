@@ -166,7 +166,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			indexType: (projectIndexType?.indexType ||
 				"subject") as IndexEntry["indexType"],
 			metadata: {
-				aliases: e.variants.map((v) => v.text),
+				matchers: e.matchers?.map((m) => m.text) || [],
 			},
 		};
 	});

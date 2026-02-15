@@ -24,3 +24,10 @@ localStorage stuff should be scoped to user
 region highlights became contexts
 
 openrouter key should be user-level
+
+delete, rename, or merge IndexEntries
+
+probably swap mention count on entries to the inside, add menu
+
+prompt: if phrase *contains* exact text of entry, only highlight exact text
+    - Also need to pass all pre-existing entries.

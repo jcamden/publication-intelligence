@@ -1,0 +1,65 @@
+# Adding Shadcn Components to Yabasic
+
+## Base UI Components Required
+
+The `yabasic` package uses **Base UI** (not Radix UI) for its component primitives. All components must be Base UI versions.
+
+## Installation Command
+
+When adding shadcn components to yabasic, always use the Base UI registry:
+
+```bash
+cd packages/yabasic && pnpm dlx shadcn@latest add https://basecn.dev/r/[component-name].json
+```
+
+### Examples
+
+```bash
+# Add tabs component
+cd packages/yabasic && pnpm dlx shadcn@latest add https://basecn.dev/r/tabs.json
+
+# Add dialog component  
+cd packages/yabasic && pnpm dlx shadcn@latest add https://basecn.dev/r/dialog.json
+
+# Add switch component
+cd packages/yabasic && pnpm dlx shadcn@latest add https://basecn.dev/r/switch.json
+```
+
+## Why Base UI?
+
+The `yabasic` package is configured with `"style": "base-nova"` in `components.json`, which uses Base UI primitives. All existing components import from `@base-ui/react/*`:
+
+```typescript
+// ✅ CORRECT - Base UI
+import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
+import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+
+// ❌ WRONG - Radix UI (don't use in yabasic)
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import * as SelectPrimitive from "@radix-ui/react-select";
+```
+
+## Installation Policy
+
+Following the package installation policy, **always prompt the user** to run the installation command rather than executing it automatically:
+
+```
+❌ BAD:
+"I'll add the tabs component now..."
+[runs pnpm command]
+
+✅ GOOD:
+"To add the tabs component with Base UI, please run:
+cd packages/yabasic && pnpm dlx shadcn@latest add https://basecn.dev/r/tabs.json"
+```
+
+## Verification
+
+After installation, verify the component uses Base UI by checking the import:
+
+```typescript
+import { ComponentName as ComponentPrimitive } from "@base-ui/react/component-name";
+```
+
+If the component imports from `@radix-ui`, it was installed incorrectly and needs to be replaced with the Base UI version.

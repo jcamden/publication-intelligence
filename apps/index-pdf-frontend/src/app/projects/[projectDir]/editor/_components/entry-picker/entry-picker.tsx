@@ -44,9 +44,9 @@ const getFilteredEntries = ({
 			// Check label
 			if (entry.label.toLowerCase().includes(normalized)) return true;
 
-			// Check aliases
-			const aliases = entry.metadata?.aliases || [];
-			return aliases.some((alias) => alias.toLowerCase().includes(normalized));
+			// Check matchers
+			const matchers = entry.metadata?.matchers || [];
+			return matchers.some((alias) => alias.toLowerCase().includes(normalized));
 		});
 	}
 

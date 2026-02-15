@@ -13,10 +13,10 @@ import { detectionRuns } from "./detection";
 import { sourceDocuments } from "./documents";
 import {
 	indexEntryStatusEnum,
+	matcherTypeEnum,
 	mentionRangeTypeEnum,
 	mentionTypeEnum,
 	relationTypeEnum,
-	variantTypeEnum,
 } from "./enums";
 import { projectIndexTypes } from "./highlight-configs";
 import { projects } from "./projects";
@@ -96,23 +96,23 @@ export const indexEntriesRelations = relations(
 			references: [detectionRuns.id],
 		}),
 		children: many(indexEntries, { relationName: "entryHierarchy" }),
-		variants: many(indexVariants),
+		matchers: many(indexMatchers),
 		mentions: many(indexMentions),
 		relationsFrom: many(indexRelations, { relationName: "relationFrom" }),
 		relationsTo: many(indexRelations, { relationName: "relationTo" }),
 	}),
 );
 
-// IndexVariant - Alternative forms of an IndexEntry
-export const indexVariants = pgTable(
-	"index_variants",
+// IndexMatcher - Terms that should match to this entry
+export const indexMatchers = pgTable(
+	"index_matchers",
 	{
 		id: uuid("id").primaryKey().defaultRandom(),
 		entryId: uuid("entry_id")
 			.references(() => indexEntries.id, { onDelete: "cascade" })
 			.notNull(),
 		text: text("text").notNull(),
-		variantType: variantTypeEnum("variant_type").default("alias").notNull(),
+		matcherType: matcherTypeEnum("matcher_type").default("alias").notNull(),
 		revision: integer("revision").default(1).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
@@ -120,12 +120,12 @@ export const indexVariants = pgTable(
 		updatedAt: timestamp("updated_at", { withTimezone: true }),
 	},
 	(table) => [
-		// Prevent duplicate variants for the same entry
+		// Prevent duplicate matchers for the same entry
 		uniqueIndex("unique_entry_text").on(table.entryId, table.text),
 
 		// RLS: Inherit access from index entry
 		// index_entries RLS inherits from projects RLS
-		pgPolicy("index_variants_entry_access", {
+		pgPolicy("index_matchers_entry_access", {
 			for: "all",
 			to: authenticatedRole,
 			using: sql`EXISTS (
@@ -136,10 +136,10 @@ export const indexVariants = pgTable(
 	],
 );
 
-// IndexVariant relations
-export const indexVariantsRelations = relations(indexVariants, ({ one }) => ({
+// IndexMatcher relations
+export const indexMatchersRelations = relations(indexMatchers, ({ one }) => ({
 	entry: one(indexEntries, {
-		fields: [indexVariants.entryId],
+		fields: [indexMatchers.entryId],
 		references: [indexEntries.id],
 	}),
 }));
@@ -152,9 +152,10 @@ export const indexRelations = pgTable(
 		fromEntryId: uuid("from_entry_id")
 			.references(() => indexEntries.id, { onDelete: "cascade" })
 			.notNull(),
-		toEntryId: uuid("to_entry_id")
-			.references(() => indexEntries.id, { onDelete: "cascade" })
-			.notNull(),
+		toEntryId: uuid("to_entry_id").references(() => indexEntries.id, {
+			onDelete: "cascade",
+		}), // Nullable for arbitrary cross-references
+		arbitraryValue: text("arbitrary_value"), // For freeform cross-references
 		relationType: relationTypeEnum("relation_type").notNull(),
 		note: text("note"),
 		revision: integer("revision").default(1).notNull(),
@@ -219,6 +220,7 @@ export const indexMentions = pgTable(
 			.default("single_page")
 			.notNull(),
 		mentionType: mentionTypeEnum("mention_type").default("text").notNull(),
+		pageSublocation: text("page_sublocation"), // Within-page location (e.g., "10:45.a")
 		suggestedByLlmId: uuid("suggested_by_llm_id"), // References llm_runs (legacy)
 		detectionRunId: uuid("detection_run_id").references(
 			() => detectionRuns.id,

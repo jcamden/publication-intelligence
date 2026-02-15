@@ -2,8 +2,9 @@ import { and, count, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db, withUserContext } from "../../db/client";
 import {
 	indexEntries,
+	indexMatchers,
 	indexMentions,
-	indexVariants,
+	indexRelations,
 	projectIndexTypes,
 } from "../../db/schema";
 import type {
@@ -67,7 +68,7 @@ export const listIndexEntries = async ({
 		return [];
 	}
 
-	const [mentionCounts, childCounts, variants] = await Promise.all([
+	const [mentionCounts, childCounts, matchers] = await Promise.all([
 		db
 			.select({
 				entryId: indexMentions.entryId,
@@ -96,16 +97,16 @@ export const listIndexEntries = async ({
 			.groupBy(indexEntries.parentId),
 		db
 			.select({
-				id: indexVariants.id,
-				entryId: indexVariants.entryId,
-				text: indexVariants.text,
-				variantType: indexVariants.variantType,
-				revision: indexVariants.revision,
-				createdAt: indexVariants.createdAt,
-				updatedAt: indexVariants.updatedAt,
+				id: indexMatchers.id,
+				entryId: indexMatchers.entryId,
+				text: indexMatchers.text,
+				matcherType: indexMatchers.matcherType,
+				revision: indexMatchers.revision,
+				createdAt: indexMatchers.createdAt,
+				updatedAt: indexMatchers.updatedAt,
 			})
-			.from(indexVariants)
-			.where(inArray(indexVariants.entryId, entryIds)),
+			.from(indexMatchers)
+			.where(inArray(indexMatchers.entryId, entryIds)),
 	]);
 
 	const mentionCountMap = new Map(
@@ -116,11 +117,11 @@ export const listIndexEntries = async ({
 			.filter((cc) => cc.parentId !== null)
 			.map((cc) => [cc.parentId as string, cc.count]),
 	);
-	const variantsMap = new Map<string, typeof variants>();
-	for (const variant of variants) {
-		const existing = variantsMap.get(variant.entryId) || [];
-		existing.push(variant);
-		variantsMap.set(variant.entryId, existing);
+	const matchersMap = new Map<string, typeof matchers>();
+	for (const matcher of matchers) {
+		const existing = matchersMap.get(matcher.entryId) || [];
+		existing.push(matcher);
+		matchersMap.set(matcher.entryId, existing);
 	}
 
 	const parentIds = entries
@@ -152,14 +153,14 @@ export const listIndexEntries = async ({
 		projectIndexType: entry.projectIndexType,
 		mentionCount: mentionCountMap.get(entry.id) || 0,
 		childCount: childCountMap.get(entry.id) || 0,
-		variants: (variantsMap.get(entry.id) || []).map((v) => ({
-			id: v.id,
-			entryId: v.entryId,
-			text: v.text,
-			variantType: v.variantType,
-			revision: v.revision,
-			createdAt: v.createdAt.toISOString(),
-			updatedAt: v.updatedAt?.toISOString() || null,
+		matchers: (matchersMap.get(entry.id) || []).map((m) => ({
+			id: m.id,
+			entryId: m.entryId,
+			text: m.text,
+			matcherType: m.matcherType,
+			revision: m.revision,
+			createdAt: m.createdAt.toISOString(),
+			updatedAt: m.updatedAt?.toISOString() || null,
 		})),
 		createdAt: entry.createdAt.toISOString(),
 		updatedAt: entry.updatedAt?.toISOString() || null,
@@ -195,18 +196,18 @@ export const getIndexEntryById = async ({
 	}
 
 	const entry = result[0];
-	const variants = await db
+	const matchers = await db
 		.select({
-			id: indexVariants.id,
-			entryId: indexVariants.entryId,
-			text: indexVariants.text,
-			variantType: indexVariants.variantType,
-			revision: indexVariants.revision,
-			createdAt: indexVariants.createdAt,
-			updatedAt: indexVariants.updatedAt,
+			id: indexMatchers.id,
+			entryId: indexMatchers.entryId,
+			text: indexMatchers.text,
+			matcherType: indexMatchers.matcherType,
+			revision: indexMatchers.revision,
+			createdAt: indexMatchers.createdAt,
+			updatedAt: indexMatchers.updatedAt,
 		})
-		.from(indexVariants)
-		.where(eq(indexVariants.entryId, id));
+		.from(indexMatchers)
+		.where(eq(indexMatchers.entryId, id));
 
 	return {
 		id: entry.id,
@@ -221,14 +222,14 @@ export const getIndexEntryById = async ({
 		createdAt: entry.createdAt.toISOString(),
 		updatedAt: entry.updatedAt?.toISOString() || null,
 		deletedAt: entry.deletedAt?.toISOString() || null,
-		variants: variants.map((v) => ({
-			id: v.id,
-			entryId: v.entryId,
-			text: v.text,
-			variantType: v.variantType,
-			revision: v.revision,
-			createdAt: v.createdAt.toISOString(),
-			updatedAt: v.updatedAt?.toISOString() || null,
+		matchers: matchers.map((m) => ({
+			id: m.id,
+			entryId: m.entryId,
+			text: m.text,
+			matcherType: m.matcherType,
+			revision: m.revision,
+			createdAt: m.createdAt.toISOString(),
+			updatedAt: m.updatedAt?.toISOString() || null,
 		})),
 	};
 };
@@ -261,30 +262,30 @@ export const createIndexEntry = async ({
 				throw new Error("Failed to create index entry");
 			}
 
-			if (input.variants && input.variants.length > 0) {
-				await tx.insert(indexVariants).values(
-					input.variants.map((text) => ({
+			if (input.matchers && input.matchers.length > 0) {
+				await tx.insert(indexMatchers).values(
+					input.matchers.map((text) => ({
 						entryId: entry.id,
 						text,
-						variantType: "alias" as const,
+						matcherType: "alias" as const,
 						revision: 1,
 					})),
 				);
 			}
 
-			const variants = input.variants
+			const matchers = input.matchers
 				? await tx
 						.select({
-							id: indexVariants.id,
-							entryId: indexVariants.entryId,
-							text: indexVariants.text,
-							variantType: indexVariants.variantType,
-							revision: indexVariants.revision,
-							createdAt: indexVariants.createdAt,
-							updatedAt: indexVariants.updatedAt,
+							id: indexMatchers.id,
+							entryId: indexMatchers.entryId,
+							text: indexMatchers.text,
+							matcherType: indexMatchers.matcherType,
+							revision: indexMatchers.revision,
+							createdAt: indexMatchers.createdAt,
+							updatedAt: indexMatchers.updatedAt,
 						})
-						.from(indexVariants)
-						.where(eq(indexVariants.entryId, entry.id))
+						.from(indexMatchers)
+						.where(eq(indexMatchers.entryId, entry.id))
 				: [];
 
 			return {
@@ -300,14 +301,14 @@ export const createIndexEntry = async ({
 				createdAt: entry.createdAt.toISOString(),
 				updatedAt: entry.updatedAt?.toISOString() || null,
 				deletedAt: entry.deletedAt?.toISOString() || null,
-				variants: variants.map((v) => ({
-					id: v.id,
-					entryId: v.entryId,
-					text: v.text,
-					variantType: v.variantType,
-					revision: v.revision,
-					createdAt: v.createdAt.toISOString(),
-					updatedAt: v.updatedAt?.toISOString() || null,
+				matchers: matchers.map((m) => ({
+					id: m.id,
+					entryId: m.entryId,
+					text: m.text,
+					matcherType: m.matcherType,
+					revision: m.revision,
+					createdAt: m.createdAt.toISOString(),
+					updatedAt: m.updatedAt?.toISOString() || null,
 				})),
 			};
 		},
@@ -349,17 +350,17 @@ export const updateIndexEntry = async ({
 				return null;
 			}
 
-			if (input.variants !== undefined) {
+			if (input.matchers !== undefined) {
 				await tx
-					.delete(indexVariants)
-					.where(eq(indexVariants.entryId, input.id));
+					.delete(indexMatchers)
+					.where(eq(indexMatchers.entryId, input.id));
 
-				if (input.variants.length > 0) {
-					await tx.insert(indexVariants).values(
-						input.variants.map((text) => ({
+				if (input.matchers.length > 0) {
+					await tx.insert(indexMatchers).values(
+						input.matchers.map((text) => ({
 							entryId: input.id,
 							text,
-							variantType: "alias" as const,
+							matcherType: "alias" as const,
 							revision: 1,
 						})),
 					);
@@ -389,18 +390,18 @@ export const updateIndexEntry = async ({
 				return null;
 			}
 
-			const variants = await tx
+			const matchers = await tx
 				.select({
-					id: indexVariants.id,
-					entryId: indexVariants.entryId,
-					text: indexVariants.text,
-					variantType: indexVariants.variantType,
-					revision: indexVariants.revision,
-					createdAt: indexVariants.createdAt,
-					updatedAt: indexVariants.updatedAt,
+					id: indexMatchers.id,
+					entryId: indexMatchers.entryId,
+					text: indexMatchers.text,
+					matcherType: indexMatchers.matcherType,
+					revision: indexMatchers.revision,
+					createdAt: indexMatchers.createdAt,
+					updatedAt: indexMatchers.updatedAt,
 				})
-				.from(indexVariants)
-				.where(eq(indexVariants.entryId, input.id));
+				.from(indexMatchers)
+				.where(eq(indexMatchers.entryId, input.id));
 
 			const e = entry[0];
 			return {
@@ -416,14 +417,14 @@ export const updateIndexEntry = async ({
 				createdAt: e.createdAt.toISOString(),
 				updatedAt: e.updatedAt?.toISOString() || null,
 				deletedAt: e.deletedAt?.toISOString() || null,
-				variants: variants.map((v) => ({
-					id: v.id,
-					entryId: v.entryId,
-					text: v.text,
-					variantType: v.variantType,
-					revision: v.revision,
-					createdAt: v.createdAt.toISOString(),
-					updatedAt: v.updatedAt?.toISOString() || null,
+				matchers: matchers.map((m) => ({
+					id: m.id,
+					entryId: m.entryId,
+					text: m.text,
+					matcherType: m.matcherType,
+					revision: m.revision,
+					createdAt: m.createdAt.toISOString(),
+					updatedAt: m.updatedAt?.toISOString() || null,
 				})),
 			};
 		},
@@ -500,21 +501,21 @@ export const approveIndexEntry = async ({
 					return null;
 				}
 
-				const variants = await tx
+				const matchers = await tx
 					.select({
-						id: indexVariants.id,
-						entryId: indexVariants.entryId,
-						text: indexVariants.text,
-						variantType: indexVariants.variantType,
-						revision: indexVariants.revision,
-						createdAt: indexVariants.createdAt,
-						updatedAt: indexVariants.updatedAt,
+						id: indexMatchers.id,
+						entryId: indexMatchers.entryId,
+						text: indexMatchers.text,
+						matcherType: indexMatchers.matcherType,
+						revision: indexMatchers.revision,
+						createdAt: indexMatchers.createdAt,
+						updatedAt: indexMatchers.updatedAt,
 					})
-					.from(indexVariants)
-					.where(eq(indexVariants.entryId, id));
+					.from(indexMatchers)
+					.where(eq(indexMatchers.entryId, id));
 
 				console.log(
-					`[approveIndexEntry] Successfully approved entry ${id}, found ${variants.length} variants`,
+					`[approveIndexEntry] Successfully approved entry ${id}, found ${matchers.length} matchers`,
 				);
 
 				const e = entry[0];
@@ -531,14 +532,14 @@ export const approveIndexEntry = async ({
 					createdAt: e.createdAt.toISOString(),
 					updatedAt: e.updatedAt?.toISOString() || null,
 					deletedAt: e.deletedAt?.toISOString() || null,
-					variants: variants.map((v) => ({
-						id: v.id,
-						entryId: v.entryId,
-						text: v.text,
-						variantType: v.variantType,
-						revision: v.revision,
-						createdAt: v.createdAt.toISOString(),
-						updatedAt: v.updatedAt?.toISOString() || null,
+					matchers: matchers.map((m) => ({
+						id: m.id,
+						entryId: m.entryId,
+						text: m.text,
+						matcherType: m.matcherType,
+						revision: m.revision,
+						createdAt: m.createdAt.toISOString(),
+						updatedAt: m.updatedAt?.toISOString() || null,
 					})),
 				};
 			} catch (error) {
@@ -599,18 +600,18 @@ export const updateIndexEntryParent = async ({
 				return null;
 			}
 
-			const variants = await tx
+			const matchers = await tx
 				.select({
-					id: indexVariants.id,
-					entryId: indexVariants.entryId,
-					text: indexVariants.text,
-					variantType: indexVariants.variantType,
-					revision: indexVariants.revision,
-					createdAt: indexVariants.createdAt,
-					updatedAt: indexVariants.updatedAt,
+					id: indexMatchers.id,
+					entryId: indexMatchers.entryId,
+					text: indexMatchers.text,
+					matcherType: indexMatchers.matcherType,
+					revision: indexMatchers.revision,
+					createdAt: indexMatchers.createdAt,
+					updatedAt: indexMatchers.updatedAt,
 				})
-				.from(indexVariants)
-				.where(eq(indexVariants.entryId, input.id));
+				.from(indexMatchers)
+				.where(eq(indexMatchers.entryId, input.id));
 
 			const e = entry[0];
 			return {
@@ -626,14 +627,14 @@ export const updateIndexEntryParent = async ({
 				createdAt: e.createdAt.toISOString(),
 				updatedAt: e.updatedAt?.toISOString() || null,
 				deletedAt: e.deletedAt?.toISOString() || null,
-				variants: variants.map((v) => ({
-					id: v.id,
-					entryId: v.entryId,
-					text: v.text,
-					variantType: v.variantType,
-					revision: v.revision,
-					createdAt: v.createdAt.toISOString(),
-					updatedAt: v.updatedAt?.toISOString() || null,
+				matchers: matchers.map((m) => ({
+					id: m.id,
+					entryId: m.entryId,
+					text: m.text,
+					matcherType: m.matcherType,
+					revision: m.revision,
+					createdAt: m.createdAt.toISOString(),
+					updatedAt: m.updatedAt?.toISOString() || null,
 				})),
 			};
 		},
@@ -690,18 +691,18 @@ export const deleteIndexEntry = async ({
 				return null;
 			}
 
-			const variants = await tx
+			const matchers = await tx
 				.select({
-					id: indexVariants.id,
-					entryId: indexVariants.entryId,
-					text: indexVariants.text,
-					variantType: indexVariants.variantType,
-					revision: indexVariants.revision,
-					createdAt: indexVariants.createdAt,
-					updatedAt: indexVariants.updatedAt,
+					id: indexMatchers.id,
+					entryId: indexMatchers.entryId,
+					text: indexMatchers.text,
+					matcherType: indexMatchers.matcherType,
+					revision: indexMatchers.revision,
+					createdAt: indexMatchers.createdAt,
+					updatedAt: indexMatchers.updatedAt,
 				})
-				.from(indexVariants)
-				.where(eq(indexVariants.entryId, id));
+				.from(indexMatchers)
+				.where(eq(indexMatchers.entryId, id));
 
 			const e = entry[0];
 			return {
@@ -717,14 +718,14 @@ export const deleteIndexEntry = async ({
 				createdAt: e.createdAt.toISOString(),
 				updatedAt: e.updatedAt?.toISOString() || null,
 				deletedAt: e.deletedAt?.toISOString() || null,
-				variants: variants.map((v) => ({
-					id: v.id,
-					entryId: v.entryId,
-					text: v.text,
-					variantType: v.variantType,
-					revision: v.revision,
-					createdAt: v.createdAt.toISOString(),
-					updatedAt: v.updatedAt?.toISOString() || null,
+				matchers: matchers.map((m) => ({
+					id: m.id,
+					entryId: m.entryId,
+					text: m.text,
+					matcherType: m.matcherType,
+					revision: m.revision,
+					createdAt: m.createdAt.toISOString(),
+					updatedAt: m.updatedAt?.toISOString() || null,
 				})),
 			};
 		},
@@ -763,23 +764,23 @@ export const searchIndexEntries = async ({
 		)
 		.limit(limit);
 
-	const variantMatches = await db
+	const matcherMatches = await db
 		.select({
 			id: indexEntries.id,
 			label: indexEntries.label,
 			slug: indexEntries.slug,
 			description: indexEntries.description,
 			parentId: indexEntries.parentId,
-			matchedText: indexVariants.text,
+			matchedText: indexMatchers.text,
 		})
 		.from(indexEntries)
-		.innerJoin(indexVariants, eq(indexEntries.id, indexVariants.entryId))
+		.innerJoin(indexMatchers, eq(indexEntries.id, indexMatchers.entryId))
 		.where(
 			and(
 				eq(indexEntries.projectId, projectId),
 				eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
 				isNull(indexEntries.deletedAt),
-				ilike(indexVariants.text, searchPattern),
+				ilike(indexMatchers.text, searchPattern),
 			),
 		)
 		.limit(limit);
@@ -787,7 +788,7 @@ export const searchIndexEntries = async ({
 	const allEntryIds = [
 		...new Set([
 			...labelMatches.map((m) => m.id),
-			...variantMatches.map((m) => m.id),
+			...matcherMatches.map((m) => m.id),
 		]),
 	];
 
@@ -795,11 +796,11 @@ export const searchIndexEntries = async ({
 		return [];
 	}
 
-	const parentIds = [...labelMatches, ...variantMatches]
+	const parentIds = [...labelMatches, ...matcherMatches]
 		.map((e) => e.parentId)
 		.filter((id): id is string => id !== null);
 
-	const [parents, variants] = await Promise.all([
+	const [parents, matchers] = await Promise.all([
 		parentIds.length > 0
 			? db
 					.select({
@@ -811,24 +812,24 @@ export const searchIndexEntries = async ({
 			: Promise.resolve([]),
 		db
 			.select({
-				id: indexVariants.id,
-				entryId: indexVariants.entryId,
-				text: indexVariants.text,
-				variantType: indexVariants.variantType,
-				revision: indexVariants.revision,
-				createdAt: indexVariants.createdAt,
-				updatedAt: indexVariants.updatedAt,
+				id: indexMatchers.id,
+				entryId: indexMatchers.entryId,
+				text: indexMatchers.text,
+				matcherType: indexMatchers.matcherType,
+				revision: indexMatchers.revision,
+				createdAt: indexMatchers.createdAt,
+				updatedAt: indexMatchers.updatedAt,
 			})
-			.from(indexVariants)
-			.where(inArray(indexVariants.entryId, allEntryIds)),
+			.from(indexMatchers)
+			.where(inArray(indexMatchers.entryId, allEntryIds)),
 	]);
 
 	const parentMap = new Map(parents.map((p) => [p.id, p]));
-	const variantsMap = new Map<string, typeof variants>();
-	for (const variant of variants) {
-		const existing = variantsMap.get(variant.entryId) || [];
-		existing.push(variant);
-		variantsMap.set(variant.entryId, existing);
+	const matchersMap = new Map<string, typeof matchers>();
+	for (const matcher of matchers) {
+		const existing = matchersMap.get(matcher.entryId) || [];
+		existing.push(matcher);
+		matchersMap.set(matcher.entryId, existing);
 	}
 
 	const labelResults: IndexEntrySearchResult[] = labelMatches.map((match) => ({
@@ -838,19 +839,19 @@ export const searchIndexEntries = async ({
 		description: match.description,
 		parentId: match.parentId,
 		parent: match.parentId ? parentMap.get(match.parentId) || null : null,
-		variants: (variantsMap.get(match.id) || []).map((v) => ({
-			id: v.id,
-			entryId: v.entryId,
-			text: v.text,
-			variantType: v.variantType,
-			revision: v.revision,
-			createdAt: v.createdAt.toISOString(),
-			updatedAt: v.updatedAt?.toISOString() || null,
+		matchers: (matchersMap.get(match.id) || []).map((m) => ({
+			id: m.id,
+			entryId: m.entryId,
+			text: m.text,
+			matcherType: m.matcherType,
+			revision: m.revision,
+			createdAt: m.createdAt.toISOString(),
+			updatedAt: m.updatedAt?.toISOString() || null,
 		})),
 		matchType: "label" as const,
 	}));
 
-	const variantResults: IndexEntrySearchResult[] = variantMatches
+	const matcherResults: IndexEntrySearchResult[] = matcherMatches
 		.filter((match) => !labelMatches.some((lm) => lm.id === match.id))
 		.map((match) => ({
 			id: match.id,
@@ -859,20 +860,20 @@ export const searchIndexEntries = async ({
 			description: match.description,
 			parentId: match.parentId,
 			parent: match.parentId ? parentMap.get(match.parentId) || null : null,
-			variants: (variantsMap.get(match.id) || []).map((v) => ({
-				id: v.id,
-				entryId: v.entryId,
-				text: v.text,
-				variantType: v.variantType,
-				revision: v.revision,
-				createdAt: v.createdAt.toISOString(),
-				updatedAt: v.updatedAt?.toISOString() || null,
+			matchers: (matchersMap.get(match.id) || []).map((m) => ({
+				id: m.id,
+				entryId: m.entryId,
+				text: m.text,
+				matcherType: m.matcherType,
+				revision: m.revision,
+				createdAt: m.createdAt.toISOString(),
+				updatedAt: m.updatedAt?.toISOString() || null,
 			})),
-			matchType: "variant" as const,
+			matchType: "matcher" as const,
 			matchedText: match.matchedText,
 		}));
 
-	return [...labelResults, ...variantResults];
+	return [...labelResults, ...matcherResults];
 };
 
 export const checkExactMatch = async ({
@@ -902,7 +903,7 @@ export const checkExactMatch = async ({
 			deletedAt: indexEntries.deletedAt,
 		})
 		.from(indexEntries)
-		.leftJoin(indexVariants, eq(indexEntries.id, indexVariants.entryId))
+		.leftJoin(indexMatchers, eq(indexEntries.id, indexMatchers.entryId))
 		.where(
 			and(
 				eq(indexEntries.projectId, projectId),
@@ -910,7 +911,7 @@ export const checkExactMatch = async ({
 				isNull(indexEntries.deletedAt),
 				or(
 					sql`LOWER(${indexEntries.label}) = ${normalized}`,
-					sql`LOWER(${indexVariants.text}) = ${normalized}`,
+					sql`LOWER(${indexMatchers.text}) = ${normalized}`,
 				),
 			),
 		)
@@ -921,18 +922,18 @@ export const checkExactMatch = async ({
 	}
 
 	const entry = result[0];
-	const variants = await db
+	const matchers = await db
 		.select({
-			id: indexVariants.id,
-			entryId: indexVariants.entryId,
-			text: indexVariants.text,
-			variantType: indexVariants.variantType,
-			revision: indexVariants.revision,
-			createdAt: indexVariants.createdAt,
-			updatedAt: indexVariants.updatedAt,
+			id: indexMatchers.id,
+			entryId: indexMatchers.entryId,
+			text: indexMatchers.text,
+			matcherType: indexMatchers.matcherType,
+			revision: indexMatchers.revision,
+			createdAt: indexMatchers.createdAt,
+			updatedAt: indexMatchers.updatedAt,
 		})
-		.from(indexVariants)
-		.where(eq(indexVariants.entryId, entry.id));
+		.from(indexMatchers)
+		.where(eq(indexMatchers.entryId, entry.id));
 
 	return {
 		id: entry.id,
@@ -947,14 +948,14 @@ export const checkExactMatch = async ({
 		createdAt: entry.createdAt.toISOString(),
 		updatedAt: entry.updatedAt?.toISOString() || null,
 		deletedAt: entry.deletedAt?.toISOString() || null,
-		variants: variants.map((v) => ({
-			id: v.id,
-			entryId: v.entryId,
-			text: v.text,
-			variantType: v.variantType,
-			revision: v.revision,
-			createdAt: v.createdAt.toISOString(),
-			updatedAt: v.updatedAt?.toISOString() || null,
+		matchers: matchers.map((m) => ({
+			id: m.id,
+			entryId: m.entryId,
+			text: m.text,
+			matcherType: m.matcherType,
+			revision: m.revision,
+			createdAt: m.createdAt.toISOString(),
+			updatedAt: m.updatedAt?.toISOString() || null,
 		})),
 	};
 };
@@ -985,4 +986,238 @@ const getDescendants = async ({
 	}
 
 	return allDescendants;
+};
+
+// ============================================================================
+// Cross-Reference Operations
+// ============================================================================
+
+export const getCrossReferences = async ({
+	entryId,
+}: {
+	entryId: string;
+}): Promise<
+	Array<{
+		id: string;
+		fromEntryId: string;
+		toEntryId: string | null;
+		arbitraryValue: string | null;
+		relationType: string;
+		note: string | null;
+		toEntry: { id: string; label: string } | null;
+	}>
+> => {
+	const relations = await db
+		.select({
+			id: indexRelations.id,
+			fromEntryId: indexRelations.fromEntryId,
+			toEntryId: indexRelations.toEntryId,
+			arbitraryValue: indexRelations.arbitraryValue,
+			relationType: indexRelations.relationType,
+			note: indexRelations.note,
+		})
+		.from(indexRelations)
+		.where(eq(indexRelations.fromEntryId, entryId));
+
+	const toEntryIds = relations
+		.map((r) => r.toEntryId)
+		.filter((id): id is string => id !== null);
+
+	const toEntries =
+		toEntryIds.length > 0
+			? await db
+					.select({
+						id: indexEntries.id,
+						label: indexEntries.label,
+					})
+					.from(indexEntries)
+					.where(inArray(indexEntries.id, toEntryIds))
+			: [];
+
+	const toEntryMap = new Map(toEntries.map((e) => [e.id, e]));
+
+	return relations.map((rel) => ({
+		...rel,
+		toEntry: rel.toEntryId ? toEntryMap.get(rel.toEntryId) || null : null,
+	}));
+};
+
+export const createCrossReference = async ({
+	fromEntryId,
+	toEntryId,
+	arbitraryValue,
+	relationType,
+	note,
+	userId,
+}: {
+	fromEntryId: string;
+	toEntryId?: string;
+	arbitraryValue?: string;
+	relationType: "see" | "see_also" | "qv";
+	note?: string;
+	userId: string;
+}): Promise<{
+	id: string;
+	fromEntryId: string;
+	toEntryId: string | null;
+	arbitraryValue: string | null;
+	relationType: string;
+	note: string | null;
+}> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [relation] = await tx
+				.insert(indexRelations)
+				.values({
+					fromEntryId,
+					toEntryId: toEntryId || null,
+					arbitraryValue: arbitraryValue || null,
+					relationType,
+					note: note || null,
+					revision: 1,
+				})
+				.returning();
+
+			return relation;
+		},
+	});
+};
+
+export const deleteCrossReference = async ({
+	id,
+	userId,
+}: {
+	id: string;
+	userId: string;
+}): Promise<boolean> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const result = await tx
+				.delete(indexRelations)
+				.where(eq(indexRelations.id, id))
+				.returning({ id: indexRelations.id });
+
+			return result.length > 0;
+		},
+	});
+};
+
+export const hasSeeCrossReference = async ({
+	entryId,
+}: {
+	entryId: string;
+}): Promise<boolean> => {
+	const result = await db
+		.select({ id: indexRelations.id })
+		.from(indexRelations)
+		.where(
+			and(
+				eq(indexRelations.fromEntryId, entryId),
+				eq(indexRelations.relationType, "see"),
+			),
+		)
+		.limit(1);
+
+	return result.length > 0;
+};
+
+export const transferMentions = async ({
+	fromEntryId,
+	toEntryId,
+	userId,
+}: {
+	fromEntryId: string;
+	toEntryId: string;
+	userId: string;
+}): Promise<number> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const result = await tx
+				.update(indexMentions)
+				.set({ entryId: toEntryId })
+				.where(
+					and(
+						eq(indexMentions.entryId, fromEntryId),
+						isNull(indexMentions.deletedAt),
+					),
+				)
+				.returning({ id: indexMentions.id });
+
+			return result.length;
+		},
+	});
+};
+
+export const getEntryMatchers = async ({
+	entryId,
+}: {
+	entryId: string;
+}): Promise<Array<{ id: string; text: string; matcherType: string }>> => {
+	return await db
+		.select({
+			id: indexMatchers.id,
+			text: indexMatchers.text,
+			matcherType: indexMatchers.matcherType,
+		})
+		.from(indexMatchers)
+		.where(eq(indexMatchers.entryId, entryId));
+};
+
+export const deleteAllMatchers = async ({
+	entryId,
+	userId,
+}: {
+	entryId: string;
+	userId: string;
+}): Promise<void> => {
+	await withUserContext({
+		userId,
+		fn: async (tx) => {
+			await tx.delete(indexMatchers).where(eq(indexMatchers.entryId, entryId));
+		},
+	});
+};
+
+export const addMatchersToEntry = async ({
+	entryId,
+	matchers,
+	userId,
+}: {
+	entryId: string;
+	matchers: string[];
+	userId: string;
+}): Promise<void> => {
+	if (matchers.length === 0) return;
+
+	await withUserContext({
+		userId,
+		fn: async (tx) => {
+			await tx.insert(indexMatchers).values(
+				matchers.map((text) => ({
+					entryId,
+					text,
+					matcherType: "alias" as const,
+					revision: 1,
+				})),
+			);
+		},
+	});
+};
+
+export const getMentionCount = async ({
+	entryId,
+}: {
+	entryId: string;
+}): Promise<number> => {
+	const result = await db
+		.select({ count: count() })
+		.from(indexMentions)
+		.where(
+			and(eq(indexMentions.entryId, entryId), isNull(indexMentions.deletedAt)),
+		);
+
+	return result[0]?.count || 0;
 };

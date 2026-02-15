@@ -49,7 +49,7 @@ export const ProjectScriptureContent = () => {
 		projectId: projectId || undefined,
 		projectIndexTypeId: scriptureProjectIndexTypeId,
 		metadata: {
-			aliases: e.variants.map((v) => v.text),
+			matchers: e.matchers?.map((m) => m.text) || [],
 		},
 	}));
 

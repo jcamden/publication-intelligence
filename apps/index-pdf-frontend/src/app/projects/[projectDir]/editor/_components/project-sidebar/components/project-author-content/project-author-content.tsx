@@ -48,7 +48,7 @@ export const ProjectAuthorContent = () => {
 		projectId: projectId || undefined,
 		projectIndexTypeId: authorProjectIndexTypeId,
 		metadata: {
-			aliases: e.variants.map((v) => v.text),
+			matchers: e.matchers?.map((m) => m.text) || [],
 		},
 	}));
 

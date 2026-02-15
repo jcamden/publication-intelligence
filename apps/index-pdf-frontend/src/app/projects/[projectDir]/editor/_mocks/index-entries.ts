@@ -23,7 +23,7 @@ export const mockSubjectEntries: IndexEntry[] = [
 		label: "Kant, Immanuel",
 		parentId: "entry-subject-1",
 		metadata: {
-			aliases: ["Kant, I.", "Emmanuel Kant"],
+			matchers: ["Kant, I.", "Emmanuel Kant"],
 		},
 	},
 	{
@@ -32,7 +32,7 @@ export const mockSubjectEntries: IndexEntry[] = [
 		label: "Hegel, G.W.F.",
 		parentId: "entry-subject-1",
 		metadata: {
-			aliases: ["Hegel", "Georg Wilhelm Friedrich Hegel"],
+			matchers: ["Hegel", "Georg Wilhelm Friedrich Hegel"],
 		},
 	},
 	{
@@ -94,7 +94,7 @@ export const mockAuthorEntries: IndexEntry[] = [
 		label: "Kant, Immanuel", // Same name as Subject entry, but different hierarchy
 		parentId: "entry-author-1",
 		metadata: {
-			aliases: ["Kant, I."],
+			matchers: ["Kant, I."],
 		},
 	},
 	{

@@ -7,9 +7,9 @@ import { getTestDb } from "../db/client";
 import type * as schema from "../db/schema";
 import {
 	indexEntries,
+	indexMatchers,
 	indexMentions,
 	indexMentionTypes,
-	indexVariants,
 	projectIndexTypes,
 	projects,
 	sourceDocuments,
@@ -319,7 +319,7 @@ export const createTestIndexEntry = async ({
 	userId,
 	description,
 	parentId,
-	variants,
+	matchers,
 	testDb,
 }: {
 	projectId: string;
@@ -329,7 +329,7 @@ export const createTestIndexEntry = async ({
 	userId: string;
 	description?: string;
 	parentId?: string;
-	variants?: string[];
+	matchers?: string[];
 	testDb?: PgliteDatabase<typeof schema>;
 }) => {
 	// Get testDb from module-level override if not explicitly provided
@@ -360,12 +360,12 @@ export const createTestIndexEntry = async ({
 			})
 			.returning();
 
-		if (variants && variants.length > 0) {
-			await tx.insert(indexVariants).values(
-				variants.map((text) => ({
+		if (matchers && matchers.length > 0) {
+			await tx.insert(indexMatchers).values(
+				matchers.map((text) => ({
 					entryId: entry.id,
 					text,
-					variantType: "alias" as const,
+					matcherType: "alias" as const,
 					revision: 1,
 				})),
 			);

@@ -41,8 +41,8 @@ export const findEntryByText = ({
 	return (
 		entries.find((entry) => {
 			if (entry.label.toLowerCase() === normalized) return true;
-			const aliases = entry.metadata?.aliases || [];
-			return aliases.some((alias) => alias.toLowerCase() === normalized);
+			const matchers = entry.metadata?.matchers || [];
+			return matchers.some((alias) => alias.toLowerCase() === normalized);
 		}) || null
 	);
 };

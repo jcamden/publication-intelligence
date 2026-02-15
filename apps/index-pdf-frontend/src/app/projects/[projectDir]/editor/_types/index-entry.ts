@@ -7,7 +7,7 @@ export type IndexEntry = {
 	projectId?: string; // Optional project ID for mutations
 	projectIndexTypeId?: string; // Optional for backend operations
 	metadata?: {
-		aliases?: string[]; // ["Kant, I.", "Emmanuel Kant"]
+		matchers?: string[]; // ["Kant, I.", "Emmanuel Kant"]
 		sortKey?: string; // For alphabetization
 	};
 };

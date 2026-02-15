@@ -6,14 +6,14 @@ CREATE TYPE "public"."highlight_type" AS ENUM('subject', 'author', 'scripture', 
 CREATE TYPE "public"."index_entry_status" AS ENUM('suggested', 'active');--> statement-breakpoint
 CREATE TYPE "public"."index_type" AS ENUM('subject', 'author', 'scripture');--> statement-breakpoint
 CREATE TYPE "public"."llm_run_status" AS ENUM('pending', 'running', 'completed', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."matcher_type" AS ENUM('alias', 'synonym', 'abbreviation', 'deprecated', 'editorial');--> statement-breakpoint
 CREATE TYPE "public"."mention_range_type" AS ENUM('single_page', 'page_range', 'passim');--> statement-breakpoint
 CREATE TYPE "public"."mention_type" AS ENUM('text', 'region');--> statement-breakpoint
 CREATE TYPE "public"."numeral_type" AS ENUM('arabic', 'roman', 'arbitrary');--> statement-breakpoint
 CREATE TYPE "public"."page_config_mode" AS ENUM('this_page', 'all_pages', 'page_range', 'custom');--> statement-breakpoint
 CREATE TYPE "public"."region_type" AS ENUM('exclude', 'page_number');--> statement-breakpoint
-CREATE TYPE "public"."relation_type" AS ENUM('see', 'see_also', 'broader', 'narrower', 'related');--> statement-breakpoint
+CREATE TYPE "public"."relation_type" AS ENUM('see', 'see_also', 'qv');--> statement-breakpoint
 CREATE TYPE "public"."source_document_status" AS ENUM('uploaded', 'processing', 'processed', 'failed');--> statement-breakpoint
-CREATE TYPE "public"."variant_type" AS ENUM('alias', 'synonym', 'abbreviation', 'deprecated', 'editorial');--> statement-breakpoint
 CREATE TABLE "canonical_page_rules" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
@@ -169,6 +169,17 @@ CREATE TABLE "index_entries" (
 );
 --> statement-breakpoint
 ALTER TABLE "index_entries" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "index_matchers" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"entry_id" uuid NOT NULL,
+	"text" text NOT NULL,
+	"matcher_type" "matcher_type" DEFAULT 'alias' NOT NULL,
+	"revision" integer DEFAULT 1 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone
+);
+--> statement-breakpoint
+ALTER TABLE "index_matchers" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "index_mention_types" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"index_mention_id" uuid NOT NULL,
@@ -189,6 +200,7 @@ CREATE TABLE "index_mentions" (
 	"bboxes" json,
 	"range_type" "mention_range_type" DEFAULT 'single_page' NOT NULL,
 	"mention_type" "mention_type" DEFAULT 'text' NOT NULL,
+	"page_sublocation" text,
 	"suggested_by_llm_id" uuid,
 	"detection_run_id" uuid,
 	"note" text,
@@ -202,7 +214,8 @@ ALTER TABLE "index_mentions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "index_relations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"from_entry_id" uuid NOT NULL,
-	"to_entry_id" uuid NOT NULL,
+	"to_entry_id" uuid,
+	"arbitrary_value" text,
 	"relation_type" "relation_type" NOT NULL,
 	"note" text,
 	"revision" integer DEFAULT 1 NOT NULL,
@@ -211,17 +224,6 @@ CREATE TABLE "index_relations" (
 );
 --> statement-breakpoint
 ALTER TABLE "index_relations" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-CREATE TABLE "index_variants" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"entry_id" uuid NOT NULL,
-	"text" text NOT NULL,
-	"variant_type" "variant_type" DEFAULT 'alias' NOT NULL,
-	"revision" integer DEFAULT 1 NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone
-);
---> statement-breakpoint
-ALTER TABLE "index_variants" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "llm_runs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"prompt_id" uuid NOT NULL,
@@ -299,6 +301,7 @@ ALTER TABLE "user_index_type_addons" ADD CONSTRAINT "user_index_type_addons_user
 ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_project_index_type_id_project_highlight_configs_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_highlight_configs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_entries" ADD CONSTRAINT "index_entries_detection_run_id_detection_runs_id_fk" FOREIGN KEY ("detection_run_id") REFERENCES "public"."detection_runs"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "index_matchers" ADD CONSTRAINT "index_matchers_entry_id_index_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mention_types" ADD CONSTRAINT "index_mention_types_index_mention_id_index_mentions_id_fk" FOREIGN KEY ("index_mention_id") REFERENCES "public"."index_mentions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mention_types" ADD CONSTRAINT "index_mention_types_project_index_type_id_project_highlight_configs_id_fk" FOREIGN KEY ("project_index_type_id") REFERENCES "public"."project_highlight_configs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_entry_id_index_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -306,7 +309,6 @@ ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_document_id_source_d
 ALTER TABLE "index_mentions" ADD CONSTRAINT "index_mentions_detection_run_id_detection_runs_id_fk" FOREIGN KEY ("detection_run_id") REFERENCES "public"."detection_runs"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_relations" ADD CONSTRAINT "index_relations_from_entry_id_index_entries_id_fk" FOREIGN KEY ("from_entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "index_relations" ADD CONSTRAINT "index_relations_to_entry_id_index_entries_id_fk" FOREIGN KEY ("to_entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "index_variants" ADD CONSTRAINT "index_variants_entry_id_index_entries_id_fk" FOREIGN KEY ("entry_id") REFERENCES "public"."index_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_prompt_id_prompts_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_document_id_source_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."source_documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "llm_runs" ADD CONSTRAINT "llm_runs_executed_by_user_id_users_id_fk" FOREIGN KEY ("executed_by_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -316,9 +318,9 @@ CREATE UNIQUE INDEX "unique_suppression" ON "suppressed_suggestions" USING btree
 CREATE UNIQUE INDEX "unique_project_highlight_type" ON "project_highlight_configs" USING btree ("project_id","highlight_type") WHERE "project_highlight_configs"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_user_index_type" ON "user_index_type_addons" USING btree ("user_id","index_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_index_type_slug" ON "index_entries" USING btree ("project_id","project_index_type_id","slug");--> statement-breakpoint
+CREATE UNIQUE INDEX "unique_entry_text" ON "index_matchers" USING btree ("entry_id","text");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_mention_type" ON "index_mention_types" USING btree ("index_mention_id","project_index_type_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_from_to_type" ON "index_relations" USING btree ("from_entry_id","to_entry_id","relation_type");--> statement-breakpoint
-CREATE UNIQUE INDEX "unique_entry_text" ON "index_variants" USING btree ("entry_id","text");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_name_version" ON "prompts" USING btree ("name","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_owner_dir" ON "projects" USING btree ("owner_id","project_dir") WHERE "projects"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_owner_title" ON "projects" USING btree ("owner_id","title") WHERE "projects"."deleted_at" IS NULL;--> statement-breakpoint
@@ -362,6 +364,10 @@ CREATE POLICY "index_entries_project_access" ON "index_entries" AS PERMISSIVE FO
 				SELECT 1 FROM projects
 				WHERE projects.id = "index_entries"."project_id"
 			));--> statement-breakpoint
+CREATE POLICY "index_matchers_entry_access" ON "index_matchers" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
+				SELECT 1 FROM index_entries
+				WHERE index_entries.id = "index_matchers"."entry_id"
+			));--> statement-breakpoint
 CREATE POLICY "index_mention_types_mention_access" ON "index_mention_types" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
 				SELECT 1 FROM index_mentions
 				WHERE index_mentions.id = "index_mention_types"."index_mention_id"
@@ -373,10 +379,6 @@ CREATE POLICY "index_mentions_entry_access" ON "index_mentions" AS PERMISSIVE FO
 CREATE POLICY "index_relations_entry_access" ON "index_relations" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
 				SELECT 1 FROM index_entries
 				WHERE index_entries.id = "index_relations"."from_entry_id"
-			));--> statement-breakpoint
-CREATE POLICY "index_variants_entry_access" ON "index_variants" AS PERMISSIVE FOR ALL TO "authenticated" USING (EXISTS (
-				SELECT 1 FROM index_entries
-				WHERE index_entries.id = "index_variants"."entry_id"
 			));--> statement-breakpoint
 CREATE POLICY "llm_runs_user_or_document_access" ON "llm_runs" AS PERMISSIVE FOR ALL TO "authenticated" USING ((
 				"llm_runs"."executed_by_user_id" = auth.user_id()

@@ -52,12 +52,12 @@ export const EntryCreationModal = ({
 		defaultValues: {
 			label: prefillLabel,
 			parentId: null as string | null,
-			aliases: "", // Comma-separated string (will be variants)
+			aliases: "", // Comma-separated string (will be matchers)
 		},
 		onSubmit: async ({ value }) => {
 			const label = value.label.trim();
 			const slug = label.toLowerCase().replace(/\s+/g, "-");
-			const variants = value.aliases
+			const matchers = value.aliases
 				.split(",")
 				.map((s) => s.trim())
 				.filter(Boolean);
@@ -69,7 +69,7 @@ export const EntryCreationModal = ({
 					label,
 					slug,
 					parentId: value.parentId || undefined,
-					variants: variants.length > 0 ? variants : undefined,
+					matchers: matchers.length > 0 ? matchers : undefined,
 				},
 				{
 					onSuccess: () => {

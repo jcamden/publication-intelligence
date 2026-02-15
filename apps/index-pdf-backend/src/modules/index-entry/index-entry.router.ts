@@ -2,8 +2,12 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../../trpc";
 import * as indexEntryService from "./index-entry.service";
 import {
+	CreateCrossReferenceSchema,
 	CreateIndexEntrySchema,
+	DeleteCrossReferenceSchema,
 	DeleteIndexEntrySchema,
+	TransferMatchersSchema,
+	TransferMentionsSchema,
 	UpdateIndexEntryParentSchema,
 	UpdateIndexEntrySchema,
 } from "./index-entry.types";
@@ -124,4 +128,64 @@ export const indexEntryRouter = router({
 				requestId: ctx.requestId,
 			});
 		}),
+
+	// ============================================================================
+	// Cross-Reference Endpoints
+	// ============================================================================
+
+	crossReference: router({
+		list: protectedProcedure
+			.input(
+				z.object({
+					entryId: z.string().uuid(),
+				}),
+			)
+			.query(async ({ input, ctx }) => {
+				return await indexEntryService.listCrossReferences({
+					entryId: input.entryId,
+					userId: ctx.user.id,
+					requestId: ctx.requestId,
+				});
+			}),
+
+		create: protectedProcedure
+			.input(CreateCrossReferenceSchema)
+			.mutation(async ({ input, ctx }) => {
+				return await indexEntryService.createCrossReference({
+					input,
+					userId: ctx.user.id,
+					requestId: ctx.requestId,
+				});
+			}),
+
+		delete: protectedProcedure
+			.input(DeleteCrossReferenceSchema)
+			.mutation(async ({ input, ctx }) => {
+				return await indexEntryService.deleteCrossReference({
+					input,
+					userId: ctx.user.id,
+					requestId: ctx.requestId,
+				});
+			}),
+
+		transferMentions: protectedProcedure
+			.input(TransferMentionsSchema)
+			.mutation(async ({ input, ctx }) => {
+				return await indexEntryService.transferMentions({
+					input,
+					userId: ctx.user.id,
+					requestId: ctx.requestId,
+				});
+			}),
+
+		transferMatchers: protectedProcedure
+			.input(TransferMatchersSchema)
+			.mutation(async ({ input, ctx }) => {
+				return await indexEntryService.transferMatchers({
+					input,
+					userId: ctx.user.id,
+					requestId: ctx.requestId,
+				});
+			}),
+	}),
 });

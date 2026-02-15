@@ -1,5 +1,5 @@
 {
-	"id": "89e49d02-0179-4fb8-bd23-18382d030cfd",
+	"id": "3280cad4-978f-4e2f-a319-6c7b9b54e8fb",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -1210,6 +1210,106 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
+		"public.index_matchers": {
+			"name": "index_matchers",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"entry_id": {
+					"name": "entry_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"text": {
+					"name": "text",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"matcher_type": {
+					"name": "matcher_type",
+					"type": "matcher_type",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'alias'"
+				},
+				"revision": {
+					"name": "revision",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 1
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				}
+			},
+			"indexes": {
+				"unique_entry_text": {
+					"name": "unique_entry_text",
+					"columns": [
+						{
+							"expression": "entry_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "text",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"index_matchers_entry_id_index_entries_id_fk": {
+					"name": "index_matchers_entry_id_index_entries_id_fk",
+					"tableFrom": "index_matchers",
+					"tableTo": "index_entries",
+					"columnsFrom": ["entry_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {
+				"index_matchers_entry_access": {
+					"name": "index_matchers_entry_access",
+					"as": "PERMISSIVE",
+					"for": "ALL",
+					"to": ["authenticated"],
+					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM index_entries\n\t\t\t\tWHERE index_entries.id = \"index_matchers\".\"entry_id\"\n\t\t\t)"
+				}
+			},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
 		"public.index_mention_types": {
 			"name": "index_mention_types",
 			"schema": "",
@@ -1373,6 +1473,12 @@
 					"notNull": true,
 					"default": "'text'"
 				},
+				"page_sublocation": {
+					"name": "page_sublocation",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
 				"suggested_by_llm_id": {
 					"name": "suggested_by_llm_id",
 					"type": "uuid",
@@ -1483,7 +1589,13 @@
 					"name": "to_entry_id",
 					"type": "uuid",
 					"primaryKey": false,
-					"notNull": true
+					"notNull": false
+				},
+				"arbitrary_value": {
+					"name": "arbitrary_value",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
 				},
 				"relation_type": {
 					"name": "relation_type",
@@ -1577,106 +1689,6 @@
 					"for": "ALL",
 					"to": ["authenticated"],
 					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM index_entries\n\t\t\t\tWHERE index_entries.id = \"index_relations\".\"from_entry_id\"\n\t\t\t)"
-				}
-			},
-			"checkConstraints": {},
-			"isRLSEnabled": false
-		},
-		"public.index_variants": {
-			"name": "index_variants",
-			"schema": "",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "uuid",
-					"primaryKey": true,
-					"notNull": true,
-					"default": "gen_random_uuid()"
-				},
-				"entry_id": {
-					"name": "entry_id",
-					"type": "uuid",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"text": {
-					"name": "text",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"variant_type": {
-					"name": "variant_type",
-					"type": "variant_type",
-					"typeSchema": "public",
-					"primaryKey": false,
-					"notNull": true,
-					"default": "'alias'"
-				},
-				"revision": {
-					"name": "revision",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": true,
-					"default": 1
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "timestamp with time zone",
-					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
-				},
-				"updated_at": {
-					"name": "updated_at",
-					"type": "timestamp with time zone",
-					"primaryKey": false,
-					"notNull": false
-				}
-			},
-			"indexes": {
-				"unique_entry_text": {
-					"name": "unique_entry_text",
-					"columns": [
-						{
-							"expression": "entry_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						},
-						{
-							"expression": "text",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						}
-					],
-					"isUnique": true,
-					"concurrently": false,
-					"method": "btree",
-					"with": {}
-				}
-			},
-			"foreignKeys": {
-				"index_variants_entry_id_index_entries_id_fk": {
-					"name": "index_variants_entry_id_index_entries_id_fk",
-					"tableFrom": "index_variants",
-					"tableTo": "index_entries",
-					"columnsFrom": ["entry_id"],
-					"columnsTo": ["id"],
-					"onDelete": "cascade",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"policies": {
-				"index_variants_entry_access": {
-					"name": "index_variants_entry_access",
-					"as": "PERMISSIVE",
-					"for": "ALL",
-					"to": ["authenticated"],
-					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM index_entries\n\t\t\t\tWHERE index_entries.id = \"index_variants\".\"entry_id\"\n\t\t\t)"
 				}
 			},
 			"checkConstraints": {},
@@ -2238,6 +2250,11 @@
 			"schema": "public",
 			"values": ["pending", "running", "completed", "failed"]
 		},
+		"public.matcher_type": {
+			"name": "matcher_type",
+			"schema": "public",
+			"values": ["alias", "synonym", "abbreviation", "deprecated", "editorial"]
+		},
 		"public.mention_range_type": {
 			"name": "mention_range_type",
 			"schema": "public",
@@ -2266,17 +2283,12 @@
 		"public.relation_type": {
 			"name": "relation_type",
 			"schema": "public",
-			"values": ["see", "see_also", "broader", "narrower", "related"]
+			"values": ["see", "see_also", "qv"]
 		},
 		"public.source_document_status": {
 			"name": "source_document_status",
 			"schema": "public",
 			"values": ["uploaded", "processing", "processed", "failed"]
-		},
-		"public.variant_type": {
-			"name": "variant_type",
-			"schema": "public",
-			"values": ["alias", "synonym", "abbreviation", "deprecated", "editorial"]
 		}
 	},
 	"schemas": {},

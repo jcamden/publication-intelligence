@@ -7,11 +7,16 @@ import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
 import * as indexEntryRepo from "./index-entry.repo";
 import type {
+	CreateCrossReferenceInput,
 	CreateIndexEntryInput,
+	CrossReference,
+	DeleteCrossReferenceInput,
 	DeleteIndexEntryInput,
 	IndexEntry,
 	IndexEntryListItem,
 	IndexEntrySearchResult,
+	TransferMatchersInput,
+	TransferMentionsInput,
 	UpdateIndexEntryInput,
 	UpdateIndexEntryParentInput,
 } from "./index-entry.types";
@@ -106,7 +111,7 @@ export const createIndexEntry = async ({
 				label: input.label,
 				slug: input.slug,
 				parentId: input.parentId,
-				variantCount: input.variants?.length || 0,
+				matcherCount: input.matchers?.length || 0,
 			},
 		},
 	});
@@ -449,4 +454,196 @@ export const checkExactMatch = async ({
 		projectIndexTypeId,
 		text,
 	});
+};
+
+// ============================================================================
+// Cross-Reference Service Functions
+// ============================================================================
+
+export const listCrossReferences = async ({
+	entryId,
+	userId,
+	requestId,
+}: {
+	entryId: string;
+	userId: string;
+	requestId: string;
+}): Promise<CrossReference[]> => {
+	logEvent({
+		event: "cross_reference.list_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: { entryId },
+		},
+	});
+
+	const relations = await indexEntryRepo.getCrossReferences({ entryId });
+	return relations as CrossReference[];
+};
+
+export const createCrossReference = async ({
+	input,
+	userId,
+	requestId,
+}: {
+	input: CreateCrossReferenceInput;
+	userId: string;
+	requestId: string;
+}): Promise<CrossReference> => {
+	// "See" cross-reference enforcement
+	if (input.relationType === "see") {
+		// Check if source entry has mentions
+		const mentionCount = await indexEntryRepo.getMentionCount({
+			entryId: input.fromEntryId,
+		});
+
+		if (mentionCount > 0) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: `Cannot create "see" cross-reference. Entry has ${mentionCount} mentions. Transfer or delete them first.`,
+			});
+		}
+
+		// Delete all matchers from source entry (label remains as implicit default)
+		await indexEntryRepo.deleteAllMatchers({
+			entryId: input.fromEntryId,
+			userId,
+		});
+
+		logEvent({
+			event: "cross_reference.see_matchers_removed",
+			context: {
+				requestId,
+				userId,
+				metadata: {
+					fromEntryId: input.fromEntryId,
+					toEntryId: input.toEntryId,
+					arbitraryValue: input.arbitraryValue,
+				},
+			},
+		});
+	}
+
+	const relation = await indexEntryRepo.createCrossReference({
+		fromEntryId: input.fromEntryId,
+		toEntryId: input.toEntryId,
+		arbitraryValue: input.arbitraryValue,
+		relationType: input.relationType,
+		note: input.note,
+		userId,
+	});
+
+	logEvent({
+		event: "cross_reference.created",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				relationId: relation.id,
+				fromEntryId: input.fromEntryId,
+				toEntryId: input.toEntryId,
+				arbitraryValue: input.arbitraryValue,
+				relationType: input.relationType,
+			},
+		},
+	});
+
+	return relation as CrossReference;
+};
+
+export const deleteCrossReference = async ({
+	input,
+	userId,
+	requestId,
+}: {
+	input: DeleteCrossReferenceInput;
+	userId: string;
+	requestId: string;
+}): Promise<boolean> => {
+	const deleted = await indexEntryRepo.deleteCrossReference({
+		id: input.id,
+		userId,
+	});
+
+	logEvent({
+		event: "cross_reference.deleted",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				relationId: input.id,
+			},
+		},
+	});
+
+	return deleted;
+};
+
+export const transferMentions = async ({
+	input,
+	userId,
+	requestId,
+}: {
+	input: TransferMentionsInput;
+	userId: string;
+	requestId: string;
+}): Promise<{ count: number }> => {
+	const count = await indexEntryRepo.transferMentions({
+		fromEntryId: input.fromEntryId,
+		toEntryId: input.toEntryId,
+		userId,
+	});
+
+	logEvent({
+		event: "cross_reference.mentions_transferred",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				fromEntryId: input.fromEntryId,
+				toEntryId: input.toEntryId,
+				count,
+			},
+		},
+	});
+
+	return { count };
+};
+
+export const transferMatchers = async ({
+	input,
+	userId,
+	requestId,
+}: {
+	input: TransferMatchersInput;
+	userId: string;
+	requestId: string;
+}): Promise<{ count: number }> => {
+	// Get matchers from source entry
+	const matchers = await indexEntryRepo.getEntryMatchers({
+		entryId: input.fromEntryId,
+	});
+
+	// Add them to target entry
+	await indexEntryRepo.addMatchersToEntry({
+		entryId: input.toEntryId,
+		matchers: matchers.map((m) => m.text),
+		userId,
+	});
+
+	logEvent({
+		event: "cross_reference.matchers_transferred",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				fromEntryId: input.fromEntryId,
+				toEntryId: input.toEntryId,
+				count: matchers.length,
+			},
+		},
+	});
+
+	return { count: matchers.length };
 };

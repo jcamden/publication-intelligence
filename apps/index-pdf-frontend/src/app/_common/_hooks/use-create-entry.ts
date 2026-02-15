@@ -40,7 +40,7 @@ export const useCreateEntry = () => {
 							colorHue: 0,
 						},
 						parentId: newEntry.parentId || null,
-						variants: [],
+						matchers: [],
 						mentionCount: 0,
 						childCount: 0,
 						createdAt: new Date().toISOString(),
@@ -85,7 +85,7 @@ export const useCreateEntry = () => {
 										indexType: "",
 										colorHue: 0,
 									},
-									variants: data.variants ?? [],
+									matchers: data.matchers ?? [],
 									mentionCount: data.mentionCount ?? 0,
 									childCount: data.childCount ?? 0,
 								} satisfies IndexEntryListItem)

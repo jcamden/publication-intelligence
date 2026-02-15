@@ -3,8 +3,10 @@ import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	createTestIndexEntry,
+	createTestIndexMention,
 	createTestProject,
 	createTestProjectIndexType,
+	createTestSourceDocument,
 	createTestUser,
 	grantIndexTypeAddon,
 } from "../../test/factories";
@@ -13,7 +15,7 @@ import {
 	createTestServer,
 	makeAuthenticatedRequest,
 } from "../../test/server-harness";
-import type { IndexEntrySearchResult, IndexVariant } from "./index-entry.types";
+import type { IndexEntrySearchResult, IndexMatcher } from "./index-entry.types";
 
 // ============================================================================
 // API / Integration Tests for IndexEntry
@@ -105,7 +107,7 @@ describe("IndexEntry API (Integration)", () => {
 			expect(body.result.data.projectIndexTypeId).toBe(subjectIndexTypeId);
 		});
 
-		it("should create entry with variants (aliases)", async ({
+		it("should create entry with matchers (aliases)", async ({
 			authenticatedRequest,
 			testProjectId,
 			subjectIndexTypeId,
@@ -118,16 +120,16 @@ describe("IndexEntry API (Integration)", () => {
 					projectIndexTypeId: subjectIndexTypeId,
 					label: "Christology",
 					slug: "christology",
-					variants: ["Christ", "Jesus Christ", "The Messiah"],
+					matchers: ["Christ", "Jesus Christ", "The Messiah"],
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
 			expect(body.result.data.label).toBe("Christology");
-			expect(body.result.data.variants).toHaveLength(3);
+			expect(body.result.data.matchers).toHaveLength(3);
 			expect(
-				body.result.data.variants.map((v: IndexVariant) => v.text),
+				body.result.data.matchers.map((v: IndexMatcher) => v.text),
 			).toEqual(["Christ", "Jesus Christ", "The Messiah"]);
 		});
 
@@ -380,7 +382,7 @@ describe("IndexEntry API (Integration)", () => {
 			expect(body.result.data.revision).toBe(2);
 		});
 
-		it("should update variants", async ({
+		it("should update matchers", async ({
 			testUser,
 			authenticatedRequest,
 			testProjectId,
@@ -392,7 +394,7 @@ describe("IndexEntry API (Integration)", () => {
 				label: "Christology",
 				slug: "christology",
 				userId: testUser.userId,
-				variants: ["Christ"],
+				matchers: ["Christ"],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -402,15 +404,15 @@ describe("IndexEntry API (Integration)", () => {
 					id: entry.id,
 					projectId: testProjectId,
 					projectIndexTypeId: subjectIndexTypeId,
-					variants: ["Christ", "Jesus", "The Messiah"],
+					matchers: ["Christ", "Jesus", "The Messiah"],
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.variants).toHaveLength(3);
+			expect(body.result.data.matchers).toHaveLength(3);
 			expect(
-				body.result.data.variants.map((v: IndexVariant) => v.text),
+				body.result.data.matchers.map((v: IndexMatcher) => v.text),
 			).toEqual(["Christ", "Jesus", "The Messiah"]);
 		});
 
@@ -587,7 +589,7 @@ describe("IndexEntry API (Integration)", () => {
 				label: "Christology",
 				slug: "christology",
 				userId: testUser.userId,
-				variants: ["Christ", "Jesus Christ"],
+				matchers: ["Christ", "Jesus Christ"],
 			});
 
 			await createTestIndexEntry({
@@ -615,7 +617,7 @@ describe("IndexEntry API (Integration)", () => {
 			expect(body.result.data[0].label).toContain("Theology");
 		});
 
-		it("should search by variant", async ({
+		it("should search by matcher", async ({
 			authenticatedRequest,
 			testProjectId,
 			subjectIndexTypeId,
@@ -666,7 +668,7 @@ describe("IndexEntry API (Integration)", () => {
 				label: "Christology",
 				slug: "christology",
 				userId: testUser.userId,
-				variants: ["Christ", "Jesus Christ"],
+				matchers: ["Christ", "Jesus Christ"],
 			});
 		});
 
@@ -686,7 +688,7 @@ describe("IndexEntry API (Integration)", () => {
 			expect(body.result.data.label).toBe("Theology");
 		});
 
-		it("should match exact variant (case-insensitive)", async ({
+		it("should match exact matcher (case-insensitive)", async ({
 			authenticatedRequest,
 			testProjectId,
 			subjectIndexTypeId,
@@ -847,6 +849,440 @@ describe("IndexEntry API (Integration)", () => {
 
 			const listBody = JSON.parse(listResponse.body);
 			expect(listBody.result.data).toHaveLength(0);
+		});
+	});
+
+	describe("Cross-References", () => {
+		it("should create a 'see' cross-reference", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+			});
+
+			const toEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry.id,
+					relationType: "see",
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.relationType).toBe("see");
+			expect(body.result.data.fromEntryId).toBe(fromEntry.id);
+			expect(body.result.data.toEntryId).toBe(toEntry.id);
+		});
+
+		it("should create a 'see also' cross-reference", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			const toEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "End, The",
+				slug: "end-the",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry.id,
+					relationType: "see_also",
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.relationType).toBe("see_also");
+		});
+
+		it("should create cross-reference with arbitrary value", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "form criticism",
+				slug: "form-criticism",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					arbitraryValue: "Form/Structure/Setting sections",
+					relationType: "see",
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.arbitraryValue).toBe(
+				"Form/Structure/Setting sections",
+			);
+			expect(body.result.data.toEntryId).toBeNull();
+		});
+
+		it("should prevent 'see' cross-reference when entry has mentions", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const document = await createTestSourceDocument({
+				projectId: testProjectId,
+				userId: testUser.userId,
+			});
+
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+			});
+
+			const toEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			// Create a mention for the fromEntry
+			await createTestIndexMention({
+				entryId: fromEntry.id,
+				documentId: document.id,
+				userId: testUser.userId,
+				projectIndexTypeIds: [subjectIndexTypeId],
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry.id,
+					relationType: "see",
+				},
+			});
+
+			expect(response.statusCode).toBe(400);
+			const body = JSON.parse(response.body);
+			expect(body.error.message).toContain("mentions");
+		});
+
+		it("should remove matchers when creating 'see' cross-reference", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+				matchers: ["beast", "creature"],
+			});
+
+			const toEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			// Verify matchers exist before
+			const beforeResponse = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+			const beforeBody = JSON.parse(beforeResponse.body);
+			const beforeEntry = beforeBody.result.data.find(
+				(e: { id: string }) => e.id === fromEntry.id,
+			);
+			expect(beforeEntry.matchers).toHaveLength(2);
+
+			// Create 'see' cross-reference
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry.id,
+					relationType: "see",
+				},
+			});
+
+			// Verify matchers were removed
+			const afterResponse = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+			const afterBody = JSON.parse(afterResponse.body);
+			const afterEntry = afterBody.result.data.find(
+				(e: { id: string }) => e.id === fromEntry.id,
+			);
+			expect(afterEntry.matchers).toHaveLength(0);
+		});
+
+		it("should list cross-references for an entry", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			const toEntry1 = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "End, The",
+				slug: "end-the",
+				userId: testUser.userId,
+			});
+
+			const toEntry2 = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "horn",
+				slug: "horn",
+				userId: testUser.userId,
+			});
+
+			// Create two cross-references
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry1.id,
+					relationType: "see_also",
+				},
+			});
+
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry2.id,
+					relationType: "see_also",
+				},
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.crossReference.list?input=${encodeURIComponent(JSON.stringify({ entryId: fromEntry.id }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toHaveLength(2);
+			expect(body.result.data[0].relationType).toBe("see_also");
+		});
+
+		it("should delete a cross-reference", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+			});
+
+			const toEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			// Create cross-reference
+			const createResponse = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry.id,
+					relationType: "see_also",
+				},
+			});
+
+			const createBody = JSON.parse(createResponse.body);
+			const relationId = createBody.result.data.id;
+
+			// Delete cross-reference
+			const deleteResponse = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.delete",
+				payload: {
+					id: relationId,
+				},
+			});
+
+			expect(deleteResponse.statusCode).toBe(200);
+			const deleteBody = JSON.parse(deleteResponse.body);
+			expect(deleteBody.result.data).toBe(true);
+		});
+
+		it("should transfer mentions between entries", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const document = await createTestSourceDocument({
+				projectId: testProjectId,
+				userId: testUser.userId,
+			});
+
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+			});
+
+			const toEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			// Create mentions for fromEntry
+			await createTestIndexMention({
+				entryId: fromEntry.id,
+				documentId: document.id,
+				userId: testUser.userId,
+				projectIndexTypeIds: [subjectIndexTypeId],
+			});
+
+			await createTestIndexMention({
+				entryId: fromEntry.id,
+				documentId: document.id,
+				userId: testUser.userId,
+				pageNumber: 2,
+				projectIndexTypeIds: [subjectIndexTypeId],
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.transferMentions",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.count).toBe(2);
+		});
+
+		it("should transfer matchers between entries", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+				matchers: ["beast", "creature", "living thing"],
+			});
+
+			const toEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.transferMatchers",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntry.id,
+				},
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.count).toBe(3);
+
+			// Verify matchers were added to toEntry
+			const listResponse = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+			const listBody = JSON.parse(listResponse.body);
+			const toEntryData = listBody.result.data.find(
+				(e: { id: string }) => e.id === toEntry.id,
+			);
+			expect(toEntryData.matchers).toHaveLength(3);
 		});
 	});
 });

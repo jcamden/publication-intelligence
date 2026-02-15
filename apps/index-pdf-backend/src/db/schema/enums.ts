@@ -55,15 +55,13 @@ export const entityTypeEnum = pgEnum("entity_type", [
 
 // Index relation types (cross-references)
 export const relationTypeEnum = pgEnum("relation_type", [
-	"see",
-	"see_also",
-	"broader",
-	"narrower",
-	"related",
+	"see", // Redirect only - no matchers allowed on source entry
+	"see_also", // Additional reference - source entry keeps matchers
+	"qv", // Inline reference (quod vide) - source entry keeps matchers
 ]);
 
-// Index variant types (synonyms, abbreviations, etc.)
-export const variantTypeEnum = pgEnum("variant_type", [
+// Index matcher types (terms that should match to this entry)
+export const matcherTypeEnum = pgEnum("matcher_type", [
 	"alias",
 	"synonym",
 	"abbreviation",

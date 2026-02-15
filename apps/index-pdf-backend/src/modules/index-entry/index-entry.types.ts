@@ -26,16 +26,16 @@ export type IndexEntry = {
 		indexType: string;
 		colorHue: number;
 	};
-	variants?: IndexVariant[];
+	matchers?: IndexMatcher[];
 	mentionCount?: number;
 	childCount?: number;
 };
 
-export type IndexVariant = {
+export type IndexMatcher = {
 	id: string;
 	entryId: string;
 	text: string;
-	variantType: string;
+	matcherType: string;
 	revision: number;
 	createdAt: string;
 	updatedAt: string | null;
@@ -60,7 +60,7 @@ export type IndexEntryListItem = {
 	};
 	mentionCount: number;
 	childCount: number;
-	variants: IndexVariant[];
+	matchers: IndexMatcher[];
 	createdAt: string;
 	updatedAt: string | null;
 };
@@ -75,8 +75,8 @@ export type IndexEntrySearchResult = {
 		id: string;
 		label: string;
 	} | null;
-	variants: IndexVariant[];
-	matchType: "label" | "variant";
+	matchers: IndexMatcher[];
+	matchType: "label" | "matcher";
 	matchedText?: string;
 };
 
@@ -90,7 +90,7 @@ export const CreateIndexEntrySchema = z.object({
 	label: z.string().min(1).max(200),
 	slug: z.string().min(1).max(200),
 	parentId: z.string().uuid().optional(),
-	variants: z.array(z.string()).optional(),
+	matchers: z.array(z.string()).optional(),
 	description: z.string().optional(),
 });
 
@@ -102,7 +102,7 @@ export const UpdateIndexEntrySchema = z.object({
 	projectIndexTypeId: z.string().uuid(),
 	label: z.string().min(1).max(200).optional(),
 	description: z.string().optional().nullable(),
-	variants: z.array(z.string()).optional(),
+	matchers: z.array(z.string()).optional(),
 });
 
 export type UpdateIndexEntryInput = z.infer<typeof UpdateIndexEntrySchema>;
@@ -124,3 +124,63 @@ export const DeleteIndexEntrySchema = z.object({
 });
 
 export type DeleteIndexEntryInput = z.infer<typeof DeleteIndexEntrySchema>;
+
+// ============================================================================
+// Cross-Reference Types
+// ============================================================================
+
+export type CrossReference = {
+	id: string;
+	fromEntryId: string;
+	toEntryId: string | null;
+	arbitraryValue: string | null;
+	relationType: "see" | "see_also" | "qv";
+	note: string | null;
+	toEntry?: {
+		id: string;
+		label: string;
+	} | null;
+};
+
+export const CreateCrossReferenceSchema = z
+	.object({
+		fromEntryId: z.string().uuid(),
+		toEntryId: z.string().uuid().optional(),
+		arbitraryValue: z.string().optional(),
+		relationType: z.enum(["see", "see_also", "qv"]),
+		note: z.string().optional(),
+	})
+	.refine(
+		(data) =>
+			(data.toEntryId && !data.arbitraryValue) ||
+			(!data.toEntryId && data.arbitraryValue),
+		{
+			message: "Must provide either toEntryId or arbitraryValue, but not both",
+		},
+	);
+
+export type CreateCrossReferenceInput = z.infer<
+	typeof CreateCrossReferenceSchema
+>;
+
+export const DeleteCrossReferenceSchema = z.object({
+	id: z.string().uuid(),
+});
+
+export type DeleteCrossReferenceInput = z.infer<
+	typeof DeleteCrossReferenceSchema
+>;
+
+export const TransferMentionsSchema = z.object({
+	fromEntryId: z.string().uuid(),
+	toEntryId: z.string().uuid(),
+});
+
+export type TransferMentionsInput = z.infer<typeof TransferMentionsSchema>;
+
+export const TransferMatchersSchema = z.object({
+	fromEntryId: z.string().uuid(),
+	toEntryId: z.string().uuid(),
+});
+
+export type TransferMatchersInput = z.infer<typeof TransferMatchersSchema>;
