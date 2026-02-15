@@ -6,16 +6,9 @@ import {
 	type Region,
 } from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
-import { StyledButton } from "@pubint/yaboujee";
 import { OklchColorPicker } from "@pubint/yaboujee/components/ui/oklch-color-picker/oklch-color-picker";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import {
-	Edit,
-	Eye,
-	EyeOff,
-	SquareDashedMousePointer,
-	Trash2,
-} from "lucide-react";
+import { Edit, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
 import {
@@ -29,14 +22,10 @@ import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks
 import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 
 type ProjectRegionsContentProps = {
-	activeAction?: { type: string | null; indexType: string | null };
-	onDrawRegion?: () => void;
 	onEditRegion?: (regionId: string) => void;
 };
 
 export const ProjectRegionsContent = ({
-	activeAction,
-	onDrawRegion,
 	onEditRegion,
 }: ProjectRegionsContentProps) => {
 	const { projectId } = useProjectContext();
@@ -197,24 +186,8 @@ export const ProjectRegionsContent = ({
 		);
 	}
 
-	const isDrawRegionActive = activeAction?.type === "draw-region";
-
 	return (
 		<div className="flex flex-col h-full">
-			{/* Header */}
-			<div className="p-3 border-b border-gray-200 dark:border-gray-700">
-				<StyledButton
-					icon={SquareDashedMousePointer}
-					label="Draw Region"
-					isActive={isDrawRegionActive}
-					onClick={() => {
-						if (onDrawRegion) {
-							onDrawRegion();
-						}
-					}}
-				/>
-			</div>
-
 			{/* Color configuration */}
 			<div className="p-3 border-b border-gray-200 dark:border-gray-700 space-y-2">
 				<div className="flex items-center justify-between gap-3">

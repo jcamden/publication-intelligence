@@ -8,6 +8,7 @@ import {
 } from "@pubint/yabasic/components/ui/tooltip";
 import { cn } from "@pubint/yabasic/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import { formatOklchColor } from "../../utils/index-type-colors";
 
 export type StyledButtonProps = {
 	icon: LucideIcon;
@@ -16,6 +17,8 @@ export type StyledButtonProps = {
 	onClick: () => void;
 	tooltip?: string;
 	className?: string;
+	surfaceColorHue?: number; // Hue value 0-360
+	isDarkMode?: boolean; // Optional dark mode flag from parent
 };
 
 /**
@@ -45,8 +48,33 @@ export const StyledButton = ({
 	onClick,
 	tooltip,
 	className,
+	surfaceColorHue,
+	isDarkMode = false,
 }: StyledButtonProps) => {
 	const tooltipContent = tooltip || label;
+
+	// Compute button background colors from hue
+	const inactiveBackgroundColor = surfaceColorHue
+		? formatOklchColor({
+				hue: surfaceColorHue,
+				lightness: isDarkMode ? 0.52 : 0.96,
+				chroma: 0.2,
+				alpha: isDarkMode ? 0.2 : 0.12,
+			})
+		: undefined;
+
+	const activeBackgroundColor = surfaceColorHue
+		? formatOklchColor({
+				hue: surfaceColorHue,
+				lightness: isDarkMode ? 0.2 : 0.92,
+				chroma: 0.1,
+				alpha: isDarkMode ? 0.35 : 0.22,
+			})
+		: undefined;
+
+	const backgroundColor = isActive
+		? activeBackgroundColor
+		: inactiveBackgroundColor;
 
 	return (
 		<Tooltip delay={500}>
@@ -83,11 +111,15 @@ export const StyledButton = ({
 							size="icon-lg"
 							className={cn(
 								"pointer-events-none border-none rounded-lg",
-								isActive &&
+								// Only apply default background colors if no surfaceColorHue is provided
+								!surfaceColorHue &&
+									isActive &&
 									"bg-neutral-100 group-hover:bg-neutral-200 !shadow-none dark:bg-transparent dark:group-hover:bg-transparent dark:!shadow-none",
-								!isActive &&
+								!surfaceColorHue &&
+									!isActive &&
 									"!shadow-none dark:bg-neutral-700 dark:group-hover:bg-neutral-700 dark:!shadow-sm dark:shadow-neutral-400/50",
 							)}
+							style={backgroundColor ? { backgroundColor } : undefined}
 						>
 							<Icon
 								className={cn(

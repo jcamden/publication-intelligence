@@ -147,7 +147,7 @@ export const PdfViewerToolbar = ({
 	);
 
 	const dockClasses = `
-		inline-flex items-center gap-3 
+		inline-flex items-center gap-6 
 		${className}
 	`.trim();
 
@@ -167,7 +167,7 @@ export const PdfViewerToolbar = ({
 		[&::-webkit-inner-spin-button]:appearance-none
 	`.trim();
 
-	const separatorClasses = `
+	const _separatorClasses = `
 		h-6 
 		w-px 
 		bg-[hsl(var(--color-border))]
@@ -185,70 +185,75 @@ export const PdfViewerToolbar = ({
 						tooltip={pdfVisible ? "Hide PDF" : "Show PDF"}
 						size="lg"
 					/>
-					<div className={separatorClasses} />
+					<div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700" />
 				</>
 			)}
-			{/* Page Controls */}
-			<StyledIconButton
-				icon={ChevronLeft}
-				onClick={handlePrevPage}
-				disabled={currentPage <= 1}
-				tooltip="Previous page"
-				size="lg"
-			/>
-			<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-				<input
-					type="number"
-					min="1"
-					max={totalPages}
-					value={pageInputValue}
-					onChange={handlePageInputChange}
-					onBlur={handlePageInputBlur}
-					onKeyDown={handlePageInputKeyDown}
-					className={inputClasses}
-					aria-label="Current page"
-				/>
-				<span>of {totalPages}</span>
-			</div>
-			<StyledIconButton
-				icon={ChevronRight}
-				onClick={handleNextPage}
-				disabled={currentPage >= totalPages}
-				tooltip="Next page"
-				size="lg"
-			/>
-			{/* Separator */}
-			<div className={separatorClasses} />
+
 			{/* Zoom Controls */}
-			<StyledIconButton
-				icon={Minus}
-				onClick={handleZoomDecrement}
-				disabled={zoom <= 0.5}
-				tooltip="Zoom out"
-				size="lg"
-			/>
-			<div className="flex gap-2 items-center text-muted-foreground">
-				<input
-					type="number"
-					min="50"
-					max="300"
-					step="25"
-					value={zoomInputValue}
-					onChange={handleZoomInputChange}
-					onBlur={handleZoomInputBlur}
-					onKeyDown={handleZoomInputKeyDown}
-					className={`${inputClasses} w-14`}
-					aria-label="Zoom percentage"
+			<div className="flex gap-3">
+				<StyledIconButton
+					icon={Minus}
+					onClick={handleZoomDecrement}
+					disabled={zoom <= 0.5}
+					tooltip="Zoom out"
+					size="lg"
 				/>
-				%
+				<div className="flex gap-1 items-center text-muted-foreground">
+					<input
+						type="number"
+						min="50"
+						max="300"
+						step="25"
+						value={zoomInputValue}
+						onChange={handleZoomInputChange}
+						onBlur={handleZoomInputBlur}
+						onKeyDown={handleZoomInputKeyDown}
+						className={`${inputClasses} w-14`}
+						aria-label="Zoom percentage"
+					/>
+					%
+				</div>
+				<StyledIconButton
+					icon={Plus}
+					onClick={handleZoomIncrement}
+					disabled={zoom >= 3}
+					tooltip="Zoom in"
+					size="lg"
+				/>
 			</div>
-			<StyledIconButton
-				icon={Plus}
-				onClick={handleZoomIncrement}
-				disabled={zoom >= 3}
-				tooltip="Zoom in"
-				size="lg"
-			/>
+			{/* Separator */}
+			<div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700" />
+			{/* Page Controls */}
+			<div className="flex gap-3">
+				<StyledIconButton
+					icon={ChevronLeft}
+					onClick={handlePrevPage}
+					disabled={currentPage <= 1}
+					tooltip="Previous page"
+					size="lg"
+				/>
+				<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+					<input
+						type="number"
+						min="1"
+						max={totalPages}
+						value={pageInputValue}
+						onChange={handlePageInputChange}
+						onBlur={handlePageInputBlur}
+						onKeyDown={handlePageInputKeyDown}
+						className={inputClasses}
+						aria-label="Current page"
+					/>
+					<span>of {totalPages}</span>
+				</div>
+				<StyledIconButton
+					icon={ChevronRight}
+					onClick={handleNextPage}
+					disabled={currentPage >= totalPages}
+					tooltip="Next page"
+					size="lg"
+				/>
+			</div>
 		</div>
 	);
 };

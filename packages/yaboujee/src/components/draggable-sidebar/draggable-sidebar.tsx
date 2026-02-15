@@ -10,6 +10,7 @@ import { Accordion } from "@pubint/yabasic/components/ui/accordion";
 import { ScrollArea } from "@pubint/yabasic/components/ui/scroll-area";
 import type { LucideIcon } from "lucide-react";
 import type React from "react";
+import { useEffect, useRef } from "react";
 import { SidebarAccordionItem } from "./components/sidebar-accordion-item";
 
 type ActionButtons = {
@@ -51,9 +52,42 @@ export const DraggableSidebar = <TSectionId extends string>({
 	side,
 	header,
 }: DraggableSidebarProps<TSectionId>) => {
+	const viewportRef = useRef<HTMLDivElement>(null);
+	const contentRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!contentRef.current || !viewportRef.current) return;
+
+		const viewport = viewportRef.current;
+		const resizeObserver = new ResizeObserver(() => {
+			requestAnimationFrame(() => {
+				const currentScroll = viewport.scrollTop;
+				const maxScroll = viewport.scrollHeight - viewport.clientHeight;
+
+				if (maxScroll <= 0) {
+					viewport.scrollTop = 1;
+					viewport.scrollTop = 0;
+				} else if (currentScroll >= maxScroll) {
+					viewport.scrollTop = currentScroll - 1;
+					viewport.scrollTop = currentScroll;
+				} else {
+					viewport.scrollTop = currentScroll + 1;
+					viewport.scrollTop = currentScroll;
+				}
+			});
+		});
+
+		resizeObserver.observe(contentRef.current);
+
+		return () => {
+			resizeObserver.disconnect();
+		};
+	}, []);
+
 	return (
 		<ScrollArea
 			className={`h-full ${side === "left" ? "border-r" : "border-l"} border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 w-full`}
+			viewportRef={viewportRef}
 		>
 			{header && (
 				<div
@@ -67,7 +101,17 @@ export const DraggableSidebar = <TSectionId extends string>({
 			<DragDropContext onDragEnd={onDragEnd}>
 				<Droppable droppableId={droppableId}>
 					{(provided) => (
-						<div ref={provided.innerRef} {...provided.droppableProps}>
+						<div
+							ref={(node) => {
+								provided.innerRef(node);
+								if (node) {
+									(
+										contentRef as React.MutableRefObject<HTMLDivElement>
+									).current = node;
+								}
+							}}
+							{...provided.droppableProps}
+						>
 							<Accordion
 								multiple
 								value={expandedItems}
@@ -109,10 +153,9 @@ export const DraggableSidebar = <TSectionId extends string>({
 														dragHandleProps={provided.dragHandleProps}
 														index={index}
 														side={side}
-														actionButtons={meta.actionButtons}
 														isExpanded={isExpanded}
 														onToggle={handleToggle}
-														headerColorHue={meta.headerColorHue}
+														surfaceColorHue={meta.headerColorHue}
 														isDarkMode={meta.isDarkMode}
 													>
 														<Content />

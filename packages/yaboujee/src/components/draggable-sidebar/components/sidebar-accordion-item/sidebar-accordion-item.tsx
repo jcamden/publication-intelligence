@@ -12,19 +12,10 @@ import {
 	type LucideIcon,
 	SquareArrowOutUpLeft,
 	SquareArrowOutUpRight,
-	SquareDashedMousePointer,
-	TextSelect,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { formatOklchColor } from "../../../../utils/index-type-colors";
 import { StyledButton } from "../../../styled-button";
-
-type ActionButtons = {
-	indexType: string;
-	activeAction: { type: string | null; indexType: string | null };
-	onSelectText: ({ indexType }: { indexType: string }) => void;
-	onDrawRegion: ({ indexType }: { indexType: string }) => void;
-};
 
 type SidebarAccordionItemProps = {
 	value: string;
@@ -35,10 +26,9 @@ type SidebarAccordionItemProps = {
 	dragHandleProps?: DraggableProvidedDragHandleProps | null;
 	index: number;
 	side: "left" | "right";
-	actionButtons?: ActionButtons;
 	isExpanded: boolean;
 	onToggle: () => void;
-	headerColorHue?: number; // Hue value 0-360
+	surfaceColorHue?: number; // Hue value 0-360
 	isDarkMode?: boolean; // Optional dark mode flag from parent
 };
 
@@ -51,26 +41,25 @@ export const SidebarAccordionItem = ({
 	dragHandleProps,
 	index,
 	side,
-	actionButtons,
 	isExpanded,
 	onToggle,
-	headerColorHue,
+	surfaceColorHue,
 	isDarkMode = false,
 }: SidebarAccordionItemProps) => {
 	// Compute header background color from hue with specific lightness/chroma for accordion headers
 	// Use lower lightness in dark mode for better contrast
-	const headerBackgroundColor = headerColorHue
+	const headerBackgroundColor = surfaceColorHue
 		? formatOklchColor({
-				hue: headerColorHue,
+				hue: surfaceColorHue,
 				lightness: isDarkMode ? 0.5 : 0.95, // Darker in dark mode, very light in light mode
 				chroma: 0.2, // Low saturation for subtle color
 				alpha: isDarkMode ? 0.15 : 0.1,
 			})
 		: undefined;
 
-	const contentBackgroundColor = headerColorHue
+	const contentBackgroundColor = surfaceColorHue
 		? formatOklchColor({
-				hue: headerColorHue,
+				hue: surfaceColorHue,
 				lightness: isDarkMode ? 0.5 : 0.95, // Darker in dark mode, very light in light mode
 				chroma: 0.2, // Low saturation for subtle color
 				alpha: isDarkMode ? 0.075 : 0.05,
@@ -80,97 +69,131 @@ export const SidebarAccordionItem = ({
 	const PopIcon =
 		side === "right" ? SquareArrowOutUpLeft : SquareArrowOutUpRight;
 
-	const isSelectTextActive =
-		actionButtons &&
-		actionButtons.activeAction.type === "select-text" &&
-		actionButtons.activeAction.indexType === actionButtons.indexType;
-	const isDrawRegionActive =
-		actionButtons &&
-		actionButtons.activeAction.type === "draw-region" &&
-		actionButtons.activeAction.indexType === actionButtons.indexType;
-
 	return (
 		<AccordionItem value={value}>
 			<div
-				className={`flex items-center justify-between gap-2 shadow-sm p-2 ${side === "right" ? "flex-row-reverse" : ""} ${index !== 0 ? "border-t" : ""}`}
+				className={`flex items-center justify-between gap-2 shadow-sm p-2 pr-4 ${side === "right" ? "flex-row-reverse" : ""} ${index !== 0 ? "border-t" : ""}`}
 				style={
 					headerBackgroundColor
 						? { backgroundColor: headerBackgroundColor }
 						: undefined
 				}
 			>
-				{dragHandleProps && (
-					// biome-ignore lint/a11y/useSemanticElements: drag handle from react-beautiful-dnd requires div
-					// biome-ignore lint/a11y/useKeyWithClickEvents: drag controlled by react-beautiful-dnd
-					<div
-						{...dragHandleProps}
-						className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 flex items-center shrink-0"
-						onClick={(e) => e.stopPropagation()}
-						role="button"
-						tabIndex={0}
-						aria-label="Drag to reorder"
-					>
-						<GripVertical className="h-4 w-4" />
-					</div>
-				)}
-				{/* biome-ignore lint/a11y/noStaticElementInteractions: wrapper for stopPropagation */}
-				{/* biome-ignore lint/a11y/useKeyWithClickEvents: wrapper for stopPropagation */}
-				<div
-					className="flex items-center gap-2 shrink-0"
-					onClick={(e) => e.stopPropagation()}
-				>
-					<StyledButton
-						icon={ChevronDown}
-						label={isExpanded ? "Collapse" : "Expand"}
-						isActive={isExpanded}
-						onClick={onToggle}
-					/>
-					<StyledButton
-						icon={PopIcon}
-						label="Pop out to window"
-						isActive={false}
-						onClick={onPop}
-					/>
-				</div>
-				<div className="flex-1 min-w-0">
-					<AccordionTrigger
-						className={`w-full h-full hover:cursor-pointer rounded-none flex [&_[data-slot=accordion-trigger-icon]]:hidden ${side === "right" ? "flex-row-reverse justify-between" : ""}`}
-					>
-						<div
-							className={`flex items-center justify-center gap-2 w-full h-full ${side === "right" ? "flex-row-reverse" : ""}`}
-						>
-							<Icon className="h-4 w-4 shrink-0" />
-							<span className="truncate">{title}</span>
-						</div>
-					</AccordionTrigger>
-				</div>
-				{actionButtons && (
+				{side === "left" ? (
 					<>
+						{dragHandleProps && (
+							// biome-ignore lint/a11y/useSemanticElements: drag handle from react-beautiful-dnd requires div
+							// biome-ignore lint/a11y/useKeyWithClickEvents: drag controlled by react-beautiful-dnd
+							<div
+								{...dragHandleProps}
+								className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 flex items-center shrink-0"
+								onClick={(e) => e.stopPropagation()}
+								role="button"
+								tabIndex={0}
+								aria-label="Drag to reorder"
+							>
+								<GripVertical className="h-4 w-4" />
+							</div>
+						)}
 						{/* biome-ignore lint/a11y/noStaticElementInteractions: wrapper for stopPropagation */}
 						{/* biome-ignore lint/a11y/useKeyWithClickEvents: wrapper for stopPropagation */}
 						<div
-							className="flex items-center gap-2 shrink-0"
+							className="flex items-center shrink-0"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<StyledButton
-								icon={TextSelect}
-								label="Select Text"
-								isActive={!!isSelectTextActive}
-								onClick={() =>
-									actionButtons.onSelectText({
-										indexType: actionButtons.indexType,
-									})
-								}
+								icon={PopIcon}
+								label="Pop out to window"
+								isActive={false}
+								onClick={onPop}
+								surfaceColorHue={surfaceColorHue}
+								isDarkMode={isDarkMode}
 							/>
+						</div>
+						<div className="flex-1 min-w-0">
+							<AccordionTrigger
+								className={`w-full h-full hover:cursor-pointer rounded-none flex [&_[data-slot=accordion-trigger-icon]]:hidden`}
+							>
+								<div
+									className={`flex items-center justify-center gap-2 w-full h-full`}
+								>
+									<Icon className="h-4 w-4 shrink-0" />
+									<span className="truncate">{title}</span>
+								</div>
+							</AccordionTrigger>
+						</div>
+						{/* biome-ignore lint/a11y/noStaticElementInteractions: wrapper for stopPropagation */}
+						{/* biome-ignore lint/a11y/useKeyWithClickEvents: wrapper for stopPropagation */}
+						<div
+							className="flex items-center shrink-0"
+							onClick={(e) => e.stopPropagation()}
+						>
 							<StyledButton
-								icon={SquareDashedMousePointer}
-								label="Draw Region"
-								isActive={!!isDrawRegionActive}
-								onClick={() =>
-									actionButtons.onDrawRegion({
-										indexType: actionButtons.indexType,
-									})
-								}
+								icon={ChevronDown}
+								label={isExpanded ? "Collapse" : "Expand"}
+								isActive={isExpanded}
+								onClick={onToggle}
+								surfaceColorHue={surfaceColorHue}
+								isDarkMode={isDarkMode}
+							/>
+						</div>
+					</>
+				) : (
+					<>
+						{dragHandleProps && (
+							// biome-ignore lint/a11y/useSemanticElements: drag handle from react-beautiful-dnd requires div
+							// biome-ignore lint/a11y/useKeyWithClickEvents: drag controlled by react-beautiful-dnd
+							<div
+								{...dragHandleProps}
+								className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 flex items-center shrink-0"
+								onClick={(e) => e.stopPropagation()}
+								role="button"
+								tabIndex={0}
+								aria-label="Drag to reorder"
+							>
+								<GripVertical className="h-4 w-4" />
+							</div>
+						)}
+						{/* biome-ignore lint/a11y/noStaticElementInteractions: wrapper for stopPropagation */}
+						{/* biome-ignore lint/a11y/useKeyWithClickEvents: wrapper for stopPropagation */}
+						<div
+							className="flex items-center shrink-0"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<StyledButton
+								icon={PopIcon}
+								label="Pop out to window"
+								isActive={false}
+								onClick={onPop}
+								surfaceColorHue={surfaceColorHue}
+								isDarkMode={isDarkMode}
+							/>
+						</div>
+						<div className="flex-1 min-w-0">
+							<AccordionTrigger
+								className={`w-full h-full hover:cursor-pointer rounded-none flex [&_[data-slot=accordion-trigger-icon]]:hidden`}
+							>
+								<div
+									className={`flex items-center justify-center gap-2 w-full h-full`}
+								>
+									<Icon className="h-4 w-4 shrink-0" />
+									<span className="truncate">{title}</span>
+								</div>
+							</AccordionTrigger>
+						</div>
+						{/* biome-ignore lint/a11y/noStaticElementInteractions: wrapper for stopPropagation */}
+						{/* biome-ignore lint/a11y/useKeyWithClickEvents: wrapper for stopPropagation */}
+						<div
+							className="flex items-center shrink-0"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<StyledButton
+								icon={ChevronDown}
+								label={isExpanded ? "Collapse" : "Expand"}
+								isActive={isExpanded}
+								onClick={onToggle}
+								surfaceColorHue={surfaceColorHue}
+								isDarkMode={isDarkMode}
 							/>
 						</div>
 					</>

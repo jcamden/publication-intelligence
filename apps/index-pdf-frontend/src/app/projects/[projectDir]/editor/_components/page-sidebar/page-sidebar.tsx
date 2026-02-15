@@ -41,9 +41,6 @@ export type MentionData = {
 };
 
 type PageSidebarProps = {
-	activeAction: { type: string | null; indexType: string | null };
-	onSelectText: ({ indexType }: { indexType: string }) => void;
-	onDrawRegion: ({ indexType }: { indexType: string }) => void;
 	mentions: MentionData[];
 	currentPage: number;
 	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
@@ -56,9 +53,6 @@ type PageSidebarProps = {
  * Right sidebar showing page-level panels (info, indices, etc.)
  */
 export const PageSidebar = ({
-	activeAction,
-	onSelectText,
-	onDrawRegion,
 	mentions,
 	currentPage,
 	onMentionClick,
@@ -127,12 +121,6 @@ export const PageSidebar = ({
 				title: string;
 				icon: LucideIcon;
 				content: React.ComponentType;
-				actionButtons?: {
-					indexType: string;
-					activeAction: { type: string | null; indexType: string | null };
-					onSelectText: ({ indexType }: { indexType: string }) => void;
-					onDrawRegion: ({ indexType }: { indexType: string }) => void;
-				};
 			}
 		>
 	> = {
@@ -160,12 +148,6 @@ export const PageSidebar = ({
 					onMentionClick={onMentionClick}
 				/>
 			),
-			actionButtons: {
-				indexType: "subject",
-				activeAction,
-				onSelectText,
-				onDrawRegion,
-			},
 		},
 		"page-author": {
 			title: "Author Index",
@@ -176,12 +158,6 @@ export const PageSidebar = ({
 					onMentionClick={onMentionClick}
 				/>
 			),
-			actionButtons: {
-				indexType: "author",
-				activeAction,
-				onSelectText,
-				onDrawRegion,
-			},
 		},
 		"page-scripture": {
 			title: "Scripture Index",
@@ -192,12 +168,6 @@ export const PageSidebar = ({
 					onMentionClick={onMentionClick}
 				/>
 			),
-			actionButtons: {
-				indexType: "scripture",
-				activeAction,
-				onSelectText,
-				onDrawRegion,
-			},
 		},
 	};
 

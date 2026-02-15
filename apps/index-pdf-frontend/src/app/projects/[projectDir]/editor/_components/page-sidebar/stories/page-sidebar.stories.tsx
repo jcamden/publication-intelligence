@@ -51,9 +51,6 @@ export const Default: Story = {
 			}}
 		>
 			<PageSidebar
-				activeAction={{ type: null, indexType: null }}
-				onSelectText={fn()}
-				onDrawRegion={fn()}
 				mentions={mockMentions}
 				currentPage={1}
 				onMentionClick={fn()}

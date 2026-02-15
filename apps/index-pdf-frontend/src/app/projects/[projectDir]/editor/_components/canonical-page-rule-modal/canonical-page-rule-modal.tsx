@@ -457,31 +457,40 @@ export const CanonicalPageRuleModal = ({
 												<>
 													{/* Numeral Type */}
 													<form.Field name="numeralType">
-														{(field) => (
-															<Field>
-																<FieldLabel>Numeral Type</FieldLabel>
-																<Select
-																	value={field.state.value}
-																	onValueChange={(value) =>
-																		field.handleChange(
-																			value as typeof field.state.value,
-																		)
-																	}
-																>
-																	<SelectTrigger>
-																		<SelectValue />
-																	</SelectTrigger>
-																	<SelectContent>
-																		<SelectItem value="arabic">
-																			Arabic (1, 2, 3...)
-																		</SelectItem>
-																		<SelectItem value="roman">
-																			Roman (i, ii, iii...)
-																		</SelectItem>
-																	</SelectContent>
-																</Select>
-															</Field>
-														)}
+														{(field) => {
+															const numeralTypeLabels: Record<string, string> =
+																{
+																	arabic: "Arabic (1, 2, 3...)",
+																	roman: "Roman (i, ii, iii...)",
+																};
+															return (
+																<Field>
+																	<FieldLabel>Numeral Type</FieldLabel>
+																	<Select
+																		value={field.state.value}
+																		onValueChange={(value) =>
+																			field.handleChange(
+																				value as typeof field.state.value,
+																			)
+																		}
+																	>
+																		<SelectTrigger>
+																			<SelectValue>
+																				{numeralTypeLabels[field.state.value]}
+																			</SelectValue>
+																		</SelectTrigger>
+																		<SelectContent>
+																			<SelectItem value="arabic">
+																				Arabic (1, 2, 3...)
+																			</SelectItem>
+																			<SelectItem value="roman">
+																				Roman (i, ii, iii...)
+																			</SelectItem>
+																		</SelectContent>
+																	</Select>
+																</Field>
+															);
+														}}
 													</form.Field>
 
 													{/* Starting Canonical Page */}

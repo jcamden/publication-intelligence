@@ -525,8 +525,15 @@ export const PdfViewer = ({
 		const handleMouseDown = (e: MouseEvent) => {
 			if (!pageContainerRef.current || !viewport) return;
 
-			// Only start drag if clicking inside the page container
+			// Only start drag if clicking inside the page container (check element containment, not just coordinates)
 			const pageContainer = pageContainerRef.current;
+			const target = e.target as Node;
+
+			// Check if the click target is actually inside the page container
+			if (!pageContainer.contains(target)) {
+				return;
+			}
+
 			const rect = pageContainer.getBoundingClientRect();
 			const x = e.clientX;
 			const y = e.clientY;
@@ -537,6 +544,9 @@ export const PdfViewer = ({
 				y >= rect.top &&
 				y <= rect.bottom
 			) {
+				// Prevent default to avoid text selection during drag
+				e.preventDefault();
+
 				// Convert to page-relative coordinates
 				const pageX = x - rect.left;
 				const pageY = y - rect.top;
@@ -548,6 +558,9 @@ export const PdfViewer = ({
 
 		const handleMouseMove = (e: MouseEvent) => {
 			if (!regionDragStart || !pageContainerRef.current) return;
+
+			// Prevent default to avoid text selection during drag
+			e.preventDefault();
 
 			const pageContainer = pageContainerRef.current;
 			const rect = pageContainer.getBoundingClientRect();
@@ -799,6 +812,7 @@ export const PdfViewer = ({
 						className="relative"
 						style={{
 							cursor: regionDrawingActive ? "crosshair" : "default",
+							userSelect: regionDrawingActive ? "none" : "auto",
 						}}
 					>
 						<canvas ref={canvasRef} className="block" />
@@ -807,7 +821,7 @@ export const PdfViewer = ({
 						{showTextLayer && (
 							<div
 								ref={textLayerRef}
-								className="textLayer absolute left-0 top-0"
+								className={`textLayer absolute left-0 top-0 ${regionDrawingActive ? "[&_*]:!cursor-crosshair" : ""}`}
 								style={{
 									pointerEvents: textLayerInteractive ? "auto" : "none",
 									// When interactive, text layer is on top (z-20)

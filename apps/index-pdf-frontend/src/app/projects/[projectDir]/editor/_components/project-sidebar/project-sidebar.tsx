@@ -33,8 +33,6 @@ import { ProjectSubjectContent } from "./components/project-subject-content";
 
 type ProjectSidebarProps = {
 	enabledIndexTypes: string[]; // Index types enabled for this project
-	activeAction?: { type: string | null; indexType: string | null }; // Current active action
-	onDrawRegion?: () => void; // Callback to activate region drawing mode
 	onEditRegion?: (regionId: string) => void; // Callback to edit region
 };
 
@@ -45,8 +43,6 @@ type ProjectSidebarProps = {
  */
 export const ProjectSidebar = ({
 	enabledIndexTypes,
-	activeAction,
-	onDrawRegion,
 	onEditRegion,
 }: ProjectSidebarProps) => {
 	const { resolvedTheme } = useTheme();
@@ -117,13 +113,7 @@ export const ProjectSidebar = ({
 			"project-regions": {
 				title: "Regions",
 				icon: SquaresSubtract,
-				content: () => (
-					<ProjectRegionsContent
-						activeAction={activeAction}
-						onDrawRegion={onDrawRegion}
-						onEditRegion={onEditRegion}
-					/>
-				),
+				content: () => <ProjectRegionsContent onEditRegion={onEditRegion} />,
 			},
 			"project-ai": {
 				title: "AI",
@@ -146,7 +136,7 @@ export const ProjectSidebar = ({
 				content: ProjectScriptureContent,
 			},
 		}),
-		[activeAction, onDrawRegion, onEditRegion],
+		[onEditRegion],
 	);
 
 	// Filter sections to only include index types enabled for this project

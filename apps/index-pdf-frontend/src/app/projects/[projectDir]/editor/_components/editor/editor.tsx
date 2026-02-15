@@ -1,11 +1,7 @@
 "use client";
 
 import type { PdfHighlight } from "@pubint/yaboujee";
-import {
-	PdfAnnotationPopover,
-	PdfViewer,
-	PdfViewerToolbar,
-} from "@pubint/yaboujee";
+import { PdfAnnotationPopover, PdfViewer } from "@pubint/yaboujee";
 import { formatOklchColor } from "@pubint/yaboujee/utils/index-type-colors";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
@@ -36,6 +32,8 @@ import type {
 } from "../../_types/highlight-config";
 import type { IndexEntry } from "../../_types/index-entry";
 import { ColorConfigProvider } from "../color-config-provider";
+import { CreateExcludeRegionModal } from "../create-exclude-region-modal";
+import { CreatePageNumberRegionModal } from "../create-page-number-region-modal";
 import { DeleteMentionDialog } from "../delete-mention-dialog";
 import {
 	type BoundingBox,
@@ -44,6 +42,7 @@ import {
 import { MentionDetailsPopover } from "../mention-details-popover";
 import { PageBar } from "../page-bar";
 import { PageSidebar } from "../page-sidebar";
+import { PdfEditorToolbar } from "../pdf-editor-toolbar";
 import { ProjectBar } from "../project-bar";
 import { ProjectSidebar } from "../project-sidebar";
 import { RegionCreationModal } from "../region-creation-modal";
@@ -106,8 +105,19 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		indexType: string | null;
 	}>({ type: null, indexType: null });
 
-	// Context creation/edit state
-	const [regionModalOpen, setRegionModalOpen] = useState(false);
+	// Type selection state with localStorage persistence
+	const [selectedRegionType, setSelectedRegionType] = useState<string>(() => {
+		if (typeof window !== "undefined") {
+			return localStorage.getItem("pdf-editor-selected-type") || "page_number";
+		}
+		return "page_number";
+	});
+
+	// Region creation/edit state
+	const [excludeRegionModalOpen, setExcludeRegionModalOpen] = useState(false);
+	const [pageNumberRegionModalOpen, setPageNumberRegionModalOpen] =
+		useState(false);
+	const [regionModalOpen, setRegionModalOpen] = useState(false); // For edit mode only
 	const [regionToEdit, setRegionToEdit] = useState<string | null>(null); // Region ID for editing
 	const [drawnRegionBbox, setDrawnRegionBbox] = useState<BoundingBox | null>(
 		null,
@@ -242,6 +252,10 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const [projectWidth, setProjectWidth] = useAtom(projectSidebarWidthAtom);
 	const [pageWidth, setPageWidth] = useAtom(pageSidebarWidthAtom);
 
+	// Get enabled index types for this project (needed early for callbacks)
+	const enabledIndexTypes =
+		projectIndexTypesQuery.data?.map((pit) => pit.indexType) ?? [];
+
 	const handlePageChange = useCallback(
 		({ page }: { page: number }) => {
 			setCurrentPage(page);
@@ -263,41 +277,64 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		[setTotalPages],
 	);
 
-	const handleSelectText = useCallback(
-		({ indexType }: { indexType: string }) => {
+	const handleTypeChange = useCallback(
+		(type: string) => {
+			setSelectedRegionType(type);
+			localStorage.setItem("pdf-editor-selected-type", type);
+
+			// Update activeAction's indexType if a tool is currently active
 			setActiveAction((current) => {
-				// Toggle off if already active for this indexType
-				if (current.type === "select-text" && current.indexType === indexType) {
-					return { type: null, indexType: null };
+				if (current.type === null) {
+					// No tool active, nothing to update
+					return current;
 				}
-				return { type: "select-text", indexType };
+				// Update indexType based on new type selection
+				const newIndexType = (enabledIndexTypes as string[]).includes(type)
+					? type
+					: null;
+				return {
+					...current,
+					indexType: newIndexType,
+				};
 			});
 		},
-		[],
+		[enabledIndexTypes],
 	);
 
-	const handleDrawRegion = useCallback(
-		({ indexType }: { indexType: string }) => {
-			setActiveAction((current) => {
-				// Toggle off if already active for this indexType
-				if (current.type === "draw-region" && current.indexType === indexType) {
-					return { type: null, indexType: null };
-				}
-				return { type: "draw-region", indexType };
-			});
+	const isIndexType = useCallback(
+		(type: string): boolean => {
+			return (enabledIndexTypes as string[]).includes(type);
 		},
-		[],
+		[enabledIndexTypes],
 	);
 
-	const handleDrawContext = useCallback(() => {
+	const handleSelectText = useCallback(() => {
+		setActiveAction((current) => {
+			// Toggle off if already active
+			if (current.type === "select-text") {
+				return { type: null, indexType: null };
+			}
+			// Turn on with indexType from selectedRegionType (only if it's an index type)
+			return {
+				type: "select-text",
+				indexType: isIndexType(selectedRegionType) ? selectedRegionType : null,
+			};
+		});
+	}, [selectedRegionType, isIndexType]);
+
+	const handleDrawRegion = useCallback(() => {
 		setActiveAction((current) => {
 			// Toggle off if already active
 			if (current.type === "draw-region") {
 				return { type: null, indexType: null };
 			}
-			return { type: "draw-region", indexType: null };
+			// Turn on with indexType from selectedRegionType (only if it's an index type)
+			return {
+				type: "draw-region",
+				indexType: isIndexType(selectedRegionType) ? selectedRegionType : null,
+			};
 		});
-	}, []);
+	}, [selectedRegionType, isIndexType]);
 
 	const handleEditRegion = useCallback((regionId: string) => {
 		setRegionToEdit(regionId);
@@ -312,18 +349,31 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			draft: { pageNumber: number; text: string; bboxes: BoundingBox[] };
 			entry: { entryId: string; entryLabel: string; regionName?: string };
 		}) => {
-			// Check if this is region creation mode
-			if (activeAction.type === "draw-region") {
-				// Store the bbox and open region creation modal
+			// Check if this is region creation mode for Exclude/Page Number (no indexType)
+			if (
+				activeAction.type === "draw-region" &&
+				activeAction.indexType === null
+			) {
+				// Store the bbox and open appropriate modal based on selectedRegionType
 				setDrawnRegionBbox(draft.bboxes[0] || null);
 				setRegionToEdit(null); // Clear edit mode
-				setRegionModalOpen(true);
-				setActiveAction({ type: null, indexType: null });
+
+				// Clear the draft immediately to prevent pointer-events blocking
 				setClearDraftTrigger((prev) => prev + 1);
+
+				// Open modal after a small delay to ensure draft is cleared
+				setTimeout(() => {
+					if (selectedRegionType === "exclude") {
+						setExcludeRegionModalOpen(true);
+					} else if (selectedRegionType === "page_number") {
+						setPageNumberRegionModalOpen(true);
+					}
+				}, 0);
+
 				return;
 			}
 
-			// Regular mention creation flow
+			// Regular mention creation flow (includes index type regions)
 			const indexType = activeAction.indexType || "subject"; // Default to subject if none
 
 			// Find the projectIndexTypeId for this index type
@@ -350,8 +400,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				mentionType: entry.regionName ? "region" : "text",
 			});
 
-			// Clear draft and revert to view mode
-			setActiveAction({ type: null, indexType: null });
+			// Clear draft but keep tool active
 			setClearDraftTrigger((prev) => prev + 1);
 		},
 		[
@@ -360,12 +409,12 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			createMention,
 			documentId,
 			projectIndexTypesQuery.data,
+			selectedRegionType,
 		],
 	);
 
 	const handleDraftCancelled = useCallback(() => {
-		// Auto-revert to view mode when draft is cancelled
-		setActiveAction({ type: null, indexType: null });
+		// Clear draft but keep tool active
 		setClearDraftTrigger((prev) => prev + 1);
 	}, []);
 
@@ -613,10 +662,6 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	// Combine mentions and regions for rendering
 	const allHighlights = [...mentionHighlights, ...regionHighlights];
 
-	// Get enabled index types for this project (to filter sidebar sections)
-	const enabledIndexTypes =
-		projectIndexTypesQuery.data?.map((pit) => pit.indexType) ?? [];
-
 	// Wait for hydration to complete before rendering to prevent flash of default state
 	if (!hydrated) {
 		return null;
@@ -629,7 +674,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 					{/* Fixed top bar row - all three bars in one row */}
 					<div className="flex-shrink-0 flex justify-between items-center p-1 bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
 						<ProjectBar enabledIndexTypes={enabledIndexTypes} />
-						<PdfViewerToolbar
+						<PdfEditorToolbar
 							currentPage={currentPage}
 							totalPages={totalPages}
 							zoom={zoom}
@@ -638,6 +683,12 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 							pdfVisible={pdfVisible}
 							onPdfVisibilityToggle={handlePdfVisibilityToggle}
 							showPdfToggle={true}
+							activeAction={activeAction}
+							selectedType={selectedRegionType}
+							onSelectText={handleSelectText}
+							onDrawRegion={handleDrawRegion}
+							onTypeChange={handleTypeChange}
+							enabledIndexTypes={enabledIndexTypes}
 						/>
 						<PageBar enabledIndexTypes={enabledIndexTypes} />
 					</div>
@@ -649,8 +700,6 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 							<div className="flex-1 min-w-0">
 								<ProjectSidebar
 									enabledIndexTypes={enabledIndexTypes}
-									activeAction={activeAction}
-									onDrawRegion={handleDrawContext}
 									onEditRegion={handleEditRegion}
 								/>
 							</div>
@@ -662,8 +711,6 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 							>
 								<ProjectSidebar
 									enabledIndexTypes={enabledIndexTypes}
-									activeAction={activeAction}
-									onDrawRegion={handleDrawContext}
 									onEditRegion={handleEditRegion}
 								/>
 							</ResizableSidebar>
@@ -692,9 +739,12 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 										onConfirm,
 										onCancel,
 									}) => {
-										// For context drawing, don't show mention popover - just auto-confirm
-										if (activeAction.type === "draw-region") {
-											// Auto-confirm to trigger handleDraftConfirmed
+										// For region drawing without an index type (Exclude/Page Number), auto-confirm
+										if (
+											activeAction.type === "draw-region" &&
+											activeAction.indexType === null
+										) {
+											// Auto-confirm to trigger handleDraftConfirmed which opens region modal
 											onConfirm({
 												entryId: "",
 												entryLabel: "",
@@ -702,7 +752,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 											return null;
 										}
 
-										// Regular mention creation popover
+										// For both select-text and draw-region with index types, show mention popover
 										return (
 											<MentionCreationPopover
 												draft={{
@@ -728,9 +778,6 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						{onlyPageVisible ? (
 							<div className="flex-1 min-w-0">
 								<PageSidebar
-									activeAction={activeAction}
-									onSelectText={handleSelectText}
-									onDrawRegion={handleDrawRegion}
 									mentions={mentions}
 									currentPage={currentPage}
 									onMentionClick={handleMentionClickFromSidebar}
@@ -744,9 +791,6 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 								isCollapsed={pageCollapsed}
 							>
 								<PageSidebar
-									activeAction={activeAction}
-									onSelectText={handleSelectText}
-									onDrawRegion={handleDrawRegion}
 									mentions={mentions}
 									currentPage={currentPage}
 									onMentionClick={handleMentionClickFromSidebar}
@@ -758,9 +802,6 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 
 					{/* Windows overlay */}
 					<WindowManager
-						activeAction={activeAction}
-						onSelectText={handleSelectText}
-						onDrawRegion={handleDrawRegion}
 						onEditRegion={handleEditRegion}
 						mentions={mentions}
 						currentPage={currentPage}
@@ -800,7 +841,33 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						onConfirm={handleConfirmDelete}
 					/>
 
-					{/* Region creation/edit modal */}
+					{/* Create Exclude Region modal */}
+					<CreateExcludeRegionModal
+						open={excludeRegionModalOpen}
+						onClose={() => {
+							setExcludeRegionModalOpen(false);
+							setDrawnRegionBbox(null);
+						}}
+						projectId={projectId || ""}
+						currentPage={currentPage}
+						documentPageCount={totalPages}
+						drawnBbox={drawnRegionBbox}
+					/>
+
+					{/* Create Page Number Region modal */}
+					<CreatePageNumberRegionModal
+						open={pageNumberRegionModalOpen}
+						onClose={() => {
+							setPageNumberRegionModalOpen(false);
+							setDrawnRegionBbox(null);
+						}}
+						projectId={projectId || ""}
+						currentPage={currentPage}
+						documentPageCount={totalPages}
+						drawnBbox={drawnRegionBbox}
+					/>
+
+					{/* Region edit modal (keep existing for edit functionality) */}
 					<RegionCreationModal
 						open={regionModalOpen}
 						onClose={() => {

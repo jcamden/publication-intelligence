@@ -40,9 +40,6 @@ type Mention = {
 };
 
 type WindowManagerProps = {
-	activeAction: { type: string | null; indexType: string | null };
-	onSelectText: ({ indexType }: { indexType: string }) => void;
-	onDrawRegion: ({ indexType }: { indexType: string }) => void;
 	onEditRegion?: (regionId: string) => void;
 	mentions: Mention[];
 	currentPage: number;
@@ -113,9 +110,6 @@ const getDefaultWindowPosition = ({ sectionId }: { sectionId: SectionId }) => {
 };
 
 export const WindowManager = ({
-	activeAction,
-	onSelectText,
-	onDrawRegion,
 	onEditRegion,
 	mentions,
 	currentPage,
@@ -166,8 +160,8 @@ export const WindowManager = ({
 
 				const Content = config.component;
 
-				// Determine if this section needs action props
-				const needsActionProps = [
+				// Determine if this section needs mention props
+				const needsMentionProps = [
 					"page-subject",
 					"page-author",
 					"page-scripture",
@@ -176,17 +170,14 @@ export const WindowManager = ({
 				// Special case for project-regions
 				const isProjectRegionsWindow = id === "project-regions";
 
-				const contentProps = needsActionProps
+				const contentProps = needsMentionProps
 					? {
-							activeAction,
-							onSelectText,
-							onDrawRegion,
 							mentions,
 							currentPage,
 							onMentionClick,
 						}
 					: isProjectRegionsWindow
-						? { activeAction, onDrawRegion, onEditRegion }
+						? { onEditRegion }
 						: {};
 
 				return (

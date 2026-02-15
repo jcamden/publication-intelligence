@@ -20,3 +20,5 @@ https://github.com/ocrmypdf/OCRmyPDF
 
 localStorage stuff should be scoped to user
     When we delete an account we should clear all stuff for user from localStorage
+
+region highlights became contexts
