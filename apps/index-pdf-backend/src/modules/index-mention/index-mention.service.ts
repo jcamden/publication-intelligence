@@ -411,6 +411,36 @@ export const bulkCreateIndexMentions = async ({
 	return created;
 };
 
+export const approveIndexMention = async ({
+	id,
+	projectId,
+	userId,
+	requestId,
+}: {
+	id: string;
+	projectId: string;
+	userId: string;
+	requestId: string;
+}): Promise<IndexMention | null> => {
+	logEvent({
+		event: "index_mention.approve_suggested",
+		context: { requestId, userId, metadata: { mentionId: id, projectId } },
+	});
+
+	const approved = await indexMentionRepo.approveIndexMention({ id, userId });
+
+	if (!approved) {
+		throw new Error("Mention not found or approval failed");
+	}
+
+	logEvent({
+		event: "index_mention.approved",
+		context: { requestId, userId, metadata: { mentionId: id, projectId } },
+	});
+
+	return approved;
+};
+
 export const deleteIndexMention = async ({
 	input,
 	userId,

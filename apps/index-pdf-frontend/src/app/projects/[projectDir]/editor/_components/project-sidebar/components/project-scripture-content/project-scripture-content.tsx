@@ -112,6 +112,7 @@ export const ProjectScriptureContent = () => {
 				entries={entries}
 				mentions={allMentions}
 				projectId={projectId}
+				projectIndexTypeId={scriptureProjectIndexTypeId}
 				onCreateEntry={() => setModalOpen(true)}
 				isLoading={isLoading}
 				error={entriesError ? (entriesError as unknown as Error) : null}

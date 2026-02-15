@@ -14,8 +14,8 @@ This document describes the architecture for subscription-based index type acces
 **Purpose:** Define what index types exist in the system
 
 **Seeded at deployment:**
-- Subject (hue=230 blue, base_tier=true)
-- Author (hue=30 orange, base_tier=false)
+- Subject (hue=85 yellow, base_tier=true)
+- Author (hue=230 blue, base_tier=false)
 - Scripture (hue=120 green, base_tier=false)
 - Region (hue=340 pink, base_tier=false)
 
@@ -458,8 +458,8 @@ Current localStorage schema:
 ```typescript
 {
   "color-config": {
-    "subject": { "hue": 230 },
-    "author": { "hue": 30 },
+    "subject": { "hue": 85 },
+    "author": { "hue": 230 },
     "scripture": { "hue": 120 },
     "context": { "hue": 340 }
   }

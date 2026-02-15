@@ -13,6 +13,7 @@ export type EntryTreeProps = {
 	entries: IndexEntry[]; // All entries for this index type
 	mentions: Mention[]; // For showing counts
 	projectId?: string; // Optional for hierarchy updates (disabled if not provided)
+	projectIndexTypeId?: string; // For approval cache invalidation
 	onEntryClick?: (entry: IndexEntry) => void; // Optional click handler
 	onCreateEntry: () => void; // Open entry creation modal
 	isLoading?: boolean; // Loading state
@@ -25,6 +26,7 @@ type EntryTreeNodeProps = {
 	mentions: Mention[]; // For counts
 	depth: number;
 	projectId?: string;
+	projectIndexTypeId?: string;
 	onEntryClick?: (entry: IndexEntry) => void;
 	onDragStart: (entryId: string) => void;
 	onDrop: (targetEntryId: string | null) => void;
@@ -37,6 +39,7 @@ const EntryTreeNode = ({
 	mentions,
 	depth,
 	projectId,
+	projectIndexTypeId,
 	onEntryClick,
 	onDragStart,
 	onDrop,
@@ -52,7 +55,7 @@ const EntryTreeNode = ({
 	const hasChildren = children.length > 0;
 
 	return (
-		<div>
+		<div className="flex flex-col gap-1">
 			<EntryItem
 				entry={entry}
 				mentions={mentions}
@@ -64,9 +67,10 @@ const EntryTreeNode = ({
 				onDragStart={onDragStart}
 				onDrop={onDrop}
 				isDragging={draggedEntryId === entry.id}
+				projectId={projectId}
 			/>
 			{hasChildren && expanded && (
-				<div>
+				<div className="flex flex-col gap-1">
 					{children.map((child) => (
 						<EntryTreeNode
 							key={child.id}
@@ -75,6 +79,7 @@ const EntryTreeNode = ({
 							mentions={mentions}
 							depth={depth + 1}
 							projectId={projectId}
+							projectIndexTypeId={projectIndexTypeId}
 							onEntryClick={onEntryClick}
 							onDragStart={onDragStart}
 							onDrop={onDrop}
@@ -91,6 +96,7 @@ export const EntryTree = ({
 	entries,
 	mentions,
 	projectId = "",
+	projectIndexTypeId,
 	onEntryClick,
 	onCreateEntry,
 	isLoading = false,
@@ -172,7 +178,7 @@ export const EntryTree = ({
 	}
 
 	return (
-		<div className="space-y-1">
+		<div className="space-y-2">
 			{/* biome-ignore lint/a11y/useSemanticElements: Drag-drop zone requires div */}
 			<div
 				role="button"
@@ -204,6 +210,7 @@ export const EntryTree = ({
 					mentions={mentions}
 					depth={0}
 					projectId={projectId}
+					projectIndexTypeId={projectIndexTypeId}
 					onEntryClick={onEntryClick}
 					onDragStart={handleDragStart}
 					onDrop={handleDrop}

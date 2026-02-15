@@ -139,14 +139,14 @@ export const DetectionPanel = () => {
 						<button
 							type="button"
 							onClick={() => setIsSettingsOpen(true)}
-							className="rounded-md border border-border bg-background p-1.5 text-muted hover:text-foreground hover:bg-surface"
+							className="rounded-md border border-border bg-background p-1.5 text-neutral-500 hover:text-foreground hover:bg-surface"
 							title="Detection Settings"
 						>
 							<Settings className="h-4 w-4" />
 						</button>
 					</div>
 
-					<p className="text-sm text-muted">
+					<p className="text-sm text-neutral-500">
 						Automatically detect and index concepts, people, and references.
 						Choose an index type to run detection.
 					</p>
@@ -166,13 +166,13 @@ export const DetectionPanel = () => {
 					)}
 
 					{hasApiKey && (
-						<div className="text-xs text-muted">
+						<div className="text-xs text-neutral-500">
 							Using model: <span className="font-mono">{displayModel}</span>
 						</div>
 					)}
 
 					<div className="space-y-2">
-						<div className="text-xs font-medium text-muted">
+						<div className="text-xs font-medium text-neutral-500">
 							Page Range (optional)
 						</div>
 						<div className="flex items-center gap-2">
@@ -184,7 +184,7 @@ export const DetectionPanel = () => {
 								onChange={(e) => setPageRangeStart(e.target.value)}
 								className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
 							/>
-							<span className="text-sm text-muted">to</span>
+							<span className="text-sm text-neutral-500">to</span>
 							<input
 								type="number"
 								min="1"
@@ -193,7 +193,7 @@ export const DetectionPanel = () => {
 								onChange={(e) => setPageRangeEnd(e.target.value)}
 								className="w-20 rounded-md border border-border bg-background px-2 py-1 text-sm"
 							/>
-							<span className="text-xs text-muted">
+							<span className="text-xs text-neutral-500">
 								(Leave blank for all pages)
 							</span>
 						</div>
@@ -201,7 +201,7 @@ export const DetectionPanel = () => {
 
 					{/* Separate buttons for each index type */}
 					<div className="space-y-2">
-						<div className="text-xs font-medium text-muted">
+						<div className="text-xs font-medium text-neutral-500">
 							Run Detection By Type
 						</div>
 						<div className="grid grid-cols-1 gap-2">
@@ -217,19 +217,19 @@ export const DetectionPanel = () => {
 											disabled={
 												runDetection.isPending || hasActiveRun || !hasApiKey
 											}
-											className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2.5 text-left hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+											className="flex items-center gap-3 rounded-2xl cursor-pointer border border-border bg-neutral-100 shadow dark:bg-neutral-900 px-3 py-2.5 text-left hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 										>
 											<Icon className="h-5 w-5 text-primary flex-shrink-0" />
 											<div className="flex-1 min-w-0">
 												<div className="text-sm font-medium">
 													{config.label}
 												</div>
-												<div className="text-xs text-muted">
+												<div className="text-xs text-neutral-500">
 													{config.description}
 												</div>
 											</div>
 											{runDetection.isPending && (
-												<Loader2 className="h-4 w-4 animate-spin text-muted flex-shrink-0" />
+												<Loader2 className="h-4 w-4 animate-spin text-neutral-500 flex-shrink-0" />
 											)}
 										</button>
 									);
@@ -242,17 +242,17 @@ export const DetectionPanel = () => {
 
 			{isLoadingRuns ? (
 				<div className="flex items-center justify-center p-8">
-					<Loader2 className="h-6 w-6 animate-spin text-muted" />
+					<Loader2 className="h-6 w-6 animate-spin text-neutral-500" />
 				</div>
 			) : detectionRuns.length === 0 ? (
 				<div className="rounded-lg border border-border bg-surface p-4">
-					<p className="text-sm text-muted">
+					<p className="text-sm text-neutral-500">
 						No detection runs yet. Choose an index type above to start.
 					</p>
 				</div>
 			) : (
 				<div className="space-y-2">
-					<div className="text-xs font-medium text-muted px-1">
+					<div className="text-xs font-medium text-neutral-500 px-1">
 						Detection History
 					</div>
 					{detectionRuns.map((run) => {
@@ -284,7 +284,7 @@ export const DetectionPanel = () => {
 											>
 												{run.status}
 											</span>
-											<span className="text-xs text-muted">
+											<span className="text-xs text-neutral-500">
 												{new Date(run.createdAt).toLocaleString()}
 											</span>
 										</div>
@@ -301,7 +301,7 @@ export const DetectionPanel = () => {
 
 									{run.status === "running" && (
 										<div className="space-y-1">
-											<div className="flex justify-between text-xs text-muted">
+											<div className="flex justify-between text-xs text-neutral-500">
 												<span>
 													Page {run.progressPage || 0}
 													{run.pageRangeStart && run.pageRangeEnd
@@ -360,7 +360,7 @@ export const DetectionPanel = () => {
 										</div>
 									)}
 
-									<div className="flex gap-4 text-xs text-muted">
+									<div className="flex gap-4 text-xs text-neutral-500">
 										<span>Model: {run.model}</span>
 										{(run.pageRangeStart || run.pageRangeEnd) && (
 											<span>
@@ -371,7 +371,7 @@ export const DetectionPanel = () => {
 									</div>
 
 									{(run.entriesCreated || run.mentionsCreated) && (
-										<div className="text-xs text-muted">
+										<div className="text-xs text-neutral-500">
 											Created {run.entriesCreated || 0} entries,{" "}
 											{run.mentionsCreated || 0} mentions
 										</div>

@@ -41,6 +41,7 @@ export const listIndexMentions = async ({
 			textSpan: indexMentions.textSpan,
 			bboxes: indexMentions.bboxes,
 			mentionType: indexMentions.mentionType,
+			detectionRunId: indexMentions.detectionRunId,
 			createdAt: indexMentions.createdAt,
 			entry: {
 				id: indexEntries.id,
@@ -123,6 +124,7 @@ export const listIndexMentions = async ({
 		textSpan: mention.textSpan,
 		bboxes: mention.bboxes as unknown as BoundingBox[] | null,
 		mentionType: mention.mentionType,
+		detectionRunId: mention.detectionRunId,
 		indexTypes: mentionTypesMap.get(mention.id) || [],
 		createdAt: mention.createdAt.toISOString(),
 	}));
@@ -146,6 +148,8 @@ export const getIndexMentionById = async ({
 			bboxes: indexMentions.bboxes,
 			rangeType: indexMentions.rangeType,
 			mentionType: indexMentions.mentionType,
+			suggestedByLlmId: indexMentions.suggestedByLlmId,
+			detectionRunId: indexMentions.detectionRunId,
 			note: indexMentions.note,
 			revision: indexMentions.revision,
 			createdAt: indexMentions.createdAt,
@@ -197,6 +201,8 @@ export const getIndexMentionById = async ({
 		bboxes: mention.bboxes as unknown as BoundingBox[] | null,
 		rangeType: mention.rangeType,
 		mentionType: mention.mentionType,
+		suggestedByLlmId: mention.suggestedByLlmId,
+		detectionRunId: mention.detectionRunId,
 		note: mention.note,
 		revision: mention.revision,
 		createdAt: mention.createdAt.toISOString(),
@@ -282,6 +288,8 @@ export const createIndexMention = async ({
 				bboxes: mention.bboxes as unknown as BoundingBox[] | null,
 				rangeType: mention.rangeType,
 				mentionType: mention.mentionType,
+				suggestedByLlmId: mention.suggestedByLlmId,
+				detectionRunId: mention.detectionRunId,
 				note: mention.note,
 				revision: mention.revision,
 				createdAt: mention.createdAt.toISOString(),
@@ -357,6 +365,8 @@ export const updateIndexMention = async ({
 					bboxes: indexMentions.bboxes,
 					rangeType: indexMentions.rangeType,
 					mentionType: indexMentions.mentionType,
+					suggestedByLlmId: indexMentions.suggestedByLlmId,
+					detectionRunId: indexMentions.detectionRunId,
 					note: indexMentions.note,
 					revision: indexMentions.revision,
 					createdAt: indexMentions.createdAt,
@@ -411,6 +421,8 @@ export const updateIndexMention = async ({
 				bboxes: m.bboxes as unknown as BoundingBox[] | null,
 				rangeType: m.rangeType,
 				mentionType: m.mentionType,
+				suggestedByLlmId: m.suggestedByLlmId,
+				detectionRunId: m.detectionRunId,
 				note: m.note,
 				revision: m.revision,
 				createdAt: m.createdAt.toISOString(),
@@ -504,6 +516,8 @@ export const updateIndexMentionTypes = async ({
 					bboxes: indexMentions.bboxes,
 					rangeType: indexMentions.rangeType,
 					mentionType: indexMentions.mentionType,
+					suggestedByLlmId: indexMentions.suggestedByLlmId,
+					detectionRunId: indexMentions.detectionRunId,
 					note: indexMentions.note,
 					revision: indexMentions.revision,
 					createdAt: indexMentions.createdAt,
@@ -562,6 +576,8 @@ export const updateIndexMentionTypes = async ({
 				bboxes: m.bboxes as unknown as BoundingBox[] | null,
 				rangeType: m.rangeType,
 				mentionType: m.mentionType,
+				suggestedByLlmId: m.suggestedByLlmId,
+				detectionRunId: m.detectionRunId,
 				note: m.note,
 				revision: m.revision,
 				createdAt: m.createdAt.toISOString(),
@@ -664,6 +680,8 @@ export const bulkCreateIndexMentions = async ({
 				bboxes: m.bboxes as unknown as BoundingBox[] | null,
 				rangeType: m.rangeType,
 				mentionType: m.mentionType,
+				suggestedByLlmId: m.suggestedByLlmId,
+				detectionRunId: m.detectionRunId,
 				note: m.note,
 				revision: m.revision,
 				createdAt: m.createdAt.toISOString(),
@@ -676,6 +694,36 @@ export const bulkCreateIndexMentions = async ({
 					projectIndexType: t.projectIndexType,
 				})),
 			}));
+		},
+	});
+};
+
+export const approveIndexMention = async ({
+	id,
+	userId,
+}: {
+	id: string;
+	userId: string;
+}): Promise<IndexMention | null> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const result = await tx
+				.update(indexMentions)
+				.set({
+					detectionRunId: null,
+					suggestedByLlmId: null,
+					updatedAt: new Date(),
+					revision: sql`${indexMentions.revision} + 1`,
+				})
+				.where(eq(indexMentions.id, id))
+				.returning({ id: indexMentions.id });
+
+			if (result.length === 0) {
+				return null;
+			}
+
+			return await getIndexMentionById({ id });
 		},
 	});
 };
@@ -708,6 +756,8 @@ export const deleteIndexMention = async ({
 					bboxes: indexMentions.bboxes,
 					rangeType: indexMentions.rangeType,
 					mentionType: indexMentions.mentionType,
+					suggestedByLlmId: indexMentions.suggestedByLlmId,
+					detectionRunId: indexMentions.detectionRunId,
 					note: indexMentions.note,
 					revision: indexMentions.revision,
 					createdAt: indexMentions.createdAt,
@@ -762,6 +812,8 @@ export const deleteIndexMention = async ({
 				bboxes: m.bboxes as unknown as BoundingBox[] | null,
 				rangeType: m.rangeType,
 				mentionType: m.mentionType,
+				suggestedByLlmId: m.suggestedByLlmId,
+				detectionRunId: m.detectionRunId,
 				note: m.note,
 				revision: m.revision,
 				createdAt: m.createdAt.toISOString(),

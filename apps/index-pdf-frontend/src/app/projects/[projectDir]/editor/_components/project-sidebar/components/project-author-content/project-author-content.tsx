@@ -111,6 +111,7 @@ export const ProjectAuthorContent = () => {
 				entries={entries}
 				mentions={allMentions}
 				projectId={projectId}
+				projectIndexTypeId={authorProjectIndexTypeId}
 				onCreateEntry={() => setModalOpen(true)}
 				isLoading={isLoading}
 				error={entriesError ? (entriesError as unknown as Error) : null}

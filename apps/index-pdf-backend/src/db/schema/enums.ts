@@ -23,8 +23,6 @@ export const sourceDocumentStatusEnum = pgEnum("source_document_status", [
 export const indexEntryStatusEnum = pgEnum("index_entry_status", [
 	"suggested",
 	"active",
-	"deprecated",
-	"merged",
 ]);
 
 // LLM run execution status

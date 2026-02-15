@@ -38,6 +38,7 @@ export type MentionData = {
 	entryId: string;
 	indexTypes: string[];
 	type: "text" | "region";
+	detectionRunId?: string | null;
 };
 
 type PageSidebarProps = {
@@ -45,6 +46,8 @@ type PageSidebarProps = {
 	currentPage: number;
 	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
 	enabledIndexTypes: string[]; // Index types enabled for this project
+	projectId?: string;
+	documentId?: string;
 };
 
 /**
@@ -57,6 +60,8 @@ export const PageSidebar = ({
 	currentPage,
 	onMentionClick,
 	enabledIndexTypes,
+	projectId,
+	documentId,
 }: PageSidebarProps) => {
 	const { resolvedTheme } = useTheme();
 	const isDarkMode = resolvedTheme === "dark";
@@ -146,6 +151,9 @@ export const PageSidebar = ({
 				<PageSubjectContent
 					mentions={getMentionsForType("subject")}
 					onMentionClick={onMentionClick}
+					projectId={projectId}
+					documentId={documentId}
+					pageNumber={currentPage}
 				/>
 			),
 		},
@@ -156,6 +164,9 @@ export const PageSidebar = ({
 				<PageAuthorContent
 					mentions={getMentionsForType("author")}
 					onMentionClick={onMentionClick}
+					projectId={projectId}
+					documentId={documentId}
+					pageNumber={currentPage}
 				/>
 			),
 		},
@@ -166,6 +177,9 @@ export const PageSidebar = ({
 				<PageScriptureContent
 					mentions={getMentionsForType("scripture")}
 					onMentionClick={onMentionClick}
+					projectId={projectId}
+					documentId={documentId}
+					pageNumber={currentPage}
 				/>
 			),
 		},

@@ -1,0 +1,88 @@
+---
+description: Tooltip patterns to avoid nested button hydration errors
+globs: **/*.tsx
+alwaysApply: false
+---
+
+# Tooltip Patterns
+
+## Avoid Nested Button Errors
+
+`TooltipTrigger` creates a `<button>` element by default. This causes hydration errors when wrapping components that also render as buttons (like `Select`, `Button`, etc.).
+
+## Solution: Use `render` Prop
+
+Use the `render` prop to create a non-button wrapper element:
+
+```tsx
+// ❌ BAD - Nested buttons cause hydration error
+<Tooltip>
+  <TooltipTrigger>
+    <Select>
+      <SelectTrigger>...</SelectTrigger>
+    </Select>
+  </TooltipTrigger>
+  <TooltipContent>Tool Mode</TooltipContent>
+</Tooltip>
+
+// ❌ BAD - asChild doesn't work, still creates button
+<Tooltip>
+  <TooltipTrigger asChild>
+    <span>
+      <Select>...</Select>
+    </span>
+  </TooltipTrigger>
+  <TooltipContent>Tool Mode</TooltipContent>
+</Tooltip>
+
+// ✅ GOOD - render prop creates div wrapper
+<Tooltip delay={500}>
+  <TooltipTrigger
+    render={
+      <div>
+        <Select>
+          <SelectTrigger>...</SelectTrigger>
+        </Select>
+      </div>
+    }
+  />
+  <TooltipContent>Tool Mode</TooltipContent>
+</Tooltip>
+```
+
+## Pattern for Interactive Elements
+
+When wrapping buttons or interactive components, use a `div` with appropriate ARIA attributes:
+
+```tsx
+<Tooltip delay={500}>
+  <TooltipTrigger
+    render={
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="My Button"
+        className="cursor-pointer"
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
+        <Button className="pointer-events-none">
+          Click Me
+        </Button>
+      </div>
+    }
+  />
+  <TooltipContent>Button tooltip</TooltipContent>
+</Tooltip>
+```
+
+## Why This Works
+
+- `render` prop tells `TooltipTrigger` to use the provided element instead of creating its own button
+- The div becomes the hover/focus target for the tooltip
+- The actual interactive element inside can be a button without nesting issues

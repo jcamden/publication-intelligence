@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { protectedProcedure, router } from "../../trpc";
 import * as indexMentionService from "./index-mention.service";
 import {
@@ -53,6 +54,22 @@ export const indexMentionRouter = router({
 		.mutation(async ({ input, ctx }) => {
 			return await indexMentionService.updateIndexMentionTypes({
 				input,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
+
+	approve: protectedProcedure
+		.input(
+			z.object({
+				id: z.string().uuid(),
+				projectId: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			return await indexMentionService.approveIndexMention({
+				id: input.id,
+				projectId: input.projectId,
 				userId: ctx.user.id,
 				requestId: ctx.requestId,
 			});

@@ -113,6 +113,7 @@ export const ProjectSubjectContent = () => {
 				entries={entries}
 				mentions={allMentions}
 				projectId={projectId}
+				projectIndexTypeId={subjectProjectIndexTypeId}
 				onCreateEntry={() => setModalOpen(true)}
 				isLoading={isLoading}
 				error={entriesError ? (entriesError as unknown as Error) : null}

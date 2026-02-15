@@ -172,6 +172,61 @@ export const updateIndexEntry = async ({
 	return entry;
 };
 
+export const approveIndexEntry = async ({
+	id,
+	projectId,
+	userId,
+	requestId,
+}: {
+	id: string;
+	projectId: string;
+	userId: string;
+	requestId: string;
+}): Promise<IndexEntry | null> => {
+	logEvent({
+		event: "index_entry.approve_suggested",
+		context: { requestId, userId, metadata: { entryId: id, projectId } },
+	});
+
+	try {
+		const approved = await indexEntryRepo.approveIndexEntry({ id, userId });
+
+		if (!approved) {
+			logEvent({
+				event: "index_entry.approve_failed",
+				context: {
+					requestId,
+					userId,
+					metadata: { entryId: id, projectId, reason: "Entry not found" },
+				},
+			});
+			throw new Error("Entry not found or approval failed");
+		}
+
+		logEvent({
+			event: "index_entry.approved",
+			context: { requestId, userId, metadata: { entryId: id, projectId } },
+		});
+
+		return approved;
+	} catch (error) {
+		logEvent({
+			event: "index_entry.approve_error",
+			context: {
+				requestId,
+				userId,
+				metadata: {
+					entryId: id,
+					projectId,
+					error: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined,
+				},
+			},
+		});
+		throw error;
+	}
+};
+
 export const updateIndexEntryParent = async ({
 	input,
 	userId,

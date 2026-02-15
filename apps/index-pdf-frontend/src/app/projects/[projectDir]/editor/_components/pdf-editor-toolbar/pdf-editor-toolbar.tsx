@@ -121,45 +121,49 @@ export const PdfEditorToolbar = ({
 			/>
 			<div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700" />
 			<div className="flex items-center gap-2">
-				<Tooltip>
-					<TooltipTrigger>
-						<Select
-							value={selectedType}
-							onValueChange={(value) => {
-								if (typeof value === "string") {
-									onTypeChange(value);
-								}
-							}}
-						>
-							<SelectTrigger size="lg" className="w-fit min-w-[40px]">
-								<SelectValue>
-									{SelectedIcon && <SelectedIcon className="h-4 w-4" />}
-								</SelectValue>
-							</SelectTrigger>
-							<SelectContent>
-								{allOptions.map((option) => {
-									// Disable region types when Select Text is active
-									const isRegionOption =
-										option.value === "exclude" ||
-										option.value === "page_number";
-									const isDisabled =
-										activeAction.type === "select-text" && isRegionOption;
-									const OptionIcon = option.icon;
+				<Tooltip delay={500}>
+					<TooltipTrigger
+						render={
+							<div>
+								<Select
+									value={selectedType}
+									onValueChange={(value) => {
+										if (typeof value === "string") {
+											onTypeChange(value);
+										}
+									}}
+								>
+									<SelectTrigger size="lg" className="w-fit min-w-[40px]">
+										<SelectValue>
+											{SelectedIcon && <SelectedIcon className="h-4 w-4" />}
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent>
+										{allOptions.map((option) => {
+											// Disable region types when Select Text is active
+											const isRegionOption =
+												option.value === "exclude" ||
+												option.value === "page_number";
+											const isDisabled =
+												activeAction.type === "select-text" && isRegionOption;
+											const OptionIcon = option.icon;
 
-									return (
-										<SelectItem
-											key={option.value}
-											value={option.value}
-											disabled={isDisabled}
-										>
-											<OptionIcon className="h-4 w-4" />
-											{option.label}
-										</SelectItem>
-									);
-								})}
-							</SelectContent>
-						</Select>
-					</TooltipTrigger>
+											return (
+												<SelectItem
+													key={option.value}
+													value={option.value}
+													disabled={isDisabled}
+												>
+													<OptionIcon className="h-4 w-4" />
+													{option.label}
+												</SelectItem>
+											);
+										})}
+									</SelectContent>
+								</Select>
+							</div>
+						}
+					/>
 					<TooltipContent>Tool Mode</TooltipContent>
 				</Tooltip>
 				<StyledButton

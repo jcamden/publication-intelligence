@@ -430,6 +430,128 @@ export const updateIndexEntry = async ({
 	});
 };
 
+export const approveIndexEntry = async ({
+	id,
+	userId,
+}: {
+	id: string;
+	userId: string;
+}): Promise<IndexEntry | null> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			try {
+				// First check if entry exists
+				const existingEntry = await tx
+					.select({ id: indexEntries.id, status: indexEntries.status })
+					.from(indexEntries)
+					.where(eq(indexEntries.id, id))
+					.limit(1);
+
+				if (existingEntry.length === 0) {
+					console.error(`[approveIndexEntry] Entry not found: ${id}`);
+					return null;
+				}
+
+				console.log(
+					`[approveIndexEntry] Approving entry ${id} with current status: ${existingEntry[0].status}`,
+				);
+
+				const result = await tx
+					.update(indexEntries)
+					.set({
+						status: "active",
+						updatedAt: new Date(),
+						revision: sql`${indexEntries.revision} + 1`,
+					})
+					.where(eq(indexEntries.id, id))
+					.returning({ id: indexEntries.id });
+
+				if (result.length === 0) {
+					console.error(
+						`[approveIndexEntry] Update returned no results for ${id}`,
+					);
+					return null;
+				}
+
+				const entry = await tx
+					.select({
+						id: indexEntries.id,
+						projectId: indexEntries.projectId,
+						projectIndexTypeId: indexEntries.projectIndexTypeId,
+						slug: indexEntries.slug,
+						label: indexEntries.label,
+						description: indexEntries.description,
+						status: indexEntries.status,
+						revision: indexEntries.revision,
+						parentId: indexEntries.parentId,
+						createdAt: indexEntries.createdAt,
+						updatedAt: indexEntries.updatedAt,
+						deletedAt: indexEntries.deletedAt,
+					})
+					.from(indexEntries)
+					.where(eq(indexEntries.id, id))
+					.limit(1);
+
+				if (entry.length === 0) {
+					console.error(
+						`[approveIndexEntry] Entry vanished after update: ${id}`,
+					);
+					return null;
+				}
+
+				const variants = await tx
+					.select({
+						id: indexVariants.id,
+						entryId: indexVariants.entryId,
+						text: indexVariants.text,
+						variantType: indexVariants.variantType,
+						revision: indexVariants.revision,
+						createdAt: indexVariants.createdAt,
+						updatedAt: indexVariants.updatedAt,
+					})
+					.from(indexVariants)
+					.where(eq(indexVariants.entryId, id));
+
+				console.log(
+					`[approveIndexEntry] Successfully approved entry ${id}, found ${variants.length} variants`,
+				);
+
+				const e = entry[0];
+				return {
+					id: e.id,
+					projectId: e.projectId,
+					projectIndexTypeId: e.projectIndexTypeId,
+					slug: e.slug,
+					label: e.label,
+					description: e.description,
+					status: e.status,
+					revision: e.revision,
+					parentId: e.parentId,
+					createdAt: e.createdAt.toISOString(),
+					updatedAt: e.updatedAt?.toISOString() || null,
+					deletedAt: e.deletedAt?.toISOString() || null,
+					variants: variants.map((v) => ({
+						id: v.id,
+						entryId: v.entryId,
+						text: v.text,
+						variantType: v.variantType,
+						revision: v.revision,
+						createdAt: v.createdAt.toISOString(),
+						updatedAt: v.updatedAt?.toISOString() || null,
+					})),
+				};
+			} catch (error) {
+				console.error(
+					`[approveIndexEntry] Error approving entry ${id}:`,
+					error,
+				);
+				throw error;
+			}
+		},
+	});
+};
+
 export const updateIndexEntryParent = async ({
 	input,
 	userId,

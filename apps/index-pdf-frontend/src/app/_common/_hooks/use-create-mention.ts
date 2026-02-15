@@ -45,6 +45,7 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 						label: "",
 					},
 					indexTypes: [],
+					detectionRunId: null,
 					createdAt: new Date().toISOString(),
 				} satisfies IndexMentionListItem,
 			]);

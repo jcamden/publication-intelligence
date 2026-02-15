@@ -18,23 +18,26 @@ const Toaster = ({ ...props }: ToasterProps) => {
 			theme={theme as ToasterProps["theme"]}
 			className="toaster group"
 			icons={{
-				success: <CircleCheckIcon className="size-4" />,
-				info: <InfoIcon className="size-4" />,
-				warning: <TriangleAlertIcon className="size-4" />,
-				error: <OctagonXIcon className="size-4" />,
-				loading: <Loader2Icon className="size-4 animate-spin" />,
+				success: (
+					<CircleCheckIcon className="size-4 text-green-600 dark:text-green-400" />
+				),
+				info: <InfoIcon className="size-4 text-blue-600 dark:text-blue-400" />,
+				warning: (
+					<TriangleAlertIcon className="size-4 text-yellow-600 dark:text-yellow-400" />
+				),
+				error: <OctagonXIcon className="size-4 text-destructive" />,
+				loading: <Loader2Icon className="size-4 animate-spin text-primary" />,
 			}}
-			style={
-				{
-					"--normal-bg": "var(--popover)",
-					"--normal-text": "var(--popover-foreground)",
-					"--normal-border": "var(--border)",
-					"--border-radius": "var(--radius)",
-				} as React.CSSProperties
-			}
 			toastOptions={{
 				classNames: {
-					toast: "cn-toast",
+					toast:
+						"group toast group-[.toaster]:!bg-white group-[.toaster]:!text-gray-950 group-[.toaster]:!border-0 group-[.toaster]:shadow-lg dark:group-[.toaster]:!bg-gray-950 dark:group-[.toaster]:!text-gray-50",
+					description:
+						"group-[.toast]:text-gray-600 dark:group-[.toast]:text-gray-400",
+					actionButton:
+						"group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+					cancelButton:
+						"group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
 				},
 			}}
 			{...props}

@@ -3,7 +3,7 @@ CREATE TYPE "public"."detection_run_status" AS ENUM('queued', 'running', 'comple
 CREATE TYPE "public"."entity_type" AS ENUM('IndexEntry', 'IndexMention', 'SourceDocument', 'DocumentPage', 'LLMRun', 'ExportedIndex', 'Project');--> statement-breakpoint
 CREATE TYPE "public"."export_format" AS ENUM('book_index', 'json', 'xml');--> statement-breakpoint
 CREATE TYPE "public"."highlight_type" AS ENUM('subject', 'author', 'scripture', 'exclude', 'page_number');--> statement-breakpoint
-CREATE TYPE "public"."index_entry_status" AS ENUM('suggested', 'active', 'deprecated', 'merged');--> statement-breakpoint
+CREATE TYPE "public"."index_entry_status" AS ENUM('suggested', 'active');--> statement-breakpoint
 CREATE TYPE "public"."index_type" AS ENUM('subject', 'author', 'scripture');--> statement-breakpoint
 CREATE TYPE "public"."llm_run_status" AS ENUM('pending', 'running', 'completed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."mention_range_type" AS ENUM('single_page', 'page_range', 'passim');--> statement-breakpoint

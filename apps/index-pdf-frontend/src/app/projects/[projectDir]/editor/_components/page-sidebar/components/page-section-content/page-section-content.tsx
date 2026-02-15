@@ -7,16 +7,23 @@ type MentionData = {
 	text: string;
 	entryLabel: string;
 	type: "text" | "region";
+	detectionRunId?: string | null;
 };
 
 type PageSectionContentProps = {
 	mentions: MentionData[];
 	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
+	projectId?: string;
+	documentId?: string;
+	pageNumber?: number;
 };
 
 export const PageSectionContent = ({
 	mentions,
 	onMentionClick,
+	projectId,
+	documentId,
+	pageNumber,
 }: PageSectionContentProps) => {
 	const mentionCount = mentions.length;
 
@@ -30,6 +37,9 @@ export const PageSectionContent = ({
 							key={mention.id}
 							mention={mention}
 							onClick={onMentionClick}
+							projectId={projectId}
+							documentId={documentId}
+							pageNumber={pageNumber}
 						/>
 					))}
 				</div>

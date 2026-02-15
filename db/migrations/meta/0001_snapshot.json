@@ -1,5 +1,5 @@
 {
-	"id": "a5c68da1-de97-44cd-b680-79e55eda6ad7",
+	"id": "89e49d02-0179-4fb8-bd23-18382d030cfd",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -2226,7 +2226,7 @@
 		"public.index_entry_status": {
 			"name": "index_entry_status",
 			"schema": "public",
-			"values": ["suggested", "active", "deprecated", "merged"]
+			"values": ["suggested", "active"]
 		},
 		"public.index_type": {
 			"name": "index_type",

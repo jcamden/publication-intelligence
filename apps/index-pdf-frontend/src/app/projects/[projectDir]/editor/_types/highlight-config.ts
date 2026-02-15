@@ -17,8 +17,8 @@ export type HighlightColorConfig = {
 
 export const DEFAULT_HIGHLIGHT_COLOR_CONFIG: HighlightColorConfig = {
 	// Index types
-	subject: { hue: 230 }, // Blue
-	author: { hue: 270 }, // Purple
+	subject: { hue: 85 }, // Yellow
+	author: { hue: 230 }, // Blue
 	scripture: { hue: 160 }, // Green
 	// Region types
 	exclude: { hue: 17 }, // Orange

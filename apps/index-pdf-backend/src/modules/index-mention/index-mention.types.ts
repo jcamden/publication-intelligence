@@ -24,6 +24,8 @@ export type IndexMention = {
 	bboxes: BoundingBox[] | null;
 	rangeType: "single_page" | "page_range" | "passim";
 	mentionType: "text" | "region";
+	suggestedByLlmId: string | null;
+	detectionRunId: string | null;
 	note: string | null;
 	revision: number;
 	createdAt: string;
@@ -60,6 +62,7 @@ export type IndexMentionListItem = {
 	textSpan: string;
 	bboxes: BoundingBox[] | null;
 	mentionType: "text" | "region";
+	detectionRunId: string | null;
 	indexTypes: Array<{
 		projectIndexTypeId: string;
 		indexType: string;

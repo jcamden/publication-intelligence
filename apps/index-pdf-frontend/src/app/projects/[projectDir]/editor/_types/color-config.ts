@@ -9,8 +9,8 @@ export type ColorConfig = {
 };
 
 export const DEFAULT_COLOR_CONFIG: ColorConfig = {
-	author: { hue: 30 }, // Orange
-	subject: { hue: 230 }, // Blue
+	author: { hue: 230 }, // Blue
+	subject: { hue: 85 }, // Yellow
 	scripture: { hue: 120 }, // Green
 };
 

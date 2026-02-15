@@ -1,5 +1,7 @@
 import { ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { useMemo, useState } from "react";
+import { ApproveSuggestionButton } from "@/app/_common/_components/approve-suggestion-button";
+import { useApproveEntry } from "@/app/_common/_hooks/use-approve-entry";
 import type { IndexEntry } from "../../../_types/index-entry";
 import type { Mention } from "../../editor/editor";
 
@@ -14,6 +16,8 @@ export type EntryItemProps = {
 	onDragStart: (entryId: string) => void;
 	onDrop: (targetEntryId: string | null) => void;
 	isDragging: boolean;
+	projectId?: string; // For approval mutation
+	projectIndexTypeId?: string; // For cache invalidation
 };
 
 export const EntryItem = ({
@@ -27,13 +31,27 @@ export const EntryItem = ({
 	onDragStart,
 	onDrop,
 	isDragging,
+	projectId,
+	projectIndexTypeId,
 }: EntryItemProps) => {
 	const [isDropTarget, setIsDropTarget] = useState(false);
+	const approveEntry = useApproveEntry({
+		projectId: projectId || "",
+		projectIndexTypeId,
+	});
 
 	const mentionCount = useMemo(
 		() => mentions.filter((m) => m.entryId === entry.id).length,
 		[mentions, entry.id],
 	);
+
+	const isSuggested = entry.status === "suggested";
+
+	const handleApprove = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!projectId) return;
+		approveEntry.mutate({ id: entry.id, projectId });
+	};
 
 	const handleDragStart = (e: React.DragEvent) => {
 		e.dataTransfer.effectAllowed = "move";
@@ -74,14 +92,14 @@ export const EntryItem = ({
 					onClick?.(entry);
 				}
 			}}
-			className={`group w-full flex items-center gap-2 pr-2 py-1.5 rounded transition-colors ${
+			className={`group border-1 h-10 flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
 				isDragging
 					? "opacity-50 bg-gray-200 dark:bg-gray-700"
 					: isDropTarget
 						? "bg-blue-100 dark:bg-blue-900"
 						: "hover:bg-gray-100 dark:hover:bg-gray-800"
 			}`}
-			style={{ paddingLeft: `${8 + depth * 20}px` }}
+			style={{ marginLeft: `${0 + depth * 20}px` }}
 		>
 			{/* Drag handle */}
 			<div className="flex-shrink-0 cursor-move opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity">
@@ -89,7 +107,7 @@ export const EntryItem = ({
 			</div>
 
 			{/* Expand/collapse icon */}
-			{hasChildren ? (
+			{hasChildren && (
 				<button
 					type="button"
 					onClick={(e) => {
@@ -104,8 +122,6 @@ export const EntryItem = ({
 						<ChevronRight className="w-3 h-3" />
 					)}
 				</button>
-			) : (
-				<div className="w-4" />
 			)}
 
 			{/* Entry label */}
@@ -116,6 +132,15 @@ export const EntryItem = ({
 			>
 				{entry.label}
 			</button>
+
+			{/* Approve button (for suggested entries) */}
+			{isSuggested && projectId && (
+				<ApproveSuggestionButton
+					onClick={handleApprove}
+					disabled={approveEntry.isPending}
+					size="sm"
+				/>
+			)}
 
 			{/* Mention count badge */}
 			{mentionCount > 0 && (

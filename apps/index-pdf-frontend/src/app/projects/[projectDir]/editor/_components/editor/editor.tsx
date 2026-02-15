@@ -88,6 +88,7 @@ export type Mention = {
 	entryLabel: string;
 	indexTypes: string[]; // ['subject', 'author', 'scripture']
 	type: "text" | "region";
+	detectionRunId?: string | null;
 	createdAt: Date;
 };
 
@@ -189,6 +190,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		entryLabel: m.entry.label,
 		indexTypes: m.indexTypes.map((t) => t.indexType),
 		type: m.mentionType,
+		detectionRunId: m.detectionRunId,
 		createdAt: new Date(m.createdAt),
 	}));
 
@@ -782,6 +784,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									currentPage={currentPage}
 									onMentionClick={handleMentionClickFromSidebar}
 									enabledIndexTypes={enabledIndexTypes}
+									projectId={projectId}
+									documentId={documentId}
 								/>
 							</div>
 						) : (
@@ -795,6 +799,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									currentPage={currentPage}
 									onMentionClick={handleMentionClickFromSidebar}
 									enabledIndexTypes={enabledIndexTypes}
+									projectId={projectId}
+									documentId={documentId}
 								/>
 							</ResizableSidebar>
 						)}

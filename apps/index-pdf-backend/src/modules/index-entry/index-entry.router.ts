@@ -61,6 +61,22 @@ export const indexEntryRouter = router({
 			});
 		}),
 
+	approve: protectedProcedure
+		.input(
+			z.object({
+				id: z.string().uuid(),
+				projectId: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			return await indexEntryService.approveIndexEntry({
+				id: input.id,
+				projectId: input.projectId,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
+
 	delete: protectedProcedure
 		.input(DeleteIndexEntrySchema)
 		.mutation(async ({ input, ctx }) => {
