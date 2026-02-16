@@ -98,10 +98,10 @@ export const SelectExistingEntry: Story = {
 		await step("Search for top-level entry", async () => {
 			const input = canvas.getByRole("combobox");
 			await userEvent.click(input);
-			
+
 			// Wait for dropdown to open
 			await new Promise((resolve) => setTimeout(resolve, 300));
-			
+
 			// Type search term for a top-level entry
 			await userEvent.clear(input);
 			await userEvent.type(input, "Philo", { delay: 50 });
@@ -298,14 +298,14 @@ export const SelectNestedEntry: Story = {
 		await step("Open dropdown and search for Science", async () => {
 			const input = canvas.getByRole("combobox");
 			await userEvent.click(input);
-			
+
 			// Wait for dropdown to open
 			await new Promise((resolve) => setTimeout(resolve, 300));
-			
+
 			// Search for Science (top-level entry)
 			await userEvent.clear(input);
 			await userEvent.type(input, "Science", { delay: 50 });
-			
+
 			// Wait for filtering
 			await new Promise((resolve) => setTimeout(resolve, 500));
 		});

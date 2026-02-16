@@ -135,7 +135,7 @@ export const CreateEntryWithParent: Story = {
 			if (!philosophyOption) {
 				throw new Error("Philosophy option not found");
 			}
-			
+
 			// Force click using native DOM method
 			(philosophyOption as HTMLElement).click();
 
