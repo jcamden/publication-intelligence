@@ -1,44 +1,47 @@
-import * as projectSettingsRepo from "./project-settings.repo";
+import * as userSettingsRepo from "./user-settings.repo";
 import type {
-	GetProjectSettingsInput,
+	GetUserSettingsInput,
 	OpenRouterModel,
 	OpenRouterModelsResponse,
-	ProjectSettings,
-	UpdateProjectSettingsInput,
-} from "./project-settings.types";
+	UpdateUserSettingsInput,
+	UserSettings,
+} from "./user-settings.types";
 
 // ============================================================================
 // Service Layer - Business Logic
 // ============================================================================
 
-export const getProjectSettings = async ({
+export const getUserSettings = async ({
+	userId,
+}: {
+	userId: string;
+	input: GetUserSettingsInput;
+}): Promise<UserSettings | null> => {
+	return await userSettingsRepo.getUserSettings({ userId });
+};
+
+export const updateUserSettings = async ({
 	userId,
 	input,
 }: {
 	userId: string;
-	input: GetProjectSettingsInput;
-}): Promise<ProjectSettings | null> => {
-	return await projectSettingsRepo.getProjectSettings({
+	input: UpdateUserSettingsInput;
+}): Promise<UserSettings> => {
+	return await userSettingsRepo.updateUserSettings({
 		userId,
-		projectId: input.projectId,
+		openrouterApiKey: input.openrouterApiKey,
+		defaultDetectionModel: input.defaultDetectionModel,
 	});
 };
 
-export const updateProjectSettings = async ({
+export const listAvailableModels = async ({
 	userId,
-	input,
 }: {
 	userId: string;
-	input: UpdateProjectSettingsInput;
-}): Promise<ProjectSettings> => {
-	return await projectSettingsRepo.upsertProjectSettings({
-		userId,
-		projectId: input.projectId,
-	});
-};
+}): Promise<OpenRouterModel[]> => {
+	const settings = await userSettingsRepo.getUserSettings({ userId });
 
-export const listAvailableModels = async (): Promise<OpenRouterModel[]> => {
-	const apiKey = process.env.OPENROUTER_API_KEY;
+	const apiKey = settings?.openrouterApiKey || process.env.OPENROUTER_API_KEY;
 
 	if (!apiKey) {
 		return getDefaultFreeModels();

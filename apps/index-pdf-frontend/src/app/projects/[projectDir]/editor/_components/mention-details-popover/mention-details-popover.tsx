@@ -28,6 +28,7 @@ export type Mention = {
 	entryId: string;
 	indexTypes: string[];
 	type: "text" | "region";
+	pageSublocation?: string | null;
 };
 
 export type IndexEntry = {
@@ -46,12 +47,14 @@ export type MentionDetailsPopoverProps = {
 		entryId,
 		entryLabel,
 		text,
+		pageSublocation,
 	}: {
 		mentionId: string;
 		indexTypes: string[];
 		entryId?: string;
 		entryLabel?: string;
 		text?: string;
+		pageSublocation?: string | null;
 	}) => void;
 	onCancel: () => void;
 };
@@ -63,6 +66,7 @@ type SavedFormState = {
 	indexTypes: string[];
 	selectedEntry: IndexEntry | null;
 	inputValue: string;
+	pageSublocation: string;
 };
 
 const AVAILABLE_INDEX_TYPES = [
@@ -99,6 +103,9 @@ export const MentionDetailsPopover = ({
 	const [localText, setLocalText] = useState(mention.text);
 	const [localIndexTypes, setLocalIndexTypes] = useState<string[]>(
 		mention.indexTypes,
+	);
+	const [localPageSublocation, setLocalPageSublocation] = useState(
+		mention.pageSublocation || "",
 	);
 
 	// Local state for entry selection
@@ -182,6 +189,7 @@ export const MentionDetailsPopover = ({
 			indexTypes: [...localIndexTypes],
 			selectedEntry,
 			inputValue,
+			pageSublocation: localPageSublocation,
 		});
 		setMode("edit");
 	};
@@ -193,6 +201,7 @@ export const MentionDetailsPopover = ({
 			setLocalIndexTypes(savedFormState.indexTypes);
 			setSelectedEntry(savedFormState.selectedEntry);
 			setInputValue(savedFormState.inputValue);
+			setLocalPageSublocation(savedFormState.pageSublocation);
 		}
 		setMode("view");
 	};
@@ -203,9 +212,16 @@ export const MentionDetailsPopover = ({
 			JSON.stringify(mention.indexTypes.sort());
 		const entryChanged = selectedEntry?.id !== mention.entryId;
 		const textChanged = localText !== mention.text;
+		const sublocationChanged =
+			localPageSublocation !== (mention.pageSublocation || "");
 
 		// Only call onClose if something actually changed
-		if (indexTypesChanged || entryChanged || textChanged) {
+		if (
+			indexTypesChanged ||
+			entryChanged ||
+			textChanged ||
+			sublocationChanged
+		) {
 			onClose({
 				mentionId: mention.id,
 				indexTypes: localIndexTypes,
@@ -216,6 +232,9 @@ export const MentionDetailsPopover = ({
 						}
 					: {}),
 				...(textChanged ? { text: localText } : {}),
+				...(sublocationChanged
+					? { pageSublocation: localPageSublocation || null }
+					: {}),
 			});
 		}
 		setMode("view");
@@ -410,6 +429,23 @@ export const MentionDetailsPopover = ({
 							{mention.pageNumber}
 						</span>
 					</div>
+
+					{localIndexTypes.includes("subject") && (
+						<div>
+							<span className="text-neutral-500 dark:text-neutral-400 text-sm mb-1 block">
+								Page Sublocation (optional):
+							</span>
+							<Input
+								value={localPageSublocation}
+								onChange={(e) => setLocalPageSublocation(e.target.value)}
+								placeholder="e.g., 10:45.a"
+								data-testid="sublocation-input"
+							/>
+							<p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+								For more precise page indexing (e.g., section 10, item 45a)
+							</p>
+						</div>
+					)}
 				</div>
 			</div>
 

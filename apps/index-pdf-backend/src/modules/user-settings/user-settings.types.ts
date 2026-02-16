@@ -4,19 +4,16 @@ import { z } from "zod";
 // DTOs - Data Transfer Objects
 // ============================================================================
 
-export const GetProjectSettingsSchema = z.object({
-	projectId: z.string().uuid("Invalid project ID"),
+export const GetUserSettingsSchema = z.object({});
+
+export type GetUserSettingsInput = z.infer<typeof GetUserSettingsSchema>;
+
+export const UpdateUserSettingsSchema = z.object({
+	openrouterApiKey: z.string().optional(),
+	defaultDetectionModel: z.string().optional(),
 });
 
-export type GetProjectSettingsInput = z.infer<typeof GetProjectSettingsSchema>;
-
-export const UpdateProjectSettingsSchema = z.object({
-	projectId: z.string().uuid("Invalid project ID"),
-});
-
-export type UpdateProjectSettingsInput = z.infer<
-	typeof UpdateProjectSettingsSchema
->;
+export type UpdateUserSettingsInput = z.infer<typeof UpdateUserSettingsSchema>;
 
 export const ListModelsSchema = z.object({});
 
@@ -26,11 +23,9 @@ export type ListModelsInput = z.infer<typeof ListModelsSchema>;
 // Domain Types
 // ============================================================================
 
-export type ProjectSettings = {
-	id: string;
-	projectId: string;
-	createdAt: Date;
-	updatedAt: Date | null;
+export type UserSettings = {
+	openrouterApiKey: string | null;
+	defaultDetectionModel: string | null;
 };
 
 export type OpenRouterModel = {

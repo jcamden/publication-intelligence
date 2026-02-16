@@ -1,4 +1,11 @@
-import { ChevronDown, ChevronRight, GripVertical } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronRight,
+	Edit2,
+	GripVertical,
+	Merge,
+	Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { ApproveSuggestionButton } from "@/app/_common/_components/approve-suggestion-button";
 import { useApproveEntry } from "@/app/_common/_hooks/use-approve-entry";
@@ -18,6 +25,9 @@ export type EntryItemProps = {
 	isDragging: boolean;
 	projectId?: string; // For approval mutation
 	projectIndexTypeId?: string; // For cache invalidation
+	onEdit?: (entry: IndexEntry) => void;
+	onDelete?: (entry: IndexEntry) => void;
+	onMerge?: (entry: IndexEntry) => void;
 };
 
 export const EntryItem = ({
@@ -33,6 +43,9 @@ export const EntryItem = ({
 	isDragging,
 	projectId,
 	projectIndexTypeId,
+	onEdit,
+	onDelete,
+	onMerge,
 }: EntryItemProps) => {
 	const [isDropTarget, setIsDropTarget] = useState(false);
 	const approveEntry = useApproveEntry({
@@ -133,6 +146,13 @@ export const EntryItem = ({
 				{entry.label}
 			</button>
 
+			{/* Mention count badge */}
+			{mentionCount > 0 && (
+				<span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+					{mentionCount}
+				</span>
+			)}
+
 			{/* Approve button (for suggested entries) */}
 			{isSuggested && projectId && (
 				<ApproveSuggestionButton
@@ -142,12 +162,48 @@ export const EntryItem = ({
 				/>
 			)}
 
-			{/* Mention count badge */}
-			{mentionCount > 0 && (
-				<span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-					{mentionCount}
-				</span>
-			)}
+			{/* Action buttons (visible on hover) */}
+			<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+				{onEdit && (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							onEdit(entry);
+						}}
+						className="flex-shrink-0 p-1 hover:bg-gray-200 rounded dark:hover:bg-gray-700"
+						aria-label="Edit entry"
+					>
+						<Edit2 className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+					</button>
+				)}
+				{onMerge && (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							onMerge(entry);
+						}}
+						className="flex-shrink-0 p-1 hover:bg-gray-200 rounded dark:hover:bg-gray-700"
+						aria-label="Merge entry"
+					>
+						<Merge className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+					</button>
+				)}
+				{onDelete && (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							onDelete(entry);
+						}}
+						className="flex-shrink-0 p-1 hover:bg-red-100 rounded dark:hover:bg-red-900/30"
+						aria-label="Delete entry"
+					>
+						<Trash2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+					</button>
+				)}
+			</div>
 		</div>
 	);
 };

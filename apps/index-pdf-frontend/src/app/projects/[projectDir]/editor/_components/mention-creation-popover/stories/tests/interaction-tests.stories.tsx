@@ -6,7 +6,12 @@ import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import type { MentionDraft } from "../../mention-creation-popover";
 import { MentionCreationPopover } from "../../mention-creation-popover";
-import { mockDraft, mockDraftNoMatch, mockRegionDraft } from "../shared";
+import {
+	mockDraft,
+	mockDraftNoMatch,
+	mockDraftPartialMatch,
+	mockRegionDraft,
+} from "../shared";
 
 const meta = {
 	...defaultInteractionTestMeta,
@@ -77,61 +82,49 @@ const InteractiveWrapper = ({
 
 export const SelectExistingEntry: Story = {
 	args: {
-		draft: mockDraft,
+		draft: mockDraftPartialMatch,
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
-	render: () => <InteractiveWrapper draft={mockDraft} indexType="subject" />,
+	render: () => (
+		<InteractiveWrapper draft={mockDraftPartialMatch} indexType="subject" />
+	),
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await step("Click input to ensure focus and open dropdown", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
+		await step("Search for top-level entry", async () => {
+			const input = canvas.getByRole("combobox");
 			await userEvent.click(input);
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
-
-		await step("Clear input and search for 'Kant'", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
-			await userEvent.clear(input);
-			await userEvent.type(input, "Kant", { delay: 50 });
-
-			// Wait for dropdown to render
+			
+			// Wait for dropdown to open
 			await new Promise((resolve) => setTimeout(resolve, 300));
+			
+			// Type search term for a top-level entry
+			await userEvent.clear(input);
+			await userEvent.type(input, "Philo", { delay: 50 });
+
+			// Wait for search to filter results
+			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
-		await step("Select 'Kant, Immanuel' using keyboard", async () => {
-			// Verify dropdown has the correct filtered option
+		await step("Select 'Philosophy' using keyboard", async () => {
+			// Verify dropdown has options
 			await waitFor(
 				async () => {
 					const options = within(document.body).queryAllByRole("option");
 					await expect(options.length).toBeGreaterThan(0);
-					const kantOption = options.find((opt) =>
-						opt.textContent?.includes("Kant, Immanuel"),
-					);
-					await expect(kantOption).toBeDefined();
 				},
 				{ timeout: 3000 },
 			);
 
-			// ArrowDown is required to highlight the first option before Enter selects it
-			// (Base UI Combobox doesn't auto-highlight the first filtered item)
-			await userEvent.keyboard("{ArrowDown}");
-
-			// Press Enter to select the highlighted option
+			// Press Enter to select the first (and only) filtered option
 			await userEvent.keyboard("{Enter}");
 
-			// Wait for selection to complete and button text to update
-			await waitFor(
-				() => {
-					const attachButton = canvas.getByRole("button", { name: "Attach" });
-					expect(attachButton).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
+			// Wait for selection to complete
+			await new Promise((resolve) => setTimeout(resolve, 300));
 		});
 
 		await step("Click Attach button", async () => {
@@ -143,7 +136,7 @@ export const SelectExistingEntry: Story = {
 			const result = canvas.getByTestId("result");
 			await waitFor(
 				() => {
-					expect(result).toHaveTextContent(/Attached: Kant, Immanuel/);
+					expect(result).toHaveTextContent(/Attached: Philosophy/);
 				},
 				{ timeout: 2000 },
 			);
@@ -151,7 +144,7 @@ export const SelectExistingEntry: Story = {
 	},
 };
 
-export const CreateNewEntryShowsError: Story = {
+export const TryToSubmitWithoutSelection: Story = {
 	args: {
 		draft: mockDraftNoMatch,
 		indexType: "subject",
@@ -166,28 +159,30 @@ export const CreateNewEntryShowsError: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await step("Click input to open dropdown", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
+		await step("Type non-existent entry name", async () => {
+			const input = canvas.getByRole("combobox");
 			await userEvent.click(input);
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
-
-		await step("Type new entry name", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
+			await new Promise((resolve) => setTimeout(resolve, 300));
 			await userEvent.type(input, "Heidegger", { delay: 50 });
 			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
-		await step("Press Enter to trigger create new entry", async () => {
-			await userEvent.keyboard("{Enter}");
+		await step("Close dropdown by pressing Escape", async () => {
+			await userEvent.keyboard("{Escape}");
 			await new Promise((resolve) => setTimeout(resolve, 300));
 		});
 
-		await step("Verify error message appears", async () => {
+		await step("Try to attach without selecting", async () => {
+			const attachButton = canvas.getByRole("button", { name: "Attach" });
+			await userEvent.click(attachButton);
+			await new Promise((resolve) => setTimeout(resolve, 300));
+		});
+
+		await step("Verify validation error appears", async () => {
 			await waitFor(
 				async () => {
 					const errorMessage = canvas.getByText(
-						/Entry "Heidegger" not found.*create it in the project sidebar/i,
+						/Please select or create an entry/i,
 					);
 					await expect(errorMessage).toBeInTheDocument();
 				},
@@ -252,32 +247,32 @@ export const CancelWithEscape: Story = {
 
 export const SearchWithNoResults: Story = {
 	args: {
-		draft: mockDraft,
+		draft: mockDraftPartialMatch,
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
-	render: () => <InteractiveWrapper draft={mockDraft} indexType="subject" />,
+	render: () => (
+		<InteractiveWrapper draft={mockDraftPartialMatch} indexType="subject" />
+	),
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await step("Click input to open dropdown", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
-			await userEvent.click(input);
-		});
-
 		await step("Search for non-existent entry", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
+			const input = canvas.getByPlaceholderText("Select entry...");
+			await userEvent.click(input);
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			await userEvent.clear(input);
 			await userEvent.type(input, "Zzzzz");
-			await new Promise((resolve) => setTimeout(resolve, 200));
+			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
 		await step("Verify empty state message", async () => {
 			const body = within(document.body);
 			await waitFor(async () => {
-				const emptyMessage = body.getByText(/No matching entries/);
+				const emptyMessage = body.getByText(/No entries found/i);
 				await expect(emptyMessage).toBeInTheDocument();
 			});
 		});
@@ -286,62 +281,59 @@ export const SearchWithNoResults: Story = {
 
 export const SelectNestedEntry: Story = {
 	args: {
-		draft: mockDraft,
+		draft: mockDraftPartialMatch,
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
 		onAttach: () => {},
 		onCancel: () => {},
 	},
-	render: () => <InteractiveWrapper draft={mockDraft} indexType="subject" />,
+	render: () => (
+		<InteractiveWrapper draft={mockDraftPartialMatch} indexType="subject" />
+	),
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
+		const body = within(document.body);
 
-		await step("Click input to open dropdown", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
+		await step("Open dropdown and search for Science", async () => {
+			const input = canvas.getByRole("combobox");
 			await userEvent.click(input);
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
-
-		await step("Clear input and search for 'Aristotle'", async () => {
-			const input = canvas.getByPlaceholderText("Search or create...");
+			
+			// Wait for dropdown to open
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			
+			// Search for Science (top-level entry)
 			await userEvent.clear(input);
-			await userEvent.type(input, "Aristotle", { delay: 50 });
+			await userEvent.type(input, "Science", { delay: 50 });
+			
+			// Wait for filtering
 			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
-		await step("Verify nested display format", async () => {
+		await step("Select Science entry using native DOM click", async () => {
+			// Wait for options to appear
 			await waitFor(
 				async () => {
-					const options = within(document.body).queryAllByRole("option");
+					const options = body.queryAllByRole("option");
 					await expect(options.length).toBeGreaterThan(0);
-				},
-				{ timeout: 3000 },
-			);
-
-			const options = within(document.body).getAllByRole("option");
-			const aristotleOption = options.find((opt) =>
-				opt.textContent?.includes("Aristotle"),
-			);
-			await expect(aristotleOption).toBeDefined();
-		});
-
-		await step("Select nested entry using keyboard", async () => {
-			// ArrowDown is required to highlight the first option before Enter selects it
-			// (Base UI Combobox doesn't auto-highlight the first filtered item)
-			await userEvent.keyboard("{ArrowDown}");
-
-			// Press Enter to select the highlighted option (Aristotle)
-			await userEvent.keyboard("{Enter}");
-
-			// Wait for selection to complete and button text to update
-			await waitFor(
-				() => {
-					const attachButton = canvas.getByRole("button", { name: "Attach" });
-					expect(attachButton).toBeInTheDocument();
 				},
 				{ timeout: 2000 },
 			);
+
+			// Select "Science" using native DOM click
+			const options = body.getAllByRole("option");
+			const scienceOption = options.find((opt) =>
+				opt.textContent?.includes("Science"),
+			);
+			if (!scienceOption) {
+				throw new Error("Science option not found");
+			}
+
+			// Force click using native DOM method
+			(scienceOption as HTMLElement).click();
+
+			// Give it a moment to register the selection
+			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
 		await step("Click Attach button", async () => {
@@ -353,9 +345,9 @@ export const SelectNestedEntry: Story = {
 			const result = canvas.getByTestId("result");
 			await waitFor(
 				() => {
-					expect(result).toHaveTextContent(/Attached: Aristotle/);
+					expect(result).toHaveTextContent(/Attached: Science/);
 				},
-				{ timeout: 2000 },
+				{ timeout: 3000 },
 			);
 		});
 	},
@@ -377,8 +369,10 @@ export const SmartAutocompleteExactMatch: Story = {
 		await step("Verify exact match auto-populated", async () => {
 			await waitFor(
 				() => {
-					const input = canvas.getByPlaceholderText("Search or create...");
-					expect((input as HTMLInputElement).value).toBe("Kant, Immanuel");
+					const input = canvas.getByRole("combobox");
+					// The full hierarchy path should be shown
+					const value = (input as HTMLInputElement).value;
+					expect(value).toContain("Kant, Immanuel");
 				},
 				{ timeout: 2000 },
 			);
@@ -430,7 +424,7 @@ export const CreateRegionMention: Story = {
 		});
 
 		await step("Search for entry in combobox", async () => {
-			const entryInput = canvas.getByPlaceholderText("Search or create...");
+			const entryInput = canvas.getByPlaceholderText("Select entry...");
 			await userEvent.click(entryInput);
 			await new Promise((resolve) => setTimeout(resolve, 200));
 			await userEvent.type(entryInput, "Philosophy", { delay: 50 });

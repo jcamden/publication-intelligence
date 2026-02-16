@@ -29,12 +29,7 @@ export const projectSettingsRouter = router({
 			});
 		}),
 
-	listModels: protectedProcedure
-		.input(ListModelsSchema)
-		.query(async ({ ctx, input }) => {
-			return await projectSettingsService.listAvailableModels({
-				userId: ctx.user.id,
-				projectId: input.projectId,
-			});
-		}),
+	listModels: protectedProcedure.input(ListModelsSchema).query(async () => {
+		return await projectSettingsService.listAvailableModels();
+	}),
 });

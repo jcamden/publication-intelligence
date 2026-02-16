@@ -58,7 +58,7 @@ export const StyledButton = ({
 		? formatOklchColor({
 				hue: surfaceColorHue,
 				lightness: isDarkMode ? 0.52 : 0.96,
-				chroma: 0.2,
+				chroma: isDarkMode ? 0.2 : 0.1,
 				alpha: isDarkMode ? 0.2 : 0.12,
 			})
 		: undefined;

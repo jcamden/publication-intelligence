@@ -14,6 +14,8 @@ export const users = pgTable(
 		email: text("email").notNull().unique(),
 		passwordHash: text("password_hash").notNull(),
 		name: text("name"),
+		openrouterApiKey: text("openrouter_api_key"),
+		defaultDetectionModel: text("default_detection_model"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),

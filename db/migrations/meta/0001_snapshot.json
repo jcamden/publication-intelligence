@@ -1,5 +1,5 @@
 {
-	"id": "3280cad4-978f-4e2f-a319-6c7b9b54e8fb",
+	"id": "052d5568-a8cd-4d17-aa91-968d639302ec",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -2132,6 +2132,18 @@
 				},
 				"name": {
 					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"openrouter_api_key": {
+					"name": "openrouter_api_key",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"default_detection_model": {
+					"name": "default_detection_model",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": false

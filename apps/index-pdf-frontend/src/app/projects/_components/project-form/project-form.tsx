@@ -19,7 +19,7 @@ import { Textarea } from "@pubint/yabasic/components/ui/textarea";
 import { PdfFileUpload, PdfThumbnail } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { FileIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { API_URL } from "@/app/_common/_config/api";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
@@ -128,8 +128,13 @@ export const ProjectForm = ({
 	const [currentTitle, setCurrentTitle] = useState(initialData?.title ?? "");
 	const debouncedTitle = useDebouncedValue({
 		value: currentTitle,
-		delay: 150,
+		delay: 500,
 	});
+
+	// Memoize the PDF load callback to prevent unnecessary re-renders
+	const handlePdfLoad = useCallback(({ numPages }: { numPages: number }) => {
+		setPdfPageCount(numPages);
+	}, []);
 
 	// For edit mode: Load PDF for thumbnail display
 	const editModePdfUrl =
@@ -366,7 +371,7 @@ export const ProjectForm = ({
 											<PdfThumbnail
 												source={selectedFile}
 												alt="PDF preview"
-												onLoadPdf={({ numPages }) => setPdfPageCount(numPages)}
+												onLoadPdf={handlePdfLoad}
 											/>
 										</div>
 									</div>

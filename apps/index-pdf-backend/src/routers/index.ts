@@ -9,6 +9,7 @@ import { projectSettingsRouter } from "../modules/project-settings/project-setti
 import { regionRouter } from "../modules/region/region.router";
 import { sourceDocumentRouter } from "../modules/source-document/sourceDocument.router";
 import { userRouter } from "../modules/user/user.router";
+import { userSettingsRouter } from "../modules/user-settings/user-settings.router";
 import { router } from "../trpc";
 
 export const appRouter = router({
@@ -23,6 +24,7 @@ export const appRouter = router({
 	projectSettings: projectSettingsRouter,
 	sourceDocument: sourceDocumentRouter,
 	user: userRouter,
+	userSettings: userSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;
@@ -42,10 +44,16 @@ export type {
 	RunDetectionInput,
 } from "../modules/detection/detection.types";
 export type {
+	CreateCrossReferenceInput,
 	CreateIndexEntryInput,
+	CrossReference,
+	DeleteCrossReferenceInput,
 	DeleteIndexEntryInput,
 	IndexEntry,
 	IndexEntryListItem,
+	IndexMatcher,
+	TransferMatchersInput,
+	TransferMentionsInput,
 	UpdateIndexEntryInput,
 } from "../modules/index-entry/index-entry.types";
 export type {
@@ -66,3 +74,4 @@ export type {
 	RegionListItem,
 	UpdateRegionInput,
 } from "../modules/region/region.types";
+export type { UserSettings } from "../modules/user-settings/user-settings.types";

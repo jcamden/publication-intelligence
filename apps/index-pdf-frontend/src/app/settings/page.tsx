@@ -22,7 +22,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@pubint/yabasic/components/ui/select";
-import { CheckIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
+import { CheckIcon, Loader2, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
@@ -36,6 +36,9 @@ export default function SettingsPage() {
 	const { authToken, clearToken, isLoading: isAuthLoading } = useAuthToken();
 	const { theme, setTheme } = useTheme();
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [apiKey, setApiKey] = useState("");
+	const [selectedModel, setSelectedModel] = useState("");
+	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
 	// Auth gate: redirect to login if not authenticated
 	useEffect(() => {
@@ -57,6 +60,85 @@ export default function SettingsPage() {
 			enabled: !!authToken,
 		},
 	);
+
+	// Fetch user settings
+	const userSettingsQuery = trpc.userSettings.get.useQuery(
+		{},
+		{
+			enabled: !!authToken,
+		},
+	);
+
+	// Fetch available models (only if user settings are loaded and user has an API key)
+	const { data: models = [], isLoading: isLoadingModels } =
+		trpc.userSettings.listModels.useQuery(
+			{},
+			{
+				enabled: !!authToken && !!userSettingsQuery.data?.openrouterApiKey,
+			},
+		);
+
+	// Default free models to show when no API key is set
+	const defaultFreeModels = [
+		{
+			id: "meta-llama/llama-3.2-3b-instruct:free",
+			name: "Meta: Llama 3.2 3B Instruct (free)",
+			description: "Fast, efficient 3B parameter model from Meta",
+			context_length: 131072,
+			pricing: { prompt: "0", completion: "0" },
+		},
+		{
+			id: "google/gemini-flash-1.5:free",
+			name: "Google: Gemini Flash 1.5 (free)",
+			description: "Fast and versatile model from Google",
+			context_length: 1048576,
+			pricing: { prompt: "0", completion: "0" },
+		},
+		{
+			id: "mistralai/mistral-7b-instruct:free",
+			name: "Mistral: 7B Instruct (free)",
+			description: "Efficient 7B parameter model",
+			context_length: 32768,
+			pricing: { prompt: "0", completion: "0" },
+		},
+		{
+			id: "openai/gpt-4o-mini",
+			name: "OpenAI: GPT-4o Mini",
+			description: "Cost-effective GPT-4 variant",
+			context_length: 128000,
+			pricing: { prompt: "0.00015", completion: "0.0006" },
+		},
+		{
+			id: "anthropic/claude-3.5-haiku",
+			name: "Anthropic: Claude 3.5 Haiku",
+			description: "Fast and affordable Claude model",
+			context_length: 200000,
+			pricing: { prompt: "0.0008", completion: "0.004" },
+		},
+	];
+
+	// Use fetched models if available, otherwise use default free models
+	const availableModels =
+		models.length > 0 || userSettingsQuery.data?.openrouterApiKey
+			? models
+			: defaultFreeModels;
+
+	// Update user settings mutation
+	const updateUserSettings = trpc.userSettings.update.useMutation({
+		onSuccess: () => {
+			userSettingsQuery.refetch();
+			setHasUnsavedChanges(false);
+		},
+	});
+
+	// Set form values when settings load
+	useEffect(() => {
+		if (userSettingsQuery.data) {
+			setApiKey(userSettingsQuery.data.openrouterApiKey ?? "");
+			setSelectedModel(userSettingsQuery.data.defaultDetectionModel ?? "");
+			setHasUnsavedChanges(false);
+		}
+	}, [userSettingsQuery.data]);
 
 	// Addon mutations
 	const grantAddonMutation = trpc.projectIndexType.grantAddon.useMutation({
@@ -105,6 +187,20 @@ export default function SettingsPage() {
 			grantAddonMutation.mutate({ indexType });
 		}
 	};
+
+	const handleSaveDetectionSettings = () => {
+		updateUserSettings.mutate({
+			openrouterApiKey: apiKey || undefined,
+			defaultDetectionModel: selectedModel || undefined,
+		});
+	};
+
+	const freeModels = availableModels.filter(
+		(m) => Number.parseFloat(m.pricing.prompt) === 0,
+	);
+	const paidModels = availableModels.filter(
+		(m) => Number.parseFloat(m.pricing.prompt) > 0,
+	);
 
 	// Show loading spinner while checking auth
 	if (isAuthLoading) {
@@ -236,6 +332,137 @@ export default function SettingsPage() {
 								);
 							})}
 						</div>
+					</CardContent>
+				</Card>
+
+				{/* AI Detection Settings */}
+				<Card>
+					<CardHeader>
+						<CardTitle>AI Detection Settings</CardTitle>
+						<CardDescription>
+							Configure AI-powered concept detection for your projects
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="space-y-4">
+						{userSettingsQuery.isLoading ? (
+							<div className="flex items-center justify-center py-8">
+								<Loader2 className="h-6 w-6 animate-spin text-muted" />
+							</div>
+						) : (
+							<>
+								<Field>
+									<FieldLabel htmlFor="api-key">OpenRouter API Key</FieldLabel>
+									<FieldDescription>
+										Get your API key from{" "}
+										<a
+											href="https://openrouter.ai/keys"
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-primary hover:underline"
+										>
+											openrouter.ai/keys
+										</a>
+									</FieldDescription>
+									<input
+										id="api-key"
+										type="password"
+										value={apiKey}
+										onChange={(e) => {
+											setApiKey(e.target.value);
+											setHasUnsavedChanges(true);
+										}}
+										placeholder="sk-or-v1-..."
+										className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+									/>
+								</Field>
+
+								<Field>
+									<FieldLabel htmlFor="model">Default Model</FieldLabel>
+									<FieldDescription>
+										Choose the AI model to use for concept detection. Free
+										models are recommended for testing.
+										{!userSettingsQuery.data?.openrouterApiKey &&
+											" Add an API key above to access more models."}
+									</FieldDescription>
+									{isLoadingModels ? (
+										<div className="flex items-center gap-2 text-sm text-muted">
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Loading models...
+										</div>
+									) : (
+										<Select
+											value={selectedModel}
+											onValueChange={(value) => {
+												setSelectedModel(value ?? "");
+												setHasUnsavedChanges(true);
+											}}
+										>
+											<SelectTrigger className="w-full">
+												<SelectValue placeholder="Select a model..." />
+											</SelectTrigger>
+											<SelectContent>
+												{freeModels.length > 0 && (
+													<>
+														<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+															Free Models
+														</div>
+														{freeModels.map((model) => (
+															<SelectItem key={model.id} value={model.id}>
+																{model.name}
+																{model.context_length &&
+																	` (${(model.context_length / 1000).toFixed(0)}k context)`}
+															</SelectItem>
+														))}
+													</>
+												)}
+
+												{paidModels.length > 0 && (
+													<>
+														<div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+															Paid Models
+														</div>
+														{paidModels.slice(0, 20).map((model) => (
+															<SelectItem key={model.id} value={model.id}>
+																{model.name} ($
+																{Number.parseFloat(
+																	model.pricing.prompt,
+																).toFixed(6)}
+																/1k tokens)
+															</SelectItem>
+														))}
+													</>
+												)}
+											</SelectContent>
+										</Select>
+									)}
+								</Field>
+
+								{hasUnsavedChanges && (
+									<div className="flex justify-end gap-2 pt-2">
+										<Button
+											variant="outline"
+											onClick={() => {
+												const settings = userSettingsQuery.data;
+												setApiKey(settings?.openrouterApiKey ?? "");
+												setSelectedModel(settings?.defaultDetectionModel ?? "");
+												setHasUnsavedChanges(false);
+											}}
+										>
+											Cancel
+										</Button>
+										<Button
+											onClick={handleSaveDetectionSettings}
+											disabled={updateUserSettings.isPending}
+										>
+											{updateUserSettings.isPending && (
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+											)}
+											Save Settings
+										</Button>
+									</div>
+								)}
+							</>
+						)}
 					</CardContent>
 				</Card>
 

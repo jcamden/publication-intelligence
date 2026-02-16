@@ -30,8 +30,6 @@ export const getProjectSettings = async ({
 			return {
 				id: settings.id,
 				projectId: settings.projectId,
-				openrouterApiKey: settings.openrouterApiKey,
-				defaultDetectionModel: settings.defaultDetectionModel,
 				createdAt: settings.createdAt,
 				updatedAt: settings.updatedAt,
 			};
@@ -42,13 +40,9 @@ export const getProjectSettings = async ({
 export const upsertProjectSettings = async ({
 	userId,
 	projectId,
-	openrouterApiKey,
-	defaultDetectionModel,
 }: {
 	userId: string;
 	projectId: string;
-	openrouterApiKey?: string;
-	defaultDetectionModel?: string;
 }): Promise<ProjectSettings> => {
 	return await withUserContext({
 		userId,
@@ -65,14 +59,6 @@ export const upsertProjectSettings = async ({
 				const [updated] = await tx
 					.update(projectSettings)
 					.set({
-						openrouterApiKey:
-							openrouterApiKey !== undefined
-								? openrouterApiKey
-								: existing.openrouterApiKey,
-						defaultDetectionModel:
-							defaultDetectionModel !== undefined
-								? defaultDetectionModel
-								: existing.defaultDetectionModel,
 						updatedAt: new Date(),
 					})
 					.where(eq(projectSettings.id, existing.id))
@@ -85,8 +71,6 @@ export const upsertProjectSettings = async ({
 				return {
 					id: updated.id,
 					projectId: updated.projectId,
-					openrouterApiKey: updated.openrouterApiKey,
-					defaultDetectionModel: updated.defaultDetectionModel,
 					createdAt: updated.createdAt,
 					updatedAt: updated.updatedAt,
 				};
@@ -97,8 +81,6 @@ export const upsertProjectSettings = async ({
 				.insert(projectSettings)
 				.values({
 					projectId,
-					openrouterApiKey: openrouterApiKey || null,
-					defaultDetectionModel: defaultDetectionModel || null,
 				})
 				.returning();
 
@@ -109,8 +91,6 @@ export const upsertProjectSettings = async ({
 			return {
 				id: created.id,
 				projectId: created.projectId,
-				openrouterApiKey: created.openrouterApiKey,
-				defaultDetectionModel: created.defaultDetectionModel,
 				createdAt: created.createdAt,
 				updatedAt: created.updatedAt,
 			};

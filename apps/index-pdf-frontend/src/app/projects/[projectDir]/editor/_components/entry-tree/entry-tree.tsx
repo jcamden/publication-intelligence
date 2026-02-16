@@ -4,7 +4,10 @@ import { ErrorState } from "@pubint/yaboujee";
 import { useMemo, useState } from "react";
 import { useUpdateEntryParent } from "@/app/_common/_hooks/use-update-entry-parent";
 import type { IndexEntry } from "../../_types/index-entry";
+import { DeleteEntryDialog } from "../delete-entry-dialog/delete-entry-dialog";
 import type { Mention } from "../editor/editor";
+import { EntryEditModal } from "../entry-edit-modal/entry-edit-modal";
+import { EntryMergeModal } from "../entry-merge-modal/entry-merge-modal";
 import { CreateEntryButton } from "./components/create-entry-button";
 import { EntryItem } from "./components/entry-item";
 import { EntryListSkeleton } from "./components/entry-list-skeleton";
@@ -31,6 +34,9 @@ type EntryTreeNodeProps = {
 	onDragStart: (entryId: string) => void;
 	onDrop: (targetEntryId: string | null) => void;
 	draggedEntryId: string | null;
+	onEdit?: (entry: IndexEntry) => void;
+	onDelete?: (entry: IndexEntry) => void;
+	onMerge?: (entry: IndexEntry) => void;
 };
 
 const EntryTreeNode = ({
@@ -44,6 +50,9 @@ const EntryTreeNode = ({
 	onDragStart,
 	onDrop,
 	draggedEntryId,
+	onEdit,
+	onDelete,
+	onMerge,
 }: EntryTreeNodeProps) => {
 	const children = useMemo(
 		() => entries.filter((e) => e.parentId === entry.id),
@@ -68,6 +77,10 @@ const EntryTreeNode = ({
 				onDrop={onDrop}
 				isDragging={draggedEntryId === entry.id}
 				projectId={projectId}
+				projectIndexTypeId={projectIndexTypeId}
+				onEdit={onEdit}
+				onDelete={onDelete}
+				onMerge={onMerge}
 			/>
 			{hasChildren && expanded && (
 				<div className="flex flex-col gap-1">
@@ -84,6 +97,9 @@ const EntryTreeNode = ({
 							onDragStart={onDragStart}
 							onDrop={onDrop}
 							draggedEntryId={draggedEntryId}
+							onEdit={onEdit}
+							onDelete={onDelete}
+							onMerge={onMerge}
 						/>
 					))}
 				</div>
@@ -104,6 +120,9 @@ export const EntryTree = ({
 }: EntryTreeProps) => {
 	const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
 	const [isRootDropTarget, setIsRootDropTarget] = useState(false);
+	const [editingEntry, setEditingEntry] = useState<IndexEntry | null>(null);
+	const [deletingEntry, setDeletingEntry] = useState<IndexEntry | null>(null);
+	const [mergingEntry, setMergingEntry] = useState<IndexEntry | null>(null);
 	const updateParent = useUpdateEntryParent({ projectId });
 
 	const topLevelEntries = useMemo(
@@ -178,45 +197,81 @@ export const EntryTree = ({
 	}
 
 	return (
-		<div className="space-y-2">
-			{/* biome-ignore lint/a11y/useSemanticElements: Drag-drop zone requires div */}
-			<div
-				role="button"
-				tabIndex={0}
-				className={`p-2 rounded transition-colors ${
-					isRootDropTarget ? "bg-blue-100 dark:bg-blue-900" : ""
-				}`}
-				onDragOver={handleRootDragOver}
-				onDragLeave={handleRootDragLeave}
-				onDrop={handleRootDrop}
-				onKeyDown={(e) => {
-					if (e.key === "Enter" || e.key === " ") {
-						e.preventDefault();
-					}
-				}}
-			>
-				<CreateEntryButton onClick={onCreateEntry} />
-				{isRootDropTarget && (
-					<p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-						Drop here to move to top level
-					</p>
-				)}
+		<>
+			<div className="space-y-2">
+				{/* biome-ignore lint/a11y/useSemanticElements: Drag-drop zone requires div */}
+				<div
+					role="button"
+					tabIndex={0}
+					className={`p-2 rounded transition-colors ${
+						isRootDropTarget ? "bg-blue-100 dark:bg-blue-900" : ""
+					}`}
+					onDragOver={handleRootDragOver}
+					onDragLeave={handleRootDragLeave}
+					onDrop={handleRootDrop}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+						}
+					}}
+				>
+					<CreateEntryButton onClick={onCreateEntry} />
+					{isRootDropTarget && (
+						<p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+							Drop here to move to top level
+						</p>
+					)}
+				</div>
+				{topLevelEntries.map((entry) => (
+					<EntryTreeNode
+						key={entry.id}
+						entry={entry}
+						entries={entries}
+						mentions={mentions}
+						depth={0}
+						projectId={projectId}
+						projectIndexTypeId={projectIndexTypeId}
+						onEntryClick={onEntryClick}
+						onDragStart={handleDragStart}
+						onDrop={handleDrop}
+						draggedEntryId={draggedEntryId}
+						onEdit={setEditingEntry}
+						onDelete={setDeletingEntry}
+						onMerge={setMergingEntry}
+					/>
+				))}
 			</div>
-			{topLevelEntries.map((entry) => (
-				<EntryTreeNode
-					key={entry.id}
-					entry={entry}
-					entries={entries}
-					mentions={mentions}
-					depth={0}
+
+			{/* Modals */}
+			{editingEntry && projectId && projectIndexTypeId && (
+				<EntryEditModal
+					open={true}
+					onClose={() => setEditingEntry(null)}
+					entry={editingEntry}
 					projectId={projectId}
 					projectIndexTypeId={projectIndexTypeId}
-					onEntryClick={onEntryClick}
-					onDragStart={handleDragStart}
-					onDrop={handleDrop}
-					draggedEntryId={draggedEntryId}
+					existingEntries={entries}
 				/>
-			))}
-		</div>
+			)}
+			{mergingEntry && projectId && projectIndexTypeId && (
+				<EntryMergeModal
+					open={true}
+					onClose={() => setMergingEntry(null)}
+					sourceEntry={mergingEntry}
+					existingEntries={entries}
+					projectId={projectId}
+					projectIndexTypeId={projectIndexTypeId}
+				/>
+			)}
+			{deletingEntry && (
+				<DeleteEntryDialog
+					entry={deletingEntry}
+					open={true}
+					onOpenChange={(open) => {
+						if (!open) setDeletingEntry(null);
+					}}
+				/>
+			)}
+		</>
 	);
 };

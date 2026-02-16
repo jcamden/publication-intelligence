@@ -1,7 +1,11 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../../db/client";
-import { indexEntries, projectIndexTypes } from "../../db/schema";
+import {
+	indexEntries,
+	indexMentions,
+	projectIndexTypes,
+} from "../../db/schema";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
@@ -492,4 +496,76 @@ export const deleteIndexMention = async ({
 	}
 
 	return result;
+};
+
+export const deleteAllMentionsByEntry = async ({
+	entryId,
+	projectId,
+	userId,
+	requestId,
+}: {
+	entryId: string;
+	projectId: string;
+	userId: string;
+	requestId: string;
+}): Promise<{ deletedCount: number }> => {
+	logEvent({
+		event: "index_mention.bulk_delete_by_entry_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				entryId,
+				projectId,
+			},
+		},
+	});
+
+	// Get all mentions for this entry
+	const mentions = await db
+		.select({ id: indexMentions.id })
+		.from(indexMentions)
+		.innerJoin(indexEntries, eq(indexMentions.entryId, indexEntries.id))
+		.where(
+			and(
+				eq(indexMentions.entryId, entryId),
+				eq(indexEntries.projectId, projectId),
+				isNull(indexMentions.deletedAt),
+			),
+		);
+
+	// Delete all mentions
+	for (const mention of mentions) {
+		await indexMentionRepo.deleteIndexMention({
+			id: mention.id,
+			userId,
+		});
+	}
+
+	logEvent({
+		event: "index_mention.bulk_deleted_by_entry",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				entryId,
+				projectId,
+				deletedCount: mentions.length,
+			},
+		},
+	});
+
+	await insertEvent({
+		type: "index_mention.bulk_deleted_by_entry",
+		projectId,
+		userId,
+		entityType: "IndexEntry",
+		entityId: entryId,
+		metadata: {
+			deletedCount: mentions.length,
+		},
+		requestId,
+	});
+
+	return { deletedCount: mentions.length };
 };

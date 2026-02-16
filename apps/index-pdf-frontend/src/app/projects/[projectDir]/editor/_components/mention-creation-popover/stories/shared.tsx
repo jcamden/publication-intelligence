@@ -8,6 +8,14 @@ export const mockDraft: MentionDraft = {
 	type: "text",
 };
 
+export const mockDraftPartialMatch: MentionDraft = {
+	documentId: "mock-document-id",
+	pageNumber: 1,
+	text: "Some selected text", // Partial match for manual selection tests
+	bboxes: [{ x: 100, y: 200, width: 300, height: 40 }],
+	type: "text",
+};
+
 export const mockDraftNoMatch: MentionDraft = {
 	documentId: "mock-document-id",
 	pageNumber: 1,

@@ -1,11 +1,11 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import { listRules } from "../canonical-page-rule/canonical-page-rule.repo";
-import { getProjectSettings } from "../project-settings/project-settings.repo";
 import {
 	getSourceDocumentById,
 	listSourceDocumentsByProject,
 } from "../source-document/sourceDocument.repo";
+import { getUserSettings } from "../user-settings/user-settings.repo";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
 import type {
@@ -284,13 +284,10 @@ const processDetection = async ({
 		includeDeleted: false,
 	});
 
-	// Get project settings for API key
-	const projectSettings = await getProjectSettings({
-		userId,
-		projectId: run.projectId,
-	});
+	// Get user settings for API key
+	const userSettings = await getUserSettings({ userId });
 
-	const apiKey = projectSettings?.openrouterApiKey || undefined;
+	const apiKey = userSettings?.openrouterApiKey || undefined;
 
 	// TODO: Get exclude regions from database
 	const excludeRegions: Region[] = [];

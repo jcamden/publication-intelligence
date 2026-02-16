@@ -51,8 +51,8 @@ export const AutoPopulatesProjectDir: StoryObj<typeof ProjectForm> = {
 		// Type a title with special characters
 		await user.type(titleInput, "Word Biblical Commentary: Daniel (Vol. 30)");
 
-		// Wait for auto-population (debounced)
-		await new Promise((resolve) => setTimeout(resolve, 200));
+		// Wait for auto-population (debounced at 500ms)
+		await new Promise((resolve) => setTimeout(resolve, 600));
 
 		// Verify project_dir is auto-populated and converted to kebab-case
 		await expect(projectDirInput).toHaveValue(

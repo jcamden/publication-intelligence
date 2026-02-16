@@ -1,10 +1,10 @@
 "use client";
 
 import { Book, Lightbulb, Loader2, Settings, User, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { DetectionSettingsModal } from "./detection-settings-modal";
 
 type IndexType = "subject" | "author" | "scripture";
 
@@ -12,7 +12,6 @@ export const DetectionPanel = () => {
 	const { projectId } = useProjectContext();
 	const [pageRangeStart, setPageRangeStart] = useState<string>("");
 	const [pageRangeEnd, setPageRangeEnd] = useState<string>("");
-	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
 	// Fetch detection runs
 	const {
@@ -34,10 +33,12 @@ export const DetectionPanel = () => {
 		},
 	);
 
-	// Fetch project settings
-	const { data: settings } = trpc.projectSettings.get.useQuery(
-		{ projectId: projectId || "" },
-		{ enabled: !!projectId },
+	// Fetch user settings
+	const { data: settings } = trpc.userSettings.get.useQuery(
+		{},
+		{
+			enabled: !!projectId,
+		},
 	);
 
 	// Run detection mutation
@@ -126,24 +127,17 @@ export const DetectionPanel = () => {
 
 	return (
 		<div className="space-y-4">
-			<DetectionSettingsModal
-				projectId={projectId || ""}
-				open={isSettingsOpen}
-				onClose={() => setIsSettingsOpen(false)}
-			/>
-
 			<div className="rounded-lg border border-border bg-surface p-4">
 				<div className="space-y-4">
 					<div className="flex items-center justify-between">
 						<h3 className="text-sm font-medium">Concept Detection</h3>
-						<button
-							type="button"
-							onClick={() => setIsSettingsOpen(true)}
+						<Link
+							href="/settings"
 							className="rounded-md border border-border bg-background p-1.5 text-neutral-500 hover:text-foreground hover:bg-surface"
 							title="Detection Settings"
 						>
 							<Settings className="h-4 w-4" />
-						</button>
+						</Link>
 					</div>
 
 					<p className="text-sm text-neutral-500">
@@ -154,13 +148,12 @@ export const DetectionPanel = () => {
 					{!hasApiKey && (
 						<div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
 							⚠️ No OpenRouter API key configured.{" "}
-							<button
-								type="button"
-								onClick={() => setIsSettingsOpen(true)}
+							<Link
+								href="/settings"
 								className="font-medium underline hover:no-underline"
 							>
 								Add one in settings
-							</button>{" "}
+							</Link>{" "}
 							to enable detection.
 						</div>
 					)}

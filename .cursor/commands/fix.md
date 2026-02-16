@@ -1,0 +1,1 @@
+Run `nvm use 23 && pnpm format && pnpm check && pnpm typecheck` and fix any issues. Continue running that command (as a single command) until all all issues are resolved.

@@ -71,7 +71,7 @@ export const getEntryDepth = ({
 };
 
 /**
- * Get entry display label with hierarchy (Parent → Child)
+ * Get entry display label with hierarchy (Parent > Child)
  */
 export const getEntryDisplayLabel = ({
 	entry,
@@ -86,7 +86,7 @@ export const getEntryDisplayLabel = ({
 	if (!parent) return entry.label;
 
 	const parentLabel = getEntryDisplayLabel({ entry: parent, entries });
-	return `${parentLabel} → ${entry.label}`;
+	return `${parentLabel} > ${entry.label}`;
 };
 
 /**

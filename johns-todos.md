@@ -31,3 +31,9 @@ probably swap mention count on entries to the inside, add menu
 
 prompt: if phrase *contains* exact text of entry, only highlight exact text
     - Also need to pass all pre-existing entries.
+
+prompts should receive list of existing matchers
+
+matchers should be associated with definitions
+   AI will need to choose from those matchers or create a new matcher with a new definition
+   A subsequent task would try to identify which canonical definition matches the new matcher's definition (may have to send to LLM for identification)

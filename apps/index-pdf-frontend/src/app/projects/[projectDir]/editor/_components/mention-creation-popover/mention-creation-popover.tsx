@@ -34,10 +34,12 @@ type MentionCreationPopoverProps = {
 		entryId,
 		entryLabel,
 		regionName,
+		pageSublocation,
 	}: {
 		entryId: string;
 		entryLabel: string;
 		regionName?: string;
+		pageSublocation?: string;
 	}) => void;
 	onCancel: () => void;
 };
@@ -59,7 +61,7 @@ export const MentionCreationPopover = ({
 	draft,
 	indexType,
 	entries,
-	mentions,
+	mentions: _mentions,
 	onAttach,
 	onCancel,
 }: MentionCreationPopoverProps) => {
@@ -80,6 +82,7 @@ export const MentionCreationPopover = ({
 	const form = useForm({
 		defaultValues: {
 			regionName: "",
+			pageSublocation: "",
 		},
 		onSubmit: async () => {
 			handleSubmit();
@@ -162,6 +165,10 @@ export const MentionCreationPopover = ({
 		// All validation passed, proceed with attachment
 		const regionName =
 			draft.type === "region" ? form.state.values.regionName : undefined;
+		const pageSublocation =
+			indexType === "subject" && form.state.values.pageSublocation
+				? form.state.values.pageSublocation
+				: undefined;
 
 		if (!selectedEntryId || !selectedEntryLabel) {
 			throw new Error("Entry ID and label are required");
@@ -171,6 +178,7 @@ export const MentionCreationPopover = ({
 			entryId: selectedEntryId,
 			entryLabel: selectedEntryLabel,
 			regionName,
+			pageSublocation,
 		});
 	};
 
@@ -217,27 +225,38 @@ export const MentionCreationPopover = ({
 			<form onSubmit={handleFormSubmit}>
 				<div className="mb-3">
 					<EntryPicker
-						indexType={indexType}
 						entries={entriesForType}
-						mentions={mentions}
-						onValueChange={(id, label) => {
+						value={selectedEntryId}
+						onValueChange={(id) => {
+							console.log("[MentionCreationPopover] onValueChange called", {
+								id,
+							});
 							setSelectedEntryId(id);
-							setSelectedEntryLabel(label);
+							const entry = entriesForType.find((e) => e.id === id);
+							setSelectedEntryLabel(entry?.label || null);
 							setEntryError(null);
 						}}
-						onCreateNew={(label) => {
-							// Entry creation now happens in project sidebar
-							// User should create entries there first
-							setEntryError(
-								`Entry "${label}" not found. Please create it in the project sidebar first.`,
-							);
-						}}
-						inputValue={inputValue}
-						onInputValueChange={setInputValue}
-						placeholder="Search or create..."
+						placeholder="Select entry..."
 					/>
 					{entryError && <FieldError errors={[{ message: entryError }]} />}
 				</div>
+
+				{indexType === "subject" && (
+					<form.Field name="pageSublocation">
+						{(field) => (
+							<div className="mb-3">
+								<FormInput
+									field={field}
+									label="Page sublocation (optional)"
+									placeholder="e.g., 10:45.a for section 10, item 45a"
+								/>
+								<p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+									Specify a location within the page for more precise indexing
+								</p>
+							</div>
+						)}
+					</form.Field>
+				)}
 
 				<div className="flex gap-2 justify-end">
 					<Button type="button" onClick={onCancel} variant="outline" size="sm">

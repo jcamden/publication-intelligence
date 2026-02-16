@@ -94,4 +94,20 @@ export const indexMentionRouter = router({
 				requestId: ctx.requestId,
 			});
 		}),
+
+	deleteAllByEntry: protectedProcedure
+		.input(
+			z.object({
+				entryId: z.string().uuid(),
+				projectId: z.string().uuid(),
+			}),
+		)
+		.mutation(async ({ input, ctx }) => {
+			return await indexMentionService.deleteAllMentionsByEntry({
+				entryId: input.entryId,
+				projectId: input.projectId,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
 });
