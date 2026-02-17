@@ -90,6 +90,16 @@ export type PdfViewerProps = {
 		}) => void;
 		onCancel: () => void;
 	}) => React.ReactNode;
+	/**
+	 * Optional callback to check if the draft popover should be prevented from closing
+	 * (e.g., when a modal is open within the popover content)
+	 */
+	shouldPreventDraftPopoverClose?: () => boolean;
+	/**
+	 * Optional z-index for the draft popover (default: 50)
+	 * Set to a lower value when you need a modal to appear above the popover
+	 */
+	draftPopoverZIndex?: number;
 };
 
 /**
@@ -262,6 +272,8 @@ export const PdfViewer = ({
 	onDraftConfirmed,
 	clearDraftTrigger,
 	renderDraftPopover,
+	shouldPreventDraftPopoverClose,
+	draftPopoverZIndex,
 }: PdfViewerProps) => {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -879,6 +891,8 @@ export const PdfViewer = ({
 					anchorElement={draftPopoverAnchor}
 					isOpen={!!draftPopoverAnchor}
 					onCancel={handleDraftCancel}
+					shouldPreventClose={shouldPreventDraftPopoverClose}
+					zIndex={draftPopoverZIndex}
 				>
 					{renderDraftPopover({
 						pageNumber: draftHighlight.pageNumber,

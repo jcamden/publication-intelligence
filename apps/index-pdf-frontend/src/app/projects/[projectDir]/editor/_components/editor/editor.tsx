@@ -31,6 +31,7 @@ import type {
 	IndexTypeName,
 } from "../../_types/highlight-config";
 import type { IndexEntry } from "../../_types/index-entry";
+import { getEntryDisplayLabel } from "../../_utils/index-entry-utils";
 import { ColorConfigProvider } from "../color-config-provider";
 import { CreateExcludeRegionModal } from "../create-exclude-region-modal";
 import { CreatePageNumberRegionModal } from "../create-page-number-region-modal";
@@ -124,6 +125,14 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		null,
 	);
 
+	// Track if entry creation modal is open (prevents mention popover from closing)
+	const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+
+	// Log state changes
+	useEffect(() => {
+		console.log("[Editor] isEntryModalOpen changed:", isEntryModalOpen);
+	}, [isEntryModalOpen]);
+
 	// Set PDF URL atom when fileUrl changes
 	useEffect(() => {
 		setPdfUrl(fileUrl);
@@ -181,18 +190,26 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	);
 
 	// Convert backend mentions to editor format
-	const mentions: Mention[] = backendMentions.map((m) => ({
-		id: m.id,
-		pageNumber: m.pageNumber ?? 1,
-		text: m.textSpan,
-		bboxes: m.bboxes ?? [],
-		entryId: m.entryId,
-		entryLabel: m.entry.label,
-		indexTypes: m.indexTypes.map((t) => t.indexType),
-		type: m.mentionType,
-		detectionRunId: m.detectionRunId,
-		createdAt: new Date(m.createdAt),
-	}));
+	const mentions: Mention[] = backendMentions.map((m) => {
+		// Find the full entry to compute breadcrumbs
+		const entry = allEntries.find((e) => e.id === m.entryId);
+		const entryLabel = entry
+			? getEntryDisplayLabel({ entry, entries: allEntries })
+			: m.entry.label;
+
+		return {
+			id: m.id,
+			pageNumber: m.pageNumber ?? 1,
+			text: m.textSpan,
+			bboxes: m.bboxes ?? [],
+			entryId: m.entryId,
+			entryLabel,
+			indexTypes: m.indexTypes.map((t) => t.indexType),
+			type: m.mentionType,
+			detectionRunId: m.detectionRunId,
+			createdAt: new Date(m.createdAt),
+		};
+	});
 
 	// Fetch regions for current page
 	const { data: regionsForPage = [] } = trpc.region.getForPage.useQuery(
@@ -242,6 +259,9 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	// Mention details popover state
 	const [selectedMention, setSelectedMention] = useState<Mention | null>(null);
 	const [detailsAnchor, setDetailsAnchor] = useState<HTMLElement | null>(null);
+	const [popoverInitialMode, setPopoverInitialMode] = useState<"view" | "edit">(
+		"view",
+	);
 
 	// Delete confirmation state
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -375,30 +395,16 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				return;
 			}
 
-			// Regular mention creation flow (includes index type regions)
-			const indexType = activeAction.indexType || "subject"; // Default to subject if none
-
-			// Find the projectIndexTypeId for this index type
-			const projectIndexType = projectIndexTypesQuery.data?.find(
-				(pit) => pit.indexType === indexType,
-			);
-
-			if (!projectIndexType) {
-				console.error(`No projectIndexType found for indexType: ${indexType}`);
-				return;
-			}
-
 			// For region drafts, use regionName as the text; for text drafts, use draft.text
 			const mentionText = entry.regionName || draft.text;
 
-			// Create mention via tRPC mutation
+			// Create mention via tRPC mutation (index type inherited from entry)
 			await createMention.mutateAsync({
 				documentId: documentId || "",
 				entryId: entry.entryId,
 				pageNumber: draft.pageNumber,
 				textSpan: mentionText,
 				bboxesPdf: draft.bboxes,
-				projectIndexTypeIds: [projectIndexType.id],
 				mentionType: entry.regionName ? "region" : "text",
 			});
 
@@ -410,7 +416,6 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			activeAction.type,
 			createMention,
 			documentId,
-			projectIndexTypesQuery.data,
 			selectedRegionType,
 		],
 	);
@@ -441,6 +446,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 					`[data-testid="highlight-${highlight.id}"]`,
 				);
 				if (highlightEl instanceof HTMLElement) {
+					setPopoverInitialMode("view");
 					setDetailsAnchor(highlightEl);
 					setSelectedMention(mention);
 				}
@@ -465,7 +471,34 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 						inline: "nearest",
 					});
 
-					// Show popover (same as direct click)
+					// Show popover in view mode
+					setPopoverInitialMode("view");
+					setDetailsAnchor(highlightEl);
+					setSelectedMention(mention);
+				}
+			}
+		},
+		[mentions],
+	);
+
+	const handleMentionEditFromSidebar = useCallback(
+		({ mentionId }: { mentionId: string }) => {
+			const mention = mentions.find((m) => m.id === mentionId);
+			if (mention) {
+				// Find the highlight element to use as anchor
+				const highlightEl = document.querySelector(
+					`[data-testid="highlight-${mentionId}"]`,
+				);
+				if (highlightEl instanceof HTMLElement) {
+					// Scroll into view if off-screen
+					highlightEl.scrollIntoView({
+						behavior: "smooth",
+						block: "center",
+						inline: "nearest",
+					});
+
+					// Show popover in edit mode
+					setPopoverInitialMode("edit");
 					setDetailsAnchor(highlightEl);
 					setSelectedMention(mention);
 				}
@@ -755,6 +788,13 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 										}
 
 										// For both select-text and draw-region with index types, show mention popover
+										const currentIndexType =
+											activeAction.indexType || "subject";
+										const projectIndexTypeId =
+											projectIndexTypesQuery.data?.find(
+												(pit) => pit.indexType === currentIndexType,
+											)?.id;
+
 										return (
 											<MentionCreationPopover
 												draft={{
@@ -764,14 +804,25 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 													bboxes,
 													type: text ? "text" : "region",
 												}}
-												indexType={activeAction.indexType || "subject"}
+												indexType={currentIndexType}
 												entries={allEntries}
 												mentions={mentions}
+												projectId={projectId || ""}
+												projectIndexTypeId={projectIndexTypeId || ""}
 												onAttach={onConfirm}
 												onCancel={onCancel}
+												onModalStateChange={setIsEntryModalOpen}
 											/>
 										);
 									}}
+									shouldPreventDraftPopoverClose={() => {
+										console.log(
+											"[Editor] shouldPreventDraftPopoverClose called, returning:",
+											isEntryModalOpen,
+										);
+										return isEntryModalOpen;
+									}}
+									draftPopoverZIndex={isEntryModalOpen ? 30 : 50}
 								/>
 							</div>
 						)}
@@ -783,6 +834,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									mentions={mentions}
 									currentPage={currentPage}
 									onMentionClick={handleMentionClickFromSidebar}
+									onMentionEdit={handleMentionEditFromSidebar}
+									onMentionDelete={handleDeleteMention}
 									enabledIndexTypes={enabledIndexTypes}
 									projectId={projectId}
 									documentId={documentId}
@@ -798,6 +851,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									mentions={mentions}
 									currentPage={currentPage}
 									onMentionClick={handleMentionClickFromSidebar}
+									onMentionEdit={handleMentionEditFromSidebar}
+									onMentionDelete={handleDeleteMention}
 									enabledIndexTypes={enabledIndexTypes}
 									projectId={projectId}
 									documentId={documentId}
@@ -836,6 +891,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 								onDelete={handleDeleteMention}
 								onClose={handleMentionDetailsClose}
 								onCancel={handleCloseDetailsPopover}
+								initialMode={popoverInitialMode}
+								colorConfig={colorConfig}
 							/>
 						</PdfAnnotationPopover>
 					)}

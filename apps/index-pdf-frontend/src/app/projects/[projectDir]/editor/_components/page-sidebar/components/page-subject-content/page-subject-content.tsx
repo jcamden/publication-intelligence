@@ -13,6 +13,8 @@ type MentionData = {
 type PageSubjectContentProps = {
 	mentions: MentionData[];
 	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
+	onMentionEdit?: ({ mentionId }: { mentionId: string }) => void;
+	onMentionDelete?: ({ mentionId }: { mentionId: string }) => void;
 	projectId?: string;
 	documentId?: string;
 	pageNumber?: number;
@@ -21,6 +23,8 @@ type PageSubjectContentProps = {
 export const PageSubjectContent = ({
 	mentions,
 	onMentionClick,
+	onMentionEdit,
+	onMentionDelete,
 	projectId,
 	documentId,
 	pageNumber,
@@ -29,6 +33,8 @@ export const PageSubjectContent = ({
 		<PageSectionContent
 			mentions={mentions}
 			onMentionClick={onMentionClick}
+			onMentionEdit={onMentionEdit}
+			onMentionDelete={onMentionDelete}
 			projectId={projectId}
 			documentId={documentId}
 			pageNumber={pageNumber}

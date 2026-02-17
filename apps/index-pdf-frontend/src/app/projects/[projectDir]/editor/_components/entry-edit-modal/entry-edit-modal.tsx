@@ -170,14 +170,17 @@ export const EntryEditModal = ({
 										return "Label is required";
 									}
 
+									// Check if an entry with the same label AND same parent exists
+									// (excluding the current entry being edited)
 									const exists = existingEntries.some(
 										(e) =>
 											e.id !== entry.id &&
-											e.label.toLowerCase() === value.trim().toLowerCase(),
+											e.label.toLowerCase() === value.trim().toLowerCase() &&
+											e.parentId === entry.parentId,
 									);
 
 									if (exists) {
-										return "An entry with this label already exists in this index";
+										return "An entry with this label already exists under this parent";
 									}
 
 									return undefined;

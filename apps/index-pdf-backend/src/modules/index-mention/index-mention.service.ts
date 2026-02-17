@@ -77,36 +77,21 @@ export const createIndexMention = async ({
 			projectIndexTypeId: indexEntries.projectIndexTypeId,
 		})
 		.from(indexEntries)
-		.where(eq(indexEntries.id, input.entryId))
+		.where(
+			and(eq(indexEntries.id, input.entryId), isNull(indexEntries.deletedAt)),
+		)
 		.limit(1);
 
 	if (entry.length === 0) {
 		throw new TRPCError({
 			code: "NOT_FOUND",
-			message: "Index entry not found",
-		});
-	}
-
-	const indexTypeValidation = await db
-		.select({ id: projectIndexTypes.id })
-		.from(projectIndexTypes)
-		.where(
-			and(
-				inArray(projectIndexTypes.id, input.projectIndexTypeIds),
-				eq(projectIndexTypes.projectId, entry[0].projectId),
-			),
-		);
-
-	if (indexTypeValidation.length !== input.projectIndexTypeIds.length) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message:
-				"One or more index types are invalid or do not belong to project",
+			message: "Index entry not found or deleted",
 		});
 	}
 
 	const mention = await indexMentionRepo.createIndexMention({
 		input,
+		projectIndexTypeId: entry[0].projectIndexTypeId,
 		userId,
 	});
 
@@ -121,7 +106,6 @@ export const createIndexMention = async ({
 				documentId: input.documentId,
 				pageNumber: input.pageNumber,
 				mentionType: input.mentionType,
-				projectIndexTypeIds: input.projectIndexTypeIds,
 			},
 		},
 	});
@@ -154,53 +138,36 @@ export const updateIndexMention = async ({
 	requestId: string;
 }): Promise<IndexMention> => {
 	const existing = await indexMentionRepo.getIndexMentionById({ id: input.id });
-	const mention = requireFound(existing);
+	requireFound(existing);
+
+	let projectIndexTypeId: string | undefined;
 
 	if (input.entryId) {
 		const entry = await db
-			.select({ id: indexEntries.id })
+			.select({
+				id: indexEntries.id,
+				projectIndexTypeId: indexEntries.projectIndexTypeId,
+			})
 			.from(indexEntries)
-			.where(eq(indexEntries.id, input.entryId))
+			.where(
+				and(eq(indexEntries.id, input.entryId), isNull(indexEntries.deletedAt)),
+			)
 			.limit(1);
 
 		if (entry.length === 0) {
 			throw new TRPCError({
 				code: "NOT_FOUND",
-				message: "Index entry not found",
+				message: "Index entry not found or deleted",
 			});
 		}
-	}
 
-	if (input.projectIndexTypeIds && input.projectIndexTypeIds.length > 0) {
-		const entry = await db
-			.select({ id: indexEntries.id, projectId: indexEntries.projectId })
-			.from(indexEntries)
-			.where(eq(indexEntries.id, mention.entryId))
-			.limit(1);
-
-		if (entry.length > 0) {
-			const indexTypeValidation = await db
-				.select({ id: projectIndexTypes.id })
-				.from(projectIndexTypes)
-				.where(
-					and(
-						inArray(projectIndexTypes.id, input.projectIndexTypeIds),
-						eq(projectIndexTypes.projectId, entry[0].projectId),
-					),
-				);
-
-			if (indexTypeValidation.length !== input.projectIndexTypeIds.length) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message:
-						"One or more index types are invalid or do not belong to project",
-				});
-			}
-		}
+		// Inherit index type from new entry
+		projectIndexTypeId = entry[0].projectIndexTypeId;
 	}
 
 	const updated = await indexMentionRepo.updateIndexMention({
 		input,
+		projectIndexTypeId,
 		userId,
 	});
 
@@ -349,42 +316,30 @@ export const bulkCreateIndexMentions = async ({
 		.select({
 			id: indexEntries.id,
 			projectId: indexEntries.projectId,
+			projectIndexTypeId: indexEntries.projectIndexTypeId,
 		})
 		.from(indexEntries)
-		.where(inArray(indexEntries.id, entryIds));
+		.where(
+			and(inArray(indexEntries.id, entryIds), isNull(indexEntries.deletedAt)),
+		);
 
 	if (entries.length !== entryIds.length) {
 		throw new TRPCError({
 			code: "NOT_FOUND",
-			message: "One or more index entries not found",
+			message: "One or more index entries not found or deleted",
 		});
 	}
 
 	const projectId = entries[0].projectId;
 
-	const allProjectIndexTypeIds = [
-		...new Set(input.mentions.flatMap((m) => m.projectIndexTypeIds)),
-	];
-	const indexTypeValidation = await db
-		.select({ id: projectIndexTypes.id })
-		.from(projectIndexTypes)
-		.where(
-			and(
-				inArray(projectIndexTypes.id, allProjectIndexTypeIds),
-				eq(projectIndexTypes.projectId, projectId),
-			),
-		);
-
-	if (indexTypeValidation.length !== allProjectIndexTypeIds.length) {
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message:
-				"One or more index types are invalid or do not belong to project",
-		});
-	}
+	// Create a map of entryId to projectIndexTypeId
+	const entryTypeMap = new Map(
+		entries.map((e) => [e.id, e.projectIndexTypeId]),
+	);
 
 	const created = await indexMentionRepo.bulkCreateIndexMentions({
 		mentions: input.mentions,
+		entryTypeMap,
 		userId,
 	});
 

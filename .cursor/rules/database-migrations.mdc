@@ -1,0 +1,46 @@
+---
+description: Database migration policy using Drizzle ORM
+alwaysApply: true
+---
+
+# Database Migration Policy
+
+## Never manually generate migrations
+
+Always use Drizzle ORM schema changes to automatically generate migrations. If automatic generation isn't possible, prefer resetting the database over creating manual migrations.
+
+## Correct Workflow
+
+```bash
+# ✅ GOOD - Modify schema, then generate migration
+# 1. Edit schema file (e.g., apps/index-pdf-backend/src/db/schema/*)
+# 2. Run Drizzle generate command
+pnpm db:generate
+
+# ✅ GOOD - If auto-generation fails, reset database
+pnpm db:reset  # or equivalent reset command
+pnpm db:push   # push schema directly
+```
+
+## What NOT to Do
+
+```bash
+# ❌ BAD - Manually creating migration files
+touch migrations/0001_manual_migration.sql
+
+# ❌ BAD - Manually editing generated migration files
+# (unless fixing a generation bug, which should be rare)
+```
+
+## Why This Matters
+
+- **Source of truth**: Schema files are the single source of truth
+- **Consistency**: Auto-generated migrations prevent human error
+- **Maintainability**: Reduces migration drift and conflicts
+- **Development speed**: Resetting is faster than debugging broken manual migrations
+
+## When to Reset vs Migrate
+
+- **Local development**: Always safe to reset
+- **Staging/Production**: Only migrate (never reset with data)
+- **Stuck migration**: Reset locally, fix schema, regenerate

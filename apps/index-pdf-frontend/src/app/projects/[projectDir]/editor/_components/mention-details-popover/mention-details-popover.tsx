@@ -11,14 +11,22 @@ import {
 } from "@pubint/yabasic/components/ui/combobox";
 import { Input } from "@pubint/yabasic/components/ui/input";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@pubint/yabasic/components/ui/select";
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@pubint/yabasic/components/ui/tooltip";
 import { clsx } from "clsx";
-import { useRef, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+	BookOpen,
+	ChevronDown,
+	Edit2,
+	Tags,
+	Trash2,
+	User,
+	X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export type Mention = {
 	id: string;
@@ -57,6 +65,8 @@ export type MentionDetailsPopoverProps = {
 		pageSublocation?: string | null;
 	}) => void;
 	onCancel: () => void;
+	initialMode?: "view" | "edit";
+	colorConfig?: Record<string, { hue: number }>;
 };
 
 type SavedFormState = {
@@ -74,6 +84,12 @@ const AVAILABLE_INDEX_TYPES = [
 	{ value: "author", label: "Author" },
 	{ value: "scripture", label: "Scripture" },
 ];
+
+const INDEX_TYPE_CONFIG: Record<string, { label: string; icon: LucideIcon }> = {
+	subject: { label: "Subject", icon: Tags },
+	author: { label: "Author", icon: User },
+	scripture: { label: "Scripture", icon: BookOpen },
+};
 
 /**
  * Popover for displaying mention details with Edit/Delete actions
@@ -95,9 +111,11 @@ export const MentionDetailsPopover = ({
 	onDelete,
 	onClose,
 	onCancel,
+	initialMode = "view",
+	colorConfig = {},
 }: MentionDetailsPopoverProps) => {
 	// Mode state
-	const [mode, setMode] = useState<"view" | "edit">("view");
+	const [mode, setMode] = useState<"view" | "edit">(initialMode);
 
 	// Local state for editing
 	const [localText, setLocalText] = useState(mention.text);
@@ -117,15 +135,82 @@ export const MentionDetailsPopover = ({
 	const [isComboboxOpen, setIsComboboxOpen] = useState(false);
 	const allowClearInputRef = useRef(false);
 
+	// Local state for index type selector
+	const [isIndexTypesOpen, setIsIndexTypesOpen] = useState(false);
+
 	// Saved form state for Cancel functionality
 	const [savedFormState, setSavedFormState] = useState<SavedFormState | null>(
 		null,
 	);
 
+	// Reset local state when mention changes
+	useEffect(() => {
+		setLocalText(mention.text);
+		setLocalIndexTypes(mention.indexTypes);
+		setLocalPageSublocation(mention.pageSublocation || "");
+
+		const entry = existingEntries.find((e) => e.id === mention.entryId);
+		setSelectedEntry(entry ?? null);
+		setInputValue(entry?.label ?? "");
+
+		// Reset to view mode when mention changes
+		setMode("view");
+		setSavedFormState(null);
+	}, [
+		mention.text,
+		mention.indexTypes,
+		mention.pageSublocation,
+		mention.entryId,
+		existingEntries,
+	]);
+
+	// Close index types dropdown when clicking outside
+	useEffect(() => {
+		if (!isIndexTypesOpen) return;
+
+		const handleClickOutside = (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+			// Check if click is outside both the trigger button and dropdown
+			const triggerButton = document.querySelector(
+				"[data-testid='index-types-select']",
+			);
+			const dropdown = triggerButton?.nextElementSibling;
+			if (!triggerButton?.contains(target) && !dropdown?.contains(target)) {
+				setIsIndexTypesOpen(false);
+			}
+		};
+
+		const handleEscapeKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && isIndexTypesOpen) {
+				setIsIndexTypesOpen(false);
+				e.stopPropagation();
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		document.addEventListener("keydown", handleEscapeKey);
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+			document.removeEventListener("keydown", handleEscapeKey);
+		};
+	}, [isIndexTypesOpen]);
+
+	// Handle escape key to close popover when not in edit mode or when dropdown is closed
+	useEffect(() => {
+		const handleEscapeKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && !isIndexTypesOpen) {
+				onCancel();
+			}
+		};
+
+		document.addEventListener("keydown", handleEscapeKey);
+		return () => document.removeEventListener("keydown", handleEscapeKey);
+	}, [onCancel, isIndexTypesOpen]);
+
 	const truncatedText =
 		localText.length > 100 ? `${localText.substring(0, 100)}...` : localText;
 
-	const formatIndexTypes = (types: string[]) => {
+	const _formatIndexTypes = (types: string[]) => {
 		return types
 			.map(
 				(type) =>
@@ -134,9 +219,17 @@ export const MentionDetailsPopover = ({
 			.join(", ");
 	};
 
-	const handleIndexTypesChange = (value: string[] | string | null) => {
-		const newTypes = Array.isArray(value) ? value : value ? [value] : [];
-		setLocalIndexTypes(newTypes);
+	const getPrimaryIndexType = () => {
+		const primaryType = localIndexTypes[0];
+		if (!primaryType) return null;
+		const config = INDEX_TYPE_CONFIG[primaryType];
+		const hue = colorConfig[primaryType]?.hue ?? 200;
+		return {
+			type: primaryType,
+			icon: config?.icon ?? Tags,
+			label: config?.label ?? primaryType,
+			hue,
+		};
 	};
 
 	const handleEntryValueChange = (entry: IndexEntry | null) => {
@@ -207,21 +300,13 @@ export const MentionDetailsPopover = ({
 	};
 
 	const handleSave = () => {
-		const indexTypesChanged =
-			JSON.stringify(localIndexTypes.sort()) !==
-			JSON.stringify(mention.indexTypes.sort());
 		const entryChanged = selectedEntry?.id !== mention.entryId;
 		const textChanged = localText !== mention.text;
 		const sublocationChanged =
 			localPageSublocation !== (mention.pageSublocation || "");
 
 		// Only call onClose if something actually changed
-		if (
-			indexTypesChanged ||
-			entryChanged ||
-			textChanged ||
-			sublocationChanged
-		) {
+		if (entryChanged || textChanged || sublocationChanged) {
 			onClose({
 				mentionId: mention.id,
 				indexTypes: localIndexTypes,
@@ -241,73 +326,121 @@ export const MentionDetailsPopover = ({
 	};
 
 	if (mode === "view") {
+		const primaryIndexType = getPrimaryIndexType();
+		const PrimaryIcon = primaryIndexType?.icon ?? Tags;
+
 		return (
 			<div className="space-y-3">
-				<div>
-					<div className="space-y-3 text-sm">
-						<div>
-							<span className="text-neutral-500 dark:text-neutral-400">
-								{mention.type === "text" ? "Text: " : "Region: "}
-							</span>
-							<br />
-							<span
-								className={clsx(
-									"text-neutral-900 dark:text-neutral-100",
-									mention.type === "text" && "italic",
-								)}
-							>
-								{truncatedText}
-							</span>
-						</div>
+				{/* Header with index type icon and close button */}
+				<div className="flex items-start justify-between gap-2">
+					{/* Index type icon with tooltip (left) */}
+					<Tooltip delay={300}>
+						<TooltipTrigger
+							render={
+								<div
+									className="flex-shrink-0 p-1.5 rounded"
+									style={{
+										backgroundColor: primaryIndexType
+											? `oklch(85% 0.08 ${primaryIndexType.hue})`
+											: "oklch(85% 0.08 200)",
+									}}
+								>
+									<PrimaryIcon
+										className="w-4 h-4"
+										style={{
+											color: primaryIndexType
+												? `oklch(40% 0.15 ${primaryIndexType.hue})`
+												: "oklch(40% 0.15 200)",
+										}}
+									/>
+								</div>
+							}
+						/>
+						<TooltipContent>
+							{primaryIndexType?.label ?? "Index"} Index
+						</TooltipContent>
+					</Tooltip>
 
-						<div>
-							<span className="text-neutral-500 dark:text-neutral-400">
-								Entry:{" "}
-							</span>
-							<span className="text-neutral-900 dark:text-neutral-100">
-								{mention.entryLabel}
-							</span>
-						</div>
-
-						<div>
-							<span className="text-neutral-500 dark:text-neutral-400">
-								Index:{" "}
-							</span>
-							<span className="text-neutral-900 dark:text-neutral-100">
-								{formatIndexTypes(localIndexTypes) || "None"}
-							</span>
-						</div>
-
-						<div>
-							<span className="text-neutral-500 dark:text-neutral-400">
-								Page:{" "}
-							</span>
-							<span className="text-neutral-900 dark:text-neutral-100">
-								{mention.pageNumber}
-							</span>
-						</div>
-					</div>
-				</div>
-
-				<div className="flex gap-2 justify-end pt-2 border-t border-neutral-200 dark:border-neutral-700">
-					<Button
-						type="button"
-						data-testid="edit-button"
-						onClick={handleEnterEditMode}
-						variant="outline"
-						size="sm"
-					>
-						Edit
-					</Button>
-					<Button
+					{/* Close button (right) */}
+					<button
 						type="button"
 						data-testid="close-button"
 						onClick={onCancel}
-						variant="outline"
-						size="sm"
+						className="flex-shrink-0 p-1 hover:bg-neutral-200 rounded dark:hover:bg-neutral-700"
+						aria-label="Close"
 					>
-						Close
-					</Button>
+						<X className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+					</button>
+				</div>
+
+				{/* Content */}
+				<div className="space-y-3 text-sm">
+					<div>
+						<span className="text-neutral-500 dark:text-neutral-400">
+							{mention.type === "text" ? "Text: " : "Region: "}
+						</span>
+						<br />
+						<span
+							className={clsx(
+								"text-neutral-900 dark:text-neutral-100",
+								mention.type === "text" && "italic",
+							)}
+						>
+							{truncatedText}
+						</span>
+					</div>
+
+					<div>
+						<span className="text-neutral-500 dark:text-neutral-400">
+							Entry:{" "}
+						</span>
+						<span className="text-neutral-900 dark:text-neutral-100">
+							{mention.entryLabel}
+						</span>
+					</div>
+
+					<div>
+						<span className="text-neutral-500 dark:text-neutral-400">
+							Index Type:{" "}
+						</span>
+						<span className="text-neutral-900 dark:text-neutral-100">
+							{_formatIndexTypes(localIndexTypes)}
+						</span>
+					</div>
+
+					<div>
+						<span className="text-neutral-500 dark:text-neutral-400">
+							Page:{" "}
+						</span>
+						<span className="text-neutral-900 dark:text-neutral-100">
+							{mention.pageNumber}
+						</span>
+					</div>
+				</div>
+
+				{/* Footer with edit and delete buttons */}
+				<div className="flex items-center justify-between pt-2 border-t border-neutral-200 dark:border-neutral-700">
+					{/* Edit button (left) */}
+					<button
+						type="button"
+						data-testid="edit-button"
+						onClick={handleEnterEditMode}
+						className="flex-shrink-0 p-1.5 hover:bg-neutral-200 rounded dark:hover:bg-neutral-700"
+						aria-label="Edit"
+					>
+						<Edit2 className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+					</button>
+
+					{/* Delete button (right) */}
+					<button
+						type="button"
+						data-testid="delete-button"
+						onClick={() => onDelete({ mentionId: mention.id })}
+						className="flex-shrink-0 p-1.5 hover:bg-red-100 rounded dark:hover:bg-red-900/30"
+						aria-label="Delete"
+					>
+						<Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+					</button>
 				</div>
 			</div>
 		);
@@ -396,38 +529,69 @@ export const MentionDetailsPopover = ({
 
 					<div>
 						<span className="text-neutral-500 dark:text-neutral-400 text-sm mb-1 block">
-							Index:
+							Index Types:
 						</span>
-						<Select
-							multiple
-							value={localIndexTypes}
-							onValueChange={handleIndexTypesChange}
-							items={AVAILABLE_INDEX_TYPES}
-						>
-							<SelectTrigger
-								size="sm"
-								className="w-full"
+						<div className="relative">
+							<button
+								type="button"
 								data-testid="index-types-select"
+								onClick={() => setIsIndexTypesOpen(!isIndexTypesOpen)}
+								className="flex items-center justify-between w-full px-3 py-2 text-sm bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-700/50"
 							>
-								<SelectValue placeholder="Select index type(s)" />
-							</SelectTrigger>
-							<SelectContent>
-								{AVAILABLE_INDEX_TYPES.map((indexType) => (
-									<SelectItem key={indexType.value} value={indexType.value}>
-										{indexType.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-
-					<div>
-						<span className="text-neutral-500 dark:text-neutral-400">
-							Page:{" "}
-						</span>
-						<span className="text-neutral-900 dark:text-neutral-100">
-							{mention.pageNumber}
-						</span>
+								<span className="text-neutral-900 dark:text-neutral-100">
+									{localIndexTypes.length === 0
+										? "Select types..."
+										: localIndexTypes.length === 1
+											? AVAILABLE_INDEX_TYPES.find(
+													(t) => t.value === localIndexTypes[0],
+												)?.label
+											: `${localIndexTypes.length} selected`}
+								</span>
+								<ChevronDown className="w-4 h-4 text-neutral-500" />
+							</button>
+							{isIndexTypesOpen && (
+								<div
+									className="absolute z-50 w-full mt-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg shadow-lg"
+									role="listbox"
+								>
+									{AVAILABLE_INDEX_TYPES.map((type) => (
+										<div
+											key={type.value}
+											role="option"
+											tabIndex={0}
+											aria-selected={localIndexTypes.includes(type.value)}
+											data-selected={
+												localIndexTypes.includes(type.value) ? "" : undefined
+											}
+											className="flex items-center gap-2 px-3 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer"
+										>
+											<label className="flex cursor-pointer items-center gap-2">
+												<input
+													type="checkbox"
+													checked={localIndexTypes.includes(type.value)}
+													onChange={(e) => {
+														if (e.target.checked) {
+															setLocalIndexTypes([
+																...localIndexTypes,
+																type.value,
+															]);
+														} else {
+															setLocalIndexTypes(
+																localIndexTypes.filter((t) => t !== type.value),
+															);
+														}
+													}}
+													className="w-4 h-4"
+												/>
+												<span className="text-sm text-neutral-900 dark:text-neutral-100">
+													{type.label}
+												</span>
+											</label>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
 					</div>
 
 					{localIndexTypes.includes("subject") && (

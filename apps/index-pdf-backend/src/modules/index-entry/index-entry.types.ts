@@ -88,7 +88,7 @@ export const CreateIndexEntrySchema = z.object({
 	projectId: z.string().uuid(),
 	projectIndexTypeId: z.string().uuid(),
 	label: z.string().min(1).max(200),
-	slug: z.string().min(1).max(200),
+	slug: z.string().min(1).max(200).optional(),
 	parentId: z.string().uuid().optional(),
 	matchers: z.array(z.string()).optional(),
 	description: z.string().optional(),

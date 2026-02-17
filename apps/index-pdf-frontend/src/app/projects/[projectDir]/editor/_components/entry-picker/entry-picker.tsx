@@ -22,6 +22,17 @@ type EntryPickerProps = {
 	allowClear?: boolean;
 	className?: string;
 	id?: string;
+	showCreateOption?: boolean;
+	onCreateEntry?: ({
+		label,
+		parentId,
+	}: {
+		label: string;
+		parentId: string | null;
+	}) => void;
+	autoFocus?: boolean;
+	defaultOpen?: boolean;
+	defaultInputValue?: string;
 };
 
 /**
@@ -44,9 +55,14 @@ export const EntryPicker = ({
 	allowClear = false,
 	className,
 	id,
+	showCreateOption = false,
+	onCreateEntry,
+	autoFocus = false,
+	defaultOpen = false,
+	defaultInputValue = "",
 }: EntryPickerProps) => {
-	const [open, setOpen] = useState(false);
-	const [inputValue, setInputValue] = useState("");
+	const [open, setOpen] = useState(defaultOpen);
+	const [inputValue, setInputValue] = useState(defaultInputValue);
 	const [navigationStack, setNavigationStack] = useState<string[]>([]);
 
 	const selectedEntry = useMemo(
@@ -295,6 +311,26 @@ export const EntryPicker = ({
 		}
 	};
 
+	const handleCreateEntry = () => {
+		if (!onCreateEntry) return;
+
+		// Extract label from input (last segment after ">")
+		const segments = inputValue
+			.split(">")
+			.map((s) => s.trim())
+			.filter(Boolean);
+		const label =
+			segments.length > 0 ? segments[segments.length - 1] : inputValue.trim();
+
+		// Parent is the last item in navigation stack (or null for top-level)
+		const parentId =
+			navigationStack.length > 0
+				? navigationStack[navigationStack.length - 1]
+				: null;
+
+		onCreateEntry({ label, parentId });
+	};
+
 	return (
 		<Combobox
 			value={value}
@@ -311,6 +347,7 @@ export const EntryPicker = ({
 				showTrigger={false}
 				showClear={false}
 				className={className}
+				autoFocus={autoFocus}
 			/>
 			<ComboboxContent>
 				<ComboboxList>
@@ -361,6 +398,31 @@ export const EntryPicker = ({
 								</div>
 							);
 						})
+					) : showCreateOption && onCreateEntry && inputValue.trim() ? (
+						<div className="px-3 py-4 text-center">
+							<p className="text-sm text-neutral-500 mb-3">No entries found</p>
+							<button
+								type="button"
+								onPointerDown={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+								}}
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									handleCreateEntry();
+								}}
+								className="px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
+							>
+								Create new entry: "
+								{inputValue
+									.split(">")
+									.map((s) => s.trim())
+									.filter(Boolean)
+									.pop() || inputValue.trim()}
+								"
+							</button>
+						</div>
 					) : (
 						<div className="px-3 py-8 text-center text-sm text-neutral-500">
 							No entries found

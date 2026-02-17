@@ -7,6 +7,13 @@ export const useCreateEntry = () => {
 
 	return trpc.indexEntry.create.useMutation({
 		onMutate: async (newEntry) => {
+			console.log("[useCreateEntry] onMutate - creating entry:", {
+				label: newEntry.label,
+				projectId: newEntry.projectId,
+				projectIndexTypeId: newEntry.projectIndexTypeId,
+				parentId: newEntry.parentId,
+			});
+
 			// Cancel outgoing queries to prevent race conditions
 			await utils.indexEntry.list.cancel({
 				projectId: newEntry.projectId,
@@ -17,6 +24,18 @@ export const useCreateEntry = () => {
 			const previous = utils.indexEntry.list.getData({
 				projectId: newEntry.projectId,
 				projectIndexTypeId: newEntry.projectIndexTypeId,
+			});
+
+			const previousAll = utils.indexEntry.list.getData({
+				projectId: newEntry.projectId,
+			});
+
+			console.log("[useCreateEntry] Cache before create:", {
+				specificTypeCount: previous?.length,
+				allEntriesCount: previousAll?.length,
+				entriesWithSameLabel: previousAll?.filter(
+					(e) => e.label.toLowerCase() === newEntry.label.toLowerCase(),
+				),
 			});
 
 			// Optimistically add to cache
@@ -68,6 +87,14 @@ export const useCreateEntry = () => {
 		},
 
 		onSuccess: (data, variables) => {
+			console.log("[useCreateEntry] onSuccess - entry created:", {
+				id: data.id,
+				label: data.label,
+				slug: data.slug,
+				projectId: data.projectId,
+				projectIndexTypeId: data.projectIndexTypeId,
+			});
+
 			// Replace temp entry with real data from server
 			// Need to ensure the returned data matches IndexEntryListItem structure
 			utils.indexEntry.list.setData(
@@ -92,6 +119,16 @@ export const useCreateEntry = () => {
 							: entry,
 					),
 			);
+
+			const afterUpdate = utils.indexEntry.list.getData({
+				projectId: variables.projectId,
+				projectIndexTypeId: variables.projectIndexTypeId,
+			});
+
+			console.log("[useCreateEntry] Cache after success update:", {
+				count: afterUpdate?.length,
+				newEntry: afterUpdate?.find((e) => e.id === data.id),
+			});
 
 			toast.success(`Entry created: "${data.label}"`);
 		},

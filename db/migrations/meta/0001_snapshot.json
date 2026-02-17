@@ -1,5 +1,5 @@
 {
-	"id": "052d5568-a8cd-4d17-aa91-968d639302ec",
+	"id": "05fde37f-77ae-4746-921e-350472926006",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -1162,6 +1162,7 @@
 						}
 					],
 					"isUnique": true,
+					"where": "\"index_entries\".\"deleted_at\" IS NULL",
 					"concurrently": false,
 					"method": "btree",
 					"with": {}
@@ -1310,94 +1311,6 @@
 			"checkConstraints": {},
 			"isRLSEnabled": false
 		},
-		"public.index_mention_types": {
-			"name": "index_mention_types",
-			"schema": "",
-			"columns": {
-				"id": {
-					"name": "id",
-					"type": "uuid",
-					"primaryKey": true,
-					"notNull": true,
-					"default": "gen_random_uuid()"
-				},
-				"index_mention_id": {
-					"name": "index_mention_id",
-					"type": "uuid",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"project_index_type_id": {
-					"name": "project_index_type_id",
-					"type": "uuid",
-					"primaryKey": false,
-					"notNull": true
-				},
-				"created_at": {
-					"name": "created_at",
-					"type": "timestamp with time zone",
-					"primaryKey": false,
-					"notNull": true,
-					"default": "now()"
-				}
-			},
-			"indexes": {
-				"unique_mention_type": {
-					"name": "unique_mention_type",
-					"columns": [
-						{
-							"expression": "index_mention_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						},
-						{
-							"expression": "project_index_type_id",
-							"isExpression": false,
-							"asc": true,
-							"nulls": "last"
-						}
-					],
-					"isUnique": true,
-					"concurrently": false,
-					"method": "btree",
-					"with": {}
-				}
-			},
-			"foreignKeys": {
-				"index_mention_types_index_mention_id_index_mentions_id_fk": {
-					"name": "index_mention_types_index_mention_id_index_mentions_id_fk",
-					"tableFrom": "index_mention_types",
-					"tableTo": "index_mentions",
-					"columnsFrom": ["index_mention_id"],
-					"columnsTo": ["id"],
-					"onDelete": "cascade",
-					"onUpdate": "no action"
-				},
-				"index_mention_types_project_index_type_id_project_highlight_configs_id_fk": {
-					"name": "index_mention_types_project_index_type_id_project_highlight_configs_id_fk",
-					"tableFrom": "index_mention_types",
-					"tableTo": "project_highlight_configs",
-					"columnsFrom": ["project_index_type_id"],
-					"columnsTo": ["id"],
-					"onDelete": "cascade",
-					"onUpdate": "no action"
-				}
-			},
-			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
-			"policies": {
-				"index_mention_types_mention_access": {
-					"name": "index_mention_types_mention_access",
-					"as": "PERMISSIVE",
-					"for": "ALL",
-					"to": ["authenticated"],
-					"using": "EXISTS (\n\t\t\t\tSELECT 1 FROM index_mentions\n\t\t\t\tWHERE index_mentions.id = \"index_mention_types\".\"index_mention_id\"\n\t\t\t)"
-				}
-			},
-			"checkConstraints": {},
-			"isRLSEnabled": false
-		},
 		"public.index_mentions": {
 			"name": "index_mentions",
 			"schema": "",
@@ -1411,6 +1324,12 @@
 				},
 				"entry_id": {
 					"name": "entry_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"project_index_type_id": {
+					"name": "project_index_type_id",
 					"type": "uuid",
 					"primaryKey": false,
 					"notNull": true
@@ -1531,6 +1450,15 @@
 					"tableFrom": "index_mentions",
 					"tableTo": "index_entries",
 					"columnsFrom": ["entry_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"index_mentions_project_index_type_id_project_highlight_configs_id_fk": {
+					"name": "index_mentions_project_index_type_id_project_highlight_configs_id_fk",
+					"tableFrom": "index_mentions",
+					"tableTo": "project_highlight_configs",
+					"columnsFrom": ["project_index_type_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
 					"onUpdate": "no action"

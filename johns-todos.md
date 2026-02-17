@@ -37,3 +37,13 @@ prompts should receive list of existing matchers
 matchers should be associated with definitions
    AI will need to choose from those matchers or create a new matcher with a new definition
    A subsequent task would try to identify which canonical definition matches the new matcher's definition (may have to send to LLM for identification)
+
+Probably, mentions should only have one type. (Perhaps we could display mixed highlight if bboxes are exactly the same for two mentions.)
+
+Allow Index highlight layer to be disabled.
+
+fix cross-reference formatting
+
+work on author and scripture indexing
+
+reorder default page bar items

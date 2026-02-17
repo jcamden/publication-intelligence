@@ -39,6 +39,8 @@ export const Default: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "project-1",
+		projectIndexTypeId: "subject-type-1",
 		onAttach: ({ entryId, entryLabel }) => {
 			console.log("Attached mention:", { entryId, entryLabel });
 		},

@@ -9,7 +9,6 @@ import {
 	indexEntries,
 	indexMatchers,
 	indexMentions,
-	indexMentionTypes,
 	projectIndexTypes,
 	projects,
 	sourceDocuments,
@@ -283,7 +282,7 @@ export const createTestProjectIndexType = async ({
 	}
 
 	const defaultColorHue =
-		indexType === "subject" ? 230 : indexType === "author" ? 280 : 30;
+		indexType === "subject" ? 85 : indexType === "author" ? 230 : 160;
 
 	return await db.transaction(async (tx) => {
 		await tx.execute(
@@ -440,7 +439,6 @@ export const createTestIndexMention = async ({
 	pageNumber = 1,
 	textSpan = "Test mention text",
 	bboxes = [{ x: 100, y: 100, width: 200, height: 20 }],
-	projectIndexTypeIds,
 	mentionType = "text",
 	testDb,
 }: {
@@ -450,7 +448,6 @@ export const createTestIndexMention = async ({
 	pageNumber?: number;
 	textSpan?: string;
 	bboxes?: Array<{ x: number; y: number; width: number; height: number }>;
-	projectIndexTypeIds: string[];
 	mentionType?: "text" | "region";
 	testDb?: PgliteDatabase<typeof schema>;
 }) => {
@@ -467,10 +464,22 @@ export const createTestIndexMention = async ({
 		);
 		await tx.execute(sql`SET LOCAL ROLE authenticated`);
 
+		// Get the projectIndexTypeId from the entry (mentions inherit from entries)
+		const [entry] = await tx
+			.select({ projectIndexTypeId: indexEntries.projectIndexTypeId })
+			.from(indexEntries)
+			.where(eq(indexEntries.id, entryId))
+			.limit(1);
+
+		if (!entry) {
+			throw new Error(`Entry ${entryId} not found`);
+		}
+
 		const [mention] = await tx
 			.insert(indexMentions)
 			.values({
 				entryId,
+				projectIndexTypeId: entry.projectIndexTypeId,
 				documentId,
 				pageNumber,
 				textSpan,
@@ -480,13 +489,6 @@ export const createTestIndexMention = async ({
 				revision: 1,
 			})
 			.returning();
-
-		await tx.insert(indexMentionTypes).values(
-			projectIndexTypeIds.map((projectIndexTypeId) => ({
-				indexMentionId: mention.id,
-				projectIndexTypeId,
-			})),
-		);
 
 		await tx.execute(sql`RESET ROLE`);
 

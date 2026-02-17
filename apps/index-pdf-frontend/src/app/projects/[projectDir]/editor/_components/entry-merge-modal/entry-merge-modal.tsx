@@ -72,7 +72,6 @@ export const EntryMergeModal = ({
 	);
 
 	const matcherCount = sourceEntry.metadata?.matchers?.length || 0;
-	const mentionCount = 0;
 
 	const handleMerge = async () => {
 		if (!targetEntryId) {
@@ -90,12 +89,11 @@ export const EntryMergeModal = ({
 				});
 			}
 
-			if (mentionCount > 0) {
-				await transferMentions.mutateAsync({
-					fromEntryId: sourceEntry.id,
-					toEntryId: targetEntryId,
-				});
-			}
+			// Always transfer mentions (backend handles empty case)
+			await transferMentions.mutateAsync({
+				fromEntryId: sourceEntry.id,
+				toEntryId: targetEntryId,
+			});
 
 			await new Promise<void>((resolve, reject) => {
 				deleteEntry.mutate(

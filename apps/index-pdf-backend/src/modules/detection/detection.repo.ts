@@ -4,7 +4,6 @@ import {
 	detectionRuns,
 	indexEntries,
 	indexMentions,
-	indexMentionTypes,
 	projectIndexTypes,
 	suppressedSuggestions,
 } from "../../db/schema";
@@ -407,6 +406,7 @@ export const createSuggestedMention = async ({
 				.insert(indexMentions)
 				.values({
 					entryId,
+					projectIndexTypeId,
 					documentId,
 					detectionRunId,
 					pageNumber,
@@ -420,12 +420,6 @@ export const createSuggestedMention = async ({
 			if (!mention) {
 				throw new Error("Failed to create index mention");
 			}
-
-			// Create junction table entry to link mention to its index type
-			await tx.insert(indexMentionTypes).values({
-				indexMentionId: mention.id,
-				projectIndexTypeId,
-			});
 
 			return mention.id;
 		},

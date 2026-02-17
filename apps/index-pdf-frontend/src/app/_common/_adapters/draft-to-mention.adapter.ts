@@ -4,11 +4,9 @@ import type { MentionDraft } from "@/app/projects/[projectDir]/editor/_component
 export const draftToMentionInput = ({
 	draft,
 	entryId,
-	projectIndexTypeIds,
 }: {
 	draft: MentionDraft;
 	entryId: string;
-	projectIndexTypeIds: string[];
 }): CreateIndexMentionInput => {
 	return {
 		documentId: draft.documentId,
@@ -16,7 +14,6 @@ export const draftToMentionInput = ({
 		pageNumber: draft.pageNumber,
 		textSpan: draft.text,
 		bboxesPdf: draft.bboxes,
-		projectIndexTypeIds,
 		mentionType: draft.type,
 	};
 };

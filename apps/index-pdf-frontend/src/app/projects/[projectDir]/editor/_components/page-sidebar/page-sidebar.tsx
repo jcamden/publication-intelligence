@@ -45,6 +45,8 @@ type PageSidebarProps = {
 	mentions: MentionData[];
 	currentPage: number;
 	onMentionClick?: ({ mentionId }: { mentionId: string }) => void;
+	onMentionEdit?: ({ mentionId }: { mentionId: string }) => void;
+	onMentionDelete?: ({ mentionId }: { mentionId: string }) => void;
 	enabledIndexTypes: string[]; // Index types enabled for this project
 	projectId?: string;
 	documentId?: string;
@@ -59,6 +61,8 @@ export const PageSidebar = ({
 	mentions,
 	currentPage,
 	onMentionClick,
+	onMentionEdit,
+	onMentionDelete,
 	enabledIndexTypes,
 	projectId,
 	documentId,
@@ -151,6 +155,8 @@ export const PageSidebar = ({
 				<PageSubjectContent
 					mentions={getMentionsForType("subject")}
 					onMentionClick={onMentionClick}
+					onMentionEdit={onMentionEdit}
+					onMentionDelete={onMentionDelete}
 					projectId={projectId}
 					documentId={documentId}
 					pageNumber={currentPage}
@@ -164,6 +170,8 @@ export const PageSidebar = ({
 				<PageAuthorContent
 					mentions={getMentionsForType("author")}
 					onMentionClick={onMentionClick}
+					onMentionEdit={onMentionEdit}
+					onMentionDelete={onMentionDelete}
 					projectId={projectId}
 					documentId={documentId}
 					pageNumber={currentPage}
@@ -177,6 +185,8 @@ export const PageSidebar = ({
 				<PageScriptureContent
 					mentions={getMentionsForType("scripture")}
 					onMentionClick={onMentionClick}
+					onMentionEdit={onMentionEdit}
+					onMentionDelete={onMentionDelete}
 					projectId={projectId}
 					documentId={documentId}
 					pageNumber={currentPage}

@@ -43,7 +43,35 @@ export const ProjectSubjectContent = () => {
 		{ enabled: !!projectId && !!subjectProjectIndexTypeId },
 	);
 
-	// Convert backend entries to frontend format (add indexType field)
+	// Fetch cross references for all entries
+	const crossReferencesQueries = trpc.useQueries((t) =>
+		backendEntries.map((entry) =>
+			t.indexEntry.crossReference.list(
+				{ entryId: entry.id },
+				{ enabled: !!entry.id },
+			),
+		),
+	);
+
+	const allCrossReferences = useMemo(() => {
+		const map = new Map<
+			string,
+			Array<{
+				id: string;
+				toEntryId: string | null;
+				arbitraryValue: string | null;
+				relationType: "see" | "see_also" | "qv";
+				toEntry?: { id: string; label: string } | null;
+			}>
+		>();
+		backendEntries.forEach((entry, index) => {
+			const data = crossReferencesQueries[index]?.data || [];
+			map.set(entry.id, data);
+		});
+		return map;
+	}, [backendEntries, crossReferencesQueries]);
+
+	// Convert backend entries to frontend format (add indexType field and cross references)
 	const entries = backendEntries.map((e) => ({
 		...e,
 		indexType: "subject" as const,
@@ -52,6 +80,7 @@ export const ProjectSubjectContent = () => {
 		metadata: {
 			matchers: e.matchers?.map((m) => m.text) || [],
 		},
+		crossReferences: allCrossReferences.get(e.id) || [],
 	}));
 
 	// Fetch mentions for this document

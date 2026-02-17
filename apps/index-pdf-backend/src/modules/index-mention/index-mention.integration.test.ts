@@ -109,7 +109,6 @@ describe("IndexMention API (Integration)", () => {
 			authenticatedRequest,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
@@ -123,7 +122,6 @@ describe("IndexMention API (Integration)", () => {
 						{ x: 100, y: 200, width: 300, height: 20 },
 						{ x: 100, y: 220, width: 150, height: 20 },
 					],
-					projectIndexTypeIds: [subjectIndexTypeId],
 					mentionType: "text",
 				},
 			});
@@ -137,12 +135,10 @@ describe("IndexMention API (Integration)", () => {
 			expect(body.result.data.indexTypes).toHaveLength(1);
 		});
 
-		it("should create mention with multiple index types", async ({
+		it("should create mention with entry's index type", async ({
 			authenticatedRequest,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
-			authorIndexTypeId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
@@ -153,21 +149,22 @@ describe("IndexMention API (Integration)", () => {
 					pageNumber: 10,
 					textSpan: "theological discussion",
 					bboxesPdf: [{ x: 100, y: 200, width: 300, height: 20 }],
-					projectIndexTypeIds: [subjectIndexTypeId, authorIndexTypeId],
 					mentionType: "text",
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.indexTypes).toHaveLength(2);
+			expect(body.result.data.indexTypes).toHaveLength(1);
+			expect(body.result.data.indexTypes[0].projectIndexType.indexType).toBe(
+				"subject",
+			);
 		});
 
 		it("should create region mention", async ({
 			authenticatedRequest,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
@@ -178,7 +175,6 @@ describe("IndexMention API (Integration)", () => {
 					pageNumber: 15,
 					textSpan: "Diagram 1",
 					bboxesPdf: [{ x: 100, y: 200, width: 400, height: 300 }],
-					projectIndexTypeIds: [subjectIndexTypeId],
 					mentionType: "region",
 				},
 			});
@@ -191,7 +187,6 @@ describe("IndexMention API (Integration)", () => {
 		it("should reject invalid entry ID", async ({
 			authenticatedRequest,
 			testDocumentId,
-			subjectIndexTypeId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
@@ -202,7 +197,6 @@ describe("IndexMention API (Integration)", () => {
 					pageNumber: 5,
 					textSpan: "text",
 					bboxesPdf: [{ x: 100, y: 200, width: 300, height: 20 }],
-					projectIndexTypeIds: [subjectIndexTypeId],
 				},
 			});
 
@@ -211,7 +205,7 @@ describe("IndexMention API (Integration)", () => {
 			expect(body.error.message).toContain("not found");
 		});
 
-		it("should require at least one index type", async ({
+		it("should automatically assign entry's index type", async ({
 			authenticatedRequest,
 			testDocumentId,
 			subjectEntryId,
@@ -225,18 +219,21 @@ describe("IndexMention API (Integration)", () => {
 					pageNumber: 5,
 					textSpan: "text",
 					bboxesPdf: [{ x: 100, y: 200, width: 300, height: 20 }],
-					projectIndexTypeIds: [],
 				},
 			});
 
-			expect(response.statusCode).toBe(400);
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data.indexTypes).toHaveLength(1);
+			expect(body.result.data.indexTypes[0].projectIndexType.indexType).toBe(
+				"subject",
+			);
 		});
 
 		it("should require authentication", async ({
 			server,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const response = await server.inject({
 				method: "POST",
@@ -247,7 +244,6 @@ describe("IndexMention API (Integration)", () => {
 					pageNumber: 5,
 					textSpan: "text",
 					bboxesPdf: [{ x: 100, y: 200, width: 300, height: 20 }],
-					projectIndexTypeIds: [subjectIndexTypeId],
 				},
 			});
 
@@ -262,7 +258,6 @@ describe("IndexMention API (Integration)", () => {
 			testProjectId,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			await createTestIndexMention({
 				entryId: subjectEntryId,
@@ -270,7 +265,6 @@ describe("IndexMention API (Integration)", () => {
 				userId: testUser.userId,
 				pageNumber: 5,
 				textSpan: "mention 1",
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			await createTestIndexMention({
@@ -279,7 +273,6 @@ describe("IndexMention API (Integration)", () => {
 				userId: testUser.userId,
 				pageNumber: 10,
 				textSpan: "mention 2",
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -298,7 +291,6 @@ describe("IndexMention API (Integration)", () => {
 			testProjectId,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const doc2 = await createTestSourceDocument({
 				projectId: testProjectId,
@@ -310,14 +302,12 @@ describe("IndexMention API (Integration)", () => {
 				entryId: subjectEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			await createTestIndexMention({
 				entryId: subjectEntryId,
 				documentId: doc2.id,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -336,14 +326,12 @@ describe("IndexMention API (Integration)", () => {
 			testProjectId,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			await createTestIndexMention({
 				entryId: subjectEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
 				pageNumber: 5,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			await createTestIndexMention({
@@ -351,7 +339,6 @@ describe("IndexMention API (Integration)", () => {
 				documentId: testDocumentId,
 				userId: testUser.userId,
 				pageNumber: 10,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -373,20 +360,17 @@ describe("IndexMention API (Integration)", () => {
 			subjectEntryId,
 			authorEntryId,
 			subjectIndexTypeId,
-			authorIndexTypeId,
 		}) => {
 			await createTestIndexMention({
 				entryId: subjectEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			await createTestIndexMention({
 				entryId: authorEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
-				projectIndexTypeIds: [authorIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -410,14 +394,12 @@ describe("IndexMention API (Integration)", () => {
 			testProjectId,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const mention = await createTestIndexMention({
 				entryId: subjectEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
 				textSpan: "original text",
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -444,13 +426,11 @@ describe("IndexMention API (Integration)", () => {
 			testDocumentId,
 			subjectEntryId,
 			authorEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const mention = await createTestIndexMention({
 				entryId: subjectEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -470,20 +450,17 @@ describe("IndexMention API (Integration)", () => {
 			expect(body.result.data.entryId).toBe(authorEntryId);
 		});
 
-		it("should update mention index types", async ({
+		it("should preserve index type when updating mention", async ({
 			testUser,
 			authenticatedRequest,
 			testProjectId,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
-			authorIndexTypeId,
 		}) => {
 			const mention = await createTestIndexMention({
 				entryId: subjectEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -494,119 +471,17 @@ describe("IndexMention API (Integration)", () => {
 					projectId: testProjectId,
 					documentId: testDocumentId,
 					pageNumber: mention.pageNumber,
-					projectIndexTypeIds: [subjectIndexTypeId, authorIndexTypeId],
+					textSpan: "updated text",
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.indexTypes).toHaveLength(2);
-		});
-	});
-
-	describe("POST /trpc/indexMention.updateIndexTypes", () => {
-		it("should replace index types for multiple mentions", async ({
-			testUser,
-			authenticatedRequest,
-			testDocumentId,
-			subjectEntryId,
-			subjectIndexTypeId,
-			authorIndexTypeId,
-		}) => {
-			const mention1 = await createTestIndexMention({
-				entryId: subjectEntryId,
-				documentId: testDocumentId,
-				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
-			});
-
-			const mention2 = await createTestIndexMention({
-				entryId: subjectEntryId,
-				documentId: testDocumentId,
-				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
-			});
-
-			const response = await authenticatedRequest.inject({
-				method: "POST",
-				url: "/trpc/indexMention.updateIndexTypes",
-				payload: {
-					mentionIds: [mention1.id, mention2.id],
-					projectIndexTypeIds: [authorIndexTypeId],
-					operation: "replace",
-				},
-			});
-
-			expect(response.statusCode).toBe(200);
-			const body = JSON.parse(response.body);
-			expect(body.result.data).toHaveLength(2);
-			expect(body.result.data[0].indexTypes).toHaveLength(1);
-			expect(body.result.data[0].indexTypes[0].projectIndexTypeId).toBe(
-				authorIndexTypeId,
+			expect(body.result.data.indexTypes).toHaveLength(1);
+			expect(body.result.data.indexTypes[0].projectIndexType.indexType).toBe(
+				"subject",
 			);
-		});
-
-		it("should add index types to existing types", async ({
-			testUser,
-			authenticatedRequest,
-			testDocumentId,
-			subjectEntryId,
-			subjectIndexTypeId,
-			authorIndexTypeId,
-		}) => {
-			const mention = await createTestIndexMention({
-				entryId: subjectEntryId,
-				documentId: testDocumentId,
-				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
-			});
-
-			const response = await authenticatedRequest.inject({
-				method: "POST",
-				url: "/trpc/indexMention.updateIndexTypes",
-				payload: {
-					mentionIds: [mention.id],
-					projectIndexTypeIds: [authorIndexTypeId],
-					operation: "add",
-				},
-			});
-
-			expect(response.statusCode).toBe(200);
-			const body = JSON.parse(response.body);
-			expect(body.result.data[0].indexTypes).toHaveLength(2);
-		});
-
-		it("should remove index types from mentions", async ({
-			testUser,
-			authenticatedRequest,
-			testDocumentId,
-			subjectEntryId,
-			subjectIndexTypeId,
-			authorIndexTypeId,
-		}) => {
-			const mention = await createTestIndexMention({
-				entryId: subjectEntryId,
-				documentId: testDocumentId,
-				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId, authorIndexTypeId],
-			});
-
-			const response = await authenticatedRequest.inject({
-				method: "POST",
-				url: "/trpc/indexMention.updateIndexTypes",
-				payload: {
-					mentionIds: [mention.id],
-					projectIndexTypeIds: [authorIndexTypeId],
-					operation: "remove",
-				},
-			});
-
-			expect(response.statusCode).toBe(200);
-			const body = JSON.parse(response.body);
-			expect(body.result.data[0].indexTypes).toHaveLength(1);
-			expect(body.result.data[0].indexTypes[0].projectIndexTypeId).toBe(
-				subjectIndexTypeId,
-			);
+			expect(body.result.data.textSpan).toBe("updated text");
 		});
 	});
 
@@ -615,7 +490,6 @@ describe("IndexMention API (Integration)", () => {
 			authenticatedRequest,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
@@ -628,7 +502,6 @@ describe("IndexMention API (Integration)", () => {
 							pageNumber: 1,
 							textSpan: "mention 1",
 							bboxesPdf: [{ x: 100, y: 100, width: 200, height: 20 }],
-							projectIndexTypeIds: [subjectIndexTypeId],
 						},
 						{
 							documentId: testDocumentId,
@@ -636,7 +509,6 @@ describe("IndexMention API (Integration)", () => {
 							pageNumber: 2,
 							textSpan: "mention 2",
 							bboxesPdf: [{ x: 100, y: 100, width: 200, height: 20 }],
-							projectIndexTypeIds: [subjectIndexTypeId],
 						},
 						{
 							documentId: testDocumentId,
@@ -644,7 +516,6 @@ describe("IndexMention API (Integration)", () => {
 							pageNumber: 3,
 							textSpan: "mention 3",
 							bboxesPdf: [{ x: 100, y: 100, width: 200, height: 20 }],
-							projectIndexTypeIds: [subjectIndexTypeId],
 						},
 					],
 				},
@@ -677,13 +548,11 @@ describe("IndexMention API (Integration)", () => {
 			testProjectId,
 			testDocumentId,
 			subjectEntryId,
-			subjectIndexTypeId,
 		}) => {
 			const mention = await createTestIndexMention({
 				entryId: subjectEntryId,
 				documentId: testDocumentId,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({

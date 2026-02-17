@@ -10,6 +10,10 @@ export type PdfAnnotationPopoverProps = {
 	isOpen: boolean;
 	/** Callback when user presses escape or clicks backdrop */
 	onCancel: () => void;
+	/** Optional callback to check if closing should be prevented (e.g., when a modal is open) */
+	shouldPreventClose?: () => boolean;
+	/** Custom z-index for the positioner (default: 50) - useful when a modal needs to be above this popover */
+	zIndex?: number;
 	/** The content to render inside the popover */
 	children: React.ReactNode;
 };
@@ -26,6 +30,8 @@ export const PdfAnnotationPopover = ({
 	anchorElement,
 	isOpen,
 	onCancel,
+	shouldPreventClose,
+	zIndex = 50,
 	children,
 }: PdfAnnotationPopoverProps) => {
 	// Don't render until we have an anchor element to position against
@@ -35,7 +41,21 @@ export const PdfAnnotationPopover = ({
 		<PopoverPrimitive.Root
 			open={isOpen}
 			onOpenChange={(open) => {
-				if (!open) onCancel();
+				// Check if any modal dialog is currently open in the DOM
+				const hasOpenModal =
+					document.querySelector("[data-modal-dialog]") !== null;
+
+				const shouldPrevent = shouldPreventClose?.() || hasOpenModal;
+				console.log("[PdfAnnotationPopover] onOpenChange:", {
+					open,
+					shouldPreventFromCallback: shouldPreventClose?.(),
+					hasOpenModal,
+					shouldPrevent,
+					willCancel: !open && !shouldPrevent,
+				});
+				if (!open && !shouldPrevent) {
+					onCancel();
+				}
 			}}
 		>
 			<PopoverPrimitive.Portal>
@@ -45,11 +65,11 @@ export const PdfAnnotationPopover = ({
 					sideOffset={10}
 					collisionBoundary={document.body}
 					collisionPadding={10}
-					className="isolate z-50"
+					className="isolate"
+					style={{ zIndex }}
 				>
 					<PopoverPrimitive.Popup
 						data-pdf-annotation-popover
-						role="dialog"
 						className={`${POPOVER_ANIMATION_CLASSES} w-80 p-4 shadow-2xl`}
 					>
 						{children}

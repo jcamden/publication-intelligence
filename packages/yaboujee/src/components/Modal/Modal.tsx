@@ -46,12 +46,32 @@ export const Modal = ({
 	return (
 		<Dialog.Root
 			open={open}
-			onOpenChange={(nextOpen) => !nextOpen && onClose()}
+			onOpenChange={(nextOpen) => {
+				console.log("[Modal] onOpenChange:", {
+					nextOpen,
+					willClose: !nextOpen,
+				});
+				if (!nextOpen) {
+					onClose();
+				}
+			}}
 		>
 			<Dialog.Portal>
 				<Dialog.Backdrop className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
-				<Dialog.Popup className="fixed inset-0 z-50 flex items-center justify-center p-4">
-					<div className={clsx(modalVariants({ size }), className)}>
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+					<Dialog.Popup
+						data-modal-dialog
+						className={clsx(
+							modalVariants({ size }),
+							className,
+							"pointer-events-auto",
+						)}
+						onPointerDown={(e) => e.stopPropagation()}
+						onPointerUp={(e) => e.stopPropagation()}
+						onClick={(e) => e.stopPropagation()}
+						onMouseDown={(e) => e.stopPropagation()}
+						onMouseUp={(e) => e.stopPropagation()}
+					>
 						{title && (
 							<div className="flex items-center justify-between px-6 py-4 border-b border-border">
 								<Dialog.Title className="text-xl font-semibold text-foreground">
@@ -81,8 +101,8 @@ export const Modal = ({
 								{footer}
 							</div>
 						)}
-					</div>
-				</Dialog.Popup>
+					</Dialog.Popup>
+				</div>
 			</Dialog.Portal>
 		</Dialog.Root>
 	);

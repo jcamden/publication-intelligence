@@ -29,6 +29,8 @@ export type EntryCreationModalProps = {
 	projectIndexTypeId: string;
 	existingEntries: IndexEntry[];
 	prefillLabel?: string;
+	prefillParentId?: string | null;
+	onEntryCreated?: (entry: IndexEntry) => void;
 };
 
 export const EntryCreationModal = ({
@@ -38,7 +40,15 @@ export const EntryCreationModal = ({
 	projectIndexTypeId,
 	existingEntries,
 	prefillLabel = "",
+	prefillParentId = null,
+	onEntryCreated,
 }: EntryCreationModalProps) => {
+	console.log("[EntryCreationModal] Component rendered/updated:", {
+		open,
+		prefillLabel,
+		prefillParentId,
+		existingEntriesCount: existingEntries.length,
+	});
 	const createEntry = useCreateEntry();
 	const [matchers, setMatchers] = useState<string[]>([]);
 	const [activeTab, setActiveTab] = useState("basic");
@@ -65,54 +75,83 @@ export const EntryCreationModal = ({
 	const form = useForm({
 		defaultValues: {
 			label: prefillLabel,
-			parentId: null as string | null,
+			parentId: prefillParentId,
 			description: "",
 		},
 		onSubmit: async ({ value }) => {
+			console.log("[EntryCreationModal] onSubmit called with value:", value);
 			const label = value.label.trim();
-			const slug = label.toLowerCase().replace(/\s+/g, "-");
 
-			createEntry.mutate(
-				{
-					projectId,
-					projectIndexTypeId,
-					label,
-					slug,
-					parentId: value.parentId || undefined,
-					matchers: matchers.length > 0 ? matchers : undefined,
-				},
-				{
-					onSuccess: async (newEntry) => {
-						// Create cross-references if any were added
-						if (pendingCrossReferences.length > 0) {
-							try {
-								await Promise.all(
-									pendingCrossReferences.map((crossRef) =>
-										createCrossReference.mutateAsync({
-											fromEntryId: newEntry.id,
-											relationType: crossRef.relationType,
-											toEntryId: crossRef.toEntryId,
-											arbitraryValue: crossRef.arbitraryValue,
-											note: crossRef.note,
-										}),
-									),
-								);
-								toast.success(
-									`Entry created with ${pendingCrossReferences.length} cross-reference(s)`,
-								);
-							} catch {
-								toast.error("Entry created but some cross-references failed");
-							}
-						}
+			const mutationInput = {
+				projectId,
+				projectIndexTypeId,
+				label,
+				parentId: value.parentId || undefined,
+				matchers: matchers.length > 0 ? matchers : undefined,
+			};
 
-						onClose();
-						form.reset();
-						setMatchers([]);
-						setPendingCrossReferences([]);
-						setActiveTab("basic");
-					},
-				},
+			console.log(
+				"[EntryCreationModal] Calling createEntry.mutate with:",
+				mutationInput,
 			);
+
+			createEntry.mutate(mutationInput, {
+				onSuccess: async (newEntry) => {
+					// Create cross-references if any were added
+					if (pendingCrossReferences.length > 0) {
+						try {
+							await Promise.all(
+								pendingCrossReferences.map((crossRef) =>
+									createCrossReference.mutateAsync({
+										fromEntryId: newEntry.id,
+										relationType: crossRef.relationType,
+										toEntryId: crossRef.toEntryId,
+										arbitraryValue: crossRef.arbitraryValue,
+										note: crossRef.note,
+									}),
+								),
+							);
+							toast.success(
+								`Entry created with ${pendingCrossReferences.length} cross-reference(s)`,
+							);
+						} catch {
+							toast.error("Entry created but some cross-references failed");
+						}
+					}
+
+					// Convert backend entry to frontend format with indexType
+					const indexType = existingEntries[0]?.indexType || "subject";
+					console.log("[EntryCreationModal] Creating frontend entry:", {
+						backendEntry: newEntry,
+						existingEntriesCount: existingEntries.length,
+						derivedIndexType: indexType,
+						projectId,
+						projectIndexTypeId,
+					});
+
+					const frontendEntry: IndexEntry = {
+						...newEntry,
+						indexType,
+						projectId: projectId,
+						projectIndexTypeId: projectIndexTypeId,
+						metadata: {
+							matchers: newEntry.matchers?.map((m) => m.text) || [],
+						},
+					};
+
+					console.log(
+						"[EntryCreationModal] Frontend entry created:",
+						frontendEntry,
+					);
+
+					onEntryCreated?.(frontendEntry);
+					onClose();
+					form.reset();
+					setMatchers([]);
+					setPendingCrossReferences([]);
+					setActiveTab("basic");
+				},
+			});
 		},
 	});
 
@@ -128,20 +167,47 @@ export const EntryCreationModal = ({
 		}
 	}, [form.state.values.label, prefillLabel, matchers]);
 
-	// Initialize matchers with prefillLabel on open
+	// Initialize form fields and matchers when modal opens with prefill values
 	useEffect(() => {
-		if (open && prefillLabel) {
-			setMatchers([prefillLabel]);
+		if (open) {
+			console.log(
+				"[EntryCreationModal] Modal opened, resetting form with prefill values:",
+				{
+					prefillLabel,
+					prefillParentId,
+				},
+			);
+
+			// Reset form with new prefill values
+			form.setFieldValue("label", prefillLabel);
+			form.setFieldValue("parentId", prefillParentId);
+			form.setFieldValue("description", "");
+
+			// Initialize matchers
+			if (prefillLabel) {
+				setMatchers([prefillLabel]);
+			}
 		}
-	}, [open, prefillLabel]);
+	}, [open, prefillLabel, prefillParentId, form]);
 
 	const handleCancel = useCallback(() => {
+		console.log("[EntryCreationModal] handleCancel called");
 		form.reset();
 		setMatchers([]);
 		setPendingCrossReferences([]);
 		setActiveTab("basic");
 		onClose();
 	}, [form, onClose]);
+
+	const handleCreate = useCallback(
+		(e?: React.MouseEvent) => {
+			console.log("[EntryCreationModal] handleCreate called, submitting form");
+			e?.preventDefault();
+			e?.stopPropagation();
+			form.handleSubmit();
+		},
+		[form],
+	);
 
 	return (
 		<Modal
@@ -153,14 +219,20 @@ export const EntryCreationModal = ({
 				<>
 					<Button
 						variant="outline"
-						onClick={handleCancel}
+						type="button"
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							handleCancel();
+						}}
 						disabled={createEntry.isPending}
 					>
 						Cancel
 					</Button>
 					<Button
 						variant="default"
-						onClick={() => form.handleSubmit()}
+						type="button"
+						onClick={handleCreate}
 						disabled={form.state.isSubmitting || createEntry.isPending}
 					>
 						{createEntry.isPending ? (
@@ -194,19 +266,49 @@ export const EntryCreationModal = ({
 						<form.Field
 							name="label"
 							validators={{
-								onSubmit: ({ value }) => {
+								onSubmit: ({ value, fieldApi }) => {
+									console.log("[EntryCreationModal] Label validator running:", {
+										value,
+										existingEntriesCount: existingEntries.length,
+										existingEntries: existingEntries.map((e) => ({
+											id: e.id,
+											label: e.label,
+											parentId: e.parentId,
+										})),
+									});
+
 									if (!value || !value.trim()) {
+										console.log(
+											"[EntryCreationModal] Validation failed: Label is required",
+										);
 										return "Label is required";
 									}
 
+									// Check if an entry with the same label AND same parent exists
+									const currentParentId =
+										fieldApi.form.getFieldValue("parentId");
 									const exists = existingEntries.some(
-										(e) => e.label.toLowerCase() === value.trim().toLowerCase(),
+										(e) =>
+											e.label.toLowerCase() === value.trim().toLowerCase() &&
+											e.parentId === currentParentId,
 									);
 
 									if (exists) {
-										return "An entry with this label already exists in this index";
+										console.log(
+											"[EntryCreationModal] Validation failed: Entry already exists with same parent",
+											{
+												matchingEntry: existingEntries.find(
+													(e) =>
+														e.label.toLowerCase() ===
+															value.trim().toLowerCase() &&
+														e.parentId === currentParentId,
+												),
+											},
+										);
+										return "An entry with this label already exists under this parent";
 									}
 
+									console.log("[EntryCreationModal] Validation passed");
 									return undefined;
 								},
 							}}

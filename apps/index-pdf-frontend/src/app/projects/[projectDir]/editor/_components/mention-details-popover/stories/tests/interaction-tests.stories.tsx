@@ -590,18 +590,19 @@ export const SelectSingleIndexType: Story = {
 				const selectTrigger = canvas.getByTestId("index-types-select");
 				await userEvent.click(selectTrigger);
 
-				// Wait for dropdown to open
 				await new Promise((resolve) => setTimeout(resolve, 100));
 
 				const body = within(document.body);
 
-				// Deselect Subject first
+				// Deselect Subject by clicking its checkbox
 				const subjectOption = body.getByRole("option", { name: /subject/i });
-				await userEvent.click(subjectOption);
+				const subjectCheckbox = within(subjectOption).getByRole("checkbox");
+				await userEvent.click(subjectCheckbox);
 
-				// Then select Author
+				// Select Author by clicking its checkbox
 				const authorOption = body.getByRole("option", { name: /author/i });
-				await userEvent.click(authorOption);
+				const authorCheckbox = within(authorOption).getByRole("checkbox");
+				await userEvent.click(authorCheckbox);
 			},
 		);
 
@@ -658,18 +659,21 @@ export const SelectMultipleIndexTypes: Story = {
 			const selectTrigger = canvas.getByTestId("index-types-select");
 			await userEvent.click(selectTrigger);
 
-			// Wait for dropdown to open
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const body = within(document.body);
 			const authorOption = body.getByRole("option", { name: /author/i });
-			await userEvent.click(authorOption);
+			const authorCheckbox = within(authorOption).getByRole("checkbox");
+			await userEvent.click(authorCheckbox);
 		});
 
 		await step("Select Scripture as well", async () => {
 			const body = within(document.body);
-			const scriptureOption = body.getByRole("option", { name: /scripture/i });
-			await userEvent.click(scriptureOption);
+			const scriptureOption = body.getByRole("option", {
+				name: /scripture/i,
+			});
+			const scriptureCheckbox = within(scriptureOption).getByRole("checkbox");
+			await userEvent.click(scriptureCheckbox);
 		});
 
 		await step("Close dropdown", async () => {
@@ -741,13 +745,13 @@ export const DeselectIndexType: Story = {
 			const selectTrigger = canvas.getByTestId("index-types-select");
 			await userEvent.click(selectTrigger);
 
-			// Wait for dropdown to open
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			const body = within(document.body);
 			const authorOption = body.getByRole("option", { name: /author/i });
 			await expect(authorOption).toHaveAttribute("data-selected");
-			await userEvent.click(authorOption);
+			const authorCheckbox = within(authorOption).getByRole("checkbox");
+			await userEvent.click(authorCheckbox);
 		});
 
 		await step("Close dropdown", async () => {

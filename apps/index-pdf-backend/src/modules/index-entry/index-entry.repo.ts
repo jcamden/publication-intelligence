@@ -15,6 +15,7 @@ import type {
 	UpdateIndexEntryInput,
 	UpdateIndexEntryParentInput,
 } from "./index-entry.types";
+import { generateSlug } from "./slug-utils";
 
 // ============================================================================
 // Repository Layer - Database queries for IndexEntry
@@ -244,12 +245,31 @@ export const createIndexEntry = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			// Generate slug from label and hierarchy if not provided
+			const slug =
+				input.slug ||
+				(await generateSlug({
+					label: input.label,
+					parentId: input.parentId || null,
+					getEntryById: async (id: string) => {
+						const result = await tx
+							.select({
+								label: indexEntries.label,
+								parentId: indexEntries.parentId,
+							})
+							.from(indexEntries)
+							.where(eq(indexEntries.id, id))
+							.limit(1);
+						return result[0] || null;
+					},
+				}));
+
 			const [entry] = await tx
 				.insert(indexEntries)
 				.values({
 					projectId: input.projectId,
 					projectIndexTypeId: input.projectIndexTypeId,
-					slug: input.slug,
+					slug,
 					label: input.label,
 					description: input.description || null,
 					parentId: input.parentId || null,
@@ -563,6 +583,7 @@ export const updateIndexEntryParent = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			// First update the parentId
 			const result = await tx
 				.update(indexEntries)
 				.set({
@@ -577,6 +598,81 @@ export const updateIndexEntryParent = async ({
 				return null;
 			}
 
+			// Get the updated entry to regenerate its slug
+			const entryData = await tx
+				.select({
+					id: indexEntries.id,
+					label: indexEntries.label,
+					parentId: indexEntries.parentId,
+				})
+				.from(indexEntries)
+				.where(eq(indexEntries.id, input.id))
+				.limit(1);
+
+			if (entryData.length === 0) {
+				return null;
+			}
+
+			// Regenerate slug for the moved entry
+			const newSlug = await generateSlug({
+				label: entryData[0].label,
+				parentId: entryData[0].parentId,
+				getEntryById: async (id: string) => {
+					const result = await tx
+						.select({
+							label: indexEntries.label,
+							parentId: indexEntries.parentId,
+						})
+						.from(indexEntries)
+						.where(eq(indexEntries.id, id))
+						.limit(1);
+					return result[0] || null;
+				},
+			});
+
+			await tx
+				.update(indexEntries)
+				.set({ slug: newSlug })
+				.where(eq(indexEntries.id, input.id));
+
+			// Get all descendants and regenerate their slugs
+			const descendants = await getDescendants({ entryId: input.id, tx });
+
+			for (const descendant of descendants) {
+				const descendantData = await tx
+					.select({
+						label: indexEntries.label,
+						parentId: indexEntries.parentId,
+					})
+					.from(indexEntries)
+					.where(eq(indexEntries.id, descendant.id))
+					.limit(1);
+
+				if (descendantData.length > 0) {
+					const descendantSlug = await generateSlug({
+						label: descendantData[0].label,
+						parentId: descendantData[0].parentId,
+						getEntryById: async (id: string) => {
+							const result = await tx
+								.select({
+									label: indexEntries.label,
+									parentId: indexEntries.parentId,
+								})
+								.from(indexEntries)
+								.where(eq(indexEntries.id, id))
+								.limit(1);
+							return result[0] || null;
+						},
+					});
+
+					await tx
+						.update(indexEntries)
+						.set({ slug: descendantSlug })
+						.where(eq(indexEntries.id, descendant.id));
+				}
+			}
+
+			// Now fetch the final entry with all fields
 			const entry = await tx
 				.select({
 					id: indexEntries.id,
@@ -657,11 +753,23 @@ export const deleteIndexEntry = async ({
 				const descendants = await getDescendants({ entryId: id, tx });
 				const allIds = [id, ...descendants.map((d) => d.id)];
 
+				// Soft-delete all associated mentions
+				await tx
+					.update(indexMentions)
+					.set({ deletedAt: new Date() })
+					.where(inArray(indexMentions.entryId, allIds));
+
 				await tx
 					.update(indexEntries)
 					.set({ deletedAt: new Date() })
 					.where(inArray(indexEntries.id, allIds));
 			} else {
+				// Soft-delete all associated mentions
+				await tx
+					.update(indexMentions)
+					.set({ deletedAt: new Date() })
+					.where(eq(indexMentions.entryId, id));
+
 				await tx
 					.update(indexEntries)
 					.set({ deletedAt: new Date() })

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { IndexEntry } from "../../_types/index-entry";
 import { findEntryByText } from "../../_utils/index-entry-utils";
 import type { Mention } from "../editor/editor";
+import { EntryCreationModal } from "../entry-creation-modal";
 import { EntryPicker } from "../entry-picker";
 
 export type BoundingBox = {
@@ -27,9 +28,11 @@ export type MentionDraft = {
 
 type MentionCreationPopoverProps = {
 	draft: MentionDraft;
-	indexType: string; // NEW: Current index type context
+	indexType: string;
 	entries: IndexEntry[];
 	mentions: Mention[];
+	projectId: string;
+	projectIndexTypeId: string;
 	onAttach: ({
 		entryId,
 		entryLabel,
@@ -42,6 +45,7 @@ type MentionCreationPopoverProps = {
 		pageSublocation?: string;
 	}) => void;
 	onCancel: () => void;
+	onModalStateChange?: (isOpen: boolean) => void;
 };
 
 /**
@@ -62,22 +66,49 @@ export const MentionCreationPopover = ({
 	indexType,
 	entries,
 	mentions: _mentions,
+	projectId,
+	projectIndexTypeId,
 	onAttach,
 	onCancel,
+	onModalStateChange,
 }: MentionCreationPopoverProps) => {
 	const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 	const [selectedEntryLabel, setSelectedEntryLabel] = useState<string | null>(
 		null,
 	);
-	const [inputValue, setInputValue] = useState("");
 	const [entryError, setEntryError] = useState<string | null>(null);
 	const regionNameInputRef = useRef<HTMLInputElement>(null);
 
-	// Filter entries to current index type
-	const entriesForType = useMemo(
-		() => entries.filter((e) => e.indexType === indexType),
-		[entries, indexType],
+	// State for entry creation modal
+	const [createEntryModalOpen, setCreateEntryModalOpen] = useState(false);
+	const [createEntryLabel, setCreateEntryLabel] = useState("");
+	const [createEntryParentId, setCreateEntryParentId] = useState<string | null>(
+		null,
 	);
+
+	// Track entries locally to include newly created ones
+	const [allEntries, setAllEntries] = useState(entries);
+
+	// Update allEntries when entries prop changes
+	useEffect(() => {
+		console.log("[MentionCreationPopover] entries prop changed:", {
+			count: entries.length,
+			labels: entries.map((e) => e.label),
+		});
+		setAllEntries(entries);
+	}, [entries]);
+
+	// Filter entries to current index type
+	const entriesForType = useMemo(() => {
+		const filtered = allEntries.filter((e) => e.indexType === indexType);
+		console.log("[MentionCreationPopover] entriesForType filtered:", {
+			totalEntries: allEntries.length,
+			filteredCount: filtered.length,
+			indexType,
+			allIndexTypes: [...new Set(allEntries.map((e) => e.indexType))],
+		});
+		return filtered;
+	}, [allEntries, indexType]);
 
 	const form = useForm({
 		defaultValues: {
@@ -89,19 +120,46 @@ export const MentionCreationPopover = ({
 		},
 	});
 
-	// Smart autocomplete: Check for exact match on mount
-	useEffect(() => {
-		if (!draft.text) return;
+	// Compute default input value based on selected text (≤3 words)
+	const defaultInputValue = useMemo(() => {
+		if (!draft.text) return "";
+
+		const spaceCount = (draft.text.match(/ /g) || []).length;
+		return spaceCount <= 2 ? draft.text.trim() : "";
+	}, [draft.text]);
+
+	// Check if selected text exactly matches an existing entry
+	const hasExactMatch = useMemo(() => {
+		if (!draft.text) return false;
+
+		const spaceCount = (draft.text.match(/ /g) || []).length;
+		if (spaceCount > 2) return false;
 
 		const exactMatch = findEntryByText({
 			entries: entriesForType,
 			text: draft.text,
 		});
 
-		if (exactMatch) {
-			setSelectedEntryId(exactMatch.id);
-			setSelectedEntryLabel(exactMatch.label);
-			setInputValue(exactMatch.label);
+		return !!exactMatch;
+	}, [draft.text, entriesForType]);
+
+	// Auto-select entry if exact match exists
+	useEffect(() => {
+		if (!draft.text) return;
+
+		const spaceCount = (draft.text.match(/ /g) || []).length;
+
+		if (spaceCount <= 2) {
+			// Check if it matches an existing entry
+			const exactMatch = findEntryByText({
+				entries: entriesForType,
+				text: draft.text,
+			});
+
+			if (exactMatch) {
+				setSelectedEntryId(exactMatch.id);
+				setSelectedEntryLabel(exactMatch.label);
+			}
 		}
 	}, [draft.text, entriesForType]);
 
@@ -110,20 +168,20 @@ export const MentionCreationPopover = ({
 		if (draft.type === "region") {
 			regionNameInputRef.current?.focus();
 		}
-		// Note: EntryPicker doesn't expose focus ref, so we can't auto-focus it
+		// EntryPicker will auto-focus if autoFocus prop is true
 	}, [draft.type]);
 
-	// Re-add escape key handler for standalone usage (tests)
+	// Escape key handler - don't close popover if modal is open
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape") {
+			if (e.key === "Escape" && !createEntryModalOpen) {
 				onCancel();
 			}
 		};
 
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [onCancel]);
+	}, [onCancel, createEntryModalOpen]);
 
 	const truncatedText =
 		draft.text.length > 60 ? `${draft.text.substring(0, 60)}...` : draft.text;
@@ -148,13 +206,7 @@ export const MentionCreationPopover = ({
 
 		// Validate entry selection
 		if (!selectedEntryId) {
-			if (inputValue.trim()) {
-				setEntryError(
-					"Please select an entry or press Enter to create a new one",
-				);
-			} else {
-				setEntryError("Please select or create an entry");
-			}
+			setEntryError("Please select or create an entry");
 			hasErrors = true;
 		}
 
@@ -185,6 +237,61 @@ export const MentionCreationPopover = ({
 	const handleFormSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
 		handleSubmit();
+	};
+
+	const handleCreateEntry = ({
+		label,
+		parentId,
+	}: {
+		label: string;
+		parentId: string | null;
+	}) => {
+		console.log("[MentionCreationPopover] Opening entry creation modal");
+		setCreateEntryLabel(label);
+		setCreateEntryParentId(parentId);
+		setCreateEntryModalOpen(true);
+		onModalStateChange?.(true);
+	};
+
+	const handleEntryCreated = (newEntry: IndexEntry) => {
+		console.log("[MentionCreationPopover] Entry created:", {
+			entry: newEntry,
+			indexType: newEntry.indexType,
+			currentIndexType: indexType,
+			matches: newEntry.indexType === indexType,
+			currentAllEntriesCount: allEntries.length,
+		});
+
+		// Add to local entries list
+		setAllEntries((prev) => {
+			console.log("[MentionCreationPopover] Adding to local entries:", {
+				prevCount: prev.length,
+				newEntryId: newEntry.id,
+				newEntryLabel: newEntry.label,
+			});
+			const updated = [...prev, newEntry];
+			console.log("[MentionCreationPopover] Updated allEntries:", {
+				previousCount: prev.length,
+				newCount: updated.length,
+				newEntry: newEntry,
+			});
+			return updated;
+		});
+
+		// Auto-select the new entry
+		setSelectedEntryId(newEntry.id);
+		setSelectedEntryLabel(newEntry.label);
+		setEntryError(null);
+
+		// Close modal
+		setCreateEntryModalOpen(false);
+		onModalStateChange?.(false);
+	};
+
+	const handleModalClose = () => {
+		console.log("[MentionCreationPopover] Modal closed (cancel)");
+		setCreateEntryModalOpen(false);
+		onModalStateChange?.(false);
 	};
 
 	return (
@@ -237,6 +344,11 @@ export const MentionCreationPopover = ({
 							setEntryError(null);
 						}}
 						placeholder="Select entry..."
+						showCreateOption={true}
+						onCreateEntry={handleCreateEntry}
+						autoFocus={draft.type === "text" && !hasExactMatch}
+						defaultOpen={draft.type === "text" && !hasExactMatch}
+						defaultInputValue={defaultInputValue}
 					/>
 					{entryError && <FieldError errors={[{ message: entryError }]} />}
 				</div>
@@ -272,6 +384,18 @@ export const MentionCreationPopover = ({
 					</Button>
 				</div>
 			</form>
+
+			{/* Entry Creation Modal */}
+			<EntryCreationModal
+				open={createEntryModalOpen}
+				onClose={handleModalClose}
+				projectId={projectId}
+				projectIndexTypeId={projectIndexTypeId}
+				existingEntries={entriesForType}
+				prefillLabel={createEntryLabel}
+				prefillParentId={createEntryParentId}
+				onEntryCreated={handleEntryCreated}
+			/>
 		</>
 	);
 };

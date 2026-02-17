@@ -130,13 +130,13 @@ describe("ProjectIndexType API (Integration)", () => {
 				payload: {
 					projectId: testProjectId,
 					highlightType: "subject",
-					colorHue: 230, // Blue hue (subject default)
+					colorHue: 85, // Yellow hue (subject default)
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.colorHue).toBe(230);
+			expect(body.result.data.colorHue).toBe(85);
 			expect(body.result.data.visible).toBe(true);
 		});
 

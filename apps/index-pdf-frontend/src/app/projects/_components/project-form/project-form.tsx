@@ -33,14 +33,14 @@ const ALL_INDEX_TYPES = [
 		id: "subject" as const,
 		displayName: "Subject Index",
 		description: "Topical index of key concepts, themes, and subjects",
-		defaultHue: 230, // Blue
+		defaultHue: 85, // Yellow
 		availableByDefault: true, // All users have access
 	},
 	{
 		id: "author" as const,
 		displayName: "Author Index",
 		description: "Index of cited authors and their works",
-		defaultHue: 270, // Purple
+		defaultHue: 230, // Blue
 		availableByDefault: false,
 	},
 	{

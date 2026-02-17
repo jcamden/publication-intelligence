@@ -3,7 +3,6 @@ import { db, withUserContext } from "../../db/client";
 import {
 	indexEntries,
 	indexMentions,
-	indexMentionTypes,
 	projectIndexTypes,
 	sourceDocuments,
 } from "../../db/schema";
@@ -33,10 +32,11 @@ export const listIndexMentions = async ({
 	projectIndexTypeIds?: string[];
 	includeDeleted?: boolean;
 }): Promise<IndexMentionListItem[]> => {
-	const baseQuery = db
+	const mentions = await db
 		.select({
 			id: indexMentions.id,
 			entryId: indexMentions.entryId,
+			projectIndexTypeId: indexMentions.projectIndexTypeId,
 			pageNumber: indexMentions.pageNumber,
 			textSpan: indexMentions.textSpan,
 			bboxes: indexMentions.bboxes,
@@ -59,75 +59,53 @@ export const listIndexMentions = async ({
 				eq(sourceDocuments.projectId, projectId),
 				documentId ? eq(indexMentions.documentId, documentId) : undefined,
 				pageNumber ? eq(indexMentions.pageNumber, pageNumber) : undefined,
+				projectIndexTypeIds && projectIndexTypeIds.length > 0
+					? inArray(indexMentions.projectIndexTypeId, projectIndexTypeIds)
+					: undefined,
 				includeDeleted ? undefined : isNull(indexMentions.deletedAt),
 			),
 		)
 		.orderBy(indexMentions.pageNumber, indexMentions.createdAt);
 
-	const mentions = await baseQuery;
-
 	if (mentions.length === 0) {
 		return [];
 	}
 
-	const mentionIds = mentions.map((m) => m.id);
-
-	const mentionTypesData = await db
+	const uniqueTypeIds = [...new Set(mentions.map((m) => m.projectIndexTypeId))];
+	const indexTypes = await db
 		.select({
-			mentionId: indexMentionTypes.indexMentionId,
-			projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
+			id: projectIndexTypes.id,
 			indexType: projectIndexTypes.highlightType,
 			colorHue: projectIndexTypes.colorHue,
 		})
-		.from(indexMentionTypes)
-		.innerJoin(
-			projectIndexTypes,
-			eq(indexMentionTypes.projectIndexTypeId, projectIndexTypes.id),
-		)
-		.where(inArray(indexMentionTypes.indexMentionId, mentionIds));
+		.from(projectIndexTypes)
+		.where(inArray(projectIndexTypes.id, uniqueTypeIds));
 
-	const mentionTypesMap = new Map<
-		string,
-		Array<{
-			projectIndexTypeId: string;
-			indexType: string;
-			colorHue: number;
-		}>
-	>();
+	const indexTypeMap = new Map(indexTypes.map((t) => [t.id, t]));
 
-	for (const mt of mentionTypesData) {
-		const existing = mentionTypesMap.get(mt.mentionId) || [];
-		existing.push({
-			projectIndexTypeId: mt.projectIndexTypeId,
-			indexType: mt.indexType,
-			colorHue: mt.colorHue,
-		});
-		mentionTypesMap.set(mt.mentionId, existing);
-	}
-
-	let filteredMentions = mentions;
-
-	if (projectIndexTypeIds && projectIndexTypeIds.length > 0) {
-		filteredMentions = mentions.filter((mention) => {
-			const types = mentionTypesMap.get(mention.id) || [];
-			return types.some((t) =>
-				projectIndexTypeIds.includes(t.projectIndexTypeId),
-			);
-		});
-	}
-
-	return filteredMentions.map((mention) => ({
-		id: mention.id,
-		entryId: mention.entryId,
-		entry: mention.entry,
-		pageNumber: mention.pageNumber,
-		textSpan: mention.textSpan,
-		bboxes: mention.bboxes as unknown as BoundingBox[] | null,
-		mentionType: mention.mentionType,
-		detectionRunId: mention.detectionRunId,
-		indexTypes: mentionTypesMap.get(mention.id) || [],
-		createdAt: mention.createdAt.toISOString(),
-	}));
+	return mentions.map((mention) => {
+		const indexType = indexTypeMap.get(mention.projectIndexTypeId);
+		return {
+			id: mention.id,
+			entryId: mention.entryId,
+			entry: mention.entry,
+			pageNumber: mention.pageNumber,
+			textSpan: mention.textSpan,
+			bboxes: mention.bboxes as unknown as BoundingBox[] | null,
+			mentionType: mention.mentionType,
+			detectionRunId: mention.detectionRunId,
+			indexTypes: indexType
+				? [
+						{
+							projectIndexTypeId: mention.projectIndexTypeId,
+							indexType: indexType.indexType,
+							colorHue: indexType.colorHue,
+						},
+					]
+				: [],
+			createdAt: mention.createdAt.toISOString(),
+		};
+	});
 };
 
 export const getIndexMentionById = async ({
@@ -139,6 +117,7 @@ export const getIndexMentionById = async ({
 		.select({
 			id: indexMentions.id,
 			entryId: indexMentions.entryId,
+			projectIndexTypeId: indexMentions.projectIndexTypeId,
 			documentId: indexMentions.documentId,
 			pageNumber: indexMentions.pageNumber,
 			pageNumberEnd: indexMentions.pageNumberEnd,
@@ -172,22 +151,15 @@ export const getIndexMentionById = async ({
 
 	const mention = result[0];
 
-	const types = await db
+	const [indexType] = await db
 		.select({
-			id: indexMentionTypes.id,
-			projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-			projectIndexType: {
-				id: projectIndexTypes.id,
-				indexType: projectIndexTypes.highlightType,
-				colorHue: projectIndexTypes.colorHue,
-			},
+			id: projectIndexTypes.id,
+			indexType: projectIndexTypes.highlightType,
+			colorHue: projectIndexTypes.colorHue,
 		})
-		.from(indexMentionTypes)
-		.innerJoin(
-			projectIndexTypes,
-			eq(indexMentionTypes.projectIndexTypeId, projectIndexTypes.id),
-		)
-		.where(eq(indexMentionTypes.indexMentionId, id));
+		.from(projectIndexTypes)
+		.where(eq(projectIndexTypes.id, mention.projectIndexTypeId))
+		.limit(1);
 
 	return {
 		id: mention.id,
@@ -209,15 +181,29 @@ export const getIndexMentionById = async ({
 		updatedAt: mention.updatedAt?.toISOString() || null,
 		deletedAt: mention.deletedAt?.toISOString() || null,
 		entry: mention.entry,
-		indexTypes: types,
+		indexTypes: indexType
+			? [
+					{
+						id: indexType.id,
+						projectIndexTypeId: mention.projectIndexTypeId,
+						projectIndexType: {
+							id: indexType.id,
+							indexType: indexType.indexType,
+							colorHue: indexType.colorHue,
+						},
+					},
+				]
+			: [],
 	};
 };
 
 export const createIndexMention = async ({
 	input,
+	projectIndexTypeId,
 	userId,
 }: {
 	input: CreateIndexMentionInput;
+	projectIndexTypeId: string;
 	userId: string;
 }): Promise<IndexMention> => {
 	return await withUserContext({
@@ -227,6 +213,7 @@ export const createIndexMention = async ({
 				.insert(indexMentions)
 				.values({
 					entryId: input.entryId,
+					projectIndexTypeId,
 					documentId: input.documentId,
 					pageNumber: input.pageNumber,
 					textSpan: input.textSpan,
@@ -242,13 +229,6 @@ export const createIndexMention = async ({
 				throw new Error("Failed to create index mention");
 			}
 
-			await tx.insert(indexMentionTypes).values(
-				input.projectIndexTypeIds.map((projectIndexTypeId) => ({
-					indexMentionId: mention.id,
-					projectIndexTypeId,
-				})),
-			);
-
 			const entry = await tx
 				.select({
 					id: indexEntries.id,
@@ -259,22 +239,15 @@ export const createIndexMention = async ({
 				.where(eq(indexEntries.id, input.entryId))
 				.limit(1);
 
-			const types = await tx
+			const [indexType] = await tx
 				.select({
-					id: indexMentionTypes.id,
-					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-					projectIndexType: {
-						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.highlightType,
-						colorHue: projectIndexTypes.colorHue,
-					},
+					id: projectIndexTypes.id,
+					indexType: projectIndexTypes.highlightType,
+					colorHue: projectIndexTypes.colorHue,
 				})
-				.from(indexMentionTypes)
-				.innerJoin(
-					projectIndexTypes,
-					eq(indexMentionTypes.projectIndexTypeId, projectIndexTypes.id),
-				)
-				.where(eq(indexMentionTypes.indexMentionId, mention.id));
+				.from(projectIndexTypes)
+				.where(eq(projectIndexTypes.id, projectIndexTypeId))
+				.limit(1);
 
 			return {
 				id: mention.id,
@@ -296,7 +269,19 @@ export const createIndexMention = async ({
 				updatedAt: mention.updatedAt?.toISOString() || null,
 				deletedAt: mention.deletedAt?.toISOString() || null,
 				entry: entry[0] || undefined,
-				indexTypes: types,
+				indexTypes: indexType
+					? [
+							{
+								id: indexType.id,
+								projectIndexTypeId: projectIndexTypeId,
+								projectIndexType: {
+									id: indexType.id,
+									indexType: indexType.indexType,
+									colorHue: indexType.colorHue,
+								},
+							},
+						]
+					: [],
 			};
 		},
 	});
@@ -304,9 +289,11 @@ export const createIndexMention = async ({
 
 export const updateIndexMention = async ({
 	input,
+	projectIndexTypeId,
 	userId,
 }: {
 	input: UpdateIndexMentionInput;
+	projectIndexTypeId?: string;
 	userId: string;
 }): Promise<IndexMention | null> => {
 	return await withUserContext({
@@ -318,6 +305,10 @@ export const updateIndexMention = async ({
 
 			if (input.entryId !== undefined) {
 				updateValues.entryId = input.entryId;
+			}
+
+			if (projectIndexTypeId !== undefined) {
+				updateValues.projectIndexTypeId = projectIndexTypeId;
 			}
 
 			if (input.textSpan !== undefined) {
@@ -337,25 +328,11 @@ export const updateIndexMention = async ({
 				return null;
 			}
 
-			if (input.projectIndexTypeIds !== undefined) {
-				await tx
-					.delete(indexMentionTypes)
-					.where(eq(indexMentionTypes.indexMentionId, input.id));
-
-				if (input.projectIndexTypeIds.length > 0) {
-					await tx.insert(indexMentionTypes).values(
-						input.projectIndexTypeIds.map((projectIndexTypeId) => ({
-							indexMentionId: input.id,
-							projectIndexTypeId,
-						})),
-					);
-				}
-			}
-
 			const mention = await tx
 				.select({
 					id: indexMentions.id,
 					entryId: indexMentions.entryId,
+					projectIndexTypeId: indexMentions.projectIndexTypeId,
 					documentId: indexMentions.documentId,
 					pageNumber: indexMentions.pageNumber,
 					pageNumberEnd: indexMentions.pageNumberEnd,
@@ -381,6 +358,8 @@ export const updateIndexMention = async ({
 				return null;
 			}
 
+			const m = mention[0];
+
 			const entry = await tx
 				.select({
 					id: indexEntries.id,
@@ -388,27 +367,19 @@ export const updateIndexMention = async ({
 					projectIndexTypeId: indexEntries.projectIndexTypeId,
 				})
 				.from(indexEntries)
-				.where(eq(indexEntries.id, mention[0].entryId))
+				.where(eq(indexEntries.id, m.entryId))
 				.limit(1);
 
-			const types = await tx
+			const [indexType] = await tx
 				.select({
-					id: indexMentionTypes.id,
-					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-					projectIndexType: {
-						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.highlightType,
-						colorHue: projectIndexTypes.colorHue,
-					},
+					id: projectIndexTypes.id,
+					indexType: projectIndexTypes.highlightType,
+					colorHue: projectIndexTypes.colorHue,
 				})
-				.from(indexMentionTypes)
-				.innerJoin(
-					projectIndexTypes,
-					eq(indexMentionTypes.projectIndexTypeId, projectIndexTypes.id),
-				)
-				.where(eq(indexMentionTypes.indexMentionId, input.id));
+				.from(projectIndexTypes)
+				.where(eq(projectIndexTypes.id, m.projectIndexTypeId))
+				.limit(1);
 
-			const m = mention[0];
 			return {
 				id: m.id,
 				entryId: m.entryId,
@@ -429,176 +400,40 @@ export const updateIndexMention = async ({
 				updatedAt: m.updatedAt?.toISOString() || null,
 				deletedAt: m.deletedAt?.toISOString() || null,
 				entry: entry[0] || undefined,
-				indexTypes: types,
+				indexTypes: indexType
+					? [
+							{
+								id: indexType.id,
+								projectIndexTypeId: m.projectIndexTypeId,
+								projectIndexType: {
+									id: indexType.id,
+									indexType: indexType.indexType,
+									colorHue: indexType.colorHue,
+								},
+							},
+						]
+					: [],
 			};
 		},
 	});
 };
 
-export const updateIndexMentionTypes = async ({
-	input,
-	userId,
-}: {
+export const updateIndexMentionTypes = async (_params: {
 	input: UpdateIndexMentionTypesInput;
 	userId: string;
 }): Promise<IndexMention[]> => {
-	return await withUserContext({
-		userId,
-		fn: async (tx) => {
-			for (const mentionId of input.mentionIds) {
-				if (input.operation === "replace") {
-					await tx
-						.delete(indexMentionTypes)
-						.where(eq(indexMentionTypes.indexMentionId, mentionId));
-
-					await tx.insert(indexMentionTypes).values(
-						input.projectIndexTypeIds.map((projectIndexTypeId) => ({
-							indexMentionId: mentionId,
-							projectIndexTypeId,
-						})),
-					);
-				} else if (input.operation === "add") {
-					const existing = await tx
-						.select({
-							projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-						})
-						.from(indexMentionTypes)
-						.where(eq(indexMentionTypes.indexMentionId, mentionId));
-
-					const existingIds = new Set(
-						existing.map((e) => e.projectIndexTypeId),
-					);
-					const newIds = input.projectIndexTypeIds.filter(
-						(id) => !existingIds.has(id),
-					);
-
-					if (newIds.length > 0) {
-						await tx.insert(indexMentionTypes).values(
-							newIds.map((projectIndexTypeId) => ({
-								indexMentionId: mentionId,
-								projectIndexTypeId,
-							})),
-						);
-					}
-				} else if (input.operation === "remove") {
-					await tx
-						.delete(indexMentionTypes)
-						.where(
-							and(
-								eq(indexMentionTypes.indexMentionId, mentionId),
-								inArray(
-									indexMentionTypes.projectIndexTypeId,
-									input.projectIndexTypeIds,
-								),
-							),
-						);
-				}
-
-				await tx
-					.update(indexMentions)
-					.set({
-						updatedAt: new Date(),
-						revision: sql`${indexMentions.revision} + 1`,
-					})
-					.where(eq(indexMentions.id, mentionId));
-			}
-
-			const mentions = await tx
-				.select({
-					id: indexMentions.id,
-					entryId: indexMentions.entryId,
-					documentId: indexMentions.documentId,
-					pageNumber: indexMentions.pageNumber,
-					pageNumberEnd: indexMentions.pageNumberEnd,
-					textSpan: indexMentions.textSpan,
-					startOffset: indexMentions.startOffset,
-					endOffset: indexMentions.endOffset,
-					bboxes: indexMentions.bboxes,
-					rangeType: indexMentions.rangeType,
-					mentionType: indexMentions.mentionType,
-					suggestedByLlmId: indexMentions.suggestedByLlmId,
-					detectionRunId: indexMentions.detectionRunId,
-					note: indexMentions.note,
-					revision: indexMentions.revision,
-					createdAt: indexMentions.createdAt,
-					updatedAt: indexMentions.updatedAt,
-					deletedAt: indexMentions.deletedAt,
-				})
-				.from(indexMentions)
-				.where(inArray(indexMentions.id, input.mentionIds));
-
-			const entryIds = [...new Set(mentions.map((m) => m.entryId))];
-			const entries = await tx
-				.select({
-					id: indexEntries.id,
-					label: indexEntries.label,
-					projectIndexTypeId: indexEntries.projectIndexTypeId,
-				})
-				.from(indexEntries)
-				.where(inArray(indexEntries.id, entryIds));
-
-			const entryMap = new Map(entries.map((e) => [e.id, e]));
-
-			const allTypes = await tx
-				.select({
-					mentionId: indexMentionTypes.indexMentionId,
-					id: indexMentionTypes.id,
-					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-					projectIndexType: {
-						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.highlightType,
-						colorHue: projectIndexTypes.colorHue,
-					},
-				})
-				.from(indexMentionTypes)
-				.innerJoin(
-					projectIndexTypes,
-					eq(indexMentionTypes.projectIndexTypeId, projectIndexTypes.id),
-				)
-				.where(inArray(indexMentionTypes.indexMentionId, input.mentionIds));
-
-			const typesMap = new Map<string, typeof allTypes>();
-			for (const type of allTypes) {
-				const existing = typesMap.get(type.mentionId) || [];
-				existing.push(type);
-				typesMap.set(type.mentionId, existing);
-			}
-
-			return mentions.map((m) => ({
-				id: m.id,
-				entryId: m.entryId,
-				documentId: m.documentId,
-				pageNumber: m.pageNumber,
-				pageNumberEnd: m.pageNumberEnd,
-				textSpan: m.textSpan,
-				startOffset: m.startOffset,
-				endOffset: m.endOffset,
-				bboxes: m.bboxes as unknown as BoundingBox[] | null,
-				rangeType: m.rangeType,
-				mentionType: m.mentionType,
-				suggestedByLlmId: m.suggestedByLlmId,
-				detectionRunId: m.detectionRunId,
-				note: m.note,
-				revision: m.revision,
-				createdAt: m.createdAt.toISOString(),
-				updatedAt: m.updatedAt?.toISOString() || null,
-				deletedAt: m.deletedAt?.toISOString() || null,
-				entry: entryMap.get(m.entryId),
-				indexTypes: (typesMap.get(m.id) || []).map((t) => ({
-					id: t.id,
-					projectIndexTypeId: t.projectIndexTypeId,
-					projectIndexType: t.projectIndexType,
-				})),
-			}));
-		},
-	});
+	throw new Error(
+		"updateIndexMentionTypes is no longer supported. Mentions inherit their index type from their entry. To change a mention's index type, move it to an entry with the desired type using updateIndexMention with a new entryId.",
+	);
 };
 
 export const bulkCreateIndexMentions = async ({
 	mentions,
+	entryTypeMap,
 	userId,
 }: {
 	mentions: CreateIndexMentionInput[];
+	entryTypeMap: Map<string, string>;
 	userId: string;
 }): Promise<IndexMention[]> => {
 	return await withUserContext({
@@ -607,28 +442,28 @@ export const bulkCreateIndexMentions = async ({
 			const createdMentions = await tx
 				.insert(indexMentions)
 				.values(
-					mentions.map((m) => ({
-						entryId: m.entryId,
-						documentId: m.documentId,
-						pageNumber: m.pageNumber,
-						textSpan: m.textSpan,
-						bboxes:
-							m.bboxesPdf as unknown as typeof indexMentions.$inferInsert.bboxes,
-						rangeType: "single_page" as const,
-						mentionType: m.mentionType,
-						revision: 1,
-					})),
+					mentions.map((m) => {
+						const projectIndexTypeId = entryTypeMap.get(m.entryId);
+						if (!projectIndexTypeId) {
+							throw new Error(
+								`No projectIndexTypeId found for entry ${m.entryId}`,
+							);
+						}
+						return {
+							entryId: m.entryId,
+							projectIndexTypeId,
+							documentId: m.documentId,
+							pageNumber: m.pageNumber,
+							textSpan: m.textSpan,
+							bboxes:
+								m.bboxesPdf as unknown as typeof indexMentions.$inferInsert.bboxes,
+							rangeType: "single_page" as const,
+							mentionType: m.mentionType,
+							revision: 1,
+						};
+					}),
 				)
 				.returning();
-
-			const mentionTypeValues = createdMentions.flatMap((mention, index) =>
-				mentions[index].projectIndexTypeIds.map((projectIndexTypeId) => ({
-					indexMentionId: mention.id,
-					projectIndexTypeId,
-				})),
-			);
-
-			await tx.insert(indexMentionTypes).values(mentionTypeValues);
 
 			const entryIds = [...new Set(mentions.map((m) => m.entryId))];
 			const entries = await tx
@@ -642,58 +477,57 @@ export const bulkCreateIndexMentions = async ({
 
 			const entryMap = new Map(entries.map((e) => [e.id, e]));
 
-			const mentionIds = createdMentions.map((m) => m.id);
-			const allTypes = await tx
+			const projectIndexTypeIds = [
+				...new Set(createdMentions.map((m) => m.projectIndexTypeId)),
+			];
+			const indexTypes = await tx
 				.select({
-					mentionId: indexMentionTypes.indexMentionId,
-					id: indexMentionTypes.id,
-					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-					projectIndexType: {
-						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.highlightType,
-						colorHue: projectIndexTypes.colorHue,
-					},
+					id: projectIndexTypes.id,
+					indexType: projectIndexTypes.highlightType,
+					colorHue: projectIndexTypes.colorHue,
 				})
-				.from(indexMentionTypes)
-				.innerJoin(
-					projectIndexTypes,
-					eq(indexMentionTypes.projectIndexTypeId, projectIndexTypes.id),
-				)
-				.where(inArray(indexMentionTypes.indexMentionId, mentionIds));
+				.from(projectIndexTypes)
+				.where(inArray(projectIndexTypes.id, projectIndexTypeIds));
 
-			const typesMap = new Map<string, typeof allTypes>();
-			for (const type of allTypes) {
-				const existing = typesMap.get(type.mentionId) || [];
-				existing.push(type);
-				typesMap.set(type.mentionId, existing);
-			}
+			const indexTypeMap = new Map(indexTypes.map((t) => [t.id, t]));
 
-			return createdMentions.map((m) => ({
-				id: m.id,
-				entryId: m.entryId,
-				documentId: m.documentId,
-				pageNumber: m.pageNumber,
-				pageNumberEnd: m.pageNumberEnd,
-				textSpan: m.textSpan,
-				startOffset: m.startOffset,
-				endOffset: m.endOffset,
-				bboxes: m.bboxes as unknown as BoundingBox[] | null,
-				rangeType: m.rangeType,
-				mentionType: m.mentionType,
-				suggestedByLlmId: m.suggestedByLlmId,
-				detectionRunId: m.detectionRunId,
-				note: m.note,
-				revision: m.revision,
-				createdAt: m.createdAt.toISOString(),
-				updatedAt: m.updatedAt?.toISOString() || null,
-				deletedAt: m.deletedAt?.toISOString() || null,
-				entry: entryMap.get(m.entryId),
-				indexTypes: (typesMap.get(m.id) || []).map((t) => ({
-					id: t.id,
-					projectIndexTypeId: t.projectIndexTypeId,
-					projectIndexType: t.projectIndexType,
-				})),
-			}));
+			return createdMentions.map((m) => {
+				const indexType = indexTypeMap.get(m.projectIndexTypeId);
+				return {
+					id: m.id,
+					entryId: m.entryId,
+					documentId: m.documentId,
+					pageNumber: m.pageNumber,
+					pageNumberEnd: m.pageNumberEnd,
+					textSpan: m.textSpan,
+					startOffset: m.startOffset,
+					endOffset: m.endOffset,
+					bboxes: m.bboxes as unknown as BoundingBox[] | null,
+					rangeType: m.rangeType,
+					mentionType: m.mentionType,
+					suggestedByLlmId: m.suggestedByLlmId,
+					detectionRunId: m.detectionRunId,
+					note: m.note,
+					revision: m.revision,
+					createdAt: m.createdAt.toISOString(),
+					updatedAt: m.updatedAt?.toISOString() || null,
+					deletedAt: m.deletedAt?.toISOString() || null,
+					entry: entryMap.get(m.entryId),
+					indexTypes: indexType
+						? [
+								{
+									id: indexType.id,
+									projectIndexTypeId: m.projectIndexTypeId,
+									projectIndexType: {
+										id: indexType.id,
+										indexType: indexType.indexType,
+										colorHue: indexType.colorHue,
+									},
+								},
+							]
+						: [],
+				};
+			});
 		},
 	});
 };
@@ -747,6 +581,7 @@ export const deleteIndexMention = async ({
 				.select({
 					id: indexMentions.id,
 					entryId: indexMentions.entryId,
+					projectIndexTypeId: indexMentions.projectIndexTypeId,
 					documentId: indexMentions.documentId,
 					pageNumber: indexMentions.pageNumber,
 					pageNumberEnd: indexMentions.pageNumberEnd,
@@ -772,6 +607,8 @@ export const deleteIndexMention = async ({
 				return null;
 			}
 
+			const m = mention[0];
+
 			const entry = await tx
 				.select({
 					id: indexEntries.id,
@@ -779,27 +616,19 @@ export const deleteIndexMention = async ({
 					projectIndexTypeId: indexEntries.projectIndexTypeId,
 				})
 				.from(indexEntries)
-				.where(eq(indexEntries.id, mention[0].entryId))
+				.where(eq(indexEntries.id, m.entryId))
 				.limit(1);
 
-			const types = await tx
+			const [indexType] = await tx
 				.select({
-					id: indexMentionTypes.id,
-					projectIndexTypeId: indexMentionTypes.projectIndexTypeId,
-					projectIndexType: {
-						id: projectIndexTypes.id,
-						indexType: projectIndexTypes.highlightType,
-						colorHue: projectIndexTypes.colorHue,
-					},
+					id: projectIndexTypes.id,
+					indexType: projectIndexTypes.highlightType,
+					colorHue: projectIndexTypes.colorHue,
 				})
-				.from(indexMentionTypes)
-				.innerJoin(
-					projectIndexTypes,
-					eq(indexMentionTypes.projectIndexTypeId, projectIndexTypes.id),
-				)
-				.where(eq(indexMentionTypes.indexMentionId, id));
+				.from(projectIndexTypes)
+				.where(eq(projectIndexTypes.id, m.projectIndexTypeId))
+				.limit(1);
 
-			const m = mention[0];
 			return {
 				id: m.id,
 				entryId: m.entryId,
@@ -820,7 +649,19 @@ export const deleteIndexMention = async ({
 				updatedAt: m.updatedAt?.toISOString() || null,
 				deletedAt: m.deletedAt?.toISOString() || null,
 				entry: entry[0] || undefined,
-				indexTypes: types,
+				indexTypes: indexType
+					? [
+							{
+								id: indexType.id,
+								projectIndexTypeId: m.projectIndexTypeId,
+								projectIndexType: {
+									id: indexType.id,
+									indexType: indexType.indexType,
+									colorHue: indexType.colorHue,
+								},
+							},
+						]
+					: [],
 			};
 		},
 	});

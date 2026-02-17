@@ -188,7 +188,7 @@ export const TwoTypes: Story = {
 		const highlight: PdfHighlight = {
 			...mockHighlight,
 			metadata: {
-				hues: [230, 160], // subject (blue), scripture (green)
+				hues: [85, 160], // subject (yellow), scripture (green)
 			},
 		};
 		return renderContainer(
@@ -198,7 +198,7 @@ export const TwoTypes: Story = {
 };
 
 /**
- * Three index types - Subject + Author + Scripture (blue/purple/green stripes)
+ * Three index types - Subject + Author + Scripture (yellow/blue/green stripes)
  */
 export const ThreeTypes: Story = {
 	globals: {
@@ -208,7 +208,7 @@ export const ThreeTypes: Story = {
 		const highlight: PdfHighlight = {
 			...mockHighlight,
 			metadata: {
-				hues: [230, 270, 160], // subject (blue), author (purple), scripture (green)
+				hues: [85, 230, 160], // subject (yellow), author (blue), scripture (green)
 			},
 		};
 		return renderContainer(
@@ -218,7 +218,7 @@ export const ThreeTypes: Story = {
 };
 
 /**
- * Three types hover state (blue/purple/green stripes with hover)
+ * Three types hover state (yellow/blue/green stripes with hover)
  */
 export const ThreeTypesHover: Story = {
 	globals: {
@@ -233,7 +233,7 @@ export const ThreeTypesHover: Story = {
 		const highlight: PdfHighlight = {
 			...mockHighlight,
 			metadata: {
-				hues: [230, 270, 160], // subject (blue), author (purple), scripture (green)
+				hues: [85, 230, 160], // subject (yellow), author (blue), scripture (green)
 			},
 		};
 		return renderContainer(

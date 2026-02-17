@@ -1,7 +1,7 @@
 "use client";
 
 import { ErrorState } from "@pubint/yaboujee";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useUpdateEntryParent } from "@/app/_common/_hooks/use-update-entry-parent";
 import type { IndexEntry } from "../../_types/index-entry";
 import { DeleteEntryDialog } from "../delete-entry-dialog/delete-entry-dialog";
@@ -25,7 +25,7 @@ export type EntryTreeProps = {
 
 type EntryTreeNodeProps = {
 	entry: IndexEntry;
-	entries: IndexEntry[]; // All entries (for finding children)
+	entries: IndexEntry[]; // All entries (for finding children and cross references)
 	mentions: Mention[]; // For counts
 	depth: number;
 	projectId?: string;
@@ -68,6 +68,7 @@ const EntryTreeNode = ({
 			<EntryItem
 				entry={entry}
 				mentions={mentions}
+				allEntries={entries}
 				depth={depth}
 				hasChildren={hasChildren}
 				expanded={expanded}
@@ -118,12 +119,28 @@ export const EntryTree = ({
 	isLoading = false,
 	error = null,
 }: EntryTreeProps) => {
+	console.log("[EntryTree] Rendering with entries:", {
+		count: entries.length,
+		entries: entries.map((e) => ({ id: e.id, label: e.label })),
+	});
+
 	const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
 	const [isRootDropTarget, setIsRootDropTarget] = useState(false);
 	const [editingEntry, setEditingEntry] = useState<IndexEntry | null>(null);
 	const [deletingEntry, setDeletingEntry] = useState<IndexEntry | null>(null);
 	const [mergingEntry, setMergingEntry] = useState<IndexEntry | null>(null);
 	const updateParent = useUpdateEntryParent({ projectId });
+
+	// Clear deletingEntry if it no longer exists in the entries list
+	useEffect(() => {
+		if (deletingEntry && !entries.find((e) => e.id === deletingEntry.id)) {
+			console.log("[EntryTree] Clearing stale deletingEntry:", {
+				deletedId: deletingEntry.id,
+				deletedLabel: deletingEntry.label,
+			});
+			setDeletingEntry(null);
+		}
+	}, [entries, deletingEntry]);
 
 	const topLevelEntries = useMemo(
 		() => entries.filter((e) => e.parentId === null),
@@ -236,7 +253,13 @@ export const EntryTree = ({
 						onDrop={handleDrop}
 						draggedEntryId={draggedEntryId}
 						onEdit={setEditingEntry}
-						onDelete={setDeletingEntry}
+						onDelete={(entry) => {
+							console.log("[EntryTree] onDelete called with entry:", {
+								id: entry.id,
+								label: entry.label,
+							});
+							setDeletingEntry(entry);
+						}}
 						onMerge={setMergingEntry}
 					/>
 				))}
@@ -264,13 +287,19 @@ export const EntryTree = ({
 				/>
 			)}
 			{deletingEntry && (
-				<DeleteEntryDialog
-					entry={deletingEntry}
-					open={true}
-					onOpenChange={(open) => {
-						if (!open) setDeletingEntry(null);
-					}}
-				/>
+				<>
+					{console.log("[EntryTree] Rendering DeleteEntryDialog:", {
+						deletingEntryId: deletingEntry.id,
+						deletingEntryLabel: deletingEntry.label,
+					})}
+					<DeleteEntryDialog
+						entry={deletingEntry}
+						open={true}
+						onOpenChange={(open) => {
+							if (!open) setDeletingEntry(null);
+						}}
+					/>
+				</>
 			)}
 		</>
 	);

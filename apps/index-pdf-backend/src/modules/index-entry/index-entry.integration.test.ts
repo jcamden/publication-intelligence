@@ -94,7 +94,6 @@ describe("IndexEntry API (Integration)", () => {
 					projectId: testProjectId,
 					projectIndexTypeId: subjectIndexTypeId,
 					label: "Theology",
-					slug: "theology",
 					description: "Study of religious faith",
 				},
 			});
@@ -119,7 +118,6 @@ describe("IndexEntry API (Integration)", () => {
 					projectId: testProjectId,
 					projectIndexTypeId: subjectIndexTypeId,
 					label: "Christology",
-					slug: "christology",
 					matchers: ["Christ", "Jesus Christ", "The Messiah"],
 				},
 			});
@@ -127,13 +125,14 @@ describe("IndexEntry API (Integration)", () => {
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
 			expect(body.result.data.label).toBe("Christology");
+			expect(body.result.data.slug).toBe("christology");
 			expect(body.result.data.matchers).toHaveLength(3);
 			expect(
 				body.result.data.matchers.map((v: IndexMatcher) => v.text),
 			).toEqual(["Christ", "Jesus Christ", "The Messiah"]);
 		});
 
-		it("should create entry with parent", async ({
+		it("should create entry with parent and hierarchical slug", async ({
 			testUser,
 			authenticatedRequest,
 			testProjectId,
@@ -154,7 +153,6 @@ describe("IndexEntry API (Integration)", () => {
 					projectId: testProjectId,
 					projectIndexTypeId: subjectIndexTypeId,
 					label: "Systematic Theology",
-					slug: "systematic-theology",
 					parentId: parent.id,
 				},
 			});
@@ -162,6 +160,111 @@ describe("IndexEntry API (Integration)", () => {
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
 			expect(body.result.data.parentId).toBe(parent.id);
+			expect(body.result.data.slug).toBe("theology_systematic-theology");
+		});
+
+		it("should generate unique slugs for nested entries with same label", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			// Create two parent entries
+			const dog = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Dog",
+				slug: "dog",
+				userId: testUser.userId,
+			});
+
+			const cat = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Cat",
+				slug: "cat",
+				userId: testUser.userId,
+			});
+
+			// Create "Fur" under Dog
+			const dogFur = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Fur",
+					parentId: dog.id,
+				},
+			});
+
+			// Create "Fur" under Cat
+			const catFur = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Fur",
+					parentId: cat.id,
+				},
+			});
+
+			expect(dogFur.statusCode).toBe(200);
+			expect(catFur.statusCode).toBe(200);
+
+			const dogFurBody = JSON.parse(dogFur.body);
+			const catFurBody = JSON.parse(catFur.body);
+
+			expect(dogFurBody.result.data.slug).toBe("dog_fur");
+			expect(catFurBody.result.data.slug).toBe("cat_fur");
+			expect(dogFurBody.result.data.slug).not.toBe(catFurBody.result.data.slug);
+		});
+
+		it("should generate multi-level hierarchical slugs", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			// Create hierarchy: Theology > Systematic Theology > Christology
+			const theology = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const systematicTheology = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Systematic Theology",
+					parentId: theology.id,
+				},
+			});
+
+			const systematicTheologyBody = JSON.parse(systematicTheology.body);
+
+			const christology = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Christology",
+					parentId: systematicTheologyBody.result.data.id,
+				},
+			});
+
+			expect(christology.statusCode).toBe(200);
+			const christologyBody = JSON.parse(christology.body);
+			expect(christologyBody.result.data.slug).toBe(
+				"theology_systematic-theology_christology",
+			);
 		});
 
 		it("should reject parent from different index type", async ({
@@ -482,6 +585,138 @@ describe("IndexEntry API (Integration)", () => {
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
 			expect(body.result.data.parentId).toBe(parent.id);
+		});
+
+		it("should regenerate slug when parent changes", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const theology = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const philosophy = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Philosophy",
+				slug: "philosophy",
+				userId: testUser.userId,
+			});
+
+			const christology = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "christology",
+				userId: testUser.userId,
+			});
+
+			// Move to Theology
+			const moveToTheology = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.updateParent",
+				payload: {
+					id: christology.id,
+					parentId: theology.id,
+				},
+			});
+
+			expect(moveToTheology.statusCode).toBe(200);
+			const theologyBody = JSON.parse(moveToTheology.body);
+			expect(theologyBody.result.data.slug).toBe("theology_christology");
+
+			// Move to Philosophy
+			const moveToPhilosophy = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.updateParent",
+				payload: {
+					id: christology.id,
+					parentId: philosophy.id,
+				},
+			});
+
+			expect(moveToPhilosophy.statusCode).toBe(200);
+			const philosophyBody = JSON.parse(moveToPhilosophy.body);
+			expect(philosophyBody.result.data.slug).toBe("philosophy_christology");
+		});
+
+		it("should regenerate slugs for all descendants when parent changes", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			// Create hierarchy: Theology > Systematic Theology > Christology
+			const theology = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const systematicTheology = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Systematic Theology",
+				slug: "theology_systematic-theology",
+				userId: testUser.userId,
+				parentId: theology.id,
+			});
+
+			const christology = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Christology",
+				slug: "theology_systematic-theology_christology",
+				userId: testUser.userId,
+				parentId: systematicTheology.id,
+			});
+
+			// Create new parent: Philosophy
+			const philosophy = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Philosophy",
+				slug: "philosophy",
+				userId: testUser.userId,
+			});
+
+			// Move Systematic Theology to Philosophy
+			const moveResponse = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.updateParent",
+				payload: {
+					id: systematicTheology.id,
+					parentId: philosophy.id,
+				},
+			});
+
+			expect(moveResponse.statusCode).toBe(200);
+			const moveBody = JSON.parse(moveResponse.body);
+			expect(moveBody.result.data.slug).toBe("philosophy_systematic-theology");
+
+			// Verify descendant (Christology) also got updated
+			const listResponse = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+
+			expect(listResponse.statusCode).toBe(200);
+			const listBody = JSON.parse(listResponse.body);
+			const updatedChristology = listBody.result.data.find(
+				(e: { id: string }) => e.id === christology.id,
+			);
+			expect(updatedChristology).toBeDefined();
+			expect(updatedChristology.slug).toBe(
+				"philosophy_systematic-theology_christology",
+			);
 		});
 
 		it("should detect cycles", async ({
@@ -850,6 +1085,48 @@ describe("IndexEntry API (Integration)", () => {
 			const listBody = JSON.parse(listResponse.body);
 			expect(listBody.result.data).toHaveLength(0);
 		});
+
+		it("should allow recreation of deleted entry with same slug", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			// Create and delete an entry
+			const entry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.delete",
+				payload: {
+					id: entry.id,
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+				},
+			});
+
+			// Recreate with same label (should generate same slug)
+			const recreateResponse = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.create",
+				payload: {
+					projectId: testProjectId,
+					projectIndexTypeId: subjectIndexTypeId,
+					label: "Theology",
+				},
+			});
+
+			expect(recreateResponse.statusCode).toBe(200);
+			const recreateBody = JSON.parse(recreateResponse.body);
+			expect(recreateBody.result.data.slug).toBe("theology");
+			expect(recreateBody.result.data.id).not.toBe(entry.id);
+		});
 	});
 
 	describe("Cross-References", () => {
@@ -993,7 +1270,6 @@ describe("IndexEntry API (Integration)", () => {
 				entryId: fromEntry.id,
 				documentId: document.id,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({
@@ -1212,7 +1488,6 @@ describe("IndexEntry API (Integration)", () => {
 				entryId: fromEntry.id,
 				documentId: document.id,
 				userId: testUser.userId,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			await createTestIndexMention({
@@ -1220,7 +1495,6 @@ describe("IndexEntry API (Integration)", () => {
 				documentId: document.id,
 				userId: testUser.userId,
 				pageNumber: 2,
-				projectIndexTypeIds: [subjectIndexTypeId],
 			});
 
 			const response = await authenticatedRequest.inject({

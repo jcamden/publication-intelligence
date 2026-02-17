@@ -53,7 +53,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 		links: [
 			httpLink({
 				url: `${API_URL}/trpc`,
-				fetch: async (url) => {
+				fetch: async (url, init) => {
 					// Add delay if configured
 					if (config?.delayMs) {
 						await new Promise((resolve) => setTimeout(resolve, config.delayMs));
@@ -61,6 +61,19 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 
 					// Parse the URL to determine which endpoint is being called
 					const urlString = typeof url === "string" ? url : url.toString();
+
+					const getBodyJson = async (): Promise<unknown> => {
+						if (init?.body == null) return null;
+						const raw =
+							typeof init.body === "string"
+								? init.body
+								: await new Response(init.body).text();
+						try {
+							return JSON.parse(raw);
+						} catch {
+							return null;
+						}
+					};
 
 					// tRPC batching: Check if this is a batch request
 					if (urlString.includes("batch=1")) {
@@ -241,6 +254,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 											createdAt: new Date().toISOString(),
 											updatedAt: new Date().toISOString(),
 											variants: [{ text: "Test Alias" }],
+											crossReferences: [],
 										},
 									],
 								},
@@ -338,6 +352,136 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 							JSON.stringify({
 								result: {
 									data: [],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					// Mock query: indexEntry.list
+					if (urlString.includes("indexEntry.list")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					// Mock mutation: indexEntry.create (input may be in POST body or URL)
+					if (urlString.includes("indexEntry.create")) {
+						let label = "Mock Entry";
+						let parentId = null;
+						let projectIndexTypeId = "test-project-index-type-id";
+
+						const urlObj = new URL(urlString);
+						const urlInput = urlObj.searchParams.get("input");
+						const bodyJson = await getBodyJson();
+						const parsed = (() => {
+							if (
+								bodyJson &&
+								typeof bodyJson === "object" &&
+								"json" in bodyJson
+							) {
+								return (bodyJson as { json: Record<string, unknown> }).json;
+							}
+							if (bodyJson && typeof bodyJson === "object") {
+								return bodyJson as Record<string, unknown>;
+							}
+							if (urlInput) {
+								try {
+									return JSON.parse(urlInput) as Record<string, unknown>;
+								} catch {
+									return null;
+								}
+							}
+							return null;
+						})();
+
+						if (parsed) {
+							label = (parsed.label as string) || label;
+							parentId = (parsed.parentId as string | null) ?? null;
+							projectIndexTypeId =
+								(parsed.projectIndexTypeId as string) || projectIndexTypeId;
+						}
+
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: {
+										id: `mock-entry-${Date.now()}`,
+										label,
+										slug: label.toLowerCase().replace(/\s+/g, "-"),
+										description: null,
+										status: "active",
+										projectId: "test-project-id",
+										projectIndexTypeId,
+										projectIndexType: {
+											id: projectIndexTypeId,
+											indexType: "subject",
+											colorHue: 230,
+										},
+										parentId,
+										matchers: [],
+										mentionCount: 0,
+										childCount: 0,
+										crossReferences: [],
+										createdAt: new Date().toISOString(),
+										updatedAt: new Date().toISOString(),
+									},
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					if (urlString.includes("indexEntry.crossReference.list")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					// Mock mutation: indexEntry.crossReference.create
+					if (urlString.includes("indexEntry.crossReference.create")) {
+						const urlObj = new URL(urlString);
+						const input = urlObj.searchParams.get("input");
+						let fromEntryId = "mock-from-entry-id";
+						let toEntryId = "mock-to-entry-id";
+
+						if (input) {
+							try {
+								const parsed = JSON.parse(input);
+								fromEntryId = parsed.fromEntryId || fromEntryId;
+								toEntryId = parsed.toEntryId || toEntryId;
+							} catch {
+								// Use defaults
+							}
+						}
+
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: {
+										id: `mock-cross-ref-${Date.now()}`,
+										fromEntryId,
+										toEntryId,
+										createdAt: new Date().toISOString(),
+									},
 								},
 							}),
 							{

@@ -362,6 +362,20 @@ await waitFor(async () => {
 }, { timeout: 3000, interval: 100 });
 ```
 
+## Buttons That Block userEvent.click
+
+Some components use `onPointerDown` with `preventDefault()` / `stopPropagation()` (e.g. to keep a dropdown open or control focus). That can prevent `userEvent.click()` from firing the element’s `onClick`, so the handler never runs in tests.
+
+**Use a native DOM click** for such buttons:
+
+```typescript
+const createButton = body.getByRole("button", { name: /Create new entry/i });
+// Native click so onPointerDown (preventDefault) doesn't block the click
+(createButton as HTMLElement).click();
+```
+
+Prefer `userEvent.click()` by default; use native `(element as HTMLElement).click()` only when the click handler does not run (e.g. modal/expected UI doesn’t appear after the step).
+
 ## TypeScript Patterns
 
 **Avoid non-null assertions (`!`):**

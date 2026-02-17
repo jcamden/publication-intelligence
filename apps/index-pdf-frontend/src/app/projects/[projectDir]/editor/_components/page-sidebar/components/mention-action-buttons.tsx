@@ -24,16 +24,16 @@ export const MentionActionButtons = ({
 	return (
 		<div className="flex gap-2 mb-3">
 			<StyledButton
-				icon={TextSelect}
-				label="Select Text"
-				isActive={isSelectTextActive}
-				onClick={() => onSelectText({ indexType })}
-			/>
-			<StyledButton
 				icon={SquareDashedMousePointer}
 				label="Draw Region"
 				isActive={isDrawRegionActive}
 				onClick={() => onDrawRegion({ indexType })}
+			/>
+			<StyledButton
+				icon={TextSelect}
+				label="Select Text"
+				isActive={isSelectTextActive}
+				onClick={() => onSelectText({ indexType })}
 			/>
 		</div>
 	);

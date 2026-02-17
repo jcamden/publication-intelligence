@@ -2,7 +2,10 @@ import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { useState } from "react";
-import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
+import {
+	TestDecorator,
+	TrpcDecorator,
+} from "@/app/_common/_test-utils/storybook-utils";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import type { MentionDraft } from "../../mention-creation-popover";
 import { MentionCreationPopover } from "../../mention-creation-popover";
@@ -21,7 +24,14 @@ const meta = {
 	parameters: {
 		layout: "padded",
 	},
-	decorators: [TestDecorator],
+	decorators: [
+		TestDecorator,
+		(Story) => (
+			<TrpcDecorator>
+				<Story />
+			</TrpcDecorator>
+		),
+	],
 } satisfies Meta<typeof MentionCreationPopover>;
 
 export default meta;
@@ -56,6 +66,8 @@ const InteractiveWrapper = ({
 					indexType={indexType}
 					entries={mockSubjectEntries}
 					mentions={[]}
+					projectId="test-project-id"
+					projectIndexTypeId="test-project-index-type-id"
 					onAttach={({ entryId, entryLabel, regionName }) => {
 						setResult({ type: "attach", entryId, entryLabel, regionName });
 						setShowPopover(false);
@@ -86,6 +98,8 @@ export const SelectExistingEntry: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -150,6 +164,8 @@ export const TryToSubmitWithoutSelection: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -198,6 +214,8 @@ export const CancelWithButton: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -225,6 +243,8 @@ export const CancelWithEscape: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -251,6 +271,8 @@ export const SearchWithNoResults: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -285,6 +307,8 @@ export const SelectNestedEntry: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -359,6 +383,8 @@ export const SmartAutocompleteExactMatch: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -401,6 +427,8 @@ export const CreateRegionMention: Story = {
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
 		onAttach: () => {},
 		onCancel: () => {},
 	},
@@ -473,5 +501,116 @@ export const CreateRegionMention: Story = {
 				);
 			},
 		);
+	},
+};
+
+export const CreateNewEntryFromPicker: Story = {
+	args: {
+		draft: mockDraftNoMatch,
+		indexType: "subject",
+		entries: mockSubjectEntries,
+		mentions: [],
+		projectId: "test-project-id",
+		projectIndexTypeId: "test-project-index-type-id",
+		onAttach: () => {},
+		onCancel: () => {},
+	},
+	render: () => (
+		<InteractiveWrapper draft={mockDraftNoMatch} indexType="subject" />
+	),
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+		const body = within(document.body);
+
+		await step("Wait for story to be ready", async () => {
+			await waitFor(
+				() => {
+					expect(canvas.getByRole("combobox")).toBeInTheDocument();
+				},
+				{ timeout: 5000 },
+			);
+		});
+
+		await step("Search for non-existent entry", async () => {
+			const input = canvas.getByRole("combobox");
+			await userEvent.click(input);
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			await userEvent.clear(input);
+			await userEvent.type(input, "Heidegger", { delay: 50 });
+			await new Promise((resolve) => setTimeout(resolve, 500));
+		});
+
+		await step("Verify 'Create new entry' button appears", async () => {
+			await waitFor(
+				async () => {
+					const createButton = body.getByRole("button", {
+						name: /Create new entry.*Heidegger/i,
+					});
+					await expect(createButton).toBeInTheDocument();
+				},
+				{ timeout: 5000 },
+			);
+		});
+
+		await step("Click 'Create new entry' button", async () => {
+			const createButton = body.getByRole("button", {
+				name: /Create new entry.*Heidegger/i,
+			});
+			// Native click so the button's onPointerDown (preventDefault) doesn't block the click
+			(createButton as HTMLElement).click();
+			await new Promise((resolve) => setTimeout(resolve, 500));
+		});
+
+		await step("Verify EntryCreationModal opens", async () => {
+			await waitFor(
+				async () => {
+					const modal = body.getByRole("dialog", { hidden: true });
+					await expect(modal).toBeInTheDocument();
+					const modalTitle = body.getByText("Create Index Entry");
+					await expect(modalTitle).toBeInTheDocument();
+				},
+				{ timeout: 3000 },
+			);
+		});
+
+		await step("Verify label is pre-filled", async () => {
+			const labelInput = body.getByLabelText("Label");
+			await waitFor(() => {
+				expect((labelInput as HTMLInputElement).value).toBe("Heidegger");
+			});
+		});
+
+		await step("Submit entry creation form", async () => {
+			const createButton = body.getByRole("button", { name: /^Create$/i });
+			await userEvent.click(createButton);
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+		});
+
+		await step("Verify new entry is auto-selected", async () => {
+			// The modal should close and the entry should be selected in the picker
+			await waitFor(
+				async () => {
+					const input = canvas.getByRole("combobox");
+					const value = (input as HTMLInputElement).value;
+					await expect(value).toContain("Heidegger");
+				},
+				{ timeout: 3000 },
+			);
+		});
+
+		await step("Complete the attachment", async () => {
+			const attachButton = canvas.getByRole("button", { name: "Attach" });
+			await userEvent.click(attachButton);
+		});
+
+		await step("Verify mention was attached with new entry", async () => {
+			const result = canvas.getByTestId("result");
+			await waitFor(
+				() => {
+					expect(result).toHaveTextContent(/Attached: Heidegger/);
+				},
+				{ timeout: 2000 },
+			);
+		});
 	},
 };

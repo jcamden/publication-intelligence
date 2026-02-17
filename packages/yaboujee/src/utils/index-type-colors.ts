@@ -16,8 +16,8 @@ export type IndexTypeHue = {
  * These match the defaults in the backend's index type config
  */
 export const DEFAULT_INDEX_TYPE_HUES: Record<IndexTypeName, IndexTypeHue> = {
-	author: { hue: 270 }, // Purple
-	subject: { hue: 230 }, // Blue
+	author: { hue: 230 }, // Blue
+	subject: { hue: 85 }, // Yellow
 	scripture: { hue: 160 }, // Green
 	region: { hue: 340 }, // Pink
 };

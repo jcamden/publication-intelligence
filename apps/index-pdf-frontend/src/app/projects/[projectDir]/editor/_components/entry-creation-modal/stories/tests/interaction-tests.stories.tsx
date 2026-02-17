@@ -44,9 +44,9 @@ export const CreateTopLevelEntry: Story = {
 };
 
 /**
- * Test: Validate unique label
+ * Test: Validate unique label under same parent
  */
-export const ValidateUniqueLabel: Story = {
+export const ValidateUniqueLabelUnderSameParent: Story = {
 	args: {
 		open: true,
 		onClose: () => {},
@@ -70,7 +70,7 @@ export const ValidateUniqueLabel: Story = {
 			await new Promise((resolve) => setTimeout(resolve, 200));
 		});
 
-		await step("Enter existing label", async () => {
+		await step("Enter existing top-level label without parent", async () => {
 			const labelInput = body.getByLabelText("Label");
 			await userEvent.type(labelInput, "Philosophy");
 		});
@@ -83,12 +83,88 @@ export const ValidateUniqueLabel: Story = {
 				async () => {
 					const alert = body.getByRole("alert");
 					await expect(alert).toHaveTextContent(
-						/already exists in this index/i,
+						/already exists under this parent/i,
 					);
 				},
 				{ timeout: 5000, interval: 50 },
 			);
 		});
+	},
+};
+
+/**
+ * Test: Allow same label under different parent
+ */
+export const AllowSameLabelUnderDifferentParent: Story = {
+	args: {
+		open: true,
+		onClose: () => {},
+		projectId: "mock-project-id",
+		projectIndexTypeId: "mock-subject-index-type-id",
+		existingEntries: mockSubjectEntries,
+		prefillLabel: "Kant, Immanuel", // Already exists under Philosophy
+	},
+	play: async ({ step }) => {
+		const body = within(document.body);
+
+		await step("Wait for modal to be fully rendered", async () => {
+			await waitFor(
+				() => {
+					const modal = body.getByRole("dialog", { hidden: true });
+					expect(modal).toBeInTheDocument();
+				},
+				{ timeout: 2000 },
+			);
+
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+
+		await step(
+			"Select different parent (Science instead of Philosophy)",
+			async () => {
+				const parentInput = body.getByRole("combobox", {
+					hidden: false,
+				});
+				await userEvent.click(parentInput);
+
+				await waitFor(
+					async () => {
+						const options = body.queryAllByRole("option");
+						await expect(options.length).toBeGreaterThan(0);
+					},
+					{ timeout: 2000 },
+				);
+
+				const options = body.getAllByRole("option");
+				const scienceOption = options.find(
+					(opt) => opt.textContent === "Science",
+				);
+				if (!scienceOption) {
+					throw new Error("Science option not found");
+				}
+
+				(scienceOption as HTMLElement).click();
+				await new Promise((resolve) => setTimeout(resolve, 500));
+			},
+		);
+
+		await step(
+			"Submit form should succeed without validation error",
+			async () => {
+				const createButton = body.getByRole("button", { name: "Create" });
+				await userEvent.click(createButton);
+
+				// Wait a moment to see if any error appears
+				await new Promise((resolve) => setTimeout(resolve, 500));
+
+				// Verify no validation error appears
+				const alerts = body.queryAllByRole("alert");
+				const hasValidationError = alerts.some((alert) =>
+					alert.textContent?.includes("already exists"),
+				);
+				expect(hasValidationError).toBe(false);
+			},
+		);
 	},
 };
 

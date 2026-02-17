@@ -54,12 +54,10 @@ export const indexEntries = pgTable(
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [
-		// Slug uniqueness per project AND index type
-		uniqueIndex("unique_project_index_type_slug").on(
-			table.projectId,
-			table.projectIndexTypeId,
-			table.slug,
-		),
+		// Slug uniqueness per project AND index type (excluding soft-deleted entries)
+		uniqueIndex("unique_project_index_type_slug")
+			.on(table.projectId, table.projectIndexTypeId, table.slug)
+			.where(sql`${table.deletedAt} IS NULL`),
 
 		// RLS: Inherit access from project
 		// The projects table RLS already handles owner access
@@ -207,6 +205,9 @@ export const indexMentions = pgTable(
 		entryId: uuid("entry_id")
 			.references(() => indexEntries.id, { onDelete: "cascade" })
 			.notNull(),
+		projectIndexTypeId: uuid("project_index_type_id")
+			.references(() => projectIndexTypes.id, { onDelete: "cascade" })
+			.notNull(),
 		documentId: uuid("document_id")
 			.references(() => sourceDocuments.id, { onDelete: "cascade" })
 			.notNull(),
@@ -251,71 +252,21 @@ export const indexMentions = pgTable(
 );
 
 // IndexMention relations
-export const indexMentionsRelations = relations(
-	indexMentions,
-	({ one, many }) => ({
-		entry: one(indexEntries, {
-			fields: [indexMentions.entryId],
-			references: [indexEntries.id],
-		}),
-		document: one(sourceDocuments, {
-			fields: [indexMentions.documentId],
-			references: [sourceDocuments.id],
-		}),
-		detectionRun: one(detectionRuns, {
-			fields: [indexMentions.detectionRunId],
-			references: [detectionRuns.id],
-		}),
-		mentionTypes: many(indexMentionTypes),
+export const indexMentionsRelations = relations(indexMentions, ({ one }) => ({
+	entry: one(indexEntries, {
+		fields: [indexMentions.entryId],
+		references: [indexEntries.id],
 	}),
-);
-
-// IndexMentionTypes - Junction table for many-to-many relationship
-// (IndexMention can belong to multiple ProjectIndexTypes for multi-highlighting)
-export const indexMentionTypes = pgTable(
-	"index_mention_types",
-	{
-		id: uuid("id").primaryKey().defaultRandom(),
-		indexMentionId: uuid("index_mention_id")
-			.references(() => indexMentions.id, { onDelete: "cascade" })
-			.notNull(),
-		projectIndexTypeId: uuid("project_index_type_id")
-			.references(() => projectIndexTypes.id, { onDelete: "cascade" })
-			.notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.defaultNow()
-			.notNull(),
-	},
-	(table) => [
-		uniqueIndex("unique_mention_type").on(
-			table.indexMentionId,
-			table.projectIndexTypeId,
-		),
-
-		// RLS: Inherit access from mention
-		// index_mentions RLS inherits from index_entries RLS which inherits from projects RLS
-		pgPolicy("index_mention_types_mention_access", {
-			for: "all",
-			to: authenticatedRole,
-			using: sql`EXISTS (
-				SELECT 1 FROM index_mentions
-				WHERE index_mentions.id = ${table.indexMentionId}
-			)`,
-		}),
-	],
-);
-
-// IndexMentionTypes relations
-export const indexMentionTypesRelations = relations(
-	indexMentionTypes,
-	({ one }) => ({
-		mention: one(indexMentions, {
-			fields: [indexMentionTypes.indexMentionId],
-			references: [indexMentions.id],
-		}),
-		projectIndexType: one(projectIndexTypes, {
-			fields: [indexMentionTypes.projectIndexTypeId],
-			references: [projectIndexTypes.id],
-		}),
+	projectIndexType: one(projectIndexTypes, {
+		fields: [indexMentions.projectIndexTypeId],
+		references: [projectIndexTypes.id],
 	}),
-);
+	document: one(sourceDocuments, {
+		fields: [indexMentions.documentId],
+		references: [sourceDocuments.id],
+	}),
+	detectionRun: one(detectionRuns, {
+		fields: [indexMentions.detectionRunId],
+		references: [detectionRuns.id],
+	}),
+}));

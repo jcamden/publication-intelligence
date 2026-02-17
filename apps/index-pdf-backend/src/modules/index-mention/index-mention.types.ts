@@ -99,7 +99,6 @@ export const CreateIndexMentionSchema = z.object({
 	pageNumber: z.number().int().min(1),
 	textSpan: z.string().min(1),
 	bboxesPdf: z.array(BoundingBoxSchema),
-	projectIndexTypeIds: z.array(z.string().uuid()).min(1),
 	mentionType: z.enum(["text", "region"]).optional().default("text"),
 });
 
@@ -112,7 +111,6 @@ export const UpdateIndexMentionSchema = z.object({
 	pageNumber: z.number().int(),
 	entryId: z.string().uuid().optional(),
 	textSpan: z.string().optional(),
-	projectIndexTypeIds: z.array(z.string().uuid()).min(1).optional(),
 });
 
 export type UpdateIndexMentionInput = z.infer<typeof UpdateIndexMentionSchema>;
@@ -136,7 +134,6 @@ export const BulkCreateIndexMentionsSchema = z.object({
 				pageNumber: z.number().int(),
 				textSpan: z.string(),
 				bboxesPdf: z.array(BoundingBoxSchema),
-				projectIndexTypeIds: z.array(z.string().uuid()),
 				mentionType: z.enum(["text", "region"]).optional().default("text"),
 			}),
 		)
