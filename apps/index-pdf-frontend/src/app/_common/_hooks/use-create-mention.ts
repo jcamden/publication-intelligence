@@ -70,6 +70,7 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 			if (context?.queryParams) {
 				utils.indexMention.list.invalidate(context.queryParams);
 			}
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

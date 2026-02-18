@@ -142,6 +142,7 @@ export const useCreateEntry = () => {
 			utils.indexEntry.list.invalidate({
 				projectId: variables.projectId,
 			});
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

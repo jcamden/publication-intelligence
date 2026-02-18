@@ -155,6 +155,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const deleteMentionMutation = trpc.indexMention.delete.useMutation({
 		onSuccess: () => {
 			utils.indexMention.list.invalidate();
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 
@@ -162,6 +163,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const updateMentionMutation = trpc.indexMention.update.useMutation({
 		onSuccess: () => {
 			utils.indexMention.list.invalidate();
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 

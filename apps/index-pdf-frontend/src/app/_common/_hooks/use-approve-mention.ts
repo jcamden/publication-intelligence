@@ -75,6 +75,7 @@ export const useApproveMention = ({
 		onSettled: () => {
 			// Invalidate all mention queries for this project to ensure consistency
 			utils.indexMention.list.invalidate({ projectId });
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

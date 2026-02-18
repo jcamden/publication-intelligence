@@ -65,6 +65,7 @@ export const useUpdateMention = () => {
 				documentId: variables.documentId,
 				pageNumber: variables.pageNumber,
 			});
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

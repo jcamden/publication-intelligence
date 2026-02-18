@@ -98,6 +98,7 @@ export const useUpdateEntryParent = ({ projectId }: { projectId: string }) => {
 					projectIndexTypeId: context.projectIndexTypeId,
 				});
 			}
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

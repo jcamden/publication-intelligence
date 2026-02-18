@@ -48,11 +48,14 @@ export const CrossReferenceEditor = ({
 		"transfer",
 	);
 
+	const utils = trpc.useUtils();
+
 	const deleteCrossReference =
 		trpc.indexEntry.crossReference.delete.useMutation({
 			onSuccess: () => {
 				toast.success("Cross-reference deleted");
 				onUpdate();
+				utils.indexEntry.getIndexView.invalidate();
 			},
 			onError: (error) => {
 				toast.error(`Failed to delete cross-reference: ${error.message}`);
@@ -65,6 +68,7 @@ export const CrossReferenceEditor = ({
 				toast.success("Cross-reference created");
 				resetForm();
 				onUpdate();
+				utils.indexEntry.getIndexView.invalidate();
 			},
 			onError: (error) => {
 				toast.error(`Failed to create cross-reference: ${error.message}`);

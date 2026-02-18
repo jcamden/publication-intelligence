@@ -56,6 +56,7 @@ export const useDeleteMention = () => {
 				documentId: variables.documentId,
 				pageNumber: variables.pageNumber,
 			});
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

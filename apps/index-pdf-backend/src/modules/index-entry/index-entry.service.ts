@@ -15,6 +15,7 @@ import type {
 	IndexEntry,
 	IndexEntryListItem,
 	IndexEntrySearchResult,
+	IndexView,
 	TransferMatchersInput,
 	TransferMentionsInput,
 	UpdateIndexEntryInput,
@@ -56,6 +57,32 @@ export const listIndexEntries = async ({
 		projectId,
 		projectIndexTypeId,
 		includeDeleted,
+	});
+};
+
+export const getIndexView = async ({
+	projectId,
+	projectIndexTypeId,
+	userId,
+	requestId,
+}: {
+	projectId: string;
+	projectIndexTypeId: string;
+	userId: string;
+	requestId: string;
+}): Promise<IndexView> => {
+	logEvent({
+		event: "index_entry.index_view_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: { projectId, projectIndexTypeId },
+		},
+	});
+
+	return await indexEntryRepo.getIndexView({
+		projectId,
+		projectIndexTypeId,
 	});
 };
 

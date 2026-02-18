@@ -7,14 +7,18 @@ import {
 	indexRelations,
 	projectIndexTypes,
 } from "../../db/schema";
+import * as indexMentionRepo from "../index-mention/index-mention.repo";
 import type {
 	CreateIndexEntryInput,
+	CrossReference,
 	IndexEntry,
 	IndexEntryListItem,
 	IndexEntrySearchResult,
+	IndexView,
 	UpdateIndexEntryInput,
 	UpdateIndexEntryParentInput,
 } from "./index-entry.types";
+import { mergeAndFormatPageRanges } from "./page-range-utils";
 import { generateSlug } from "./slug-utils";
 
 // ============================================================================
@@ -1122,6 +1126,137 @@ export const getCrossReferences = async ({
 		...rel,
 		toEntry: rel.toEntryId ? toEntryMap.get(rel.toEntryId) || null : null,
 	}));
+};
+
+export type CrossReferenceRow = {
+	id: string;
+	fromEntryId: string;
+	toEntryId: string | null;
+	arbitraryValue: string | null;
+	relationType: string;
+	toEntry: { id: string; label: string; parentId: string | null } | null;
+};
+
+export const getCrossReferencesForEntries = async ({
+	entryIds,
+}: {
+	entryIds: string[];
+}): Promise<Map<string, CrossReferenceRow[]>> => {
+	if (entryIds.length === 0) {
+		return new Map();
+	}
+
+	const relations = await db
+		.select({
+			id: indexRelations.id,
+			fromEntryId: indexRelations.fromEntryId,
+			toEntryId: indexRelations.toEntryId,
+			arbitraryValue: indexRelations.arbitraryValue,
+			relationType: indexRelations.relationType,
+		})
+		.from(indexRelations)
+		.where(inArray(indexRelations.fromEntryId, entryIds));
+
+	const toEntryIds = relations
+		.map((r) => r.toEntryId)
+		.filter((id): id is string => id !== null);
+	const uniqueToIds = [...new Set(toEntryIds)];
+
+	const toEntries =
+		uniqueToIds.length > 0
+			? await db
+					.select({
+						id: indexEntries.id,
+						label: indexEntries.label,
+						parentId: indexEntries.parentId,
+					})
+					.from(indexEntries)
+					.where(inArray(indexEntries.id, uniqueToIds))
+			: [];
+
+	const toEntryMap = new Map(
+		toEntries.map((e) => [e.id, { ...e, parentId: e.parentId }]),
+	);
+
+	const byFrom = new Map<string, CrossReferenceRow[]>();
+	for (const rel of relations) {
+		const row: CrossReferenceRow = {
+			...rel,
+			toEntry: rel.toEntryId ? toEntryMap.get(rel.toEntryId) || null : null,
+		};
+		const list = byFrom.get(rel.fromEntryId) ?? [];
+		list.push(row);
+		byFrom.set(rel.fromEntryId, list);
+	}
+	return byFrom;
+};
+
+const crossReferenceRowToApi = (row: CrossReferenceRow): CrossReference => ({
+	id: row.id,
+	fromEntryId: row.fromEntryId,
+	toEntryId: row.toEntryId,
+	arbitraryValue: row.arbitraryValue,
+	relationType: row.relationType as CrossReference["relationType"],
+	toEntry: row.toEntry
+		? { id: row.toEntry.id, label: row.toEntry.label }
+		: null,
+});
+
+export const getIndexView = async ({
+	projectId,
+	projectIndexTypeId,
+}: {
+	projectId: string;
+	projectIndexTypeId: string;
+}): Promise<IndexView> => {
+	const entries = await listIndexEntries({
+		projectId,
+		projectIndexTypeId,
+	});
+
+	const entryIds = entries.map((e) => e.id);
+	if (entryIds.length === 0) {
+		return {
+			entries: [],
+			pageRangesByEntryId: {},
+			crossReferencesByEntryId: {},
+		};
+	}
+
+	const [pageSpans, crossRefsMap] = await Promise.all([
+		indexMentionRepo.listMentionPageSpans({
+			projectId,
+			projectIndexTypeId,
+		}),
+		getCrossReferencesForEntries({ entryIds }),
+	]);
+
+	const byEntryId = new Map<string, typeof pageSpans>();
+	for (const span of pageSpans) {
+		const list = byEntryId.get(span.entryId) ?? [];
+		list.push(span);
+		byEntryId.set(span.entryId, list);
+	}
+
+	const pageRangesByEntryId: Record<string, string> = {};
+	for (const entryId of entryIds) {
+		const spans = byEntryId.get(entryId) ?? [];
+		pageRangesByEntryId[entryId] = mergeAndFormatPageRanges({
+			mentions: spans,
+		});
+	}
+
+	const crossReferencesByEntryId: Record<string, CrossReference[]> = {};
+	for (const entryId of entryIds) {
+		const rows = crossRefsMap.get(entryId) ?? [];
+		crossReferencesByEntryId[entryId] = rows.map(crossReferenceRowToApi);
+	}
+
+	return {
+		entries,
+		pageRangesByEntryId,
+		crossReferencesByEntryId,
+	};
 };
 
 export const createCrossReference = async ({

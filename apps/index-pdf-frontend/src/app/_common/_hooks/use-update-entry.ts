@@ -60,6 +60,7 @@ export const useUpdateEntry = () => {
 				projectId: variables.projectId,
 				projectIndexTypeId: variables.projectIndexTypeId,
 			});
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

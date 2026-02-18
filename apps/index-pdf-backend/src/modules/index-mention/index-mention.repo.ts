@@ -110,6 +110,46 @@ export const listIndexMentions = async ({
 	});
 };
 
+export type MentionPageSpan = {
+	entryId: string;
+	pageNumber: number;
+	pageNumberEnd: number | null;
+};
+
+export const listMentionPageSpans = async ({
+	projectId,
+	projectIndexTypeId,
+}: {
+	projectId: string;
+	projectIndexTypeId: string;
+}): Promise<MentionPageSpan[]> => {
+	const rows = await db
+		.select({
+			entryId: indexMentions.entryId,
+			pageNumber: indexMentions.pageNumber,
+			pageNumberEnd: indexMentions.pageNumberEnd,
+		})
+		.from(indexMentions)
+		.innerJoin(indexEntries, eq(indexMentions.entryId, indexEntries.id))
+		.innerJoin(
+			sourceDocuments,
+			eq(indexMentions.documentId, sourceDocuments.id),
+		)
+		.where(
+			and(
+				eq(sourceDocuments.projectId, projectId),
+				eq(indexMentions.projectIndexTypeId, projectIndexTypeId),
+				isNull(indexMentions.deletedAt),
+			),
+		);
+
+	return rows.map((r) => ({
+		entryId: r.entryId,
+		pageNumber: r.pageNumber,
+		pageNumberEnd: r.pageNumberEnd,
+	}));
+};
+
 export const getIndexMentionById = async ({
 	id,
 }: {

@@ -161,6 +161,7 @@ export const useBulkUpdateIndexTypes = ({
 					});
 				}
 			}
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

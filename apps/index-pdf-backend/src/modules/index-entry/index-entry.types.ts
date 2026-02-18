@@ -136,6 +136,12 @@ export type CrossReference = {
 	} | null;
 };
 
+export type IndexView = {
+	entries: IndexEntryListItem[];
+	pageRangesByEntryId: Record<string, string>;
+	crossReferencesByEntryId: Record<string, CrossReference[]>;
+};
+
 export const CreateCrossReferenceSchema = z
 	.object({
 		fromEntryId: z.string().uuid(),

@@ -53,3 +53,5 @@ transfer mentions for "See" cross-reference type
    Do you want to transfer matchers?
 
 When adding text that is not already in matcher to an entry, "Do you want to add to matchers for entry?"
+
+Still allow creating new entry from mention-creation-popover even if match is found (e.g. Israel finds Israelite)

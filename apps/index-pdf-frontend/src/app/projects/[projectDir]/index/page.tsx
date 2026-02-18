@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { ProjectNavbar } from "../../_components/project-navbar";
+import { SubjectIndexContent } from "./_components/subject-index-content";
 
 export default function IndexPage() {
 	const params = useParams();
@@ -133,12 +134,17 @@ export default function IndexPage() {
 							{enabledIndexTypes.map((indexType) => (
 								<TabsContent key={indexType.id} value={indexType.indexType}>
 									<div className="py-4">
-										<h2 className="text-xl font-semibold mb-2">
-											{indexType.displayName}
-										</h2>
-										<p className="text-muted-foreground">
-											Index content will go here for {indexType.indexType}
-										</p>
+										{indexType.indexType === "subject" &&
+										projectQuery.data?.id ? (
+											<SubjectIndexContent
+												projectId={projectQuery.data.id}
+												projectIndexTypeId={indexType.id}
+											/>
+										) : (
+											<p className="text-muted-foreground">
+												Index content will go here for {indexType.indexType}
+											</p>
+										)}
 									</div>
 								</TabsContent>
 							))}

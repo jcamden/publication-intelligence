@@ -113,6 +113,8 @@ export const useDeleteEntry = () => {
 			utils.indexMention.list.invalidate({
 				projectId: variables.projectId,
 			});
+
+			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 };

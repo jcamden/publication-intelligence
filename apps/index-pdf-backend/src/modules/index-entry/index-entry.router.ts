@@ -129,6 +129,22 @@ export const indexEntryRouter = router({
 			});
 		}),
 
+	getIndexView: protectedProcedure
+		.input(
+			z.object({
+				projectId: z.string().uuid(),
+				projectIndexTypeId: z.string().uuid(),
+			}),
+		)
+		.query(async ({ input, ctx }) => {
+			return await indexEntryService.getIndexView({
+				projectId: input.projectId,
+				projectIndexTypeId: input.projectIndexTypeId,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
+
 	// ============================================================================
 	// Cross-Reference Endpoints
 	// ============================================================================
