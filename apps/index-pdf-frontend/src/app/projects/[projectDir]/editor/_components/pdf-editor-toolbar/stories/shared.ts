@@ -13,6 +13,7 @@ export const defaultArgs = {
 	selectedType: "page_number",
 	onSelectText: fn(),
 	onDrawRegion: fn(),
+	onHighlightInteraction: fn(),
 	onTypeChange: fn(),
 	enabledIndexTypes: ["subject", "author", "scripture"],
 };

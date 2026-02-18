@@ -100,7 +100,8 @@ export const ProjectScriptureContent = () => {
 		bboxes: m.bboxes ?? [],
 		entryId: m.entryId,
 		entryLabel: m.entry.label,
-		indexTypes: m.indexTypes.map((t) => t.indexType),
+		indexType: m.indexTypes[0]?.indexType ?? "",
+		pageSublocation: m.pageSublocation ?? null,
 		type: m.mentionType as "text" | "region",
 		createdAt: new Date(m.createdAt),
 	}));

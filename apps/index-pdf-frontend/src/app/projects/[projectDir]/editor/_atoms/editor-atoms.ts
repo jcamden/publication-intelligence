@@ -257,6 +257,12 @@ export const pageSidebarWidthAtom = atomWithStorage(
 	28.75,
 ); // rem
 
+// Mention creation popover: show page sublocation field (default hidden; edit via mention details)
+export const mentionCreationShowPageSublocationAtom = atomWithStorage(
+	"editor-mention-creation-show-page-sublocation",
+	false,
+);
+
 // PDF section visibility and width memory
 export const pdfSectionVisibleAtom = atomWithStorage(
 	"pdf-section-visible",

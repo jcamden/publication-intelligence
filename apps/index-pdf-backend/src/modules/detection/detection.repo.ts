@@ -318,7 +318,6 @@ export const createSuggestedEntry = async ({
 	label,
 	meaningType,
 	meaningId,
-	description,
 }: {
 	userId: string;
 	projectId: string;
@@ -327,7 +326,6 @@ export const createSuggestedEntry = async ({
 	label: string;
 	meaningType?: string;
 	meaningId?: string;
-	description?: string;
 }): Promise<string> => {
 	return await withUserContext({
 		userId,
@@ -366,7 +364,6 @@ export const createSuggestedEntry = async ({
 					label,
 					meaningType,
 					meaningId,
-					description,
 					status: "suggested",
 				})
 				.returning({ id: indexEntries.id });

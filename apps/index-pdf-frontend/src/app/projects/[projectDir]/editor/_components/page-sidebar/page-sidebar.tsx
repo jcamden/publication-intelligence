@@ -36,7 +36,7 @@ export type MentionData = {
 	text: string;
 	entryLabel: string;
 	entryId: string;
-	indexTypes: string[];
+	indexType: string;
 	type: "text" | "region";
 	detectionRunId?: string | null;
 };
@@ -121,7 +121,7 @@ export const PageSidebar = ({
 
 	// Create filtered mention lists per index type
 	const getMentionsForType = (indexType: string) =>
-		mentionsOnPage.filter((m) => m.indexTypes.includes(indexType));
+		mentionsOnPage.filter((m) => m.indexType === indexType);
 
 	const allSectionMetadata: Partial<
 		Record<
@@ -134,7 +134,7 @@ export const PageSidebar = ({
 		>
 	> = {
 		"page-pages": {
-			title: "Pages",
+			title: "Page",
 			icon: File,
 			content: PagePagesContent,
 		},
@@ -212,9 +212,9 @@ export const PageSidebar = ({
 		}),
 	) as typeof allSectionMetadata;
 
-	const visibleSections = sectionOrder
-		.filter((id) => sections.get(id)?.visible && !sections.get(id)?.popped)
-		.reverse();
+	const visibleSections = sectionOrder.filter(
+		(id) => sections.get(id)?.visible && !sections.get(id)?.popped,
+	);
 
 	return (
 		<DraggableSidebarContainer

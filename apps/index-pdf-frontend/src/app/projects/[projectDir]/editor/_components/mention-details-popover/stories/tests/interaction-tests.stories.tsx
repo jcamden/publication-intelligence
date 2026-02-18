@@ -36,7 +36,7 @@ export const ViewModeDefault: Story = {
 			text: "Sample text",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -45,12 +45,23 @@ export const ViewModeDefault: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -64,8 +75,6 @@ export const ViewModeDefault: Story = {
 			await expect(
 				canvas.getByText(/kant → critique of pure reason/i),
 			).toBeInTheDocument();
-			await expect(canvas.getByText(/subject/i)).toBeInTheDocument();
-			await expect(canvas.getByText(/42/)).toBeInTheDocument();
 		});
 
 		await step("Verify Edit and Close buttons are visible", async () => {
@@ -77,12 +86,12 @@ export const ViewModeDefault: Story = {
 			).toBeInTheDocument();
 		});
 
-		await step("Verify editable fields are not present", async () => {
-			expect(canvas.queryByTestId("entry-combobox")).not.toBeInTheDocument();
-			expect(
-				canvas.queryByTestId("index-types-select"),
-			).not.toBeInTheDocument();
-		});
+		await step(
+			"Verify editable fields are not present in view mode",
+			async () => {
+				expect(canvas.queryByTestId("entry-combobox")).not.toBeInTheDocument();
+			},
+		);
 	},
 };
 
@@ -94,7 +103,7 @@ export const EnterEditMode: Story = {
 			text: "Sample text",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -103,12 +112,23 @@ export const EnterEditMode: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -124,9 +144,6 @@ export const EnterEditMode: Story = {
 
 		await step("Verify Edit mode UI is displayed", async () => {
 			await expect(canvas.getByTestId("entry-combobox")).toBeInTheDocument();
-			await expect(
-				canvas.getByTestId("index-types-select"),
-			).toBeInTheDocument();
 		});
 
 		await step("Verify Edit mode buttons are visible", async () => {
@@ -151,7 +168,7 @@ export const CancelEditMode: Story = {
 			text: "Sample text",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -160,12 +177,23 @@ export const CancelEditMode: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -177,19 +205,6 @@ export const CancelEditMode: Story = {
 		await step("Enter Edit mode", async () => {
 			const editButton = canvas.getByRole("button", { name: /^edit$/i });
 			await userEvent.click(editButton);
-		});
-
-		await step("Make changes to index types", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			await userEvent.click(selectTrigger);
-
-			// Wait for dropdown to open
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			const body = within(document.body);
-			const authorOption = body.getByRole("option", { name: /author/i });
-			await userEvent.click(authorOption);
-			await userEvent.keyboard("{Escape}");
 		});
 
 		await step("Click Cancel button", async () => {
@@ -205,11 +220,6 @@ export const CancelEditMode: Story = {
 				canvas.getByRole("button", { name: /close/i }),
 			).toBeInTheDocument();
 		});
-
-		await step("Verify changes were reverted", async () => {
-			const indexText = canvas.getByText(/subject/i);
-			await expect(indexText).toBeInTheDocument();
-		});
 	},
 };
 
@@ -221,7 +231,7 @@ export const SaveChanges: Story = {
 			text: "Sample text",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -230,12 +240,23 @@ export const SaveChanges: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -249,17 +270,10 @@ export const SaveChanges: Story = {
 			await userEvent.click(editButton);
 		});
 
-		await step("Make changes to index types", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			await userEvent.click(selectTrigger);
-
-			// Wait for dropdown to open
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			const body = within(document.body);
-			const authorOption = body.getByRole("option", { name: /author/i });
-			await userEvent.click(authorOption);
-			await userEvent.keyboard("{Escape}");
+		await step("Change page sublocation", async () => {
+			const sublocationInput = canvas.getByTestId("sublocation-input");
+			await userEvent.clear(sublocationInput);
+			await userEvent.type(sublocationInput, "10:45.a");
 		});
 
 		await step("Click Save button", async () => {
@@ -283,7 +297,7 @@ export const EditRegionText: Story = {
 			text: "Original region description",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "region" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -294,10 +308,10 @@ export const EditRegionText: Story = {
 			text,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
 			entryId?: string;
 			entryLabel?: string;
 			text?: string;
+			pageSublocation?: string | null;
 		}) => {
 			console.log("Close with updated text:", text);
 		},
@@ -344,7 +358,7 @@ export const TextTypeReadonly: Story = {
 			text: "Extracted text from PDF",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -353,12 +367,23 @@ export const TextTypeReadonly: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -389,7 +414,7 @@ export const CloseButtonClick: Story = {
 			text: "Sample text",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -398,12 +423,23 @@ export const CloseButtonClick: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -427,7 +463,7 @@ export const DeleteInEditMode: Story = {
 			text: "Sample text",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -436,12 +472,23 @@ export const DeleteInEditMode: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -470,7 +517,7 @@ export const DisplaysCorrectInformation: Story = {
 			text: "This is the highlighted text from the document",
 			entryLabel: "Plato → The Republic",
 			entryId: "entry-3",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -479,12 +526,23 @@ export const DisplaysCorrectInformation: Story = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
+			entryId,
+			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
+			entryId?: string;
+			entryLabel?: string;
+			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
+			console.log(
+				"Close with updates:",
+				mentionId,
+				entryId,
+				text,
+				pageSublocation,
+			);
 		},
 		onCancel: () => {
 			console.log("Cancel clicked");
@@ -504,10 +562,6 @@ export const DisplaysCorrectInformation: Story = {
 				canvas.getByText(/plato → the republic/i),
 			).toBeInTheDocument();
 		});
-
-		await step("Verify page number is displayed", async () => {
-			await expect(canvas.getByText(/99/)).toBeInTheDocument();
-		});
 	},
 };
 
@@ -519,7 +573,7 @@ export const TruncatesLongText: Story = {
 			text: "This is a very long text snippet that exceeds 100 characters and should be truncated with ellipsis to prevent the popover from becoming too wide and unwieldy for the user interface",
 			entryLabel: "Test Entry",
 			entryId: "entry-4",
-			indexTypes: ["scripture"],
+			indexType: "scripture",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -539,234 +593,6 @@ export const TruncatesLongText: Story = {
 		await step("Verify text is truncated with ellipsis", async () => {
 			const textElement = canvas.getByText(/this is a very long text/i);
 			await expect(textElement.textContent).toMatch(/\.\.\./);
-		});
-	},
-};
-
-export const SelectSingleIndexType: Story = {
-	args: {
-		mention: {
-			id: "mention-11",
-			pageNumber: 10,
-			text: "Test text",
-			entryLabel: "Test Entry",
-			entryId: "entry-5",
-			indexTypes: ["subject"],
-			type: "text" as const,
-		},
-		existingEntries: mockIndexEntries,
-		onDelete: ({ mentionId }: { mentionId: string }) => {
-			console.log("Delete clicked:", mentionId);
-		},
-		onClose: ({
-			mentionId,
-			indexTypes,
-		}: {
-			mentionId: string;
-			indexTypes: string[];
-		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
-		},
-		onCancel: () => {
-			console.log("Cancel clicked");
-		},
-	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
-
-		await step("Enter Edit mode", async () => {
-			const editButton = canvas.getByRole("button", { name: /^edit$/i });
-			await userEvent.click(editButton);
-		});
-
-		await step("Verify initial trigger shows Subject", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			await expect(selectTrigger.textContent).toMatch(/subject/i);
-		});
-
-		await step(
-			"Open dropdown, deselect Subject, and select Author",
-			async () => {
-				const selectTrigger = canvas.getByTestId("index-types-select");
-				await userEvent.click(selectTrigger);
-
-				await new Promise((resolve) => setTimeout(resolve, 100));
-
-				const body = within(document.body);
-
-				// Deselect Subject by clicking its checkbox
-				const subjectOption = body.getByRole("option", { name: /subject/i });
-				const subjectCheckbox = within(subjectOption).getByRole("checkbox");
-				await userEvent.click(subjectCheckbox);
-
-				// Select Author by clicking its checkbox
-				const authorOption = body.getByRole("option", { name: /author/i });
-				const authorCheckbox = within(authorOption).getByRole("checkbox");
-				await userEvent.click(authorCheckbox);
-			},
-		);
-
-		await step("Close dropdown", async () => {
-			await userEvent.keyboard("{Escape}");
-		});
-
-		await step("Verify trigger now shows only Author", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			const triggerText = selectTrigger.textContent || "";
-			await expect(triggerText).toMatch(/author/i);
-			await expect(triggerText).not.toMatch(/subject/i);
-		});
-	},
-};
-
-export const SelectMultipleIndexTypes: Story = {
-	args: {
-		mention: {
-			id: "mention-12",
-			pageNumber: 20,
-			text: "Multi-type mention",
-			entryLabel: "Test Entry",
-			entryId: "entry-6",
-			indexTypes: ["subject"],
-			type: "text" as const,
-		},
-		existingEntries: mockIndexEntries,
-		onDelete: ({ mentionId }: { mentionId: string }) => {
-			console.log("Delete clicked:", mentionId);
-		},
-		onClose: ({
-			mentionId,
-			indexTypes,
-		}: {
-			mentionId: string;
-			indexTypes: string[];
-		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
-		},
-		onCancel: () => {
-			console.log("Cancel clicked");
-		},
-	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
-
-		await step("Enter Edit mode", async () => {
-			const editButton = canvas.getByRole("button", { name: /^edit$/i });
-			await userEvent.click(editButton);
-		});
-
-		await step("Open dropdown and select Author", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			await userEvent.click(selectTrigger);
-
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			const body = within(document.body);
-			const authorOption = body.getByRole("option", { name: /author/i });
-			const authorCheckbox = within(authorOption).getByRole("checkbox");
-			await userEvent.click(authorCheckbox);
-		});
-
-		await step("Select Scripture as well", async () => {
-			const body = within(document.body);
-			const scriptureOption = body.getByRole("option", {
-				name: /scripture/i,
-			});
-			const scriptureCheckbox = within(scriptureOption).getByRole("checkbox");
-			await userEvent.click(scriptureCheckbox);
-		});
-
-		await step("Close dropdown", async () => {
-			await userEvent.keyboard("{Escape}");
-		});
-
-		await step("Verify trigger shows 3 selected items", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			const triggerText = selectTrigger.textContent || "";
-			// Should show "3 selected" or list all three
-			await expect(
-				triggerText.includes("3") ||
-					(triggerText.includes("Subject") &&
-						triggerText.includes("Author") &&
-						triggerText.includes("Scripture")),
-			).toBe(true);
-		});
-	},
-};
-
-export const DeselectIndexType: Story = {
-	args: {
-		mention: {
-			id: "mention-13",
-			pageNumber: 30,
-			text: "All types selected",
-			entryLabel: "Test Entry",
-			entryId: "entry-7",
-			indexTypes: ["subject", "author", "scripture"],
-			type: "text" as const,
-		},
-		existingEntries: mockIndexEntries,
-		onDelete: ({ mentionId }: { mentionId: string }) => {
-			console.log("Delete clicked:", mentionId);
-		},
-		onClose: ({
-			mentionId,
-			indexTypes,
-		}: {
-			mentionId: string;
-			indexTypes: string[];
-		}) => {
-			console.log("Close with updated types:", mentionId, indexTypes);
-		},
-		onCancel: () => {
-			console.log("Cancel clicked");
-		},
-	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
-
-		await step("Enter Edit mode", async () => {
-			const editButton = canvas.getByRole("button", { name: /^edit$/i });
-			await userEvent.click(editButton);
-		});
-
-		await step("Verify initial trigger shows 3 items", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			const triggerText = selectTrigger.textContent || "";
-			await expect(
-				triggerText.includes("3") ||
-					(triggerText.includes("Subject") &&
-						triggerText.includes("Author") &&
-						triggerText.includes("Scripture")),
-			).toBe(true);
-		});
-
-		await step("Open dropdown and deselect Author", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			await userEvent.click(selectTrigger);
-
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			const body = within(document.body);
-			const authorOption = body.getByRole("option", { name: /author/i });
-			await expect(authorOption).toHaveAttribute("data-selected");
-			const authorCheckbox = within(authorOption).getByRole("checkbox");
-			await userEvent.click(authorCheckbox);
-		});
-
-		await step("Close dropdown", async () => {
-			await userEvent.keyboard("{Escape}");
-		});
-
-		await step("Verify trigger now shows 2 items", async () => {
-			const selectTrigger = canvas.getByTestId("index-types-select");
-			const triggerText = selectTrigger.textContent || "";
-			await expect(
-				triggerText.includes("2") ||
-					(triggerText.includes("Subject") &&
-						triggerText.includes("Scripture") &&
-						!triggerText.includes("Author")),
-			).toBe(true);
 		});
 	},
 };

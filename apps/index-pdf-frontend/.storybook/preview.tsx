@@ -1,4 +1,5 @@
 import type { Preview } from "@storybook/nextjs-vite";
+import { Provider as JotaiProvider } from "jotai";
 import { MockProjectProvider } from "../src/app/_common/_test-utils/storybook-utils/project-decorator";
 import { MockThemeProvider } from "../src/app/_common/_test-utils/storybook-utils/theme-decorator";
 import { TrpcDecorator } from "../src/app/_common/_test-utils/storybook-utils/trpc-decorator";
@@ -88,13 +89,15 @@ const preview: Preview = {
 			}
 
 			return (
-				<TrpcDecorator>
-					<MockThemeProvider theme={theme as "light" | "dark"}>
-						<MockProjectProvider projectId="test-project-id">
-							<Story />
-						</MockProjectProvider>
-					</MockThemeProvider>
-				</TrpcDecorator>
+				<JotaiProvider>
+					<TrpcDecorator>
+						<MockThemeProvider theme={theme as "light" | "dark"}>
+							<MockProjectProvider projectId="test-project-id">
+								<Story />
+							</MockProjectProvider>
+						</MockThemeProvider>
+					</TrpcDecorator>
+				</JotaiProvider>
 			);
 		},
 	],

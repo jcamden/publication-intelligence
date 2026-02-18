@@ -9,6 +9,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@pubint/yabasic/components/ui/card";
+import { Checkbox } from "@pubint/yabasic/components/ui/checkbox";
 import {
 	Field,
 	FieldDescription,
@@ -22,6 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@pubint/yabasic/components/ui/select";
+import { useAtom } from "jotai";
 import { CheckIcon, Loader2, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,6 +31,7 @@ import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { useTheme } from "@/app/_common/_providers/theme-provider";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { ProjectNavbar } from "@/app/projects/_components/project-navbar";
+import { mentionCreationShowPageSublocationAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { DeleteAccountDialog } from "./_components/delete-account-dialog";
 
 export default function SettingsPage() {
@@ -39,6 +42,10 @@ export default function SettingsPage() {
 	const [apiKey, setApiKey] = useState("");
 	const [selectedModel, setSelectedModel] = useState("");
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+	const [
+		showPageSublocationInMentionCreation,
+		setShowPageSublocationInMentionCreation,
+	] = useAtom(mentionCreationShowPageSublocationAtom);
 
 	// Auth gate: redirect to login if not authenticated
 	useEffect(() => {
@@ -494,6 +501,40 @@ export default function SettingsPage() {
 								</SelectContent>
 							</Select>
 						</Field>
+					</CardContent>
+				</Card>
+
+				{/* Editor */}
+				<Card>
+					<CardHeader>
+						<CardTitle>Editor</CardTitle>
+						<CardDescription>
+							Options for the PDF editor and mention creation
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="flex items-start gap-3">
+							<Checkbox
+								id="show-page-sublocation"
+								checked={showPageSublocationInMentionCreation}
+								onCheckedChange={(checked) =>
+									setShowPageSublocationInMentionCreation(!!checked)
+								}
+							/>
+							<div className="grid gap-1.5 leading-none">
+								<Label
+									htmlFor="show-page-sublocation"
+									className="text-sm font-medium cursor-pointer"
+								>
+									Show page sublocation in mention creation popover
+								</Label>
+								<p className="text-sm text-muted-foreground">
+									When creating a mention (subject index), show the optional
+									page sublocation field. You can always edit it later in the
+									mention details popover.
+								</p>
+							</div>
+						</div>
 					</CardContent>
 				</Card>
 

@@ -41,6 +41,16 @@ export const Default: Story = {
 				onDrawRegion={() =>
 					setActiveAction({ type: "draw-region", indexType: "subject" })
 				}
+				onHighlightInteraction={() =>
+					setActiveAction((c) =>
+						c.type === "select-text" || c.type === "draw-region"
+							? { type: null, indexType: null }
+							: {
+									type: c.type === "highlight" ? null : "highlight",
+									indexType: null,
+								},
+					)
+				}
 				onTypeChange={(type) => setSelectedType(type)}
 			/>
 		);
@@ -76,6 +86,16 @@ export const SelectTextActive: Story = {
 				}
 				onDrawRegion={() =>
 					setActiveAction({ type: "draw-region", indexType: "subject" })
+				}
+				onHighlightInteraction={() =>
+					setActiveAction((c) =>
+						c.type === "select-text" || c.type === "draw-region"
+							? { type: null, indexType: null }
+							: {
+									type: c.type === "highlight" ? null : "highlight",
+									indexType: null,
+								},
+					)
 				}
 				onTypeChange={(type) => setSelectedType(type)}
 			/>
@@ -113,6 +133,16 @@ export const DrawRegionActivePageNumber: Story = {
 				onDrawRegion={() =>
 					setActiveAction({ type: "draw-region", indexType: null })
 				}
+				onHighlightInteraction={() =>
+					setActiveAction((c) =>
+						c.type === "select-text" || c.type === "draw-region"
+							? { type: null, indexType: null }
+							: {
+									type: c.type === "highlight" ? null : "highlight",
+									indexType: null,
+								},
+					)
+				}
 				onTypeChange={(type) => setSelectedType(type)}
 			/>
 		);
@@ -149,6 +179,16 @@ export const DrawRegionActiveExclude: Story = {
 				onDrawRegion={() =>
 					setActiveAction({ type: "draw-region", indexType: null })
 				}
+				onHighlightInteraction={() =>
+					setActiveAction((c) =>
+						c.type === "select-text" || c.type === "draw-region"
+							? { type: null, indexType: null }
+							: {
+									type: c.type === "highlight" ? null : "highlight",
+									indexType: null,
+								},
+					)
+				}
 				onTypeChange={(type) => setSelectedType(type)}
 			/>
 		);
@@ -184,6 +224,16 @@ export const DrawRegionActiveAuthor: Story = {
 				}
 				onDrawRegion={() =>
 					setActiveAction({ type: "draw-region", indexType: "author" })
+				}
+				onHighlightInteraction={() =>
+					setActiveAction((c) =>
+						c.type === "select-text" || c.type === "draw-region"
+							? { type: null, indexType: null }
+							: {
+									type: c.type === "highlight" ? null : "highlight",
+									indexType: null,
+								},
+					)
 				}
 				onTypeChange={(type) => setSelectedType(type)}
 			/>

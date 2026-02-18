@@ -156,7 +156,6 @@ CREATE TABLE "index_entries" (
 	"project_index_type_id" uuid NOT NULL,
 	"slug" text NOT NULL,
 	"label" text NOT NULL,
-	"description" text,
 	"status" "index_entry_status" DEFAULT 'active' NOT NULL,
 	"revision" integer DEFAULT 1 NOT NULL,
 	"parent_id" uuid,
@@ -210,7 +209,6 @@ CREATE TABLE "index_relations" (
 	"to_entry_id" uuid,
 	"arbitrary_value" text,
 	"relation_type" "relation_type" NOT NULL,
-	"note" text,
 	"revision" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone

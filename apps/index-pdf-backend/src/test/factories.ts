@@ -316,7 +316,6 @@ export const createTestIndexEntry = async ({
 	label,
 	slug,
 	userId,
-	description,
 	parentId,
 	matchers,
 	testDb,
@@ -326,7 +325,6 @@ export const createTestIndexEntry = async ({
 	label: string;
 	slug: string;
 	userId: string;
-	description?: string;
 	parentId?: string;
 	matchers?: string[];
 	testDb?: PgliteDatabase<typeof schema>;
@@ -352,7 +350,6 @@ export const createTestIndexEntry = async ({
 				projectIndexTypeId,
 				label,
 				slug,
-				description: description ?? null,
 				parentId: parentId ?? null,
 				status: "active",
 				revision: 1,

@@ -4,7 +4,9 @@ import { Button } from "@pubint/yabasic/components/ui/button";
 import { FieldError } from "@pubint/yabasic/components/ui/field";
 import { FormInput } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
+import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { mentionCreationShowPageSublocationAtom } from "../../_atoms/editor-atoms";
 import type { IndexEntry } from "../../_types/index-entry";
 import { findEntryByText } from "../../_utils/index-entry-utils";
 import type { Mention } from "../editor/editor";
@@ -78,6 +80,9 @@ export const MentionCreationPopover = ({
 	);
 	const [entryError, setEntryError] = useState<string | null>(null);
 	const regionNameInputRef = useRef<HTMLInputElement>(null);
+	const showPageSublocation = useAtomValue(
+		mentionCreationShowPageSublocationAtom,
+	);
 
 	// State for entry creation modal
 	const [createEntryModalOpen, setCreateEntryModalOpen] = useState(false);
@@ -353,7 +358,7 @@ export const MentionCreationPopover = ({
 					{entryError && <FieldError errors={[{ message: entryError }]} />}
 				</div>
 
-				{indexType === "subject" && (
+				{indexType === "subject" && showPageSublocation && (
 					<form.Field name="pageSublocation">
 						{(field) => (
 							<div className="mb-3">

@@ -69,7 +69,6 @@ export const EntryEditModal = ({
 		defaultValues: {
 			label: entry.label,
 			parentId: entry.parentId as string | null,
-			description: "",
 		},
 		onSubmit: async ({ value }) => {
 			const label = value.label.trim();
@@ -80,7 +79,6 @@ export const EntryEditModal = ({
 					projectId,
 					projectIndexTypeId,
 					label,
-					description: value.description || undefined,
 					matchers: matchers,
 				},
 				{
@@ -232,17 +230,6 @@ export const EntryEditModal = ({
 										</SelectContent>
 									</Select>
 								</Field>
-							)}
-						</form.Field>
-
-						{/* Description field */}
-						<form.Field name="description">
-							{(field) => (
-								<FormInput
-									field={field}
-									label="Description (optional)"
-									placeholder="Additional notes or context..."
-								/>
 							)}
 						</form.Field>
 					</form>

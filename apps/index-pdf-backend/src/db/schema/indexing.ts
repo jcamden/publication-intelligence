@@ -35,7 +35,6 @@ export const indexEntries = pgTable(
 			.notNull(),
 		slug: text("slug").notNull(), // Stable identifier, never changes
 		label: text("label").notNull(), // Display name, mutable
-		description: text("description"),
 		status: indexEntryStatusEnum("status").default("active").notNull(),
 		revision: integer("revision").default(1).notNull(),
 		parentId: uuid("parent_id"), // Self-referential, nullable for top-level entries
@@ -155,7 +154,6 @@ export const indexRelations = pgTable(
 		}), // Nullable for arbitrary cross-references
 		arbitraryValue: text("arbitrary_value"), // For freeform cross-references
 		relationType: relationTypeEnum("relation_type").notNull(),
-		note: text("note"),
 		revision: integer("revision").default(1).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()

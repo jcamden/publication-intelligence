@@ -41,6 +41,7 @@ export const listIndexMentions = async ({
 			textSpan: indexMentions.textSpan,
 			bboxes: indexMentions.bboxes,
 			mentionType: indexMentions.mentionType,
+			pageSublocation: indexMentions.pageSublocation,
 			detectionRunId: indexMentions.detectionRunId,
 			createdAt: indexMentions.createdAt,
 			entry: {
@@ -93,6 +94,7 @@ export const listIndexMentions = async ({
 			textSpan: mention.textSpan,
 			bboxes: mention.bboxes as unknown as BoundingBox[] | null,
 			mentionType: mention.mentionType,
+			pageSublocation: mention.pageSublocation,
 			detectionRunId: mention.detectionRunId,
 			indexTypes: indexType
 				? [
@@ -313,6 +315,10 @@ export const updateIndexMention = async ({
 
 			if (input.textSpan !== undefined) {
 				updateValues.textSpan = input.textSpan;
+			}
+
+			if (input.pageSublocation !== undefined) {
+				updateValues.pageSublocation = input.pageSublocation;
 			}
 
 			const result = await tx

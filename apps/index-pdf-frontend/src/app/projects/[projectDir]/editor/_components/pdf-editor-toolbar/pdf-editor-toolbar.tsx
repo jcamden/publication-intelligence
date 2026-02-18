@@ -13,16 +13,21 @@ import {
 	TooltipTrigger,
 } from "@pubint/yabasic/components/ui/tooltip";
 import { PdfViewerToolbar, StyledButton } from "@pubint/yaboujee";
+import { useAtomValue } from "jotai";
 import type { LucideIcon } from "lucide-react";
 import {
 	Ban,
 	BookOpen,
 	FileDigit,
+	Pointer,
 	SquareDashedMousePointer,
 	Tags,
 	TextSelect,
 	User,
 } from "lucide-react";
+import { highlightColorConfigAtom } from "../../_atoms/editor-atoms";
+import type { HighlightType } from "../../_types/highlight-config";
+import { iconColorFromHue } from "../../_types/highlight-config";
 
 export type PdfEditorToolbarProps = {
 	// PDF Viewer Toolbar props (pass-through)
@@ -36,12 +41,13 @@ export type PdfEditorToolbarProps = {
 	showPdfToggle: boolean;
 	// Editor-specific props
 	activeAction: {
-		type: "select-text" | "draw-region" | null;
+		type: "select-text" | "draw-region" | "highlight" | null;
 		indexType: string | null;
 	};
 	selectedType: string;
 	onSelectText: () => void;
 	onDrawRegion: () => void;
+	onHighlightInteraction: () => void;
 	onTypeChange: (type: string) => void;
 	enabledIndexTypes: string[];
 };
@@ -86,9 +92,12 @@ export const PdfEditorToolbar = ({
 	selectedType,
 	onSelectText,
 	onDrawRegion,
+	onHighlightInteraction,
 	onTypeChange,
 	enabledIndexTypes,
 }: PdfEditorToolbarProps) => {
+	const highlightColorConfig = useAtomValue(highlightColorConfigAtom);
+
 	// Determine if selected type is a region type (exclude or page_number)
 	const isRegionType =
 		selectedType === "exclude" || selectedType === "page_number";
@@ -103,9 +112,15 @@ export const PdfEditorToolbar = ({
 		})),
 	];
 
-	// Get the selected option's icon for display
+	// Get the selected option's icon for display (with persisted hue)
 	const selectedOption = allOptions.find((opt) => opt.value === selectedType);
 	const SelectedIcon = selectedOption?.icon;
+	const selectedHue =
+		selectedType in highlightColorConfig
+			? highlightColorConfig[selectedType as HighlightType].hue
+			: null;
+	const selectedIconColor =
+		selectedHue !== null ? iconColorFromHue({ hue: selectedHue }) : undefined;
 
 	return (
 		<div className="flex items-center gap-6">
@@ -135,7 +150,17 @@ export const PdfEditorToolbar = ({
 								>
 									<SelectTrigger size="lg" className="w-fit min-w-[40px]">
 										<SelectValue>
-											{SelectedIcon && <SelectedIcon className="h-4 w-4" />}
+											{SelectedIcon && (
+												<SelectedIcon
+													className="h-4 w-4 shrink-0"
+													strokeWidth={3}
+													style={
+														selectedIconColor
+															? { color: selectedIconColor }
+															: undefined
+													}
+												/>
+											)}
 										</SelectValue>
 									</SelectTrigger>
 									<SelectContent>
@@ -147,6 +172,15 @@ export const PdfEditorToolbar = ({
 											const isDisabled =
 												activeAction.type === "select-text" && isRegionOption;
 											const OptionIcon = option.icon;
+											const optionHue =
+												option.value in highlightColorConfig
+													? highlightColorConfig[option.value as HighlightType]
+															.hue
+													: null;
+											const optionIconColor =
+												optionHue !== null
+													? iconColorFromHue({ hue: optionHue })
+													: undefined;
 
 											return (
 												<SelectItem
@@ -154,7 +188,15 @@ export const PdfEditorToolbar = ({
 													value={option.value}
 													disabled={isDisabled}
 												>
-													<OptionIcon className="h-4 w-4" />
+													<OptionIcon
+														className="h-4 w-4 shrink-0"
+														strokeWidth={2.5}
+														style={
+															optionIconColor
+																? { color: optionIconColor }
+																: undefined
+														}
+													/>
 													{option.label}
 												</SelectItem>
 											);
@@ -183,6 +225,14 @@ export const PdfEditorToolbar = ({
 					label="Draw Region"
 					isActive={activeAction.type === "draw-region"}
 					onClick={onDrawRegion}
+				/>
+				<StyledButton
+					icon={Pointer}
+					label="Highlight Interaction Mode"
+					isActive={
+						activeAction.type === "highlight" || activeAction.type === null
+					}
+					onClick={onHighlightInteraction}
 				/>
 			</div>
 		</div>

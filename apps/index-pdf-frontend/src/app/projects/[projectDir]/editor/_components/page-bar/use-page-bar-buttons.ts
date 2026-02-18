@@ -188,7 +188,6 @@ export const usePageBarButtons = ({
 		.filter((button): button is StyledToggleButton => button !== null);
 
 	const buttons: StyledToggleButton[] = [
-		...sectionButtons,
 		{
 			name: "toggleSidebar",
 			icon: ChevronLeft as LucideIcon,
@@ -196,6 +195,7 @@ export const usePageBarButtons = ({
 			onClick: handleSidebarToggle,
 			tooltip: pageSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar",
 		},
+		...sectionButtons,
 	];
 
 	return { buttons, onReorder };

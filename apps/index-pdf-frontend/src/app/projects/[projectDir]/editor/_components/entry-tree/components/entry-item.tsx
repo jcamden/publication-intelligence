@@ -10,7 +10,7 @@ import { useMemo, useState } from "react";
 import { ApproveSuggestionButton } from "@/app/_common/_components/approve-suggestion-button";
 import { useApproveEntry } from "@/app/_common/_hooks/use-approve-entry";
 import type { IndexEntry } from "../../../_types/index-entry";
-import { formatCrossReferences } from "../../../_utils/cross-reference-utils";
+import { formatCrossReferencesAsSegments } from "../../../_utils/cross-reference-utils";
 import type { Mention } from "../../editor/editor";
 
 export type EntryItemProps = {
@@ -61,21 +61,14 @@ export const EntryItem = ({
 		[mentions, entry.id],
 	);
 
-	const crossReferencesData = useMemo(() => {
-		const sorted = [...(entry.crossReferences || [])].sort((a, b) => {
-			const labelA = a.toEntry?.label || a.arbitraryValue || "";
-			const labelB = b.toEntry?.label || b.arbitraryValue || "";
-			return labelA.localeCompare(labelB);
-		});
-
-		return sorted.map((ref) => ({
-			id: ref.id,
-			text: formatCrossReferences({
-				crossReferences: [ref],
+	const crossReferenceSegments = useMemo(
+		() =>
+			formatCrossReferencesAsSegments({
+				crossReferences: entry.crossReferences ?? [],
 				allEntries,
-			})[0],
-		}));
-	}, [entry.crossReferences, allEntries]);
+			}),
+		[entry.crossReferences, allEntries],
+	);
 
 	const isSuggested = entry.status === "suggested";
 
@@ -226,15 +219,19 @@ export const EntryItem = ({
 				</div>
 			</div>
 
-			{/* Cross references list (if any) */}
-			{crossReferencesData.length > 0 && (
+			{/* Cross references (if any); directive in italic per Chicago; Merriweather for clearer italic/roman spacing */}
+			{crossReferenceSegments.length > 0 && (
 				<div
-					className="flex flex-col text-xs text-gray-600 dark:text-gray-400 italic pl-8"
+					className="font-merriweather text-xs text-gray-600 dark:text-gray-400 pl-8"
 					style={{ marginLeft: `${hasChildren ? 20 : 0}px` }}
 				>
-					{crossReferencesData.map((ref) => (
-						<div key={ref.id}>{ref.text}</div>
-					))}
+					{crossReferenceSegments.map((seg, i) =>
+						seg.italic ? (
+							<em key={`${i}-italic-${seg.text}`}>{seg.text}</em>
+						) : (
+							<span key={`${i}-roman-${seg.text}`}>{seg.text}</span>
+						),
+					)}
 				</div>
 			)}
 		</div>

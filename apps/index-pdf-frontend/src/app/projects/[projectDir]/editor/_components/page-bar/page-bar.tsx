@@ -19,6 +19,7 @@ export const PageBar = ({ enabledIndexTypes }: PageBarProps) => {
 	return (
 		<StyledToggleButtonGroup
 			buttons={buttons}
+			className="flex-row-reverse"
 			draggable={true}
 			onReorder={onReorder}
 			excludeFromDrag={["toggleSidebar"]}

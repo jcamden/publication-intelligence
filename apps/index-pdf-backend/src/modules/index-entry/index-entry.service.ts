@@ -482,6 +482,9 @@ export const listCrossReferences = async ({
 	return relations as CrossReference[];
 };
 
+const REDIRECT_TYPES = ["see", "qv"] as const;
+const SEE_ALSO_TYPE = "see_also";
+
 export const createCrossReference = async ({
 	input,
 	userId,
@@ -491,6 +494,36 @@ export const createCrossReference = async ({
 	userId: string;
 	requestId: string;
 }): Promise<CrossReference> => {
+	const existing = await indexEntryRepo.getCrossReferences({
+		entryId: input.fromEntryId,
+	});
+
+	const hasRedirect = existing.some((r) =>
+		REDIRECT_TYPES.includes(r.relationType as (typeof REDIRECT_TYPES)[number]),
+	);
+	const hasSeeAlso = existing.some((r) => r.relationType === SEE_ALSO_TYPE);
+
+	if (input.relationType === SEE_ALSO_TYPE && hasRedirect) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message:
+				'Cannot add "see also" cross-reference when entry already has a redirect (see or q.v.). Remove redirects first.',
+		});
+	}
+
+	if (
+		REDIRECT_TYPES.includes(
+			input.relationType as (typeof REDIRECT_TYPES)[number],
+		) &&
+		hasSeeAlso
+	) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message:
+				'Cannot add redirect (see or q.v.) when entry already has "see also" cross-references. Remove them first.',
+		});
+	}
+
 	// "See" cross-reference enforcement
 	if (input.relationType === "see") {
 		// Check if source entry has mentions
@@ -519,18 +552,21 @@ export const createCrossReference = async ({
 				metadata: {
 					fromEntryId: input.fromEntryId,
 					toEntryId: input.toEntryId,
-					arbitraryValue: input.arbitraryValue,
 				},
 			},
 		});
 	}
 
+	const toEntryId = input.toEntryId ?? null;
+	const arbitraryValue = input.arbitraryValue?.trim()
+		? input.arbitraryValue.trim()
+		: null;
+
 	const relation = await indexEntryRepo.createCrossReference({
 		fromEntryId: input.fromEntryId,
-		toEntryId: input.toEntryId,
-		arbitraryValue: input.arbitraryValue,
+		toEntryId,
+		arbitraryValue,
 		relationType: input.relationType,
-		note: input.note,
 		userId,
 	});
 
@@ -542,8 +578,8 @@ export const createCrossReference = async ({
 			metadata: {
 				relationId: relation.id,
 				fromEntryId: input.fromEntryId,
-				toEntryId: input.toEntryId,
-				arbitraryValue: input.arbitraryValue,
+				toEntryId: relation.toEntryId,
+				arbitraryValue: relation.arbitraryValue,
 				relationType: input.relationType,
 			},
 		},

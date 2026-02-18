@@ -76,7 +76,6 @@ export const EntryCreationModal = ({
 		defaultValues: {
 			label: prefillLabel,
 			parentId: prefillParentId,
-			description: "",
 		},
 		onSubmit: async ({ value }) => {
 			console.log("[EntryCreationModal] onSubmit called with value:", value);
@@ -104,10 +103,10 @@ export const EntryCreationModal = ({
 								pendingCrossReferences.map((crossRef) =>
 									createCrossReference.mutateAsync({
 										fromEntryId: newEntry.id,
+										...(crossRef.toEntryId != null
+											? { toEntryId: crossRef.toEntryId }
+											: { arbitraryValue: crossRef.arbitraryValue ?? "" }),
 										relationType: crossRef.relationType,
-										toEntryId: crossRef.toEntryId,
-										arbitraryValue: crossRef.arbitraryValue,
-										note: crossRef.note,
 									}),
 								),
 							);
@@ -181,7 +180,6 @@ export const EntryCreationModal = ({
 			// Reset form with new prefill values
 			form.setFieldValue("label", prefillLabel);
 			form.setFieldValue("parentId", prefillParentId);
-			form.setFieldValue("description", "");
 
 			// Initialize matchers
 			if (prefillLabel) {
@@ -338,17 +336,6 @@ export const EntryCreationModal = ({
 										allowClear
 									/>
 								</Field>
-							)}
-						</form.Field>
-
-						{/* Description field */}
-						<form.Field name="description">
-							{(field) => (
-								<FormInput
-									field={field}
-									label="Description (optional)"
-									placeholder="Additional notes or context..."
-								/>
 							)}
 						</form.Field>
 					</form>

@@ -87,8 +87,9 @@ export type Mention = {
 	bboxes: BoundingBox[];
 	entryId: string;
 	entryLabel: string;
-	indexTypes: string[]; // ['subject', 'author', 'scripture']
+	indexType: string;
 	type: "text" | "region";
+	pageSublocation?: string | null;
 	detectionRunId?: string | null;
 	createdAt: Date;
 };
@@ -103,7 +104,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 
 	// Transient action state (replaces persistent annotationMode)
 	const [activeAction, setActiveAction] = useState<{
-		type: "select-text" | "draw-region" | "draw-region" | null;
+		type: "select-text" | "draw-region" | "highlight" | null;
 		indexType: string | null;
 	}>({ type: null, indexType: null });
 
@@ -157,6 +158,13 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		},
 	});
 
+	// Mutation for updating mentions (from mention-details-popover save)
+	const updateMentionMutation = trpc.indexMention.update.useMutation({
+		onSuccess: () => {
+			utils.indexMention.list.invalidate();
+		},
+	});
+
 	// Fetch all entries for the project (needed for mention details popover)
 	const { data: backendAllEntries = [] } = trpc.indexEntry.list.useQuery(
 		{
@@ -204,8 +212,9 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			bboxes: m.bboxes ?? [],
 			entryId: m.entryId,
 			entryLabel,
-			indexTypes: m.indexTypes.map((t) => t.indexType),
+			indexType: m.indexTypes[0]?.indexType ?? "",
 			type: m.mentionType,
+			pageSublocation: m.pageSublocation ?? null,
 			detectionRunId: m.detectionRunId,
 			createdAt: new Date(m.createdAt),
 		};
@@ -358,6 +367,18 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		});
 	}, [selectedRegionType, isIndexType]);
 
+	const handleHighlightInteraction = useCallback(() => {
+		setActiveAction((current) => {
+			if (current.type === "select-text" || current.type === "draw-region") {
+				return { type: null, indexType: null };
+			}
+			return {
+				type: current.type === "highlight" ? null : "highlight",
+				indexType: null,
+			};
+		});
+	}, []);
+
 	const handleEditRegion = useCallback((regionId: string) => {
 		setRegionToEdit(regionId);
 		setRegionModalOpen(true);
@@ -508,31 +529,39 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	);
 
 	const handleMentionDetailsClose = useCallback(
-		async (_params: {
+		async (params: {
 			mentionId: string;
-			indexTypes: string[];
 			entryId?: string;
 			entryLabel?: string;
 			text?: string;
+			pageSublocation?: string | null;
 		}) => {
-			// NOTE: Currently updating local state immediately.
-			// Phase 5 TODO: Replace with optimistic update pattern:
-			// 1. Immediately update local state (optimistic)
-			// 2. Call backend API
-			// 3. If API fails, revert to previous state
-			// 4. If API succeeds, state is already correct
-			//
-			// This ensures UI feels instant while staying in sync with backend.
-			// await updateMentionIndexTypesMutation.mutateAsync({ id: mentionId, indexTypes });
+			if (!projectId || !documentId) return;
 
-			// Simulated API call
-			await new Promise((resolve) => setTimeout(resolve, 200));
+			const mention = mentions.find((m) => m.id === params.mentionId);
+			if (!mention) return;
 
-			// Phase 5: Mention updates now handled by tRPC mutations
-			// The tRPC cache will be automatically invalidated by the mutations
-			// TODO: Wire up actual tRPC updateMention mutation
+			const hasChanges =
+				(params.entryId !== undefined && params.entryId !== mention.entryId) ||
+				(params.text !== undefined && params.text !== mention.text) ||
+				(params.pageSublocation !== undefined &&
+					params.pageSublocation !== (mention.pageSublocation ?? ""));
+
+			if (!hasChanges) return;
+
+			await updateMentionMutation.mutateAsync({
+				id: params.mentionId,
+				projectId,
+				documentId,
+				pageNumber: mention.pageNumber,
+				...(params.entryId !== undefined && { entryId: params.entryId }),
+				...(params.text !== undefined && { textSpan: params.text }),
+				...(params.pageSublocation !== undefined && {
+					pageSublocation: params.pageSublocation,
+				}),
+			});
 		},
-		[],
+		[projectId, documentId, mentions, updateMentionMutation],
 	);
 
 	const handleDeleteMention = useCallback(
@@ -639,20 +668,15 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			.map((pit) => pit.indexType) ?? [],
 	);
 
-	// Filter mentions to only include those with ALL types visible
+	// Filter mentions to only include those with index type visible
 	const visibleMentions = mentions.filter((mention) =>
-		mention.indexTypes.every((typeName) => visibleIndexTypeNames.has(typeName)),
+		visibleIndexTypeNames.has(mention.indexType),
 	);
 
 	// Convert visible mentions to PdfHighlight format for rendering
 	const mentionHighlights: PdfHighlight[] = visibleMentions.map((mention) => {
-		// Map mention.indexTypes to hues from colorConfig
-		const hues = mention.indexTypes
-			.map((typeName) => {
-				const typeColor = colorConfig[typeName as IndexTypeName];
-				return typeColor ? typeColor.hue : null;
-			})
-			.filter((hue): hue is number => hue !== null);
+		const typeColor = colorConfig[mention.indexType as IndexTypeName];
+		const hue = typeColor ? typeColor.hue : 60;
 
 		return {
 			id: mention.id,
@@ -661,8 +685,8 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			text: mention.text,
 			bboxes: mention.bboxes,
 			metadata: {
-				indexTypes: mention.indexTypes,
-				hues: hues.length > 0 ? hues : [60], // Fallback to yellow hue
+				indexTypes: [mention.indexType],
+				hues: [hue],
 			},
 		};
 	});
@@ -722,6 +746,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 							selectedType={selectedRegionType}
 							onSelectText={handleSelectText}
 							onDrawRegion={handleDrawRegion}
+							onHighlightInteraction={handleHighlightInteraction}
 							onTypeChange={handleTypeChange}
 							enabledIndexTypes={enabledIndexTypes}
 						/>
@@ -884,15 +909,15 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									text: selectedMention.text,
 									entryLabel: selectedMention.entryLabel,
 									entryId: selectedMention.entryId,
-									indexTypes: selectedMention.indexTypes,
+									indexType: selectedMention.indexType,
 									type: selectedMention.type,
+									pageSublocation: selectedMention.pageSublocation,
 								}}
 								existingEntries={allEntries}
 								onDelete={handleDeleteMention}
 								onClose={handleMentionDetailsClose}
 								onCancel={handleCloseDetailsPopover}
 								initialMode={popoverInitialMode}
-								colorConfig={colorConfig}
 							/>
 						</PdfAnnotationPopover>
 					)}

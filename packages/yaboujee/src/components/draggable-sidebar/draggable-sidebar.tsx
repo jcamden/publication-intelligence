@@ -91,9 +91,11 @@ export const DraggableSidebar = <TSectionId extends string>({
 		>
 			{header && (
 				<div
-					className={`px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 ${side === "left" ? "text-left" : "text-right"}`}
+					className={`px-4 py-3 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 ${side === "left" ? "text-center" : "text-center"}`}
 				>
-					<h2 className="text-md font-semibold text-neutral-900 dark:text-neutral-100">
+					<h2
+						className={`text-md font-semibold text-neutral-700 dark:text-neutral-300 ${side === "left" ? "pl-10" : "pr-3"}`}
+					>
 						{header}
 					</h2>
 				</div>

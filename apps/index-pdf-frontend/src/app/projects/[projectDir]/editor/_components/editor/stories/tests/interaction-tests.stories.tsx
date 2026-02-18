@@ -271,6 +271,15 @@ export const EscapeKeyClosesPopover: Story = {
 			step,
 		});
 
+		await step(
+			"Focus popover so Escape is dispatched in correct context",
+			async () => {
+				const body = within(document.body);
+				const dialog = body.getByRole("dialog", { hidden: true });
+				(dialog as HTMLElement).focus();
+			},
+		);
+
 		await step("Press Escape key", async () => {
 			await userEvent.keyboard("{Escape}");
 		});

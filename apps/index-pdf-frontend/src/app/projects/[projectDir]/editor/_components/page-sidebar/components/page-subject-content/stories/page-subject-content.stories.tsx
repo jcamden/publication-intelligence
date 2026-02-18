@@ -21,7 +21,7 @@ const mockMentions = [
 		text: "This is a sample mention text",
 		entryLabel: "Philosophy → Kant",
 		entryId: "entry-1",
-		indexTypes: ["subject"],
+		indexType: "subject",
 		type: "text" as const,
 	},
 	{
@@ -30,7 +30,7 @@ const mockMentions = [
 		text: "Another mention on the same page",
 		entryLabel: "Philosophy → Heidegger",
 		entryId: "entry-2",
-		indexTypes: ["subject"],
+		indexType: "subject",
 		type: "text" as const,
 	},
 ];

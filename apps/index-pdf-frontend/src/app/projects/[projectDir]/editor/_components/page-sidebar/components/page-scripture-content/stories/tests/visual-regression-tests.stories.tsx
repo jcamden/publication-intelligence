@@ -24,7 +24,7 @@ const mockMentions = [
 		text: "This is a sample mention text",
 		entryLabel: "Scripture → Matthew 5:3",
 		entryId: "entry-1",
-		indexTypes: ["scripture"],
+		indexType: "scripture",
 		type: "text" as const,
 	},
 	{
@@ -33,7 +33,7 @@ const mockMentions = [
 		text: "Another mention on the same page",
 		entryLabel: "Scripture → John 3:16",
 		entryId: "entry-2",
-		indexTypes: ["scripture"],
+		indexType: "scripture",
 		type: "text" as const,
 	},
 ];

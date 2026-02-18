@@ -29,7 +29,6 @@ export const useUpdateEntry = () => {
 							? {
 									...e,
 									label: update.label ?? e.label,
-									description: update.description ?? e.description,
 								}
 							: e,
 					),

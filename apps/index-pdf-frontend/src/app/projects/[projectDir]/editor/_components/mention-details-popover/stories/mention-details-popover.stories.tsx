@@ -28,7 +28,7 @@ const meta = {
 			text: "This is an example text snippet from the PDF document that was highlighted by the user",
 			entryLabel: "Kant → Critique of Pure Reason",
 			entryId: "entry-1",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -37,23 +37,23 @@ const meta = {
 		},
 		onClose: ({
 			mentionId,
-			indexTypes,
 			entryId,
 			entryLabel,
 			text,
+			pageSublocation,
 		}: {
 			mentionId: string;
-			indexTypes: string[];
 			entryId?: string;
 			entryLabel?: string;
 			text?: string;
+			pageSublocation?: string | null;
 		}) => {
 			console.log("Close:", {
 				mentionId,
-				indexTypes,
 				entryId,
 				entryLabel,
 				text,
+				pageSublocation,
 			});
 		},
 		onCancel: () => {
@@ -75,7 +75,7 @@ export const ShortText: Story = {
 			text: "Short text",
 			entryLabel: "Philosophy",
 			entryId: "entry-2",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 	},
@@ -89,7 +89,7 @@ export const LongText: Story = {
 			text: "This is a very long text snippet that exceeds 100 characters and should be truncated with ellipsis to prevent the popover from becoming too wide and unwieldy for the user interface",
 			entryLabel: "Plato → The Republic → Theory of Forms",
 			entryId: "entry-3",
-			indexTypes: ["subject", "author"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 	},
@@ -104,7 +104,7 @@ export const LongEntryLabel: Story = {
 			entryLabel:
 				"Very Long Parent Entry → Very Long Child Entry → Very Long Grandchild Entry",
 			entryId: "entry-4",
-			indexTypes: ["scripture"],
+			indexType: "scripture",
 			type: "text" as const,
 		},
 	},
@@ -118,7 +118,7 @@ export const RegionMention: Story = {
 			text: "Figure 3.2: Neural Network Architecture",
 			entryLabel: "Aristotle",
 			entryId: "entry-5",
-			indexTypes: ["subject"],
+			indexType: "subject",
 			type: "region" as const,
 		},
 	},

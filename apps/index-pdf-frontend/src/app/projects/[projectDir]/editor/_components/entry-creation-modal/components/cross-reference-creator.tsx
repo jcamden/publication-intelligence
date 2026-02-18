@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@pubint/yabasic/components/ui/badge";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { Input } from "@pubint/yabasic/components/ui/input";
 import { Label } from "@pubint/yabasic/components/ui/label";
@@ -9,13 +8,15 @@ import {
 	RadioGroupItem,
 } from "@pubint/yabasic/components/ui/radio-group";
 import { SmartSelect } from "@pubint/yabasic/components/ui/smart-select";
-import { Textarea } from "@pubint/yabasic/components/ui/textarea";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { CreateCrossReferenceInput } from "@/app/_common/_utils/trpc-types";
 import type { IndexEntry } from "../../../_types/index-entry";
-import { getEntryDisplayLabel } from "../../../_utils/index-entry-utils";
+import {
+	formatSingleCrossReferenceLabel,
+	getDirectiveForSingleRef,
+} from "../../../_utils/cross-reference-utils";
 import { EntryPicker } from "../../entry-picker/entry-picker";
 
 type CrossReferenceCreatorProps = {
@@ -34,12 +35,9 @@ export const CrossReferenceCreator = ({
 	const [relationType, setRelationType] = useState<"see" | "see_also" | "qv">(
 		"see_also",
 	);
-	const [referenceMode, setReferenceMode] = useState<"entry" | "custom">(
-		"entry",
-	);
+	const [targetMode, setTargetMode] = useState<"entry" | "arbitrary">("entry");
 	const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
-	const [customText, setCustomText] = useState("");
-	const [note, setNote] = useState("");
+	const [arbitraryText, setArbitraryText] = useState("");
 
 	const handleRemove = (index: number) => {
 		const updated = [...pendingCrossReferences];
@@ -48,48 +46,47 @@ export const CrossReferenceCreator = ({
 	};
 
 	const handleAdd = () => {
-		if (referenceMode === "entry" && !selectedEntryId) {
-			toast.error("Please select an entry");
-			return;
+		if (targetMode === "entry") {
+			if (!selectedEntryId) {
+				toast.error("Please select an entry");
+				return;
+			}
+			onChange([
+				...pendingCrossReferences,
+				{
+					toEntryId: selectedEntryId ?? undefined,
+					relationType,
+				},
+			]);
+		} else {
+			const value = arbitraryText.trim();
+			if (!value) {
+				toast.error("Please enter the cross-reference text");
+				return;
+			}
+			onChange([
+				...pendingCrossReferences,
+				{
+					arbitraryValue: value,
+					relationType,
+				},
+			]);
 		}
-
-		if (referenceMode === "custom" && !customText.trim()) {
-			toast.error("Please enter custom text");
-			return;
-		}
-
-		const newCrossRef: Omit<CreateCrossReferenceInput, "fromEntryId"> = {
-			toEntryId:
-				referenceMode === "entry" && selectedEntryId
-					? selectedEntryId
-					: undefined,
-			arbitraryValue:
-				referenceMode === "custom" ? customText.trim() : undefined,
-			relationType,
-			note: note.trim() || undefined,
-		};
-
-		onChange([...pendingCrossReferences, newCrossRef]);
 		resetForm();
 	};
 
 	const resetForm = () => {
 		setSelectedEntryId(null);
-		setCustomText("");
-		setNote("");
-		setReferenceMode("entry");
+		setArbitraryText("");
 		setRelationType("see_also");
+		setTargetMode("entry");
 	};
 
-	const relationTypeLabels = {
-		see: "See",
-		see_also: "See also",
-		qv: "q.v.",
-	};
+	const canAdd =
+		targetMode === "entry" ? !!selectedEntryId : !!arbitraryText.trim();
 
 	return (
 		<div className="space-y-4">
-			{/* Existing Cross-References */}
 			{pendingCrossReferences.length > 0 && (
 				<div className="space-y-2">
 					<Label className="text-sm font-medium">
@@ -97,38 +94,33 @@ export const CrossReferenceCreator = ({
 					</Label>
 					<div className="space-y-2">
 						{pendingCrossReferences.map((crossRef, index) => {
-							const key = `${crossRef.toEntryId || crossRef.arbitraryValue}-${crossRef.relationType}-${index}`;
+							const key = `${crossRef.toEntryId ?? crossRef.arbitraryValue ?? ""}-${crossRef.relationType}-${index}`;
+							const refForLabel = {
+								...crossRef,
+								toEntryId: crossRef.toEntryId ?? null,
+							};
+							const label = formatSingleCrossReferenceLabel({
+								ref: refForLabel,
+								allEntries: existingEntries,
+							});
+							const directive = getDirectiveForSingleRef({
+								ref: refForLabel,
+								allEntries: existingEntries,
+							});
+							const afterDirective =
+								label.length > directive.length
+									? label.slice(directive.length)
+									: "";
 							return (
 								<div
 									key={key}
 									className="flex items-start justify-between p-3 border rounded-lg bg-neutral-50 dark:bg-neutral-800"
 								>
 									<div className="flex-1">
-										<div className="flex items-center gap-2 mb-1">
-											<Badge variant="outline" className="text-xs">
-												{relationTypeLabels[crossRef.relationType]}
-											</Badge>
-											<span className="text-sm font-medium">
-												{crossRef.toEntryId
-													? (() => {
-															const targetEntry = existingEntries.find(
-																(e) => e.id === crossRef.toEntryId,
-															);
-															return targetEntry
-																? getEntryDisplayLabel({
-																		entry: targetEntry,
-																		entries: existingEntries,
-																	})
-																: "Unknown";
-														})()
-													: crossRef.arbitraryValue}
-											</span>
-										</div>
-										{crossRef.note && (
-											<p className="text-xs text-neutral-600 dark:text-neutral-400">
-												{crossRef.note}
-											</p>
-										)}
+										<p className="text-sm font-medium">
+											<em>{directive}</em>
+											{afterDirective}
+										</p>
 									</div>
 									<button
 										type="button"
@@ -145,13 +137,11 @@ export const CrossReferenceCreator = ({
 				</div>
 			)}
 
-			{/* Add New Cross-Reference Form */}
 			<div className="border-t pt-4">
 				<Label className="text-sm font-medium mb-3 block">
 					Add Cross-Reference
 				</Label>
 
-				{/* Type Selector */}
 				<div className="mb-4">
 					<Label
 						htmlFor="relation-type"
@@ -173,38 +163,31 @@ export const CrossReferenceCreator = ({
 					/>
 				</div>
 
-				{/* Reference Mode Radio */}
 				<div className="mb-4">
+					<Label className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
+						Target
+					</Label>
 					<RadioGroup
-						value={referenceMode}
-						onValueChange={(v) => setReferenceMode(v as "entry" | "custom")}
+						value={targetMode}
+						onValueChange={(v) => setTargetMode(v as "entry" | "arbitrary")}
+						className="flex gap-4 mb-2"
 					>
 						<label
-							htmlFor="mode-entry"
-							className="flex items-center space-x-2 cursor-pointer"
+							htmlFor="target-entry"
+							className="flex items-center gap-2 cursor-pointer"
 						>
-							<RadioGroupItem value="entry" id="mode-entry" />
-							<span className="text-sm">Reference an entry</span>
+							<RadioGroupItem value="entry" id="target-entry" />
+							<span className="text-sm">Index entry</span>
 						</label>
 						<label
-							htmlFor="mode-custom"
-							className="flex items-center space-x-2 cursor-pointer"
+							htmlFor="target-arbitrary"
+							className="flex items-center gap-2 cursor-pointer"
 						>
-							<RadioGroupItem value="custom" id="mode-custom" />
-							<span className="text-sm">Custom text</span>
+							<RadioGroupItem value="arbitrary" id="target-arbitrary" />
+							<span className="text-sm">Arbitrary value</span>
 						</label>
 					</RadioGroup>
-				</div>
-
-				{/* Entry Picker Mode */}
-				{referenceMode === "entry" && (
-					<div className="mb-4">
-						<Label
-							htmlFor="entry-select"
-							className="text-xs text-neutral-600 dark:text-neutral-400 mb-2"
-						>
-							Select Entry
-						</Label>
+					{targetMode === "entry" ? (
 						<EntryPicker
 							id="entry-select"
 							entries={existingEntries}
@@ -212,42 +195,14 @@ export const CrossReferenceCreator = ({
 							onValueChange={setSelectedEntryId}
 							placeholder="Search entries..."
 						/>
-					</div>
-				)}
-
-				{/* Custom Text Mode */}
-				{referenceMode === "custom" && (
-					<div className="mb-4">
-						<Label
-							htmlFor="custom-text"
-							className="text-xs text-neutral-600 dark:text-neutral-400 mb-2"
-						>
-							Custom Reference Text
-						</Label>
+					) : (
 						<Input
-							id="custom-text"
-							value={customText}
-							onChange={(e) => setCustomText(e.target.value)}
-							placeholder="Enter custom cross-reference text..."
+							id="arbitrary-value"
+							value={arbitraryText}
+							onChange={(e) => setArbitraryText(e.target.value)}
+							placeholder="e.g. Notes sections"
 						/>
-					</div>
-				)}
-
-				{/* Note Field */}
-				<div className="mb-4">
-					<Label
-						htmlFor="note"
-						className="text-xs text-neutral-600 dark:text-neutral-400 mb-2"
-					>
-						Note (optional)
-					</Label>
-					<Textarea
-						id="note"
-						value={note}
-						onChange={(e) => setNote(e.target.value)}
-						placeholder="Add context or explanation..."
-						rows={2}
-					/>
+					)}
 				</div>
 
 				<Button
@@ -255,10 +210,7 @@ export const CrossReferenceCreator = ({
 					onClick={handleAdd}
 					variant="outline"
 					size="sm"
-					disabled={
-						(referenceMode === "entry" && !selectedEntryId) ||
-						(referenceMode === "custom" && !customText.trim())
-					}
+					disabled={!canAdd}
 				>
 					Add Cross-Reference
 				</Button>

@@ -40,6 +40,9 @@ export const formatOklch = ({
 	return alpha !== undefined ? `${base} / ${alpha.toFixed(2)})` : `${base})`;
 };
 
+export const iconColorFromHue = ({ hue }: { hue: number }) =>
+	formatOklch({ lightness: 0.8, chroma: 0.2, hue });
+
 export const parseOklch = (
 	oklchString: string,
 ): {

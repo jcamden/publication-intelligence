@@ -101,8 +101,9 @@ export const ProjectSubjectContent = () => {
 		bboxes: m.bboxes ?? [],
 		entryId: m.entryId,
 		entryLabel: m.entry.label,
-		indexTypes: m.indexTypes.map((t) => t.indexType),
+		indexType: m.indexTypes[0]?.indexType ?? "",
 		type: m.mentionType as "text" | "region",
+		pageSublocation: m.pageSublocation ?? null,
 		createdAt: new Date(m.createdAt),
 	}));
 

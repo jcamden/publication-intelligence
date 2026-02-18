@@ -10,7 +10,6 @@ export type IndexEntry = {
 	projectIndexTypeId: string;
 	slug: string;
 	label: string;
-	description: string | null;
 	status: string;
 	revision: number;
 	parentId: string | null;
@@ -46,7 +45,6 @@ export type IndexEntryListItem = {
 	projectIndexTypeId: string;
 	slug: string;
 	label: string;
-	description: string | null;
 	status: string;
 	parentId: string | null;
 	parent?: {
@@ -69,7 +67,6 @@ export type IndexEntrySearchResult = {
 	id: string;
 	label: string;
 	slug: string;
-	description: string | null;
 	parentId: string | null;
 	parent?: {
 		id: string;
@@ -91,7 +88,6 @@ export const CreateIndexEntrySchema = z.object({
 	slug: z.string().min(1).max(200).optional(),
 	parentId: z.string().uuid().optional(),
 	matchers: z.array(z.string()).optional(),
-	description: z.string().optional(),
 });
 
 export type CreateIndexEntryInput = z.infer<typeof CreateIndexEntrySchema>;
@@ -101,7 +97,6 @@ export const UpdateIndexEntrySchema = z.object({
 	projectId: z.string().uuid(),
 	projectIndexTypeId: z.string().uuid(),
 	label: z.string().min(1).max(200).optional(),
-	description: z.string().optional().nullable(),
 	matchers: z.array(z.string()).optional(),
 });
 
@@ -135,7 +130,6 @@ export type CrossReference = {
 	toEntryId: string | null;
 	arbitraryValue: string | null;
 	relationType: "see" | "see_also" | "qv";
-	note: string | null;
 	toEntry?: {
 		id: string;
 		label: string;
@@ -148,15 +142,15 @@ export const CreateCrossReferenceSchema = z
 		toEntryId: z.string().uuid().optional(),
 		arbitraryValue: z.string().optional(),
 		relationType: z.enum(["see", "see_also", "qv"]),
-		note: z.string().optional(),
 	})
 	.refine(
-		(data) =>
-			(data.toEntryId && !data.arbitraryValue) ||
-			(!data.toEntryId && data.arbitraryValue),
-		{
-			message: "Must provide either toEntryId or arbitraryValue, but not both",
+		(data) => {
+			const hasEntry = data.toEntryId != null;
+			const hasArbitrary =
+				data.arbitraryValue != null && data.arbitraryValue.trim().length > 0;
+			return hasEntry !== hasArbitrary;
 		},
+		{ message: "Provide exactly one of toEntryId or arbitraryValue" },
 	);
 
 export type CreateCrossReferenceInput = z.infer<

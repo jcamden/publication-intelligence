@@ -36,7 +36,6 @@ export const listIndexEntries = async ({
 			projectIndexTypeId: indexEntries.projectIndexTypeId,
 			slug: indexEntries.slug,
 			label: indexEntries.label,
-			description: indexEntries.description,
 			status: indexEntries.status,
 			parentId: indexEntries.parentId,
 			createdAt: indexEntries.createdAt,
@@ -147,7 +146,6 @@ export const listIndexEntries = async ({
 		projectIndexTypeId: entry.projectIndexTypeId,
 		slug: entry.slug,
 		label: entry.label,
-		description: entry.description,
 		status: entry.status,
 		parentId: entry.parentId,
 		parent: entry.parentId ? parentMap.get(entry.parentId) || null : null,
@@ -180,7 +178,6 @@ export const getIndexEntryById = async ({
 			projectIndexTypeId: indexEntries.projectIndexTypeId,
 			slug: indexEntries.slug,
 			label: indexEntries.label,
-			description: indexEntries.description,
 			status: indexEntries.status,
 			revision: indexEntries.revision,
 			parentId: indexEntries.parentId,
@@ -216,7 +213,6 @@ export const getIndexEntryById = async ({
 		projectIndexTypeId: entry.projectIndexTypeId,
 		slug: entry.slug,
 		label: entry.label,
-		description: entry.description,
 		status: entry.status,
 		revision: entry.revision,
 		parentId: entry.parentId,
@@ -271,7 +267,6 @@ export const createIndexEntry = async ({
 					projectIndexTypeId: input.projectIndexTypeId,
 					slug,
 					label: input.label,
-					description: input.description || null,
 					parentId: input.parentId || null,
 					status: "active",
 					revision: 1,
@@ -314,7 +309,6 @@ export const createIndexEntry = async ({
 				projectIndexTypeId: entry.projectIndexTypeId,
 				slug: entry.slug,
 				label: entry.label,
-				description: entry.description,
 				status: entry.status,
 				revision: entry.revision,
 				parentId: entry.parentId,
@@ -351,10 +345,6 @@ export const updateIndexEntry = async ({
 
 			if (input.label !== undefined) {
 				updateValues.label = input.label;
-			}
-
-			if (input.description !== undefined) {
-				updateValues.description = input.description;
 			}
 
 			const result = await tx
@@ -394,7 +384,6 @@ export const updateIndexEntry = async ({
 					projectIndexTypeId: indexEntries.projectIndexTypeId,
 					slug: indexEntries.slug,
 					label: indexEntries.label,
-					description: indexEntries.description,
 					status: indexEntries.status,
 					revision: indexEntries.revision,
 					parentId: indexEntries.parentId,
@@ -430,7 +419,6 @@ export const updateIndexEntry = async ({
 				projectIndexTypeId: e.projectIndexTypeId,
 				slug: e.slug,
 				label: e.label,
-				description: e.description,
 				status: e.status,
 				revision: e.revision,
 				parentId: e.parentId,
@@ -502,7 +490,6 @@ export const approveIndexEntry = async ({
 						projectIndexTypeId: indexEntries.projectIndexTypeId,
 						slug: indexEntries.slug,
 						label: indexEntries.label,
-						description: indexEntries.description,
 						status: indexEntries.status,
 						revision: indexEntries.revision,
 						parentId: indexEntries.parentId,
@@ -545,7 +532,6 @@ export const approveIndexEntry = async ({
 					projectIndexTypeId: e.projectIndexTypeId,
 					slug: e.slug,
 					label: e.label,
-					description: e.description,
 					status: e.status,
 					revision: e.revision,
 					parentId: e.parentId,
@@ -680,7 +666,6 @@ export const updateIndexEntryParent = async ({
 					projectIndexTypeId: indexEntries.projectIndexTypeId,
 					slug: indexEntries.slug,
 					label: indexEntries.label,
-					description: indexEntries.description,
 					status: indexEntries.status,
 					revision: indexEntries.revision,
 					parentId: indexEntries.parentId,
@@ -716,7 +701,6 @@ export const updateIndexEntryParent = async ({
 				projectIndexTypeId: e.projectIndexTypeId,
 				slug: e.slug,
 				label: e.label,
-				description: e.description,
 				status: e.status,
 				revision: e.revision,
 				parentId: e.parentId,
@@ -783,7 +767,6 @@ export const deleteIndexEntry = async ({
 					projectIndexTypeId: indexEntries.projectIndexTypeId,
 					slug: indexEntries.slug,
 					label: indexEntries.label,
-					description: indexEntries.description,
 					status: indexEntries.status,
 					revision: indexEntries.revision,
 					parentId: indexEntries.parentId,
@@ -819,7 +802,6 @@ export const deleteIndexEntry = async ({
 				projectIndexTypeId: e.projectIndexTypeId,
 				slug: e.slug,
 				label: e.label,
-				description: e.description,
 				status: e.status,
 				revision: e.revision,
 				parentId: e.parentId,
@@ -858,7 +840,6 @@ export const searchIndexEntries = async ({
 			id: indexEntries.id,
 			label: indexEntries.label,
 			slug: indexEntries.slug,
-			description: indexEntries.description,
 			parentId: indexEntries.parentId,
 		})
 		.from(indexEntries)
@@ -877,7 +858,6 @@ export const searchIndexEntries = async ({
 			id: indexEntries.id,
 			label: indexEntries.label,
 			slug: indexEntries.slug,
-			description: indexEntries.description,
 			parentId: indexEntries.parentId,
 			matchedText: indexMatchers.text,
 		})
@@ -944,7 +924,6 @@ export const searchIndexEntries = async ({
 		id: match.id,
 		label: match.label,
 		slug: match.slug,
-		description: match.description,
 		parentId: match.parentId,
 		parent: match.parentId ? parentMap.get(match.parentId) || null : null,
 		matchers: (matchersMap.get(match.id) || []).map((m) => ({
@@ -965,7 +944,6 @@ export const searchIndexEntries = async ({
 			id: match.id,
 			label: match.label,
 			slug: match.slug,
-			description: match.description,
 			parentId: match.parentId,
 			parent: match.parentId ? parentMap.get(match.parentId) || null : null,
 			matchers: (matchersMap.get(match.id) || []).map((m) => ({
@@ -1002,7 +980,6 @@ export const checkExactMatch = async ({
 			projectIndexTypeId: indexEntries.projectIndexTypeId,
 			slug: indexEntries.slug,
 			label: indexEntries.label,
-			description: indexEntries.description,
 			status: indexEntries.status,
 			revision: indexEntries.revision,
 			parentId: indexEntries.parentId,
@@ -1049,7 +1026,6 @@ export const checkExactMatch = async ({
 		projectIndexTypeId: entry.projectIndexTypeId,
 		slug: entry.slug,
 		label: entry.label,
-		description: entry.description,
 		status: entry.status,
 		revision: entry.revision,
 		parentId: entry.parentId,
@@ -1111,7 +1087,6 @@ export const getCrossReferences = async ({
 		toEntryId: string | null;
 		arbitraryValue: string | null;
 		relationType: string;
-		note: string | null;
 		toEntry: { id: string; label: string } | null;
 	}>
 > => {
@@ -1122,7 +1097,6 @@ export const getCrossReferences = async ({
 			toEntryId: indexRelations.toEntryId,
 			arbitraryValue: indexRelations.arbitraryValue,
 			relationType: indexRelations.relationType,
-			note: indexRelations.note,
 		})
 		.from(indexRelations)
 		.where(eq(indexRelations.fromEntryId, entryId));
@@ -1155,14 +1129,12 @@ export const createCrossReference = async ({
 	toEntryId,
 	arbitraryValue,
 	relationType,
-	note,
 	userId,
 }: {
 	fromEntryId: string;
-	toEntryId?: string;
-	arbitraryValue?: string;
+	toEntryId: string | null;
+	arbitraryValue: string | null;
 	relationType: "see" | "see_also" | "qv";
-	note?: string;
 	userId: string;
 }): Promise<{
 	id: string;
@@ -1170,7 +1142,6 @@ export const createCrossReference = async ({
 	toEntryId: string | null;
 	arbitraryValue: string | null;
 	relationType: string;
-	note: string | null;
 }> => {
 	return await withUserContext({
 		userId,
@@ -1179,10 +1150,9 @@ export const createCrossReference = async ({
 				.insert(indexRelations)
 				.values({
 					fromEntryId,
-					toEntryId: toEntryId || null,
-					arbitraryValue: arbitraryValue || null,
+					toEntryId: toEntryId ?? null,
+					arbitraryValue: arbitraryValue?.trim() ?? null,
 					relationType,
-					note: note || null,
 					revision: 1,
 				})
 				.returning();
@@ -1325,6 +1295,21 @@ export const getMentionCount = async ({
 		.from(indexMentions)
 		.where(
 			and(eq(indexMentions.entryId, entryId), isNull(indexMentions.deletedAt)),
+		);
+
+	return result[0]?.count || 0;
+};
+
+export const getDirectChildCount = async ({
+	entryId,
+}: {
+	entryId: string;
+}): Promise<number> => {
+	const result = await db
+		.select({ count: count() })
+		.from(indexEntries)
+		.where(
+			and(eq(indexEntries.parentId, entryId), isNull(indexEntries.deletedAt)),
 		);
 
 	return result[0]?.count || 0;

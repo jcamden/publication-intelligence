@@ -508,7 +508,6 @@ const processDetection = async ({
 				label: entry.label,
 				meaningType: entry.meaningType,
 				meaningId: entry.meaningId,
-				description: entry.description,
 			});
 
 			entriesCreated++;

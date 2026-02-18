@@ -50,7 +50,6 @@ export const useCreateEntry = () => {
 						id: `temp-${Date.now()}`,
 						label: newEntry.label,
 						slug: `temp-slug-${Date.now()}`,
-						description: newEntry.description || null,
 						status: "active",
 						projectIndexTypeId: newEntry.projectIndexTypeId,
 						projectIndexType: {

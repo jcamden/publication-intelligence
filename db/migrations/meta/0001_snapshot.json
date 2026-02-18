@@ -1,5 +1,5 @@
 {
-	"id": "05fde37f-77ae-4746-921e-350472926006",
+	"id": "b3d31610-7c59-4579-abcf-1362e807baaa",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -1073,12 +1073,6 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"description": {
-					"name": "description",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": false
-				},
 				"status": {
 					"name": "status",
 					"type": "index_entry_status",
@@ -1531,12 +1525,6 @@
 					"typeSchema": "public",
 					"primaryKey": false,
 					"notNull": true
-				},
-				"note": {
-					"name": "note",
-					"type": "text",
-					"primaryKey": false,
-					"notNull": false
 				},
 				"revision": {
 					"name": "revision",

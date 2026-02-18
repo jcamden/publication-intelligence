@@ -32,7 +32,7 @@ const defaultMention = {
 	text: "This is an example text snippet from the PDF document that was highlighted by the user",
 	entryLabel: "Kant → Critique of Pure Reason",
 	entryId: "entry-1",
-	indexTypes: ["subject"],
+	indexType: "subject",
 	type: "text" as const,
 };
 
@@ -73,7 +73,7 @@ export const ShortText: Story = {
 			text: "Short text",
 			entryLabel: "Philosophy",
 			entryId: "entry-2",
-			indexTypes: ["author"],
+			indexType: "author",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -95,7 +95,7 @@ export const LongText: Story = {
 			text: "This is a very long text snippet that exceeds 100 characters and should be truncated with ellipsis to prevent the popover from becoming too wide and unwieldy for the user interface",
 			entryLabel: "Plato → The Republic → Theory of Forms",
 			entryId: "entry-3",
-			indexTypes: ["subject", "author"],
+			indexType: "subject",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -153,18 +153,15 @@ export const HoverDeleteButton: Story = {
 	},
 };
 
-/**
- * Multiselect with all three types selected
- */
-export const ThreeTypesSelected: Story = {
+export const ScriptureIndexType: Story = {
 	args: {
 		mention: {
 			id: "mention-5",
 			pageNumber: 42,
-			text: "All types mention text",
+			text: "Scripture mention text",
 			entryLabel: "Philosophy Entry",
 			entryId: "entry-5",
-			indexTypes: ["subject", "author", "scripture"],
+			indexType: "scripture",
 			type: "text" as const,
 		},
 		existingEntries: mockIndexEntries,
@@ -178,10 +175,7 @@ export const ThreeTypesSelected: Story = {
 	},
 };
 
-/**
- * Multiselect dropdown in open state
- */
-export const DropdownOpen: Story = {
+export const EditModeWithSublocation: Story = {
 	args: {
 		mention: {
 			id: "mention-6",
@@ -189,8 +183,9 @@ export const DropdownOpen: Story = {
 			text: "Example text",
 			entryLabel: "Test Entry",
 			entryId: "entry-6",
-			indexTypes: ["subject", "author"],
+			indexType: "subject",
 			type: "text" as const,
+			pageSublocation: "10:45.a",
 		},
 		existingEntries: mockIndexEntries,
 		onDelete: () => {},
@@ -203,19 +198,8 @@ export const DropdownOpen: Story = {
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-
-		// Enter Edit mode first
 		const editButton = canvas.getByRole("button", { name: /^edit$/i });
 		await userEvent.click(editButton);
-
-		// Wait for Edit mode transition
 		await new Promise((resolve) => setTimeout(resolve, 100));
-
-		// Open the dropdown
-		const selectTrigger = canvas.getByTestId("index-types-select");
-		await userEvent.click(selectTrigger);
-
-		// Wait for dropdown animation to complete
-		await new Promise((resolve) => setTimeout(resolve, 300));
 	},
 };

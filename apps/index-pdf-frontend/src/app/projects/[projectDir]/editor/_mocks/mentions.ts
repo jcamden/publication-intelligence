@@ -12,7 +12,7 @@ export const mockMentions: Mention[] = [
 		bboxes: [{ x: 100, y: 100, width: 200, height: 20 }],
 		entryId: "entry-subject-1", // Philosophy
 		entryLabel: "Philosophy",
-		indexTypes: ["subject"],
+		indexType: "subject",
 		type: "text",
 		createdAt: new Date(),
 	},
@@ -23,7 +23,7 @@ export const mockMentions: Mention[] = [
 		bboxes: [{ x: 100, y: 150, width: 200, height: 20 }],
 		entryId: "entry-subject-3", // Kant
 		entryLabel: "Kant, Immanuel",
-		indexTypes: ["subject"],
+		indexType: "subject",
 		type: "text",
 		createdAt: new Date(),
 	},
@@ -34,7 +34,7 @@ export const mockMentions: Mention[] = [
 		bboxes: [{ x: 100, y: 100, width: 200, height: 20 }],
 		entryId: "entry-subject-3", // Kant
 		entryLabel: "Kant, Immanuel",
-		indexTypes: ["subject"],
+		indexType: "subject",
 		type: "text",
 		createdAt: new Date(),
 	},

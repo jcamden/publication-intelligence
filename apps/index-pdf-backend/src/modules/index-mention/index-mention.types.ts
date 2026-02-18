@@ -62,6 +62,7 @@ export type IndexMentionListItem = {
 	textSpan: string;
 	bboxes: BoundingBox[] | null;
 	mentionType: "text" | "region";
+	pageSublocation: string | null;
 	detectionRunId: string | null;
 	indexTypes: Array<{
 		projectIndexTypeId: string;
@@ -111,6 +112,7 @@ export const UpdateIndexMentionSchema = z.object({
 	pageNumber: z.number().int(),
 	entryId: z.string().uuid().optional(),
 	textSpan: z.string().optional(),
+	pageSublocation: z.string().nullable().optional(),
 });
 
 export type UpdateIndexMentionInput = z.infer<typeof UpdateIndexMentionSchema>;

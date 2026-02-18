@@ -94,7 +94,6 @@ describe("IndexEntry API (Integration)", () => {
 					projectId: testProjectId,
 					projectIndexTypeId: subjectIndexTypeId,
 					label: "Theology",
-					description: "Study of religious faith",
 				},
 			});
 
@@ -102,7 +101,6 @@ describe("IndexEntry API (Integration)", () => {
 			const body = JSON.parse(response.body);
 			expect(body.result.data.label).toBe("Theology");
 			expect(body.result.data.slug).toBe("theology");
-			expect(body.result.data.description).toBe("Study of religious faith");
 			expect(body.result.data.projectIndexTypeId).toBe(subjectIndexTypeId);
 		});
 
@@ -1206,7 +1204,7 @@ describe("IndexEntry API (Integration)", () => {
 			expect(body.result.data.relationType).toBe("see_also");
 		});
 
-		it("should create cross-reference with arbitrary value", async ({
+		it("should reject cross-reference without toEntryId or arbitraryValue", async ({
 			testUser,
 			authenticatedRequest,
 			testProjectId,
@@ -1225,16 +1223,42 @@ describe("IndexEntry API (Integration)", () => {
 				url: "/trpc/indexEntry.crossReference.create",
 				payload: {
 					fromEntryId: fromEntry.id,
-					arbitraryValue: "Form/Structure/Setting sections",
 					relationType: "see",
+				},
+			});
+
+			const body = JSON.parse(response.body);
+			expect(body.error).toBeDefined();
+		});
+
+		it("should create cross-reference with arbitrary value", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "manuscripts",
+				slug: "manuscripts",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					arbitraryValue: "Notes sections",
+					relationType: "see_also",
 				},
 			});
 
 			expect(response.statusCode).toBe(200);
 			const body = JSON.parse(response.body);
-			expect(body.result.data.arbitraryValue).toBe(
-				"Form/Structure/Setting sections",
-			);
+			expect(body.result.data.relationType).toBe("see_also");
+			expect(body.result.data.arbitraryValue).toBe("Notes sections");
 			expect(body.result.data.toEntryId).toBeNull();
 		});
 
@@ -1454,6 +1478,129 @@ describe("IndexEntry API (Integration)", () => {
 			expect(deleteResponse.statusCode).toBe(200);
 			const deleteBody = JSON.parse(deleteResponse.body);
 			expect(deleteBody.result.data).toBe(true);
+		});
+
+		it("should reject see_also when entry already has see redirect", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+			});
+
+			const toEntrySee = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			const toEntryAlso = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "creature",
+				slug: "creature",
+				userId: testUser.userId,
+			});
+
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntrySee.id,
+					relationType: "see",
+				},
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntryAlso.id,
+					relationType: "see_also",
+				},
+			});
+
+			expect(response.statusCode).toBe(400);
+			const body = JSON.parse(response.body);
+			expect(body.error).toBeDefined();
+			expect(body.error.message).toContain("see also");
+		});
+
+		it("should reject see when entry already has see_also", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			const document = await createTestSourceDocument({
+				projectId: testProjectId,
+				userId: testUser.userId,
+			});
+
+			const fromEntry = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "beast",
+				slug: "beast",
+				userId: testUser.userId,
+			});
+
+			const toEntryAlso = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "creature",
+				slug: "creature",
+				userId: testUser.userId,
+			});
+
+			await createTestIndexMention({
+				entryId: toEntryAlso.id,
+				documentId: document.id,
+				userId: testUser.userId,
+			});
+
+			const toEntrySee = await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "animal",
+				slug: "animal",
+				userId: testUser.userId,
+			});
+
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntryAlso.id,
+					relationType: "see_also",
+				},
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.crossReference.create",
+				payload: {
+					fromEntryId: fromEntry.id,
+					toEntryId: toEntrySee.id,
+					relationType: "see",
+				},
+			});
+
+			expect(response.statusCode).toBe(400);
+			const body = JSON.parse(response.body);
+			expect(body.error).toBeDefined();
+			expect(body.error.message).toContain("see also");
 		});
 
 		it("should transfer mentions between entries", async ({

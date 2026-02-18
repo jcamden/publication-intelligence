@@ -418,7 +418,6 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 										id: `mock-entry-${Date.now()}`,
 										label,
 										slug: label.toLowerCase().replace(/\s+/g, "-"),
-										description: null,
 										status: "active",
 										projectId: "test-project-id",
 										projectIndexTypeId,

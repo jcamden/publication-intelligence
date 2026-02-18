@@ -40,6 +40,7 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 					textSpan: newMention.textSpan,
 					bboxes: newMention.bboxesPdf,
 					mentionType: newMention.mentionType || "text",
+					pageSublocation: null,
 					entry: {
 						id: newMention.entryId,
 						label: "",
@@ -61,23 +62,7 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 			toast.error(`Failed to create mention: ${err.message}`);
 		},
 
-		onSuccess: (data, _variables, context) => {
-			// Replace temp with real data
-			// Need to ensure the returned data matches IndexMentionListItem structure
-			if (context?.queryParams) {
-				utils.indexMention.list.setData(context.queryParams, (old) =>
-					(old || []).map((m) =>
-						m.id.startsWith("temp-")
-							? ({
-									...data,
-									entry: data.entry ?? { id: data.entryId, label: "" },
-									indexTypes: [],
-								} satisfies IndexMentionListItem)
-							: m,
-					),
-				);
-			}
-
+		onSuccess: () => {
 			toast.success("Mention created");
 		},
 

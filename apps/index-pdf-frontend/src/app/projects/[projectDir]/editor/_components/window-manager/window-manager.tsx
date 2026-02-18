@@ -35,7 +35,7 @@ type Mention = {
 	text: string;
 	entryLabel: string;
 	entryId: string;
-	indexTypes: string[];
+	indexType: string;
 	type: "text" | "region";
 };
 
@@ -81,7 +81,7 @@ const windowRegistry: Record<
 		component: ProjectAiContent,
 	},
 	"page-info": { title: "Page Info", component: PageInfoContent },
-	"page-pages": { title: "Page Pages", component: PagePagesContent },
+	"page-pages": { title: "Page", component: PagePagesContent },
 	"page-subject": {
 		title: "Page Subject Index",
 		component: PageSubjectContent,

@@ -47,3 +47,9 @@ fix cross-reference formatting
 work on author and scripture indexing
 
 reorder default page bar items
+
+transfer mentions for "See" cross-reference type
+   Do you want to transfer mentions?
+   Do you want to transfer matchers?
+
+When adding text that is not already in matcher to an entry, "Do you want to add to matchers for entry?"

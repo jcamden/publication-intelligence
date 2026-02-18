@@ -12,7 +12,7 @@ const mockMentions: Mention[] = [
 		bboxes: [{ x: 100, y: 100, width: 200, height: 20 }],
 		entryId: "entry-subject-3",
 		entryLabel: "Kant, Immanuel",
-		indexTypes: ["subject"],
+		indexType: "subject",
 		type: "text",
 		createdAt: new Date(),
 	},
