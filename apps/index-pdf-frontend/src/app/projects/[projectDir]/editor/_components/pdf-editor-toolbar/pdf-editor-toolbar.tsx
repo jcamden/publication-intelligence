@@ -136,6 +136,14 @@ export const PdfEditorToolbar = ({
 			/>
 			<div className="h-6 w-px bg-neutral-200 dark:bg-neutral-700" />
 			<div className="flex items-center gap-2">
+				<StyledButton
+					icon={Pointer}
+					label="Highlight Interaction Mode"
+					isActive={
+						activeAction.type === "highlight" || activeAction.type === null
+					}
+					onClick={onHighlightInteraction}
+				/>
 				<Tooltip delay={500}>
 					<TooltipTrigger
 						render={
@@ -225,14 +233,6 @@ export const PdfEditorToolbar = ({
 					label="Draw Region"
 					isActive={activeAction.type === "draw-region"}
 					onClick={onDrawRegion}
-				/>
-				<StyledButton
-					icon={Pointer}
-					label="Highlight Interaction Mode"
-					isActive={
-						activeAction.type === "highlight" || activeAction.type === null
-					}
-					onClick={onHighlightInteraction}
 				/>
 			</div>
 		</div>

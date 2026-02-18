@@ -284,6 +284,9 @@ export const EntryTree = ({
 					existingEntries={entries}
 					projectId={projectId}
 					projectIndexTypeId={projectIndexTypeId}
+					sourceEntryMentionCount={
+						mentions.filter((m) => m.entryId === mergingEntry.id).length
+					}
 				/>
 			)}
 			{deletingEntry && (

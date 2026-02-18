@@ -95,7 +95,8 @@ export const getEntryPathColonForm = ({
 };
 
 /**
- * Get entry display label with hierarchy (Child under Parent)
+ * Get entry display label in Chicago style: "parent:child" or "grandparent:parent:child".
+ * Top-level entry returns entry.label only.
  */
 export const getEntryDisplayLabel = ({
 	entry,
@@ -104,13 +105,17 @@ export const getEntryDisplayLabel = ({
 	entry: IndexEntry;
 	entries: IndexEntry[];
 }): string => {
-	if (!entry.parentId) return entry.label;
+	const path: string[] = [];
+	let current: IndexEntry | undefined = entry;
 
-	const parent = entries.find((e) => e.id === entry.parentId);
-	if (!parent) return entry.label;
+	while (current) {
+		path.unshift(current.label);
+		const parentId: string | null = current.parentId;
+		if (!parentId) break;
+		current = entries.find((e) => e.id === parentId);
+	}
 
-	const parentLabel = getEntryDisplayLabel({ entry: parent, entries });
-	return `${entry.label} under ${parentLabel}`;
+	return path.join(":");
 };
 
 /**

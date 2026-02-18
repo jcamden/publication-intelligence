@@ -9,6 +9,7 @@ import {
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
+import * as indexEntryRepo from "../index-entry/index-entry.repo";
 import * as indexMentionRepo from "./index-mention.repo";
 import type {
 	BulkCreateIndexMentionsInput,
@@ -89,6 +90,17 @@ export const createIndexMention = async ({
 		});
 	}
 
+	const hasSee = await indexEntryRepo.entryHasSeeCrossReference({
+		entryId: input.entryId,
+	});
+	if (hasSee) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message:
+				"Mentions cannot target an entry that has a See cross-reference. Use the target entry instead.",
+		});
+	}
+
 	const mention = await indexMentionRepo.createIndexMention({
 		input,
 		projectIndexTypeId: entry[0].projectIndexTypeId,
@@ -158,6 +170,17 @@ export const updateIndexMention = async ({
 			throw new TRPCError({
 				code: "NOT_FOUND",
 				message: "Index entry not found or deleted",
+			});
+		}
+
+		const hasSee = await indexEntryRepo.entryHasSeeCrossReference({
+			entryId: input.entryId,
+		});
+		if (hasSee) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message:
+					"Mentions cannot target an entry that has a See cross-reference. Use the target entry instead.",
 			});
 		}
 

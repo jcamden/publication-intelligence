@@ -160,11 +160,11 @@ export const CreateNestedEntry: Story = {
 		const canvas = within(canvasElement);
 		const body = within(document.body);
 
-		await step("Navigate into Philosophy > ", async () => {
+		await step("Navigate into Philosophy:", async () => {
 			const input = canvas.getByRole("combobox");
 			await userEvent.click(input);
 			await new Promise((resolve) => setTimeout(resolve, 300));
-			await userEvent.type(input, "Philosophy > ", { delay: 50 });
+			await userEvent.type(input, "Philosophy:", { delay: 50 });
 			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 

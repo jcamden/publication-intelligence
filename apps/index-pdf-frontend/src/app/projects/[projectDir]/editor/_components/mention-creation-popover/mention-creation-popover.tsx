@@ -133,8 +133,8 @@ export const MentionCreationPopover = ({
 		return spaceCount <= 2 ? draft.text.trim() : "";
 	}, [draft.text]);
 
-	// Check if selected text exactly matches an existing entry
-	const hasExactMatch = useMemo(() => {
+	// True only when exact match is top-level (no parent). Used to pre-select and to skip opening the picker.
+	const hasTopLevelExactMatch = useMemo(() => {
 		if (!draft.text) return false;
 
 		const spaceCount = (draft.text.match(/ /g) || []).length;
@@ -145,23 +145,23 @@ export const MentionCreationPopover = ({
 			text: draft.text,
 		});
 
-		return !!exactMatch;
+		return !!exactMatch && !exactMatch.parentId;
 	}, [draft.text, entriesForType]);
 
-	// Auto-select entry if exact match exists
+	// Auto-select entry only when exact match is a top-level entry (no parent).
+	// Otherwise just pre-populate the input so the user can choose (e.g. Egypt:worship vs God:worship).
 	useEffect(() => {
 		if (!draft.text) return;
 
 		const spaceCount = (draft.text.match(/ /g) || []).length;
 
 		if (spaceCount <= 2) {
-			// Check if it matches an existing entry
 			const exactMatch = findEntryByText({
 				entries: entriesForType,
 				text: draft.text,
 			});
 
-			if (exactMatch) {
+			if (exactMatch && !exactMatch.parentId) {
 				setSelectedEntryId(exactMatch.id);
 				setSelectedEntryLabel(exactMatch.label);
 			}
@@ -351,8 +351,8 @@ export const MentionCreationPopover = ({
 						placeholder="Select entry..."
 						showCreateOption={true}
 						onCreateEntry={handleCreateEntry}
-						autoFocus={draft.type === "text" && !hasExactMatch}
-						defaultOpen={draft.type === "text" && !hasExactMatch}
+						autoFocus={draft.type === "text" && !hasTopLevelExactMatch}
+						defaultOpen={draft.type === "text" && !hasTopLevelExactMatch}
 						defaultInputValue={defaultInputValue}
 					/>
 					{entryError && <FieldError errors={[{ message: entryError }]} />}

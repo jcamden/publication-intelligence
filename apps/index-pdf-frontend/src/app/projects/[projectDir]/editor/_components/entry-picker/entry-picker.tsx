@@ -13,6 +13,9 @@ import { useMemo, useState } from "react";
 import type { IndexEntry } from "../../_types/index-entry";
 import { getEntryDisplayLabel } from "../../_utils/index-entry-utils";
 
+const hasSeeCrossReference = (entry: IndexEntry): boolean =>
+	entry.crossReferences?.some((ref) => ref.relationType === "see") ?? false;
+
 type EntryPickerProps = {
 	entries: IndexEntry[];
 	value: string | null;
@@ -36,15 +39,15 @@ type EntryPickerProps = {
 };
 
 /**
- * Hierarchical, searchable entry picker with "Under" navigation.
+ * Hierarchical, searchable entry picker with Chicago-style parent:child format.
  *
  * Features:
- * - Search/filter by entry label
- * - Navigate into children with "Under" option or by typing "Parent > "
- * - Shows full hierarchy path in input (e.g., "Animals > Mammals > ")
- * - Shows full hierarchy for selected entry
+ * - Search/filter by entry label; all entries (including children) appear at top level as "parent:child"
+ * - Navigate into children with "Under" option or by typing "parent:"
+ * - Display and selection use "parent:child" format
  * - Optional clear selection
  * - Excludes specified entry IDs
+ * - Hides entries that have a "See" cross-reference (they cannot be targets)
  */
 export const EntryPicker = ({
 	entries,
@@ -88,36 +91,53 @@ export const EntryPicker = ({
 	}, [inputValue, selectedEntry, entries, open]);
 
 	const filteredEntries = useMemo(() => {
-		// Normalize input only if it contains ">": collapse multiple spaces around > and trim
-		const normalizedInput = inputValue.includes(">")
-			? inputValue.replace(/\s*>\s*/g, " > ").trim()
-			: inputValue.trim();
-		const separatorCount = (normalizedInput.match(/>/g) || []).length;
-		const endsWithNavigator = normalizedInput.endsWith(" >");
+		const normalizedInput = inputValue.trim();
+		const segments = normalizedInput.split(":").map((s) => s.trim());
+		const endsWithColon = normalizedInput.endsWith(":");
 
-		// If user tried to navigate (ends with >) but navigation didn't happen,
-		// it means they typed an invalid entry name - show no results
-		if (endsWithNavigator && separatorCount !== navigationStack.length) {
-			return [];
+		// If user typed "parent:" but we haven't navigated yet, show no results until we sync
+		if (endsWithColon && segments.length - 1 !== navigationStack.length) {
+			const prefixPath = segments.slice(0, -1).filter(Boolean);
+			if (
+				prefixPath.length > 0 &&
+				prefixPath.length !== navigationStack.length
+			) {
+				return [];
+			}
 		}
 
-		// First filter by current navigation level
-		let levelEntries = entries.filter(
-			(e) => e.parentId === currentParentId && !excludeIds.includes(e.id),
-		);
+		// At top level show all entries; when narrowed show only children of current parent.
+		// Exclude entries that have a "See" cross-reference (they cannot be targets).
+		let levelEntries =
+			currentParentId === null
+				? entries.filter(
+						(e) => !excludeIds.includes(e.id) && !hasSeeCrossReference(e),
+					)
+				: entries.filter(
+						(e) =>
+							e.parentId === currentParentId &&
+							!excludeIds.includes(e.id) &&
+							!hasSeeCrossReference(e),
+					);
 
-		// Apply search filter if query exists
-		const isSearching = normalizedInput && !endsWithNavigator;
+		// Apply search filter
+		const isSearching = normalizedInput && !endsWithColon;
 		if (isSearching) {
-			// Extract the last segment for searching (after the last >)
-			const segments = normalizedInput.split(">").map((s) => s.trim());
-			const lastSegment = segments[segments.length - 1];
-			const query = lastSegment.toLowerCase();
-			levelEntries = levelEntries.filter((e) =>
-				e.label.toLowerCase().includes(query),
-			);
+			if (currentParentId === null) {
+				const query = normalizedInput.toLowerCase();
+				levelEntries = levelEntries.filter((e) =>
+					getEntryDisplayLabel({ entry: e, entries })
+						.toLowerCase()
+						.includes(query),
+				);
+			} else {
+				const lastSegment = segments[segments.length - 1];
+				const query = lastSegment.toLowerCase();
+				levelEntries = levelEntries.filter((e) =>
+					e.label.toLowerCase().includes(query),
+				);
+			}
 		} else if (!normalizedInput) {
-			// Only exclude selected entry when not searching (dropdown just opened)
 			levelEntries = levelEntries.filter((e) => e.id !== value);
 		}
 
@@ -142,19 +162,19 @@ export const EntryPicker = ({
 		return stack
 			.map((id) => entries.find((e) => e.id === id)?.label || "")
 			.filter(Boolean)
-			.join(" > ");
+			.join(":");
 	};
 
 	const handleNavigateUnder = (entryId: string) => {
 		const newStack = [...navigationStack, entryId];
 		setNavigationStack(newStack);
 		const path = buildNavigationPath(newStack);
-		setInputValue(`${path} > `);
+		setInputValue(`${path}:`);
 	};
 
 	const findEntryByPath = (pathString: string): IndexEntry | null => {
 		const segments = pathString
-			.split(">")
+			.split(":")
 			.map((s) => s.trim())
 			.filter(Boolean);
 		if (segments.length === 0) return null;
@@ -167,7 +187,8 @@ export const EntryPicker = ({
 				(e) =>
 					e.parentId === currentParent &&
 					e.label.toLowerCase() === segment.toLowerCase() &&
-					!excludeIds.includes(e.id),
+					!excludeIds.includes(e.id) &&
+					!hasSeeCrossReference(e),
 			);
 			if (!found) return null;
 			currentEntry = found;
@@ -203,6 +224,10 @@ export const EntryPicker = ({
 	};
 
 	const handleInputChange = (newValue: string) => {
+		const normalizedValue = newValue.trim();
+		const segments = normalizedValue.split(":").map((s) => s.trim());
+		const endsWithColon = normalizedValue.endsWith(":");
+
 		// If user starts typing after having a selected value (inputValue was empty)
 		// AND they don't have an active navigation session, rebuild navigation context
 		if (
@@ -215,7 +240,6 @@ export const EntryPicker = ({
 				entry: selectedEntry,
 				entries,
 			});
-			// Build navigation stack from the selected entry's parents
 			const stack: string[] = [];
 			let current = selectedEntry;
 			while (current.parentId) {
@@ -225,46 +249,39 @@ export const EntryPicker = ({
 				current = parent;
 			}
 
-			// Check if user is trying to navigate into children with " >"
-			const normalized = newValue.includes(">")
-				? newValue.replace(/\s*>\s*/g, " > ").trim()
-				: newValue;
-			if (normalized === `${displayPath} >`) {
+			if (normalizedValue === `${displayPath}:`) {
 				const hasChildren = entries.some(
 					(e) => e.parentId === selectedEntry.id,
 				);
 				if (hasChildren) {
-					// Navigate into the selected entry's children
-					// Build the full stack including the selected entry
 					const fullStack = [...stack, selectedEntry.id];
 					setNavigationStack(fullStack);
 					const path = buildNavigationPath(fullStack);
-					setInputValue(`${path} > `);
+					setInputValue(`${path}:`);
 					return;
 				}
 			}
 
-			// Not navigating, just set the stack and input value
 			setNavigationStack(stack);
 			setInputValue(newValue);
 			return;
 		}
 
-		// Normalize input only if it contains ">": collapse multiple spaces around > and trim
-		const normalizedValue = newValue.includes(">")
-			? newValue.replace(/\s*>\s*/g, " > ").trim()
-			: newValue;
-		const separatorCount = (normalizedValue.match(/>/g) || []).length;
-		const expectedSeparatorCount = navigationStack.length;
-
-		// If user has backspaced to remove a " > ", pop the navigation stack
-		if (separatorCount < expectedSeparatorCount && navigationStack.length > 0) {
-			const newStack = navigationStack.slice(0, separatorCount);
+		// If user backspaced and removed a ":", pop the navigation stack
+		const prefixSegments = endsWithColon
+			? segments.slice(0, -1)
+			: segments.filter((_, i) => i < segments.length - 1 || !normalizedValue);
+		const expectedDepth = navigationStack.length;
+		if (
+			prefixSegments.length < expectedDepth &&
+			!endsWithColon &&
+			navigationStack.length > 0
+		) {
+			const newStack = navigationStack.slice(0, prefixSegments.length);
 			setNavigationStack(newStack);
-			// Update input to match the new stack
 			if (newStack.length > 0) {
 				const path = buildNavigationPath(newStack);
-				setInputValue(`${path} > `);
+				setInputValue(`${path}:`);
 			} else {
 				setInputValue("");
 			}
@@ -273,17 +290,11 @@ export const EntryPicker = ({
 
 		setInputValue(newValue);
 
-		// Check if user typed ">" to navigate into an entry
-		if (
-			normalizedValue.endsWith(" >") &&
-			separatorCount > expectedSeparatorCount
-		) {
-			// Extract the last segment after the last ">"
-			const segments = normalizedValue.split(">").map((s) => s.trim());
-			const lastSegment = segments[segments.length - 2]; // -2 because last one is empty after ">"
-
-			if (lastSegment) {
-				const searchText = lastSegment.toLowerCase();
+		// If user typed "parent:" to navigate into an entry at current level
+		if (endsWithColon && segments.length > navigationStack.length) {
+			const segmentBeforeColon = segments[segments.length - 2];
+			if (segmentBeforeColon) {
+				const searchText = segmentBeforeColon.toLowerCase();
 				const matchingEntry = entries.find(
 					(e) =>
 						e.parentId === currentParentId &&
@@ -314,15 +325,13 @@ export const EntryPicker = ({
 	const handleCreateEntry = () => {
 		if (!onCreateEntry) return;
 
-		// Extract label from input (last segment after ">")
 		const segments = inputValue
-			.split(">")
+			.split(":")
 			.map((s) => s.trim())
 			.filter(Boolean);
 		const label =
 			segments.length > 0 ? segments[segments.length - 1] : inputValue.trim();
 
-		// Parent is the last item in navigation stack (or null for top-level)
 		const parentId =
 			navigationStack.length > 0
 				? navigationStack[navigationStack.length - 1]
@@ -368,6 +377,10 @@ export const EntryPicker = ({
 						filteredEntries.map((entry) => {
 							const hasChildren = entries.some((e) => e.parentId === entry.id);
 							const isSingleResult = filteredEntries.length === 1;
+							const displayLabel =
+								currentParentId === null
+									? getEntryDisplayLabel({ entry, entries })
+									: entry.label;
 							return (
 								<div
 									key={entry.id}
@@ -376,7 +389,7 @@ export const EntryPicker = ({
 									}`}
 								>
 									<ComboboxItem value={entry.id} className="flex-1 min-w-0">
-										{entry.label}
+										{displayLabel}
 									</ComboboxItem>
 									{hasChildren && (
 										<button
@@ -392,7 +405,7 @@ export const EntryPicker = ({
 											}}
 											className="h-6 px-2 text-xs shrink-0 rounded hover:bg-neutral-200 dark:hover:bg-neutral-700 z-10"
 										>
-											Under &gt;
+											Under :
 										</button>
 									)}
 								</div>
@@ -416,7 +429,7 @@ export const EntryPicker = ({
 							>
 								Create new entry: "
 								{inputValue
-									.split(">")
+									.split(":")
 									.map((s) => s.trim())
 									.filter(Boolean)
 									.pop() || inputValue.trim()}

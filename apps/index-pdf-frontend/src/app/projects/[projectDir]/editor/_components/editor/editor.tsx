@@ -4,7 +4,7 @@ import type { PdfHighlight } from "@pubint/yaboujee";
 import { PdfAnnotationPopover, PdfViewer } from "@pubint/yaboujee";
 import { formatOklchColor } from "@pubint/yaboujee/utils/index-type-colors";
 import { useAtom, useAtomValue } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCreateMention } from "@/app/_common/_hooks/use-create-mention";
 import { trpc } from "@/app/_common/_utils/trpc";
 import {
@@ -167,7 +167,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		},
 	});
 
-	// Fetch all entries for the project (needed for mention details popover)
+	// Fetch all entries for the project (needed for mention details popover and entry picker)
 	const { data: backendAllEntries = [] } = trpc.indexEntry.list.useQuery(
 		{
 			projectId: projectId ?? "",
@@ -175,20 +175,51 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		{ enabled: !!projectId },
 	);
 
-	// Convert backend entries to frontend format (add indexType field by looking up projectIndexType)
-	const allEntries = backendAllEntries.map((e) => {
-		const projectIndexType = projectIndexTypesQuery.data?.find(
-			(pit) => pit.id === e.projectIndexTypeId,
-		);
-		return {
-			...e,
-			indexType: (projectIndexType?.indexType ||
-				"subject") as IndexEntry["indexType"],
-			metadata: {
-				matchers: e.matchers?.map((m) => m.text) || [],
-			},
-		};
-	});
+	// Fetch cross-references for all entries (so entry picker can hide "See" entries)
+	const crossReferencesQueries = trpc.useQueries((t) =>
+		backendAllEntries.map((entry) =>
+			t.indexEntry.crossReference.list(
+				{ entryId: entry.id },
+				{ enabled: !!entry.id },
+			),
+		),
+	);
+
+	const allCrossReferences = useMemo(() => {
+		const map = new Map<
+			string,
+			Array<{
+				id: string;
+				toEntryId: string | null;
+				arbitraryValue: string | null;
+				relationType: "see" | "see_also" | "qv";
+				toEntry?: { id: string; label: string } | null;
+			}>
+		>();
+		backendAllEntries.forEach((entry, index) => {
+			const data = crossReferencesQueries[index]?.data ?? [];
+			map.set(entry.id, data);
+		});
+		return map;
+	}, [backendAllEntries, crossReferencesQueries]);
+
+	// Convert backend entries to frontend format (add indexType, metadata, crossReferences)
+	const allEntries = useMemo(() => {
+		return backendAllEntries.map((e) => {
+			const projectIndexType = projectIndexTypesQuery.data?.find(
+				(pit) => pit.id === e.projectIndexTypeId,
+			);
+			return {
+				...e,
+				indexType: (projectIndexType?.indexType ||
+					"subject") as IndexEntry["indexType"],
+				metadata: {
+					matchers: e.matchers?.map((m) => m.text) || [],
+				},
+				crossReferences: allCrossReferences.get(e.id) ?? [],
+			};
+		});
+	}, [backendAllEntries, projectIndexTypesQuery.data, allCrossReferences]);
 
 	// Fetch mentions from backend (used for page sidebar and highlights)
 	const { data: backendMentions = [] } = trpc.indexMention.list.useQuery(

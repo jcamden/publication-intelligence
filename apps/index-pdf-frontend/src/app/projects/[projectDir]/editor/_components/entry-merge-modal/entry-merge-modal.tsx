@@ -3,22 +3,14 @@
 import { Alert, AlertDescription } from "@pubint/yabasic/components/ui/alert";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { Field, FieldLabel } from "@pubint/yabasic/components/ui/field";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@pubint/yabasic/components/ui/select";
 import { Spinner } from "@pubint/yabasic/components/ui/spinner";
 import { Modal } from "@pubint/yaboujee";
-import { AlertCircle } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDeleteEntry } from "@/app/_common/_hooks/use-delete-entry";
 import { trpc } from "@/app/_common/_utils/trpc";
 import type { IndexEntry } from "../../_types/index-entry";
-import { getEntryDisplayLabel } from "../../_utils/index-entry-utils";
+import { EntryPicker } from "../entry-picker/entry-picker";
 
 export type EntryMergeModalProps = {
 	open: boolean;
@@ -27,6 +19,7 @@ export type EntryMergeModalProps = {
 	existingEntries: IndexEntry[];
 	projectId: string;
 	projectIndexTypeId: string;
+	sourceEntryMentionCount?: number;
 };
 
 export const EntryMergeModal = ({
@@ -36,6 +29,7 @@ export const EntryMergeModal = ({
 	existingEntries,
 	projectId,
 	projectIndexTypeId,
+	sourceEntryMentionCount = 0,
 }: EntryMergeModalProps) => {
 	const [targetEntryId, setTargetEntryId] = useState<string | null>(null);
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -46,7 +40,7 @@ export const EntryMergeModal = ({
 	const transferMentions =
 		trpc.indexEntry.crossReference.transferMentions.useMutation();
 
-	const availableTargets = useMemo(() => {
+	const excludeIds = useMemo(() => {
 		const getDescendants = (entryId: string): Set<string> => {
 			const descendants = new Set<string>();
 			const findChildren = (id: string) => {
@@ -59,19 +53,19 @@ export const EntryMergeModal = ({
 			findChildren(entryId);
 			return descendants;
 		};
-
 		const descendantIds = getDescendants(sourceEntry.id);
-		return existingEntries.filter(
-			(e) => e.id !== sourceEntry.id && !descendantIds.has(e.id),
-		);
+		return [sourceEntry.id, ...descendantIds];
 	}, [existingEntries, sourceEntry.id]);
 
 	const targetEntry = useMemo(
-		() => availableTargets.find((e) => e.id === targetEntryId),
-		[availableTargets, targetEntryId],
+		() =>
+			targetEntryId
+				? (existingEntries.find((e) => e.id === targetEntryId) ?? null)
+				: null,
+		[existingEntries, targetEntryId],
 	);
 
-	const matcherCount = sourceEntry.metadata?.matchers?.length || 0;
+	const matchers = sourceEntry.metadata?.matchers ?? [];
 
 	const handleMerge = async () => {
 		if (!targetEntryId) {
@@ -82,7 +76,7 @@ export const EntryMergeModal = ({
 		setIsProcessing(true);
 
 		try {
-			if (matcherCount > 0) {
+			if (matchers.length > 0) {
 				await transferMatchers.mutateAsync({
 					fromEntryId: sourceEntry.id,
 					toEntryId: targetEntryId,
@@ -160,35 +154,25 @@ export const EntryMergeModal = ({
 			}
 		>
 			<div className="space-y-4">
-				<Alert>
+				{/* <Alert>
 					<AlertCircle className="h-4 w-4" />
 					<AlertDescription>
 						Select a target entry to merge into. All matchers and mentions from
 						"{sourceEntry.label}" will be transferred, and this entry will be
 						deleted. This action cannot be undone.
 					</AlertDescription>
-				</Alert>
+				</Alert> */}
 
 				<Field>
 					<FieldLabel htmlFor="target-entry">Target Entry</FieldLabel>
-					<Select
-						value={targetEntryId ?? ""}
-						onValueChange={(value) => setTargetEntryId(value || null)}
-					>
-						<SelectTrigger id="target-entry" className="w-full">
-							<SelectValue placeholder="Select target entry..." />
-						</SelectTrigger>
-						<SelectContent>
-							{availableTargets.map((entry) => (
-								<SelectItem key={entry.id} value={entry.id}>
-									{getEntryDisplayLabel({
-										entry,
-										entries: existingEntries,
-									})}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<EntryPicker
+						id="target-entry"
+						entries={existingEntries}
+						value={targetEntryId}
+						onValueChange={setTargetEntryId}
+						placeholder="Select target entry..."
+						excludeIds={excludeIds}
+					/>
 				</Field>
 
 				{targetEntryId && (
@@ -198,11 +182,20 @@ export const EntryMergeModal = ({
 								<p className="font-semibold">Preview:</p>
 								<ul className="list-disc list-inside space-y-1 text-sm">
 									<li>
-										{matcherCount} matcher{matcherCount !== 1 ? "s" : ""} will
-										be transferred
+										{
+											<>
+												Transfer {matchers.length} matcher
+												{matchers.length !== 1 ? "s" : ""}
+												{matchers.length > 0 ? ": " : ""}
+												<div className="pl-8">{matchers.join(", ")}</div>
+											</>
+										}
 									</li>
-									<li>All mentions will be transferred</li>
-									<li>"{sourceEntry.label}" will be deleted</li>
+									<li>
+										Transfer {sourceEntryMentionCount} mention
+										{sourceEntryMentionCount !== 1 ? "s" : ""}
+									</li>
+									<li>Delete "{sourceEntry.label}" entry</li>
 								</ul>
 							</div>
 						</AlertDescription>

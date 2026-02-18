@@ -1137,6 +1137,24 @@ export type CrossReferenceRow = {
 	toEntry: { id: string; label: string; parentId: string | null } | null;
 };
 
+export const entryHasSeeCrossReference = async ({
+	entryId,
+}: {
+	entryId: string;
+}): Promise<boolean> => {
+	const [row] = await db
+		.select({ id: indexRelations.id })
+		.from(indexRelations)
+		.where(
+			and(
+				eq(indexRelations.fromEntryId, entryId),
+				eq(indexRelations.relationType, "see"),
+			),
+		)
+		.limit(1);
+	return !!row;
+};
+
 export const getCrossReferencesForEntries = async ({
 	entryIds,
 }: {

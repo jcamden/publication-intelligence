@@ -24,6 +24,15 @@ export const mockDraftNoMatch: MentionDraft = {
 	type: "text",
 };
 
+/** Top-level entry exact match – used to test auto-select (only top-level matches are auto-selected). */
+export const mockDraftTopLevelExactMatch: MentionDraft = {
+	documentId: "mock-document-id",
+	pageNumber: 1,
+	text: "Science",
+	bboxes: [{ x: 100, y: 200, width: 300, height: 40 }],
+	type: "text",
+};
+
 export const mockRegionDraft: MentionDraft = {
 	documentId: "mock-document-id",
 	pageNumber: 1,

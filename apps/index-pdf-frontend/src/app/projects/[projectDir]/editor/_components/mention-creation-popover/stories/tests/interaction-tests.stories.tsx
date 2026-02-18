@@ -13,6 +13,7 @@ import {
 	mockDraft,
 	mockDraftNoMatch,
 	mockDraftPartialMatch,
+	mockDraftTopLevelExactMatch,
 	mockRegionDraft,
 } from "../shared";
 
@@ -124,20 +125,20 @@ export const SelectExistingEntry: Story = {
 			await new Promise((resolve) => setTimeout(resolve, 500));
 		});
 
-		await step("Select 'Philosophy' using keyboard", async () => {
-			// Verify dropdown has options
+		await step("Select 'Philosophy' entry", async () => {
+			const body = within(document.body);
 			await waitFor(
 				async () => {
-					const options = within(document.body).queryAllByRole("option");
+					const options = body.queryAllByRole("option");
 					await expect(options.length).toBeGreaterThan(0);
 				},
 				{ timeout: 3000 },
 			);
 
-			// Press Enter to select the first (and only) filtered option
-			await userEvent.keyboard("{Enter}");
+			// EntryPicker shows multiple matches for "Philo"; Enter only selects when exactly one. Select by clicking the top-level "Philosophy" option.
+			const philosophyOption = body.getByRole("option", { name: "Philosophy" });
+			(philosophyOption as HTMLElement).click();
 
-			// Wait for selection to complete
 			await new Promise((resolve) => setTimeout(resolve, 300));
 		});
 
@@ -223,6 +224,11 @@ export const CancelWithButton: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
+		await step("Close dropdown so form is not inert", async () => {
+			await userEvent.keyboard("{Escape}");
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		});
+
 		await step("Click cancel button", async () => {
 			const cancelButton = canvas.getByRole("button", { name: "Cancel" });
 			await userEvent.click(cancelButton);
@@ -252,9 +258,14 @@ export const CancelWithEscape: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await step("Press Escape key", async () => {
-			await userEvent.keyboard("{Escape}");
-		});
+		await step(
+			"Press Escape to close dropdown then cancel popover",
+			async () => {
+				await userEvent.keyboard("{Escape}");
+				await new Promise((resolve) => setTimeout(resolve, 100));
+				await userEvent.keyboard("{Escape}");
+			},
+		);
 
 		await step("Verify cancellation", async () => {
 			const result = canvas.getByTestId("result");
@@ -379,7 +390,7 @@ export const SelectNestedEntry: Story = {
 
 export const SmartAutocompleteExactMatch: Story = {
 	args: {
-		draft: mockDraft, // "Kant, Immanuel" - exact match in mock data
+		draft: mockDraftTopLevelExactMatch, // "Science" - top-level exact match (only these are auto-selected)
 		indexType: "subject",
 		entries: mockSubjectEntries,
 		mentions: [],
@@ -388,21 +399,28 @@ export const SmartAutocompleteExactMatch: Story = {
 		onAttach: () => {},
 		onCancel: () => {},
 	},
-	render: () => <InteractiveWrapper draft={mockDraft} indexType="subject" />,
+	render: () => (
+		<InteractiveWrapper
+			draft={mockDraftTopLevelExactMatch}
+			indexType="subject"
+		/>
+	),
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await step("Verify exact match auto-populated", async () => {
-			await waitFor(
-				() => {
-					const input = canvas.getByRole("combobox");
-					// The full hierarchy path should be shown
-					const value = (input as HTMLInputElement).value;
-					expect(value).toContain("Kant, Immanuel");
-				},
-				{ timeout: 2000 },
-			);
-		});
+		await step(
+			"Verify exact match auto-populated and pre-selected",
+			async () => {
+				await waitFor(
+					() => {
+						const input = canvas.getByRole("combobox");
+						const value = (input as HTMLInputElement).value;
+						expect(value).toContain("Science");
+					},
+					{ timeout: 2000 },
+				);
+			},
+		);
 
 		await step("Click Attach button", async () => {
 			const attachButton = canvas.getByRole("button", { name: "Attach" });
@@ -413,7 +431,7 @@ export const SmartAutocompleteExactMatch: Story = {
 			const result = canvas.getByTestId("result");
 			await waitFor(
 				() => {
-					expect(result).toHaveTextContent(/Attached: Kant, Immanuel/);
+					expect(result).toHaveTextContent(/Attached: Science/);
 				},
 				{ timeout: 2000 },
 			);
