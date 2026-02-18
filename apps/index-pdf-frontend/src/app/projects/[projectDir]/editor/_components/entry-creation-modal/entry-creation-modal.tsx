@@ -49,6 +49,7 @@ export const EntryCreationModal = ({
 		prefillParentId,
 		existingEntriesCount: existingEntries.length,
 	});
+	const utils = trpc.useUtils();
 	const createEntry = useCreateEntry();
 	const [matchers, setMatchers] = useState<string[]>([]);
 	const [activeTab, setActiveTab] = useState("basic");
@@ -110,6 +111,9 @@ export const EntryCreationModal = ({
 									}),
 								),
 							);
+							utils.indexEntry.crossReference.list.invalidate({
+								entryId: newEntry.id,
+							});
 							toast.success(
 								`Entry created with ${pendingCrossReferences.length} cross-reference(s)`,
 							);
