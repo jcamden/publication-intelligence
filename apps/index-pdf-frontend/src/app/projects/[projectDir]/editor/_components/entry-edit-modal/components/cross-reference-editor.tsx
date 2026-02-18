@@ -9,7 +9,7 @@ import {
 } from "@pubint/yabasic/components/ui/radio-group";
 import { SmartSelect } from "@pubint/yabasic/components/ui/smart-select";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/app/_common/_utils/trpc";
 import type { CrossReference } from "@/app/_common/_utils/trpc-types";
@@ -28,6 +28,8 @@ type CrossReferenceEditorProps = {
 	mentionCount: number;
 	projectId: string;
 	onUpdate: () => void;
+	onUnsavedTargetChange?: (hasUnsaved: boolean) => void;
+	validationError?: string;
 };
 
 export const CrossReferenceEditor = ({
@@ -37,6 +39,8 @@ export const CrossReferenceEditor = ({
 	mentionCount,
 	projectId,
 	onUpdate,
+	onUnsavedTargetChange,
+	validationError,
 }: CrossReferenceEditorProps) => {
 	const [relationType, setRelationType] = useState<"see" | "see_also" | "qv">(
 		"see_also",
@@ -136,6 +140,10 @@ export const CrossReferenceEditor = ({
 
 	const canAdd =
 		targetMode === "entry" ? !!selectedEntryId : !!arbitraryText.trim();
+
+	useEffect(() => {
+		onUnsavedTargetChange?.(canAdd);
+	}, [canAdd, onUnsavedTargetChange]);
 
 	return (
 		<div className="space-y-4">
@@ -267,6 +275,11 @@ export const CrossReferenceEditor = ({
 					<Label className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
 						Target
 					</Label>
+					{validationError && (
+						<p className="text-sm text-destructive mb-2" role="alert">
+							{validationError}
+						</p>
+					)}
 					<RadioGroup
 						value={targetMode}
 						onValueChange={(v) => setTargetMode(v as "entry" | "arbitrary")}

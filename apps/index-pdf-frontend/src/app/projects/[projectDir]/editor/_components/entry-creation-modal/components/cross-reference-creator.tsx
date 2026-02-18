@@ -9,7 +9,7 @@ import {
 } from "@pubint/yabasic/components/ui/radio-group";
 import { SmartSelect } from "@pubint/yabasic/components/ui/smart-select";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { CreateCrossReferenceInput } from "@/app/_common/_utils/trpc-types";
 import type { IndexEntry } from "../../../_types/index-entry";
@@ -25,12 +25,16 @@ type CrossReferenceCreatorProps = {
 	onChange: (
 		crossRefs: Omit<CreateCrossReferenceInput, "fromEntryId">[],
 	) => void;
+	onUnsavedTargetChange?: (hasUnsaved: boolean) => void;
+	validationError?: string;
 };
 
 export const CrossReferenceCreator = ({
 	existingEntries,
 	pendingCrossReferences,
 	onChange,
+	onUnsavedTargetChange,
+	validationError,
 }: CrossReferenceCreatorProps) => {
 	const [relationType, setRelationType] = useState<"see" | "see_also" | "qv">(
 		"see_also",
@@ -84,6 +88,10 @@ export const CrossReferenceCreator = ({
 
 	const canAdd =
 		targetMode === "entry" ? !!selectedEntryId : !!arbitraryText.trim();
+
+	useEffect(() => {
+		onUnsavedTargetChange?.(canAdd);
+	}, [canAdd, onUnsavedTargetChange]);
 
 	return (
 		<div className="space-y-4">
@@ -167,6 +175,11 @@ export const CrossReferenceCreator = ({
 					<Label className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
 						Target
 					</Label>
+					{validationError && (
+						<p className="text-sm text-destructive mb-2" role="alert">
+							{validationError}
+						</p>
+					)}
 					<RadioGroup
 						value={targetMode}
 						onValueChange={(v) => setTargetMode(v as "entry" | "arbitrary")}
@@ -208,7 +221,7 @@ export const CrossReferenceCreator = ({
 				<Button
 					type="button"
 					onClick={handleAdd}
-					variant="outline"
+					variant={!canAdd ? "outline" : "default"}
 					size="sm"
 					disabled={!canAdd}
 				>

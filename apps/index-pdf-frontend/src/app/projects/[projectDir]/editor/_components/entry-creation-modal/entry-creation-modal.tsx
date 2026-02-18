@@ -56,6 +56,11 @@ export const EntryCreationModal = ({
 	const [pendingCrossReferences, setPendingCrossReferences] = useState<
 		Omit<CreateCrossReferenceInput, "fromEntryId">[]
 	>([]);
+	const [hasUnsavedCrossRefTarget, setHasUnsavedCrossRefTarget] =
+		useState(false);
+	const [crossRefValidationError, setCrossRefValidationError] = useState<
+		string | null
+	>(null);
 
 	const createCrossReference =
 		trpc.indexEntry.crossReference.create.useMutation({
@@ -152,6 +157,8 @@ export const EntryCreationModal = ({
 					form.reset();
 					setMatchers([]);
 					setPendingCrossReferences([]);
+					setHasUnsavedCrossRefTarget(false);
+					setCrossRefValidationError(null);
 					setActiveTab("basic");
 				},
 			});
@@ -173,42 +180,41 @@ export const EntryCreationModal = ({
 	// Initialize form fields and matchers when modal opens with prefill values
 	useEffect(() => {
 		if (open) {
-			console.log(
-				"[EntryCreationModal] Modal opened, resetting form with prefill values:",
-				{
-					prefillLabel,
-					prefillParentId,
-				},
-			);
-
-			// Reset form with new prefill values
 			form.setFieldValue("label", prefillLabel);
 			form.setFieldValue("parentId", prefillParentId);
-
-			// Initialize matchers
 			if (prefillLabel) {
 				setMatchers([prefillLabel]);
 			}
+			setHasUnsavedCrossRefTarget(false);
+			setCrossRefValidationError(null);
 		}
 	}, [open, prefillLabel, prefillParentId, form]);
 
 	const handleCancel = useCallback(() => {
-		console.log("[EntryCreationModal] handleCancel called");
 		form.reset();
 		setMatchers([]);
 		setPendingCrossReferences([]);
+		setHasUnsavedCrossRefTarget(false);
+		setCrossRefValidationError(null);
 		setActiveTab("basic");
 		onClose();
 	}, [form, onClose]);
 
+	const CROSS_REF_VALIDATION_MESSAGE =
+		"Cross-reference not saved. Please add it or clear the Target field.";
+
 	const handleCreate = useCallback(
 		(e?: React.MouseEvent) => {
-			console.log("[EntryCreationModal] handleCreate called, submitting form");
 			e?.preventDefault();
 			e?.stopPropagation();
+			if (hasUnsavedCrossRefTarget) {
+				setCrossRefValidationError(CROSS_REF_VALIDATION_MESSAGE);
+				setActiveTab("cross-references");
+				return;
+			}
 			form.handleSubmit();
 		},
-		[form],
+		[form, hasUnsavedCrossRefTarget],
 	);
 
 	return (
@@ -360,6 +366,11 @@ export const EntryCreationModal = ({
 						existingEntries={existingEntries}
 						pendingCrossReferences={pendingCrossReferences}
 						onChange={setPendingCrossReferences}
+						onUnsavedTargetChange={(hasUnsaved) => {
+							setHasUnsavedCrossRefTarget(hasUnsaved);
+							if (!hasUnsaved) setCrossRefValidationError(null);
+						}}
+						validationError={crossRefValidationError ?? undefined}
 					/>
 				</TabsContent>
 			</Tabs>

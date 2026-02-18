@@ -48,7 +48,15 @@ export const EntryEditModal = ({
 }: EntryEditModalProps) => {
 	const [matchers, setMatchers] = useState<string[]>([]);
 	const [activeTab, setActiveTab] = useState("basic");
+	const [hasUnsavedCrossRefTarget, setHasUnsavedCrossRefTarget] =
+		useState(false);
+	const [crossRefValidationError, setCrossRefValidationError] = useState<
+		string | null
+	>(null);
 	const updateEntry = useUpdateEntry();
+
+	const CROSS_REF_VALIDATION_MESSAGE =
+		"Cross-reference not saved. Please add it or clear the Target field.";
 
 	const { data: crossReferences = [], refetch: refetchCrossReferences } =
 		trpc.indexEntry.crossReference.list.useQuery(
@@ -96,11 +104,29 @@ export const EntryEditModal = ({
 		}
 	}, [open, entry.metadata?.matchers]);
 
+	useEffect(() => {
+		if (open) {
+			setHasUnsavedCrossRefTarget(false);
+			setCrossRefValidationError(null);
+		}
+	}, [open]);
+
 	const handleCancel = useCallback(() => {
 		form.reset();
 		setActiveTab("basic");
+		setHasUnsavedCrossRefTarget(false);
+		setCrossRefValidationError(null);
 		onClose();
 	}, [form, onClose]);
+
+	const handleSave = useCallback(() => {
+		if (hasUnsavedCrossRefTarget) {
+			setCrossRefValidationError(CROSS_REF_VALIDATION_MESSAGE);
+			setActiveTab("cross-refs");
+			return;
+		}
+		form.handleSubmit();
+	}, [form, hasUnsavedCrossRefTarget]);
 
 	const selectedParent = useMemo(
 		() =>
@@ -129,7 +155,7 @@ export const EntryEditModal = ({
 					</Button>
 					<Button
 						variant="default"
-						onClick={() => form.handleSubmit()}
+						onClick={handleSave}
 						disabled={form.state.isSubmitting || updateEntry.isPending}
 					>
 						{updateEntry.isPending ? (
@@ -247,6 +273,11 @@ export const EntryEditModal = ({
 						mentionCount={mentionCount}
 						projectId={projectId}
 						onUpdate={refetchCrossReferences}
+						onUnsavedTargetChange={(hasUnsaved) => {
+							setHasUnsavedCrossRefTarget(hasUnsaved);
+							if (!hasUnsaved) setCrossRefValidationError(null);
+						}}
+						validationError={crossRefValidationError ?? undefined}
 					/>
 				</TabsContent>
 			</Tabs>
