@@ -2,8 +2,10 @@
 
 import { useMemo } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
+import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 import type { IndexEntry } from "@/app/projects/[projectDir]/editor/_types/index-entry";
 import { formatCrossReferencesAsSegments } from "@/app/projects/[projectDir]/editor/_utils/cross-reference-utils";
+import { documentPageRangeToCanonicalRangeString } from "../_utils/canonical-page-range";
 
 const EMPTY_MESSAGE =
 	"Create entries and attach mentions in order to see your index.";
@@ -124,6 +126,25 @@ export const SubjectIndexContent = ({
 		{ enabled: !!projectId && !!projectIndexTypeId },
 	);
 
+	const { data: regions = [] } = trpc.region.list.useQuery(
+		{ projectId },
+		{ enabled: !!projectId },
+	);
+
+	const { regionDerivedPageNumbers } = useRegionDerivedPageNumbers({
+		regions,
+		projectId: projectId ?? undefined,
+		enabled: !!projectId,
+	});
+
+	const docToCanonical = useMemo(() => {
+		const map = new Map<number, string>();
+		for (const d of regionDerivedPageNumbers) {
+			map.set(d.documentPage, d.canonicalPage);
+		}
+		return map;
+	}, [regionDerivedPageNumbers]);
+
 	const allEntries = useMemo((): IndexEntry[] => {
 		if (!data) return [];
 		return data.entries.map((e) => ({
@@ -138,6 +159,19 @@ export const SubjectIndexContent = ({
 			crossReferences: data.crossReferencesByEntryId[e.id] ?? [],
 		}));
 	}, [data]);
+
+	const canonicalPageRangesByEntryId = useMemo(() => {
+		if (!data?.pageRangesByEntryId) return {};
+		const out: Record<string, string> = {};
+		for (const entryId of Object.keys(data.pageRangesByEntryId)) {
+			const docRangeStr = data.pageRangesByEntryId[entryId];
+			out[entryId] = documentPageRangeToCanonicalRangeString({
+				documentPageRangeStr: docRangeStr,
+				docToCanonical,
+			});
+		}
+		return out;
+	}, [data?.pageRangesByEntryId, docToCanonical]);
 
 	if (isLoading) {
 		return (
@@ -168,7 +202,7 @@ export const SubjectIndexContent = ({
 			<IndexViewTree
 				entries={allEntries}
 				allEntries={allEntries}
-				pageRangesByEntryId={data.pageRangesByEntryId}
+				pageRangesByEntryId={canonicalPageRangesByEntryId}
 				parentId={null}
 				depth={0}
 			/>

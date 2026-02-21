@@ -135,7 +135,7 @@ export const useRegionDerivedPageNumbers = ({
 }: {
 	regions: RegionInput[];
 	pdfUrl?: string;
-	totalPages: number;
+	totalPages?: number;
 	enabled?: boolean;
 	projectId?: string;
 }): {
@@ -157,33 +157,41 @@ export const useRegionDerivedPageNumbers = ({
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `regions` is intentionally omitted because: (1) it's recreated on every render (mapped from tRPC data), (2) region data changes are tracked via `cacheKey`, (3) including it causes infinite loops
 	useEffect(() => {
-		if (!enabled || !pdfUrl || totalPages === 0 || !projectId) {
+		if (!enabled || !projectId) {
 			return;
 		}
 
+		// Try cache first (works without pdfUrl/totalPages - e.g. on index page)
+		if (cacheKey) {
+			try {
+				const cacheStorageKey = `region-page-numbers-${projectId}`;
+				const cachedStr = localStorage.getItem(cacheStorageKey);
+				if (cachedStr) {
+					const cached: CachedPageNumbers = JSON.parse(cachedStr);
+					if (cached.cacheKey === cacheKey) {
+						setRegionDerivedPageNumbers(cached.results);
+						setIsLoading(false);
+						return;
+					}
+				}
+			} catch (err) {
+				console.warn("Failed to read region page numbers cache:", err);
+			}
+		}
+
+		// No cache hit and no PDF context: nothing to extract
+		const hasPdfContext =
+			typeof totalPages === "number" && totalPages > 0 && !!pdfUrl;
+		if (!hasPdfContext) {
+			setRegionDerivedPageNumbers([]);
+			setIsLoading(false);
+			return;
+		}
+
+		const maxPage = totalPages;
 		let isCancelled = false;
 
 		const extractPageNumbers = async () => {
-			// Try to load from cache first
-			if (cacheKey) {
-				try {
-					const cacheStorageKey = `region-page-numbers-${projectId}`;
-					const cachedStr = localStorage.getItem(cacheStorageKey);
-					if (cachedStr) {
-						const cached: CachedPageNumbers = JSON.parse(cachedStr);
-						if (cached.cacheKey === cacheKey) {
-							// Cache hit! Use cached results
-							setRegionDerivedPageNumbers(cached.results);
-							setIsLoading(false);
-							return;
-						}
-					}
-				} catch (err) {
-					// Cache read error, continue with extraction
-					console.warn("Failed to read region page numbers cache:", err);
-				}
-			}
-
 			setIsLoading(true);
 			setError(null);
 
@@ -210,7 +218,7 @@ export const useRegionDerivedPageNumbers = ({
 				for (const region of pageNumberRegions) {
 					const applicablePages = getApplicablePages({
 						region: region as unknown as Region,
-						maxPage: totalPages,
+						maxPage,
 					});
 
 					for (const pageNum of applicablePages) {
