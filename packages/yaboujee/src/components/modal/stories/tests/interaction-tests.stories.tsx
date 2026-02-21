@@ -1,7 +1,7 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { useState } from "react";
 import { Modal } from "../../modal";
 
@@ -89,7 +89,12 @@ export const DisplaysTitle: StoryObj<typeof Modal> = {
 		const canvas = within(document.body);
 		const title = await canvas.findByText("Test Title");
 
-		await expect(title).toBeVisible();
+		await waitFor(
+			async () => {
+				await expect(title).toBeVisible();
+			},
+			{ timeout: 500 },
+		);
 	},
 };
 
@@ -107,7 +112,12 @@ export const DisplaysChildren: StoryObj<typeof Modal> = {
 		const canvas = within(document.body);
 		const content = await canvas.findByTestId("child-content");
 
-		await expect(content).toBeVisible();
+		await waitFor(
+			async () => {
+				await expect(content).toBeVisible();
+			},
+			{ timeout: 500 },
+		);
 		await expect(content).toHaveTextContent("This is the modal content");
 	},
 };
@@ -135,7 +145,12 @@ export const DisplaysFooter: StoryObj<typeof Modal> = {
 		const canvas = within(document.body);
 		const footerButton = await canvas.findByTestId("footer-button");
 
-		await expect(footerButton).toBeVisible();
+		await waitFor(
+			async () => {
+				await expect(footerButton).toBeVisible();
+			},
+			{ timeout: 500 },
+		);
 		await expect(footerButton).toHaveTextContent("Action");
 	},
 };

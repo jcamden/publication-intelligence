@@ -116,11 +116,13 @@ const parseStoryFile = ({ filePath }: { filePath: string }): StoryInfo => {
 			? pathParts[storiesIndex - 1]
 			: "unknown";
 
-	// Extract title from default export
-	const titleMatch = content.match(/title:\s*["']([^"']+)["']/);
-	const storyTitle = titleMatch
-		? titleMatch[1]
-		: `Components/${componentName}/tests/Visual Regression Tests`;
+	// Extract title from Storybook meta (default export). Prefer a title that looks like
+	// a Storybook path (contains "/") to avoid matching nested objects like sectionMetadata.
+	const allTitleMatches = [...content.matchAll(/title:\s*["']([^"']+)["']/g)];
+	const storyTitle =
+		allTitleMatches.find((m) => m[1].includes("/"))?.[1] ??
+		allTitleMatches[0]?.[1] ??
+		`Components/${componentName}/tests/Visual Regression Tests`;
 
 	// Extract all exported stories with their globals
 	const stories: Array<{
