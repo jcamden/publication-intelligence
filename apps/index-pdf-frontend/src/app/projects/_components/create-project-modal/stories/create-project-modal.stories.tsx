@@ -108,7 +108,7 @@ export const LargeModal: StoryObj<typeof CreateProjectModal> = {
 		docs: {
 			description: {
 				story:
-					"Modal is sized 2xl to accommodate the two-column layout with PDF preview",
+					"Modal is sized 4xl to accommodate the two-column layout with PDF preview",
 			},
 		},
 	},

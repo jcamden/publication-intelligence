@@ -16,12 +16,15 @@ const modalVariants = cva(
 	{
 		variants: {
 			size: {
-				sm: "max-w-sm",
-				md: "max-w-md",
-				lg: "max-w-lg",
-				xl: "max-w-xl",
-				"2xl": "max-w-2xl",
-				full: "max-w-full mx-4",
+				sm: "max-w-sm sm:max-w-sm",
+				md: "max-w-md sm:max-w-md",
+				lg: "max-w-lg sm:max-w-lg",
+				xl: "max-w-xl sm:max-w-xl",
+				"2xl": "max-w-2xl sm:max-w-2xl",
+				"3xl": "max-w-3xl sm:max-w-3xl",
+				"4xl": "max-w-4xl sm:max-w-4xl",
+				"5xl": "max-w-5xl sm:max-w-5xl",
+				full: "max-w-full mx-4 sm:max-w-full",
 			},
 		},
 		defaultVariants: {
@@ -63,6 +66,11 @@ export const Modal = ({
 				data-modal-dialog
 				className={clsx(modalVariants({ size }), "!p-0 !gap-0", className)}
 				showCloseButton={!title && showCloseButton}
+				onPointerDown={(e) => e.stopPropagation()}
+				onPointerUp={(e) => e.stopPropagation()}
+				onClick={(e) => e.stopPropagation()}
+				onMouseDown={(e) => e.stopPropagation()}
+				onMouseUp={(e) => e.stopPropagation()}
 			>
 				{title && (
 					<DialogHeader className="flex flex-row items-center justify-between gap-2 px-6 py-4 border-b border-border">

@@ -34,7 +34,7 @@ export const CreateProjectModal = ({
 			open={open}
 			onClose={handleClose}
 			title="Create New Project"
-			size="2xl"
+			size="4xl"
 		>
 			<ProjectForm
 				onSuccess={handleSuccess}
