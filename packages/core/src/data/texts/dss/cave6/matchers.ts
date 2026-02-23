@@ -1,0 +1,295 @@
+export const CAVE_6_MATCHERS: Record<string, string[]> = {
+	"6Q1 (6QpaleoGen, Genesis)": [
+		"6Q1",
+		"6Q 1",
+		"6Q-1",
+		"6Q.1",
+		"6QpaleoGen",
+		"6Q paleo Gen",
+		"6Q-PaleoGen",
+		"Genesis (6Q)",
+		"6Q Genesis",
+	],
+
+	"6Q2 (6QpaleoLev, Leviticus)": [
+		"6Q2",
+		"6Q 2",
+		"6Q-2",
+		"6Q.2",
+		"6QpaleoLev",
+		"6Q paleo Lev",
+		"6Q-PaleoLev",
+		"Leviticus (6Q)",
+		"6Q Leviticus",
+	],
+
+	"6Q3 (pap6QDeut / 6QpapDeut, Deuteronomy)": [
+		"6Q3",
+		"6Q 3",
+		"6Q-3",
+		"6Q.3",
+		"pap6QDeut",
+		"6QpapDeut",
+		"6Q pap Deut",
+		"6Q-Deut (pap)",
+		"Deuteronomy (6Q)",
+		"6Q Deuteronomy",
+	],
+
+	"6Q4 (6QpapKgs, Kings)": [
+		"6Q4",
+		"6Q 4",
+		"6Q-4",
+		"6Q.4",
+		"6QpapKgs",
+		"pap6QKgs",
+		"6Q pap Kgs",
+		"Kings (6Q)",
+		"6Q Kings",
+	],
+
+	"6Q5 (pap6QPs / 6QpapPs, Psalms)": [
+		"6Q5",
+		"6Q 5",
+		"6Q-5",
+		"6Q.5",
+		"pap6QPs",
+		"6QpapPs",
+		"6Q pap Ps",
+		"Psalms (6Q)",
+		"6Q Psalms",
+	],
+
+	"6Q6 (6QCant, Song of Songs)": [
+		"6Q6",
+		"6Q 6",
+		"6Q-6",
+		"6Q.6",
+		"6QCant",
+		"6Q Cant",
+		"Song of Songs (6Q)",
+		"Canticles (6Q)",
+	],
+
+	"6Q7 (6QpapDan, Daniel)": [
+		"6Q7",
+		"6Q 7",
+		"6Q-7",
+		"6Q.7",
+		"6QpapDan",
+		"pap6QDan",
+		"Daniel (6Q)",
+		"6Q Daniel",
+	],
+
+	"6Q8 (6QpapGiants / pap6QEnGiants, Book of Giants)": [
+		"6Q8",
+		"6Q 8",
+		"6Q-8",
+		"6Q.8",
+		"6QpapGiants",
+		"pap6QEnGiants",
+		"pap6QGiants",
+		"Book of Giants (6Q)",
+		"Giants (6Q)",
+	],
+
+	"6Q9 (6QpapApocrSam-Kgs, Apocryphon on Samuel–Kings)": [
+		"6Q9",
+		"6Q 9",
+		"6Q-9",
+		"6Q.9",
+		"6QpapApocrSam-Kgs",
+		"pap6QapocrSam/Kgs",
+		"6Q apocr Sam-Kgs",
+		"Apocryphon on Samuel–Kings (6Q)",
+	],
+
+	"6Q10 (6QpapProph, Unidentified Prophetic Fragment)": [
+		"6Q10",
+		"6Q 10",
+		"6Q-10",
+		"6Q.10",
+		"6QpapProph",
+		"pap6QProph",
+		"Prophetic Fragment (6Q)",
+	],
+
+	"6Q11 (6QAllegory, Allegory of the Vine)": [
+		"6Q11",
+		"6Q 11",
+		"6Q-11",
+		"6Q.11",
+		"6QAllegory",
+		"Allegory of the Vine",
+		"Vine Allegory (6Q)",
+	],
+
+	"6Q12 (6QapProph, Apocryphal Prophecy)": [
+		"6Q12",
+		"6Q 12",
+		"6Q-12",
+		"6Q.12",
+		"6QapProph",
+		"Apocryphal Prophecy (6Q)",
+	],
+
+	"6Q13 (6QPriestProph, Priestly Prophecy)": [
+		"6Q13",
+		"6Q 13",
+		"6Q-13",
+		"6Q.13",
+		"6QPriestProph",
+		"Priestly Prophecy (6Q)",
+	],
+
+	"6Q14 (6QApocalypse, Apocalyptic Text)": [
+		"6Q14",
+		"6Q 14",
+		"6Q-14",
+		"6Q.14",
+		"6QApocalypse",
+		"6Q Apocalypse",
+		"Apocalyptic Text (6Q)",
+	],
+
+	"6Q15 (6QD, Damascus Document)": [
+		"6Q15",
+		"6Q 15",
+		"6Q-15",
+		"6Q.15",
+		"6QD",
+		"6Q D",
+		"Damascus Document (6Q)",
+		"CD (6Q)",
+	],
+
+	"6Q16 (6QpapBened, Benediction)": [
+		"6Q16",
+		"6Q 16",
+		"6Q-16",
+		"6Q.16",
+		"6QpapBened",
+		"pap6QBen",
+		"papBenediction",
+		"Benediction (6Q)",
+	],
+
+	"6Q17 (6QCalDoc, Calendrical Document)": [
+		"6Q17",
+		"6Q 17",
+		"6Q-17",
+		"6Q.17",
+		"6QCalDoc",
+		"Calendrical Document (6Q)",
+	],
+
+	"6Q18 (pap6QHymn, Hymn)": ["6Q18", "pap6QHymn", "Hymn (6Q)"],
+
+	"6Q19 (Text Related to Genesis)": [
+		"6Q19",
+		"6Q 19",
+		"6Q-19",
+		"6Q.19",
+		"6Q Text Related to Genesis",
+		"Genesis-related Text (6Q)",
+	],
+
+	"6Q20 (6QDeut, Deuteronomy)": [
+		"6Q20",
+		"6Q 20",
+		"6Q-20",
+		"6Q.20",
+		"6QDeut",
+		"6Q Deut",
+		"Deuteronomy (6Q20)",
+	],
+
+	"6Q21 (6QfrgProph, Prophetic Text)": [
+		"6Q21",
+		"6Q 21",
+		"6Q-21",
+		"6Q.21",
+		"6QfrgProph",
+		"6Q Prophetic Text",
+		"Prophetic Text (6Q)",
+	],
+
+	"6Q22 (pap6QUnidA, Unclassified Fragment A)": [
+		"6Q22",
+		"6Q 22",
+		"6Q-22",
+		"6Q.22",
+		"pap6QUnidA",
+		"Unclassified (6Q22)",
+	],
+
+	"6Q23 (pap6QUnidA ar, Unclassified Aramaic Fragment)": [
+		"6Q23",
+		"6Q 23",
+		"6Q-23",
+		"6Q.23",
+		"pap6QUnidA ar",
+		"6Q23 Ar",
+		"Unclassified Aramaic (6Q)",
+	],
+
+	"6Q24 (6QUnidB, Unclassified Fragment B)": [
+		"6Q24",
+		"6Q 24",
+		"6Q-24",
+		"6Q.24",
+		"Unclassified (6Q24)",
+	],
+
+	"6Q25 (6QUnidB, Unclassified Fragment B)": [
+		"6Q25",
+		"6Q 25",
+		"6Q-25",
+		"6Q.25",
+		"Unclassified (6Q25)",
+	],
+
+	"6Q26 (6QpapAccount, Papyrus Account / Contract)": [
+		"6Q26",
+		"6Q 26",
+		"6Q-26",
+		"6Q.26",
+		"6QpapAccount",
+		"Account Text (6Q)",
+		"Contract (6Q)",
+	],
+
+	"6Q27–6Q28 (6QUnidB, Unclassified Fragments)": [
+		"6Q27",
+		"6Q 27",
+		"6Q-27",
+		"6Q.27",
+		"6Q28",
+		"6Q 28",
+		"6Q-28",
+		"6Q.28",
+		"6Q27–28",
+		"6Q27-28",
+		"Unclassified (6Q27-28)",
+	],
+
+	"6Q30 (6QpapProv, Proverbs)": [
+		"6Q30",
+		"6Q 30",
+		"6Q-30",
+		"6Q.30",
+		"6QpapProv",
+		"pap6QProv",
+		"Proverbs (6Q)",
+		"6Q Proverbs",
+	],
+
+	"6Q31 (6QUnidB, Unclassified Fragment)": [
+		"6Q31",
+		"6Q 31",
+		"6Q-31",
+		"6Q.31",
+		"Unclassified (6Q31)",
+	],
+};

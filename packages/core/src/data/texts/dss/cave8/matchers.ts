@@ -1,0 +1,63 @@
+export const CAVE_8_MATCHERS: Record<string, string[]> = {
+	"8Q1 (8QGen, Genesis)": [
+		"8Q1",
+		"8Q 1",
+		"8Q-1",
+		"8Q.1",
+		"8QGen",
+		"8Q Gen",
+		"8Q-Gen",
+		"Genesis (8Q)",
+		"8Q Genesis",
+	],
+
+	"8Q2 (8QPs, Psalms)": [
+		"8Q2",
+		"8Q 2",
+		"8Q-2",
+		"8Q.2",
+		"8QPs",
+		"8Q Ps",
+		"8Q-Ps",
+		"Psalms (8Q)",
+		"8Q Psalms",
+	],
+
+	"8Q3 (8QPhyl, Phylacteries)": [
+		"8Q3",
+		"8Q 3",
+		"8Q-3",
+		"8Q.3",
+		"8QPhyl",
+		"8Q Phyl",
+		"8Q-Phyl",
+		"Phylacteries (8Q)",
+		"Phylactery (8Q)",
+		"Tefillin (8Q)",
+	],
+
+	"8Q4 (8QMez, Mezuzah)": [
+		"8Q4",
+		"8Q 4",
+		"8Q-4",
+		"8Q.4",
+		"8QMez",
+		"8Q Mez",
+		"8Q-Mez",
+		"Mezuzah (8Q)",
+		"Mezuza (8Q)",
+		"Mezuzot (8Q)",
+	],
+
+	"8Q5 (8QHymn, Hymn)": [
+		"8Q5",
+		"8Q 5",
+		"8Q-5",
+		"8Q.5",
+		"8QHymn",
+		"8Q Hymn",
+		"8Q-Hymn",
+		"Hymn (8Q)",
+		"Unidentified Hymn (8Q)",
+	],
+};

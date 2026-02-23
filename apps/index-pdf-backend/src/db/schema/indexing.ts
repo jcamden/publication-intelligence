@@ -1,11 +1,13 @@
 import { relations, sql } from "drizzle-orm";
 import {
+	foreignKey,
 	integer,
 	json,
 	pgPolicy,
 	pgTable,
 	text,
 	timestamp,
+	unique,
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
@@ -53,6 +55,9 @@ export const indexEntries = pgTable(
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [
+		// Required by composite FK from index_matchers (entry_id, project_index_type_id)
+		unique("unique_index_entry_id_type").on(table.id, table.projectIndexTypeId),
+
 		// Slug uniqueness per project AND index type (excluding soft-deleted entries)
 		uniqueIndex("unique_project_index_type_slug")
 			.on(table.projectId, table.projectIndexTypeId, table.slug)
@@ -108,6 +113,9 @@ export const indexMatchers = pgTable(
 		entryId: uuid("entry_id")
 			.references(() => indexEntries.id, { onDelete: "cascade" })
 			.notNull(),
+		projectIndexTypeId: uuid("project_index_type_id")
+			.references(() => projectIndexTypes.id, { onDelete: "cascade" })
+			.notNull(),
 		text: text("text").notNull(),
 		matcherType: matcherTypeEnum("matcher_type").default("alias").notNull(),
 		revision: integer("revision").default(1).notNull(),
@@ -117,8 +125,20 @@ export const indexMatchers = pgTable(
 		updatedAt: timestamp("updated_at", { withTimezone: true }),
 	},
 	(table) => [
-		// Prevent duplicate matchers for the same entry
-		uniqueIndex("unique_entry_text").on(table.entryId, table.text),
+		// Enforce deterministic matcher -> entry mapping per index type.
+		// This still allows same matcher text across different index types
+		// (e.g. "genesis" in subject and scripture).
+		uniqueIndex("unique_project_index_type_matcher_text").on(
+			table.projectIndexTypeId,
+			table.text,
+		),
+
+		// Enforce that matcher's project_index_type_id matches its entry's type.
+		foreignKey({
+			columns: [table.entryId, table.projectIndexTypeId],
+			foreignColumns: [indexEntries.id, indexEntries.projectIndexTypeId],
+			name: "index_matchers_entry_id_project_index_type_id_fk",
+		}),
 
 		// RLS: Inherit access from index entry
 		// index_entries RLS inherits from projects RLS
@@ -138,6 +158,10 @@ export const indexMatchersRelations = relations(indexMatchers, ({ one }) => ({
 	entry: one(indexEntries, {
 		fields: [indexMatchers.entryId],
 		references: [indexEntries.id],
+	}),
+	projectIndexType: one(projectIndexTypes, {
+		fields: [indexMatchers.projectIndexTypeId],
+		references: [projectIndexTypes.id],
 	}),
 }));
 
@@ -212,8 +236,6 @@ export const indexMentions = pgTable(
 		pageNumber: integer("page_number").notNull(), // Page number (validated against sourceDocuments.pageCount)
 		pageNumberEnd: integer("page_number_end"), // For page ranges
 		textSpan: text("text_span").notNull(), // The actual text
-		startOffset: integer("start_offset"),
-		endOffset: integer("end_offset"),
 		bboxes: json("bboxes"), // Array of BoundingBox coordinates
 		rangeType: mentionRangeTypeEnum("range_type")
 			.default("single_page")
@@ -227,7 +249,6 @@ export const indexMentions = pgTable(
 				onDelete: "set null",
 			},
 		), // null if manually created
-		note: text("note"),
 		revision: integer("revision").default(1).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()

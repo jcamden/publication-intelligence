@@ -285,6 +285,7 @@ export const createIndexEntry = async ({
 				await tx.insert(indexMatchers).values(
 					input.matchers.map((text) => ({
 						entryId: entry.id,
+						projectIndexTypeId: entry.projectIndexTypeId,
 						text,
 						matcherType: "alias" as const,
 						revision: 1,
@@ -373,6 +374,7 @@ export const updateIndexEntry = async ({
 					await tx.insert(indexMatchers).values(
 						input.matchers.map((text) => ({
 							entryId: input.id,
+							projectIndexTypeId: input.projectIndexTypeId,
 							text,
 							matcherType: "alias" as const,
 							revision: 1,
@@ -1382,6 +1384,29 @@ export const transferMentions = async ({
 	});
 };
 
+export const transferMatchers = async ({
+	fromEntryId,
+	toEntryId,
+	userId,
+}: {
+	fromEntryId: string;
+	toEntryId: string;
+	userId: string;
+}): Promise<number> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const result = await tx
+				.update(indexMatchers)
+				.set({ entryId: toEntryId })
+				.where(eq(indexMatchers.entryId, fromEntryId))
+				.returning({ id: indexMatchers.id });
+
+			return result.length;
+		},
+	});
+};
+
 export const getEntryMatchers = async ({
 	entryId,
 }: {
@@ -1426,9 +1451,22 @@ export const addMatchersToEntry = async ({
 	await withUserContext({
 		userId,
 		fn: async (tx) => {
+			const [entry] = await tx
+				.select({
+					projectIndexTypeId: indexEntries.projectIndexTypeId,
+				})
+				.from(indexEntries)
+				.where(eq(indexEntries.id, entryId))
+				.limit(1);
+
+			if (!entry) {
+				throw new Error("Entry not found");
+			}
+
 			await tx.insert(indexMatchers).values(
 				matchers.map((text) => ({
 					entryId,
+					projectIndexTypeId: entry.projectIndexTypeId,
 					text,
 					matcherType: "alias" as const,
 					revision: 1,

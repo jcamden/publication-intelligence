@@ -19,14 +19,11 @@ export type IndexMention = {
 	pageNumber: number;
 	pageNumberEnd: number | null;
 	textSpan: string;
-	startOffset: number | null;
-	endOffset: number | null;
 	bboxes: BoundingBox[] | null;
 	rangeType: "single_page" | "page_range" | "passim";
 	mentionType: "text" | "region";
 	suggestedByLlmId: string | null;
 	detectionRunId: string | null;
-	note: string | null;
 	revision: number;
 	createdAt: string;
 	updatedAt: string | null;

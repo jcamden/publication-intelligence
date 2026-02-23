@@ -360,6 +360,7 @@ export const createTestIndexEntry = async ({
 			await tx.insert(indexMatchers).values(
 				matchers.map((text) => ({
 					entryId: entry.id,
+					projectIndexTypeId,
 					text,
 					matcherType: "alias" as const,
 					revision: 1,

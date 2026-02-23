@@ -1,5 +1,5 @@
 {
-	"id": "b3d31610-7c59-4579-abcf-1362e807baaa",
+	"id": "7e77fad2-ce25-4f88-a5cf-e5392189b6e6",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -1192,7 +1192,13 @@
 				}
 			},
 			"compositePrimaryKeys": {},
-			"uniqueConstraints": {},
+			"uniqueConstraints": {
+				"unique_index_entry_id_type": {
+					"name": "unique_index_entry_id_type",
+					"nullsNotDistinct": false,
+					"columns": ["id", "project_index_type_id"]
+				}
+			},
 			"policies": {
 				"index_entries_project_access": {
 					"name": "index_entries_project_access",
@@ -1218,6 +1224,12 @@
 				},
 				"entry_id": {
 					"name": "entry_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"project_index_type_id": {
+					"name": "project_index_type_id",
 					"type": "uuid",
 					"primaryKey": false,
 					"notNull": true
@@ -1258,11 +1270,11 @@
 				}
 			},
 			"indexes": {
-				"unique_entry_text": {
-					"name": "unique_entry_text",
+				"unique_project_index_type_matcher_text": {
+					"name": "unique_project_index_type_matcher_text",
 					"columns": [
 						{
-							"expression": "entry_id",
+							"expression": "project_index_type_id",
 							"isExpression": false,
 							"asc": true,
 							"nulls": "last"
@@ -1288,6 +1300,24 @@
 					"columnsFrom": ["entry_id"],
 					"columnsTo": ["id"],
 					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"index_matchers_project_index_type_id_project_highlight_configs_id_fk": {
+					"name": "index_matchers_project_index_type_id_project_highlight_configs_id_fk",
+					"tableFrom": "index_matchers",
+					"tableTo": "project_highlight_configs",
+					"columnsFrom": ["project_index_type_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"index_matchers_entry_id_project_index_type_id_fk": {
+					"name": "index_matchers_entry_id_project_index_type_id_fk",
+					"tableFrom": "index_matchers",
+					"tableTo": "index_entries",
+					"columnsFrom": ["entry_id", "project_index_type_id"],
+					"columnsTo": ["id", "project_index_type_id"],
+					"onDelete": "no action",
 					"onUpdate": "no action"
 				}
 			},

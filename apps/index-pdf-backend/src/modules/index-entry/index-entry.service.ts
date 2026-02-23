@@ -710,15 +710,36 @@ export const transferMatchers = async ({
 	userId: string;
 	requestId: string;
 }): Promise<{ count: number }> => {
-	// Get matchers from source entry
-	const matchers = await indexEntryRepo.getEntryMatchers({
-		entryId: input.fromEntryId,
-	});
+	// Validate both entries have same index type
+	const [fromEntry] = await db
+		.select({ projectIndexTypeId: indexEntries.projectIndexTypeId })
+		.from(indexEntries)
+		.where(eq(indexEntries.id, input.fromEntryId))
+		.limit(1);
 
-	// Add them to target entry
-	await indexEntryRepo.addMatchersToEntry({
-		entryId: input.toEntryId,
-		matchers: matchers.map((m) => m.text),
+	const [toEntry] = await db
+		.select({ projectIndexTypeId: indexEntries.projectIndexTypeId })
+		.from(indexEntries)
+		.where(eq(indexEntries.id, input.toEntryId))
+		.limit(1);
+
+	if (!fromEntry || !toEntry) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "One or both entries not found",
+		});
+	}
+
+	if (fromEntry.projectIndexTypeId !== toEntry.projectIndexTypeId) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Cannot merge entries with different index types",
+		});
+	}
+
+	const count = await indexEntryRepo.transferMatchers({
+		fromEntryId: input.fromEntryId,
+		toEntryId: input.toEntryId,
 		userId,
 	});
 
@@ -730,10 +751,10 @@ export const transferMatchers = async ({
 			metadata: {
 				fromEntryId: input.fromEntryId,
 				toEntryId: input.toEntryId,
-				count: matchers.length,
+				count,
 			},
 		},
 	});
 
-	return { count: matchers.length };
+	return { count };
 };
