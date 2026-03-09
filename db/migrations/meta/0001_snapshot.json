@@ -1,5 +1,5 @@
 {
-	"id": "7e77fad2-ce25-4f88-a5cf-e5392189b6e6",
+	"id": "846bf901-8053-4021-a064-4649de19c2e6",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -1382,18 +1382,6 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"start_offset": {
-					"name": "start_offset",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false
-				},
-				"end_offset": {
-					"name": "end_offset",
-					"type": "integer",
-					"primaryKey": false,
-					"notNull": false
-				},
 				"bboxes": {
 					"name": "bboxes",
 					"type": "json",
@@ -1431,12 +1419,6 @@
 				"detection_run_id": {
 					"name": "detection_run_id",
 					"type": "uuid",
-					"primaryKey": false,
-					"notNull": false
-				},
-				"note": {
-					"name": "note",
-					"type": "text",
 					"primaryKey": false,
 					"notNull": false
 				},

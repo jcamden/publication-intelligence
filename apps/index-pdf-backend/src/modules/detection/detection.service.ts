@@ -12,7 +12,8 @@ import type {
 	CreateDetectionRunInput,
 	DetectionRun,
 	DetectionRunListItem,
-	RunDetectionInput,
+	RunLlmInput,
+	RunMatcherInput,
 } from "./detection.types";
 import { callLLMForDetection } from "./openrouter.client";
 import { buildDetectionPrompt } from "./prompt.utils";
@@ -29,70 +30,23 @@ import { searchMentionsInText } from "./text-search.utils";
 // Service Layer - Business Logic
 // ============================================================================
 
-export const runDetection = async ({
+type ProcessFn = (args: { userId: string; runId: string }) => Promise<void>;
+
+const createRunAndStartBackgroundProcess = async ({
 	userId,
-	input,
+	runInput,
+	processFn,
 }: {
 	userId: string;
-	input: RunDetectionInput;
+	runInput: CreateDetectionRunInput;
+	processFn: ProcessFn;
 }): Promise<{ runId: string }> => {
-	// Get source document
-	const sourceDocuments = await listSourceDocumentsByProject({
-		projectId: input.projectId,
-		userId,
-	});
-
-	if (sourceDocuments.length === 0) {
-		throw new Error("No source document found for this project");
-	}
-
-	const sourceDocListItem = sourceDocuments[0];
-
-	if (!sourceDocListItem.page_count) {
-		throw new Error("Source document has no page count");
-	}
-
-	// Calculate settings hash for deduplication
-	const settingsHash = calculateSettingsHash({
-		projectId: input.projectId,
-		indexType: input.indexType,
-		model: input.model,
-	});
-
-	// Validate page range if provided
-	if (
-		input.pageRangeStart &&
-		input.pageRangeStart > sourceDocListItem.page_count
-	) {
-		throw new Error(
-			`Page range start (${input.pageRangeStart}) exceeds document page count (${sourceDocListItem.page_count})`,
-		);
-	}
-	if (input.pageRangeEnd && input.pageRangeEnd > sourceDocListItem.page_count) {
-		throw new Error(
-			`Page range end (${input.pageRangeEnd}) exceeds document page count (${sourceDocListItem.page_count})`,
-		);
-	}
-
-	// Create detection run record
-	const runInput: CreateDetectionRunInput = {
-		projectId: input.projectId,
-		indexType: input.indexType,
-		model: input.model,
-		promptVersion: input.promptVersion,
-		settingsHash,
-		totalPages: sourceDocListItem.page_count,
-		pageRangeStart: input.pageRangeStart,
-		pageRangeEnd: input.pageRangeEnd,
-	};
-
 	const run = await detectionRepo.createDetectionRun({
 		userId,
 		input: runInput,
 	});
 
-	// Process in background (don't await)
-	processDetection({ userId, runId: run.id }).catch((err) => {
+	processFn({ userId, runId: run.id }).catch((err) => {
 		console.error("Detection processing error:", err);
 		detectionRepo
 			.updateDetectionRunStatus({
@@ -108,6 +62,111 @@ export const runDetection = async ({
 	});
 
 	return { runId: run.id };
+};
+
+export const runLlm = async ({
+	userId,
+	input,
+}: {
+	userId: string;
+	input: RunLlmInput;
+}): Promise<{ runId: string }> => {
+	const sourceDocuments = await listSourceDocumentsByProject({
+		projectId: input.projectId,
+		userId,
+	});
+
+	if (sourceDocuments.length === 0) {
+		throw new Error("No source document found for this project");
+	}
+
+	const sourceDocListItem = sourceDocuments[0];
+
+	if (!sourceDocListItem.page_count) {
+		throw new Error("Source document has no page count");
+	}
+
+	const settingsHash = calculateSettingsHash({
+		projectId: input.projectId,
+		indexType: input.indexType,
+		model: input.model,
+	});
+
+	if (
+		input.pageRangeStart &&
+		input.pageRangeStart > sourceDocListItem.page_count
+	) {
+		throw new Error(
+			`Page range start (${input.pageRangeStart}) exceeds document page count (${sourceDocListItem.page_count})`,
+		);
+	}
+	if (input.pageRangeEnd && input.pageRangeEnd > sourceDocListItem.page_count) {
+		throw new Error(
+			`Page range end (${input.pageRangeEnd}) exceeds document page count (${sourceDocListItem.page_count})`,
+		);
+	}
+
+	const runInput: CreateDetectionRunInput = {
+		projectId: input.projectId,
+		indexType: input.indexType,
+		model: input.model,
+		promptVersion: input.promptVersion,
+		settingsHash,
+		totalPages: sourceDocListItem.page_count,
+		pageRangeStart: input.pageRangeStart,
+		pageRangeEnd: input.pageRangeEnd,
+	};
+
+	return createRunAndStartBackgroundProcess({
+		userId,
+		runInput,
+		processFn: processDetection,
+	});
+};
+
+export const runMatcher = async ({
+	userId,
+	input,
+}: {
+	userId: string;
+	input: RunMatcherInput;
+}): Promise<{ runId: string }> => {
+	const sourceDocuments = await listSourceDocumentsByProject({
+		projectId: input.projectId,
+		userId,
+	});
+
+	if (sourceDocuments.length === 0) {
+		throw new Error("No source document found for this project");
+	}
+
+	const sourceDocListItem = sourceDocuments[0];
+	const totalPages =
+		input.scope === "page" ? 1 : (sourceDocListItem.page_count ?? 1);
+
+	const settingsHash = calculateMatcherSettingsHash({
+		projectId: input.projectId,
+		indexType: input.indexType,
+		scope: input.scope,
+		pageId: input.pageId,
+		indexEntryGroupIds: input.indexEntryGroupIds,
+		runAllGroups: input.runAllGroups,
+	});
+
+	const runInput: CreateDetectionRunInput = {
+		projectId: input.projectId,
+		indexType: input.indexType,
+		model: "matcher",
+		promptVersion: "v1",
+		settingsHash,
+		totalPages,
+	};
+
+	return createRunAndStartBackgroundProcess({
+		userId,
+		runInput,
+		processFn: processMatcherStub,
+	});
 };
 
 export const getDetectionRun = async ({
@@ -221,6 +280,32 @@ const calculatePagesToProcess = ({
 // ============================================================================
 // Background Processing
 // ============================================================================
+
+const processMatcherStub = async ({
+	userId,
+	runId,
+}: {
+	userId: string;
+	runId: string;
+}): Promise<void> => {
+	await detectionRepo.updateDetectionRunStatus({
+		userId,
+		input: {
+			runId,
+			status: "running",
+			startedAt: new Date(),
+		},
+	});
+	// Stub: real matcher processing in Phase 5
+	await detectionRepo.updateDetectionRunStatus({
+		userId,
+		input: {
+			runId,
+			status: "completed",
+			finishedAt: new Date(),
+		},
+	});
+};
 
 const processDetection = async ({
 	userId,
@@ -610,6 +695,32 @@ const calculateSettingsHash = ({
 		projectId,
 		indexType,
 		model,
+	});
+	return crypto.createHash("sha256").update(data).digest("hex");
+};
+
+const calculateMatcherSettingsHash = ({
+	projectId,
+	indexType,
+	scope,
+	pageId,
+	indexEntryGroupIds,
+	runAllGroups,
+}: {
+	projectId: string;
+	indexType: string;
+	scope: string;
+	pageId?: string;
+	indexEntryGroupIds?: string[];
+	runAllGroups?: boolean;
+}): string => {
+	const data = JSON.stringify({
+		projectId,
+		indexType,
+		scope,
+		pageId,
+		indexEntryGroupIds,
+		runAllGroups,
 	});
 	return crypto.createHash("sha256").update(data).digest("hex");
 };

@@ -4,7 +4,7 @@ import { z } from "zod";
 // DTOs - Data Transfer Objects
 // ============================================================================
 
-export const RunDetectionSchema = z
+export const RunLlmSchema = z
 	.object({
 		projectId: z.string().uuid("Invalid project ID"),
 		indexType: z.string().min(1, "Index type is required"),
@@ -25,7 +25,41 @@ export const RunDetectionSchema = z
 		},
 	);
 
-export type RunDetectionInput = z.infer<typeof RunDetectionSchema>;
+export type RunLlmInput = z.infer<typeof RunLlmSchema>;
+
+export const RunMatcherSchema = z
+	.object({
+		projectId: z.string().uuid("Invalid project ID"),
+		indexType: z.string().min(1, "Index type is required"),
+		scope: z.enum(["project", "page"]),
+		pageId: z.string().uuid("Invalid page ID").optional(),
+		indexEntryGroupIds: z.array(z.string().uuid()).optional(),
+		runAllGroups: z.boolean().optional(),
+	})
+	.refine(
+		(data) => {
+			if (data.scope === "page") {
+				return typeof data.pageId === "string" && data.pageId.length > 0;
+			}
+			return true;
+		},
+		{ message: "pageId is required when scope is page", path: ["pageId"] },
+	)
+	.refine(
+		(data) => {
+			const hasGroupIds =
+				Array.isArray(data.indexEntryGroupIds) &&
+				data.indexEntryGroupIds.length > 0;
+			const hasRunAll = data.runAllGroups === true;
+			return hasGroupIds !== hasRunAll;
+		},
+		{
+			message:
+				"Exactly one of indexEntryGroupIds (non-empty) or runAllGroups (true) is required; they are mutually exclusive",
+		},
+	);
+
+export type RunMatcherInput = z.infer<typeof RunMatcherSchema>;
 
 export const GetDetectionRunSchema = z.object({
 	runId: z.string().uuid("Invalid run ID"),

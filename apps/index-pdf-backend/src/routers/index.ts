@@ -41,7 +41,8 @@ export type {
 export type {
 	DetectionRun,
 	DetectionRunListItem,
-	RunDetectionInput,
+	RunLlmInput,
+	RunMatcherInput,
 } from "../modules/detection/detection.types";
 export type {
 	CreateCrossReferenceInput,

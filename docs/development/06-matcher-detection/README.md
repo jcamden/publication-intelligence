@@ -169,23 +169,34 @@ Planned layout block model (Index page sidebar):
 
 ### Phase 0: Detection API Contract Expansion
 
-**Task 0.1: Add matcher run scope + targeting fields**
+**Task 0.1: Split detection endpoints (shared internal orchestration)** — Completed 2025-03
 - Files: `apps/index-pdf-backend/src/modules/detection/detection.types.ts`, `apps/index-pdf-backend/src/modules/detection/detection.router.ts`, `apps/index-pdf-backend/src/modules/detection/detection.service.ts`
-- Extend run input with:
-  - `mode: "llm" | "matcher"` (default `llm`)
-  - `scope: "project" | "page"`
-  - `pageId?` (required when scope is `page`)
-  - `indexEntryGroupIds?: string[]`
-  - `runAllGroups?: boolean`
-- Validate mutual exclusivity (`indexEntryGroupIds` vs `runAllGroups`).
+- Introduce separate endpoints:
+  - `detection.runLlm`
+  - `detection.runMatcher`
+- Input contracts:
+  - `runLlm`: keep current LLM input shape (no matcher-specific targeting fields).
+  - `runMatcher`:
+    - `scope: "project" | "page"`
+    - `pageId?` (required when scope is `page`)
+    - `indexEntryGroupIds?: string[]`
+    - `runAllGroups?: boolean`
+- Validate mutual exclusivity (`indexEntryGroupIds` vs `runAllGroups`) in `runMatcher`.
+- Refactor service so both endpoints call a shared orchestration layer for run creation, eventing, and lifecycle handling.
 
 **Task 0.2: Persist run metadata**
-- DB migration for run scope fields + group selection snapshot in `detection_runs`.
-- Update `detection.repo` mappings.
+- DB migration for matcher run metadata in `detection_runs`:
+  - `run_type` (`llm` | `matcher`)
+  - `scope` (`project` | `page`) nullable for existing llm rows
+  - `page_id` nullable
+  - group-selection snapshot (`index_entry_group_ids`, `run_all_groups`)
+- No backward-compatibility required in pre-MVP; apply schema changes directly and reset DB.
+- Update `detection.repo` mappings and serializers for both run types.
 
 **Acceptance**
-- Existing LLM flow unchanged when mode omitted.
-- Matcher run can target page/project and group subset/all.
+- Existing LLM flow remains unchanged via `detection.runLlm`.
+- Matcher flow is isolated under `detection.runMatcher` with page/project and group subset/all targeting.
+- Shared internals are reused (no duplicated run creation/lifecycle logic).
 
 ### Phase 1: Shared Text Normalization + Offset Mapping
 

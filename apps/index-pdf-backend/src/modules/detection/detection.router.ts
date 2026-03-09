@@ -4,7 +4,8 @@ import {
 	CancelDetectionRunSchema,
 	GetDetectionRunSchema,
 	ListDetectionRunsSchema,
-	RunDetectionSchema,
+	RunLlmSchema,
+	RunMatcherSchema,
 } from "./detection.types";
 
 // ============================================================================
@@ -12,10 +13,19 @@ import {
 // ============================================================================
 
 export const detectionRouter = router({
-	runDetection: protectedProcedure
-		.input(RunDetectionSchema)
+	runLlm: protectedProcedure
+		.input(RunLlmSchema)
 		.mutation(async ({ ctx, input }) => {
-			return await detectionService.runDetection({
+			return await detectionService.runLlm({
+				userId: ctx.user.id,
+				input,
+			});
+		}),
+
+	runMatcher: protectedProcedure
+		.input(RunMatcherSchema)
+		.mutation(async ({ ctx, input }) => {
+			return await detectionService.runMatcher({
 				userId: ctx.user.id,
 				input,
 			});

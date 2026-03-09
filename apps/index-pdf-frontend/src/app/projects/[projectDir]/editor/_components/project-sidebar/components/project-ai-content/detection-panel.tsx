@@ -42,7 +42,7 @@ export const DetectionPanel = () => {
 	);
 
 	// Run detection mutation
-	const runDetection = trpc.detection.runDetection.useMutation({
+	const runDetection = trpc.detection.runLlm.useMutation({
 		onSuccess: () => {
 			refetchRuns();
 		},
