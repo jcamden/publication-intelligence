@@ -15,6 +15,13 @@
 			"when": 1773088292171,
 			"tag": "0001_famous_magma",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1773088957994,
+			"tag": "0002_detection_run_metadata",
+			"breakpoints": true
 		}
 	]
 }

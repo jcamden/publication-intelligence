@@ -9,7 +9,8 @@ import { getUserSettings } from "../user-settings/user-settings.repo";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
 import type {
-	CreateDetectionRunInput,
+	CreateLlmDetectionRunInput,
+	CreateMatcherDetectionRunInput,
 	DetectionRun,
 	DetectionRunListItem,
 	RunLlmInput,
@@ -38,7 +39,7 @@ const createRunAndStartBackgroundProcess = async ({
 	processFn,
 }: {
 	userId: string;
-	runInput: CreateDetectionRunInput;
+	runInput: CreateLlmDetectionRunInput | CreateMatcherDetectionRunInput;
 	processFn: ProcessFn;
 }): Promise<{ runId: string }> => {
 	const run = await detectionRepo.createDetectionRun({
@@ -106,7 +107,7 @@ export const runLlm = async ({
 		);
 	}
 
-	const runInput: CreateDetectionRunInput = {
+	const runInput: CreateLlmDetectionRunInput = {
 		projectId: input.projectId,
 		indexType: input.indexType,
 		model: input.model,
@@ -153,11 +154,13 @@ export const runMatcher = async ({
 		runAllGroups: input.runAllGroups,
 	});
 
-	const runInput: CreateDetectionRunInput = {
+	const runInput: CreateMatcherDetectionRunInput = {
 		projectId: input.projectId,
 		indexType: input.indexType,
-		model: "matcher",
-		promptVersion: "v1",
+		scope: input.scope,
+		pageId: input.pageId,
+		indexEntryGroupIds: input.indexEntryGroupIds,
+		runAllGroups: input.runAllGroups,
 		settingsHash,
 		totalPages,
 	};
@@ -318,6 +321,17 @@ const processDetection = async ({
 
 	if (!run) {
 		throw new Error("Detection run not found");
+	}
+
+	if (
+		run.runType !== "llm" ||
+		run.model == null ||
+		run.promptVersion == null ||
+		run.settingsHash == null
+	) {
+		throw new Error(
+			"Detection run is not an LLM run or is missing required fields",
+		);
 	}
 
 	// Update status to running

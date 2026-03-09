@@ -93,6 +93,11 @@ export type DetectionRunStatus =
 export type DetectionRun = {
 	id: string;
 	projectId: string;
+	runType: "llm" | "matcher";
+	scope: "project" | "page" | null;
+	pageId: string | null;
+	indexEntryGroupIds: string[] | null;
+	runAllGroups: boolean | null;
 	status: DetectionRunStatus;
 	createdAt: Date;
 	startedAt: Date | null;
@@ -101,9 +106,9 @@ export type DetectionRun = {
 	totalPages: number | null;
 	pageRangeStart: number | null;
 	pageRangeEnd: number | null;
-	model: string;
-	promptVersion: string;
-	settingsHash: string;
+	model: string | null;
+	promptVersion: string | null;
+	settingsHash: string | null;
 	indexType: string;
 	errorMessage: string | null;
 	costEstimateUsd: string | null;
@@ -115,6 +120,11 @@ export type DetectionRun = {
 export type DetectionRunListItem = {
 	id: string;
 	projectId: string;
+	runType: "llm" | "matcher";
+	scope: "project" | "page" | null;
+	pageId: string | null;
+	indexEntryGroupIds: string[] | null;
+	runAllGroups: boolean | null;
 	status: DetectionRunStatus;
 	createdAt: Date;
 	startedAt: Date | null;
@@ -123,13 +133,14 @@ export type DetectionRunListItem = {
 	totalPages: number | null;
 	pageRangeStart: number | null;
 	pageRangeEnd: number | null;
-	model: string;
+	model: string | null;
 	indexType: string;
 	entriesCreated: number | null;
 	mentionsCreated: number | null;
 };
 
-export type CreateDetectionRunInput = {
+/** Input for creating an LLM detection run */
+export type CreateLlmDetectionRunInput = {
 	projectId: string;
 	indexType: string;
 	model: string;
@@ -139,6 +150,41 @@ export type CreateDetectionRunInput = {
 	pageRangeStart?: number;
 	pageRangeEnd?: number;
 };
+
+/** Input for creating a matcher detection run */
+export type CreateMatcherDetectionRunInput = {
+	projectId: string;
+	indexType: string;
+	scope: "project" | "page";
+	pageId?: string;
+	indexEntryGroupIds?: string[];
+	runAllGroups?: boolean;
+	settingsHash: string;
+	totalPages: number;
+};
+
+/** Union for run creation (discriminated by usage in repo) */
+export type CreateDetectionRunInput =
+	| CreateLlmDetectionRunInput
+	| CreateMatcherDetectionRunInput;
+
+export function isLlmRunInput(
+	input: CreateDetectionRunInput,
+): input is CreateLlmDetectionRunInput {
+	return (
+		"model" in input &&
+		typeof (input as CreateLlmDetectionRunInput).model === "string"
+	);
+}
+
+export function isMatcherRunInput(
+	input: CreateDetectionRunInput,
+): input is CreateMatcherDetectionRunInput {
+	return (
+		"scope" in input &&
+		typeof (input as CreateMatcherDetectionRunInput).scope === "string"
+	);
+}
 
 export type UpdateDetectionRunStatusInput = {
 	runId: string;

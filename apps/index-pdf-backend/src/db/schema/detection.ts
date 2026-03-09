@@ -1,6 +1,8 @@
 import { relations, sql } from "drizzle-orm";
 import {
+	boolean,
 	integer,
+	json,
 	numeric,
 	pgPolicy,
 	pgTable,
@@ -9,12 +11,16 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { detectionRunStatusEnum } from "./enums";
+import {
+	detectionRunScopeEnum,
+	detectionRunStatusEnum,
+	detectionRunTypeEnum,
+} from "./enums";
 import { indexEntries, indexMentions } from "./indexing";
 import { projects } from "./projects";
 import { authenticatedRole, users } from "./users";
 
-// DetectionRuns - tracks LLM detection jobs
+// DetectionRuns - tracks LLM and matcher detection jobs
 export const detectionRuns = pgTable(
 	"detection_runs",
 	{
@@ -22,6 +28,11 @@ export const detectionRuns = pgTable(
 		projectId: uuid("project_id")
 			.references(() => projects.id, { onDelete: "cascade" })
 			.notNull(),
+		runType: detectionRunTypeEnum("run_type").default("llm").notNull(),
+		scope: detectionRunScopeEnum("scope"), // null for legacy LLM rows
+		pageId: uuid("page_id"), // required when scope is page
+		indexEntryGroupIds: json("index_entry_group_ids").$type<string[]>(),
+		runAllGroups: boolean("run_all_groups"),
 		status: detectionRunStatusEnum("status").default("queued").notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
@@ -32,9 +43,9 @@ export const detectionRuns = pgTable(
 		totalPages: integer("total_pages"),
 		pageRangeStart: integer("page_range_start"),
 		pageRangeEnd: integer("page_range_end"),
-		model: text("model").notNull(),
-		promptVersion: text("prompt_version").notNull(),
-		settingsHash: text("settings_hash").notNull(),
+		model: text("model"), // LLM only
+		promptVersion: text("prompt_version"), // LLM only
+		settingsHash: text("settings_hash"), // both (matcher uses hash of scope/group selection)
 		indexType: text("index_type").notNull(),
 		errorMessage: text("error_message"),
 		costEstimateUsd: numeric("cost_estimate_usd", { precision: 10, scale: 4 }),

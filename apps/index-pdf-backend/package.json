@@ -24,6 +24,7 @@
 		"test:service": "vitest run --testNamePattern='Service'"
 	},
 	"dependencies": {
+		"@blackglory/aho-corasick": "^0.1.27",
 		"@fastify/cors": "^11.2.0",
 		"@fastify/multipart": "^9.4.0",
 		"@pubint/core": "workspace:*",

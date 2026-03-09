@@ -42,6 +42,18 @@ export const detectionRunStatusEnum = pgEnum("detection_run_status", [
 	"cancelled",
 ]);
 
+// Detection run type (llm vs matcher)
+export const detectionRunTypeEnum = pgEnum("detection_run_type", [
+	"llm",
+	"matcher",
+]);
+
+// Detection run scope (project vs page)
+export const detectionRunScopeEnum = pgEnum("detection_run_scope", [
+	"project",
+	"page",
+]);
+
 // Entity types for event logging
 export const entityTypeEnum = pgEnum("entity_type", [
 	"IndexEntry",

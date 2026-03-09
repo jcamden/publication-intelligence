@@ -184,7 +184,7 @@ Planned layout block model (Index page sidebar):
 - Validate mutual exclusivity (`indexEntryGroupIds` vs `runAllGroups`) in `runMatcher`.
 - Refactor service so both endpoints call a shared orchestration layer for run creation, eventing, and lifecycle handling.
 
-**Task 0.2: Persist run metadata**
+**Task 0.2: Persist run metadata** — Completed 2025-03
 - DB migration for matcher run metadata in `detection_runs`:
   - `run_type` (`llm` | `matcher`)
   - `scope` (`project` | `page`) nullable for existing llm rows
@@ -200,7 +200,7 @@ Planned layout block model (Index page sidebar):
 
 ### Phase 1: Shared Text Normalization + Offset Mapping
 
-**Task 1.1: Build normalization utility**
+**Task 1.1: Build normalization utility** — Completed 2025-03
 - New module suggestion: `packages/core/src/text/normalization.ts`.
 - Behavior:
   - Unicode NFKC
@@ -209,7 +209,7 @@ Planned layout block model (Index page sidebar):
   - whitespace collapse
   - preserve punctuation that is part of matcher text
 
-**Task 1.2: Add normalized-to-original offset map**
+**Task 1.2: Add normalized-to-original offset map** — Completed 2025-03
 - Expose helper:
   - `normalizeWithOffsetMap(text) -> { normalizedText, mapNormalizedIndexToOriginalIndex, mapNormalizedSpanToOriginalSpan }`
 
@@ -220,7 +220,7 @@ Planned layout block model (Index page sidebar):
 ### Phase 2: Shared Aho Alias Engine
 
 **Task 2.1: Install and wire `@blackglory/aho-corasick`**
-- Add dependency where matcher scan executes (likely `apps/index-pdf-backend`).
+- Add dependency to `apps/index-pdf-backend` [already done, and post-install build script ran successfully]
 
 **Task 2.2: Build alias index builder**
 - Input: array of `{ alias, matcherId, entryId, indexType, groupId }`.

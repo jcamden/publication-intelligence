@@ -16,6 +16,7 @@ import type {
 	UpdateDetectionRunProgressInput,
 	UpdateDetectionRunStatusInput,
 } from "./detection.types";
+import { isLlmRunInput } from "./detection.types";
 
 // ============================================================================
 // Repository Layer - Drizzle ORM queries
@@ -31,51 +32,109 @@ export const createDetectionRun = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			const base = {
+				projectId: input.projectId,
+				indexType: input.indexType,
+				settingsHash: input.settingsHash,
+				totalPages: input.totalPages,
+				status: "queued" as const,
+				entriesCreated: 0,
+				mentionsCreated: 0,
+			};
+
+			const values = isLlmRunInput(input)
+				? {
+						...base,
+						runType: "llm" as const,
+						scope: null,
+						pageId: null,
+						indexEntryGroupIds: null,
+						runAllGroups: null,
+						model: input.model,
+						promptVersion: input.promptVersion,
+						pageRangeStart: input.pageRangeStart,
+						pageRangeEnd: input.pageRangeEnd,
+					}
+				: {
+						...base,
+						runType: "matcher" as const,
+						scope: input.scope,
+						pageId: input.pageId ?? null,
+						indexEntryGroupIds: input.indexEntryGroupIds ?? null,
+						runAllGroups: input.runAllGroups ?? null,
+						model: null,
+						promptVersion: null,
+						pageRangeStart: undefined,
+						pageRangeEnd: undefined,
+					};
+
 			const [newRun] = await tx
 				.insert(detectionRuns)
-				.values({
-					projectId: input.projectId,
-					indexType: input.indexType,
-					model: input.model,
-					promptVersion: input.promptVersion,
-					settingsHash: input.settingsHash,
-					totalPages: input.totalPages,
-					pageRangeStart: input.pageRangeStart,
-					pageRangeEnd: input.pageRangeEnd,
-					status: "queued",
-					entriesCreated: 0,
-					mentionsCreated: 0,
-				})
+				.values(values)
 				.returning();
 
 			if (!newRun) {
 				throw new Error("Failed to create detection run");
 			}
 
-			return {
-				id: newRun.id,
-				projectId: newRun.projectId,
-				status: newRun.status,
-				createdAt: newRun.createdAt,
-				startedAt: newRun.startedAt,
-				finishedAt: newRun.finishedAt,
-				progressPage: newRun.progressPage,
-				totalPages: newRun.totalPages,
-				pageRangeStart: newRun.pageRangeStart,
-				pageRangeEnd: newRun.pageRangeEnd,
-				model: newRun.model,
-				promptVersion: newRun.promptVersion,
-				settingsHash: newRun.settingsHash,
-				indexType: newRun.indexType,
-				errorMessage: newRun.errorMessage,
-				costEstimateUsd: newRun.costEstimateUsd,
-				actualCostUsd: newRun.actualCostUsd,
-				entriesCreated: newRun.entriesCreated,
-				mentionsCreated: newRun.mentionsCreated,
-			};
+			return mapRowToDetectionRun(newRun);
 		},
 	});
 };
+
+function mapRowToDetectionRun(row: {
+	id: string;
+	projectId: string;
+	runType: "llm" | "matcher";
+	scope: "project" | "page" | null;
+	pageId: string | null;
+	indexEntryGroupIds: string[] | null;
+	runAllGroups: boolean | null;
+	status: string;
+	createdAt: Date;
+	startedAt: Date | null;
+	finishedAt: Date | null;
+	progressPage: number | null;
+	totalPages: number | null;
+	pageRangeStart: number | null;
+	pageRangeEnd: number | null;
+	model: string | null;
+	promptVersion: string | null;
+	settingsHash: string | null;
+	indexType: string;
+	errorMessage: string | null;
+	costEstimateUsd: string | null;
+	actualCostUsd: string | null;
+	entriesCreated: number | null;
+	mentionsCreated: number | null;
+}): DetectionRun {
+	return {
+		id: row.id,
+		projectId: row.projectId,
+		runType: row.runType,
+		scope: row.scope,
+		pageId: row.pageId,
+		indexEntryGroupIds: row.indexEntryGroupIds,
+		runAllGroups: row.runAllGroups,
+		status: row.status as DetectionRun["status"],
+		createdAt: row.createdAt,
+		startedAt: row.startedAt,
+		finishedAt: row.finishedAt,
+		progressPage: row.progressPage,
+		totalPages: row.totalPages,
+		pageRangeStart: row.pageRangeStart,
+		pageRangeEnd: row.pageRangeEnd,
+		model: row.model,
+		promptVersion: row.promptVersion,
+		settingsHash: row.settingsHash,
+		indexType: row.indexType,
+		errorMessage: row.errorMessage,
+		costEstimateUsd: row.costEstimateUsd,
+		actualCostUsd: row.actualCostUsd,
+		entriesCreated: row.entriesCreated,
+		mentionsCreated: row.mentionsCreated,
+	};
+}
 
 export const getDetectionRun = async ({
 	userId,
@@ -97,27 +156,7 @@ export const getDetectionRun = async ({
 				return null;
 			}
 
-			return {
-				id: run.id,
-				projectId: run.projectId,
-				status: run.status,
-				createdAt: run.createdAt,
-				startedAt: run.startedAt,
-				finishedAt: run.finishedAt,
-				progressPage: run.progressPage,
-				totalPages: run.totalPages,
-				pageRangeStart: run.pageRangeStart,
-				pageRangeEnd: run.pageRangeEnd,
-				model: run.model,
-				promptVersion: run.promptVersion,
-				settingsHash: run.settingsHash,
-				indexType: run.indexType,
-				errorMessage: run.errorMessage,
-				costEstimateUsd: run.costEstimateUsd,
-				actualCostUsd: run.actualCostUsd,
-				entriesCreated: run.entriesCreated,
-				mentionsCreated: run.mentionsCreated,
-			};
+			return mapRowToDetectionRun(run);
 		},
 	});
 };
@@ -133,27 +172,32 @@ export const listDetectionRuns = async ({
 		userId,
 		fn: async (tx) => {
 			const runs = await tx
-				.select({
-					id: detectionRuns.id,
-					projectId: detectionRuns.projectId,
-					status: detectionRuns.status,
-					createdAt: detectionRuns.createdAt,
-					startedAt: detectionRuns.startedAt,
-					finishedAt: detectionRuns.finishedAt,
-					progressPage: detectionRuns.progressPage,
-					totalPages: detectionRuns.totalPages,
-					pageRangeStart: detectionRuns.pageRangeStart,
-					pageRangeEnd: detectionRuns.pageRangeEnd,
-					model: detectionRuns.model,
-					indexType: detectionRuns.indexType,
-					entriesCreated: detectionRuns.entriesCreated,
-					mentionsCreated: detectionRuns.mentionsCreated,
-				})
+				.select()
 				.from(detectionRuns)
 				.where(eq(detectionRuns.projectId, projectId))
 				.orderBy(desc(detectionRuns.createdAt));
 
-			return runs;
+			return runs.map((r) => ({
+				id: r.id,
+				projectId: r.projectId,
+				runType: r.runType,
+				scope: r.scope,
+				pageId: r.pageId,
+				indexEntryGroupIds: r.indexEntryGroupIds,
+				runAllGroups: r.runAllGroups,
+				status: r.status,
+				createdAt: r.createdAt,
+				startedAt: r.startedAt,
+				finishedAt: r.finishedAt,
+				progressPage: r.progressPage,
+				totalPages: r.totalPages,
+				pageRangeStart: r.pageRangeStart,
+				pageRangeEnd: r.pageRangeEnd,
+				model: r.model,
+				indexType: r.indexType,
+				entriesCreated: r.entriesCreated,
+				mentionsCreated: r.mentionsCreated,
+			}));
 		},
 	});
 };

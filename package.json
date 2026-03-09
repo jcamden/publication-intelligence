@@ -75,7 +75,7 @@
 			"@types/react-dom": "^19.2.3"
 		},
 		"onlyBuiltDependencies": [
-			"@swc/core",
+			"@blackglory/aho-corasick",
 			"esbuild",
 			"msw",
 			"sharp"
