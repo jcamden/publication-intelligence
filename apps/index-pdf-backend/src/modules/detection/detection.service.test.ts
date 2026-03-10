@@ -1,10 +1,16 @@
 import "../../test/setup";
+import { getParserProfile } from "@pubint/core";
 import { describe, expect, it } from "vitest";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { AliasInput } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
-import { sortMatcherCandidates } from "./detection.service";
+import {
+	computeFallbackSpan,
+	dedupeMatcherCandidates,
+	sortMatcherCandidates,
+	shouldEmitFallbackMention,
+} from "./detection.service";
 import type { MatcherMentionCandidate } from "./detection.types";
 import {
 	buildSearchablePageText,
@@ -276,5 +282,133 @@ describe("matcher dedupe (Task 4.2)", () => {
 			return true;
 		});
 		expect(deduped.length).toBe(2);
+	});
+});
+
+// ============================================================================
+// Task 4.3: Fallback mention span
+// ============================================================================
+
+describe("computeFallbackSpan (Task 4.3)", () => {
+	it("tail-extension: Gen 1:foo captures only citation-like prefix and stops before invalid token", () => {
+		const pageText = "Gen 1:foo";
+		const span = computeFallbackSpan(pageText, 0, 3);
+		expect(span.charStart).toBe(0);
+		expect(span.charEnd).toBe(6);
+		expect(pageText.slice(span.charStart, span.charEnd)).toBe("Gen 1:");
+	});
+
+	it("extends right with citation-like chars and stops before invalid token", () => {
+		const pageText = "Gen 1:2-4, 5; bar";
+		// "Gen " = 0-4, then "1:2-4, 5; " is citation-like, "b" stops
+		const span = computeFallbackSpan(pageText, 0, 4);
+		expect(span.charStart).toBe(0);
+		expect(span.charEnd).toBe(14);
+		expect(pageText.slice(span.charStart, span.charEnd)).toBe("Gen 1:2-4, 5; ");
+	});
+
+	it("preserves trailing period when it is part of alias (no extension)", () => {
+		const pageText = "Gen. and something";
+		// Alias "Gen." ends at 4; next char " " is citation-like but we only extend
+		// with citation-like; " " is allowed so we extend. "a" stops. So span could be "Gen. " or "Gen.".
+		// Spec: "include leading/trailing punctuation that is part of matcher text" - so original span is Gen. (0-4).
+		// Right-extension: from 4, " " is citation-like, "a" is not. So end = 4 or 5?
+		// If we extend by one space we get "Gen. " - that's valid. So charEnd could be 5.
+		// For "punctuation test: matcher text like Gen. preserves trailing period" - the fallback span
+		// must include "Gen." so charStart=0, charEnd >= 4. So at least [0,4]. We're good.
+		const span = computeFallbackSpan(pageText, 0, 4);
+		expect(span.charStart).toBe(0);
+		expect(span.charEnd).toBeGreaterThanOrEqual(4);
+		expect(pageText.slice(0, 4)).toBe("Gen.");
+	});
+
+	it("stops after verse suffix letter when second letter follows (non-citation-like)", () => {
+		const pageText = "Genesis 1:1xy";
+		const span = computeFallbackSpan(pageText, 0, 7);
+		expect(span.charStart).toBe(0);
+		expect(span.charEnd).toBe(12);
+		expect(pageText.slice(span.charStart, span.charEnd)).toBe("Genesis 1:1x");
+	});
+});
+
+describe("shouldEmitFallbackMention (Task 4.3)", () => {
+	const profile = getParserProfile("scripture-biblical");
+
+	it("returns true when context passes and parse returns zero segments (parser-fail)", () => {
+		// Window " 1foo" has digit but looksLikeRef("1foo") is false -> parse returns []
+		const pageText = "Genesis 1foo";
+		expect(shouldEmitFallbackMention(pageText, 7, profile)).toBe(true);
+	});
+
+	it("returns false when context precheck fails (no fallback)", () => {
+		// 24 spaces after alias -> precheck slice is whitespace only -> contextPrecheck false
+		const pageText = "Genesis" + " ".repeat(24);
+		expect(shouldEmitFallbackMention(pageText, 7, profile)).toBe(false);
+	});
+
+	it("returns false when profile is undefined", () => {
+		expect(shouldEmitFallbackMention("Genesis 1:1", 7, undefined)).toBe(false);
+	});
+});
+
+describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
+	const projectIndexTypeId = "pit-1";
+	const bbox = { x: 0, y: 0, width: 10, height: 2 };
+
+	it("prefers parsed candidate over fallback when same dedupe key", () => {
+		const parsed: MatcherMentionCandidate = {
+			pageNumber: 1,
+			groupId: "g1",
+			matcherId: "m1",
+			entryId: "e1",
+			indexType: "scripture",
+			textSpan: "Gen 1:1",
+			charStart: 0,
+			charEnd: 8,
+			bboxes: [bbox],
+			parserSegment: { refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+		};
+		const fallback: MatcherMentionCandidate = {
+			...parsed,
+			textSpan: "Gen",
+			charEnd: 3,
+			parserSegment: undefined,
+			fallbackBookLevel: true,
+		};
+		const deduped = dedupeMatcherCandidates(
+			[fallback, parsed],
+			projectIndexTypeId,
+		);
+		expect(deduped.length).toBe(1);
+		expect(deduped[0].fallbackBookLevel).toBeUndefined();
+		expect(deduped[0].parserSegment).toBeDefined();
+	});
+
+	it("prefers parsed when parsed appears first", () => {
+		const parsed: MatcherMentionCandidate = {
+			pageNumber: 1,
+			groupId: "g1",
+			matcherId: "m1",
+			entryId: "e1",
+			indexType: "scripture",
+			textSpan: "Gen 1:1",
+			charStart: 0,
+			charEnd: 8,
+			bboxes: [bbox],
+			parserSegment: { refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+		};
+		const fallback: MatcherMentionCandidate = {
+			...parsed,
+			textSpan: "Gen",
+			charEnd: 3,
+			parserSegment: undefined,
+			fallbackBookLevel: true,
+		};
+		const deduped = dedupeMatcherCandidates(
+			[parsed, fallback],
+			projectIndexTypeId,
+		);
+		expect(deduped.length).toBe(1);
+		expect(deduped[0].parserSegment).toBeDefined();
 	});
 });

@@ -279,4 +279,6 @@ export type MatcherMentionCandidate = {
 	charEnd: number;
 	bboxes: Array<{ x: number; y: number; width: number; height: number }>;
 	parserSegment?: MatcherMentionParserSegment;
+	/** True when candidate was emitted as book-level fallback after parse returned no segments (Task 4.3). */
+	fallbackBookLevel?: boolean;
 };

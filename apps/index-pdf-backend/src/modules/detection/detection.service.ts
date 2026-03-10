@@ -335,6 +335,65 @@ function parseLocalWindowForCandidate(
 	};
 }
 
+/** Citation-like: digits, spaces, separators. Verse suffix a-z allowed only when immediately after a digit (Task 4.3). */
+function isCitationLikeTailChar(
+	pageText: string,
+	index: number,
+): boolean {
+	const c = pageText[index];
+	if (/[\d\s:.,;\-()]/.test(c)) return true;
+	// Optional verse suffix letter (e.g. 3a) only when preceded by a digit
+	if (/[a-z]/i.test(c) && index > 0 && /\d/.test(pageText[index - 1])) return true;
+	return false;
+}
+
+/**
+ * Compute fallback mention span: alias span + right-extension with citation-like chars only.
+ * Stops at first non-citation-like char. Exported for tests.
+ */
+export function computeFallbackSpan(
+	pageText: string,
+	originalStart: number,
+	originalEnd: number,
+): { charStart: number; charEnd: number } {
+	const windowEnd = Math.min(
+		originalEnd + PARSER_WINDOW_CHARS,
+		pageText.length,
+	);
+	const capEnd = Math.min(originalEnd + PARSER_WINDOW_CAP, pageText.length);
+	const limit = Math.min(windowEnd, capEnd);
+	let end = originalEnd;
+	while (end < limit && isCitationLikeTailChar(pageText, end)) {
+		end += 1;
+	}
+	return { charStart: originalStart, charEnd: end };
+}
+
+/**
+ * Returns true when context precheck passes but parse returns zero segments (parse-fail-after-context-pass).
+ * Used to decide whether to emit a fallback book-level mention (Task 4.3). Exported for tests.
+ */
+export function shouldEmitFallbackMention(
+	pageText: string,
+	aliasEndOffset: number,
+	profile: ParserProfile | undefined,
+): boolean {
+	if (!profile) return false;
+	const windowStart = aliasEndOffset;
+	const precheckSlice = pageText.slice(
+		windowStart,
+		windowStart + PRECHECK_WINDOW_CHARS,
+	);
+	if (!profile.contextPrecheck(precheckSlice)) return false;
+	const parseSlice = pageText.slice(
+		windowStart,
+		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
+	);
+	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
+	const segments = profile.parse(sliceCap);
+	return segments.length === 0;
+}
+
 /**
  * Deterministic order: pageNumber asc, charStart asc, longer span first (charEnd - charStart desc).
  * Exported for tests (determinism and ordering).
@@ -349,6 +408,37 @@ export function sortMatcherCandidates(
 		const lenB = b.charEnd - b.charStart;
 		return lenB - lenA;
 	});
+}
+
+/**
+ * In-memory dedupe: same projectIndexTypeId + matcherId + pageNumber + canonical bbox => one candidate.
+ * When parsed and fallback collide on same key, prefer parsed (Task 4.3). Exported for tests.
+ */
+export function dedupeMatcherCandidates(
+	candidates: MatcherMentionCandidate[],
+	projectIndexTypeId: string,
+): MatcherMentionCandidate[] {
+	const candidateByKey = new Map<string, MatcherMentionCandidate>();
+	for (const c of candidates) {
+		const key = buildDedupeKey({
+			projectIndexTypeId,
+			matcherId: c.matcherId,
+			pageNumber: c.pageNumber,
+			bboxes: c.bboxes,
+		});
+		const existing = candidateByKey.get(key);
+		if (!existing) {
+			candidateByKey.set(key, c);
+		} else if (c.fallbackBookLevel && !existing.fallbackBookLevel) {
+			// Keep existing (parsed)
+		} else if (!c.fallbackBookLevel && existing.fallbackBookLevel) {
+			candidateByKey.set(key, c);
+		}
+		// else both same type, keep first (existing)
+	}
+	const out = Array.from(candidateByKey.values());
+	sortMatcherCandidates(out);
+	return out;
 }
 
 const processMatcher = async ({
@@ -549,24 +639,74 @@ const processMatcher = async ({
 			);
 			if (!withBbox) continue;
 
+			const profile = parserProfile ?? undefined;
 			const parserSegment = parseLocalWindowForCandidate(
 				searchableText,
 				match.originalEnd,
-				parserProfile ?? undefined,
+				profile,
 			);
 
-			allCandidates.push({
-				pageNumber: pageNum,
-				groupId: match.groupId,
-				matcherId: match.matcherId,
-				entryId: match.entryId,
-				indexType: match.indexType,
-				textSpan: withBbox.textSpan,
-				charStart: match.originalStart,
-				charEnd: match.originalEnd,
-				bboxes: withBbox.bboxes,
-				parserSegment,
-			});
+			if (parserSegment) {
+				allCandidates.push({
+					pageNumber: pageNum,
+					groupId: match.groupId,
+					matcherId: match.matcherId,
+					entryId: match.entryId,
+					indexType: match.indexType,
+					textSpan: withBbox.textSpan,
+					charStart: match.originalStart,
+					charEnd: match.originalEnd,
+					bboxes: withBbox.bboxes,
+					parserSegment,
+				});
+			} else if (profile && shouldEmitFallbackMention(
+				searchableText,
+				match.originalEnd,
+				profile,
+			)) {
+				const fallbackSpan = computeFallbackSpan(
+					searchableText,
+					match.originalStart,
+					match.originalEnd,
+				);
+				const fallbackTextSpan = searchableText.slice(
+					fallbackSpan.charStart,
+					fallbackSpan.charEnd,
+				);
+				const fallbackMentionsWithPositions = [{
+					mention: {
+						entryLabel: "",
+						indexType: match.indexType,
+						pageNumber: pageNum,
+						textSpan: fallbackTextSpan,
+					},
+					charStart: fallbackSpan.charStart,
+					charEnd: fallbackSpan.charEnd,
+				}];
+				const { mapped: fallbackWithBboxes } = mapPositionsToBBoxes({
+					mentionsWithPositions: fallbackMentionsWithPositions,
+					textAtoms: indexableAtomsWithCorrectedPositions,
+				});
+				const fallbackWithBbox = fallbackWithBboxes.find(
+					(m) =>
+						m.pageNumber === pageNum &&
+						m.textSpan === fallbackTextSpan,
+				);
+				if (fallbackWithBbox) {
+					allCandidates.push({
+						pageNumber: pageNum,
+						groupId: match.groupId,
+						matcherId: match.matcherId,
+						entryId: match.entryId,
+						indexType: match.indexType,
+						textSpan: fallbackWithBbox.textSpan,
+						charStart: fallbackSpan.charStart,
+						charEnd: fallbackSpan.charEnd,
+						bboxes: fallbackWithBbox.bboxes,
+						fallbackBookLevel: true,
+					});
+				}
+			}
 		}
 
 		await detectionRepo.updateDetectionRunProgress({
@@ -581,19 +721,7 @@ const processMatcher = async ({
 
 	sortMatcherCandidates(allCandidates);
 
-	// In-memory dedupe across entire run (Task 4.2): same projectIndexTypeId + matcherId + pageNumber + canonical bbox => one candidate
-	const seenKeys = new Set<string>();
-	const dedupedCandidates = allCandidates.filter((c) => {
-		const key = buildDedupeKey({
-			projectIndexTypeId,
-			matcherId: c.matcherId,
-			pageNumber: c.pageNumber,
-			bboxes: c.bboxes,
-		});
-		if (seenKeys.has(key)) return false;
-		seenKeys.add(key);
-		return true;
-	});
+	const dedupedCandidates = dedupeMatcherCandidates(allCandidates, projectIndexTypeId);
 
 	const mentionsCreated = await detectionRepo.insertMatcherMentionsBatch({
 		userId,
