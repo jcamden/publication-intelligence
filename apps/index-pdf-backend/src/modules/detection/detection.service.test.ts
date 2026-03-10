@@ -2,6 +2,7 @@ import "../../test/setup";
 import { describe, expect, it } from "vitest";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { AliasInput } from "./alias-engine.types";
+import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import { sortMatcherCandidates } from "./detection.service";
 import type { MatcherMentionCandidate } from "./detection.types";
@@ -155,5 +156,125 @@ describe("matcher page flow (alias hit to candidate)", () => {
 		expect(candidate.entryId).toBe("e1");
 		expect(candidate.textSpan).toBe("genesis");
 		expect(candidate.bboxes.length).toBeGreaterThan(0);
+	});
+});
+
+// ============================================================================
+// In-memory dedupe: duplicate candidates in one run collapse to one (Task 4.2)
+// ============================================================================
+
+describe("matcher dedupe (Task 4.2)", () => {
+	const projectIndexTypeId = "pit-1";
+	const bbox = { x: 0, y: 0, width: 10, height: 2 };
+
+	it("dedupe key collapses equivalent bbox orderings to one key", () => {
+		const candidate1: MatcherMentionCandidate = {
+			pageNumber: 1,
+			groupId: "g1",
+			matcherId: "m1",
+			entryId: "e1",
+			indexType: "scripture",
+			textSpan: "Gen 1:1",
+			charStart: 0,
+			charEnd: 8,
+			bboxes: [bbox, { x: 10, y: 0, width: 5, height: 2 }],
+		};
+		const candidate2: MatcherMentionCandidate = {
+			...candidate1,
+			bboxes: [{ x: 10, y: 0, width: 5, height: 2 }, bbox],
+		};
+		const key1 = buildDedupeKey({
+			projectIndexTypeId,
+			matcherId: candidate1.matcherId,
+			pageNumber: candidate1.pageNumber,
+			bboxes: candidate1.bboxes,
+		});
+		const key2 = buildDedupeKey({
+			projectIndexTypeId,
+			matcherId: candidate2.matcherId,
+			pageNumber: candidate2.pageNumber,
+			bboxes: candidate2.bboxes,
+		});
+		expect(key1).toBe(key2);
+	});
+
+	it("dedupe filter leaves one when two candidates have same key", () => {
+		const seenKeys = new Set<string>();
+		const candidates: MatcherMentionCandidate[] = [
+			{
+				pageNumber: 1,
+				groupId: "g1",
+				matcherId: "m1",
+				entryId: "e1",
+				indexType: "scripture",
+				textSpan: "Gen 1:1",
+				charStart: 0,
+				charEnd: 8,
+				bboxes: [bbox],
+			},
+			{
+				pageNumber: 1,
+				groupId: "g1",
+				matcherId: "m1",
+				entryId: "e1",
+				indexType: "scripture",
+				textSpan: "Gen 1:1",
+				charStart: 0,
+				charEnd: 8,
+				bboxes: [bbox],
+			},
+		];
+		const deduped = candidates.filter((c) => {
+			const key = buildDedupeKey({
+				projectIndexTypeId,
+				matcherId: c.matcherId,
+				pageNumber: c.pageNumber,
+				bboxes: c.bboxes,
+			});
+			if (seenKeys.has(key)) return false;
+			seenKeys.add(key);
+			return true;
+		});
+		expect(deduped.length).toBe(1);
+	});
+
+	it("dedupe filter keeps both when same bbox different matcher", () => {
+		const seenKeys = new Set<string>();
+		const candidates: MatcherMentionCandidate[] = [
+			{
+				pageNumber: 1,
+				groupId: "g1",
+				matcherId: "m1",
+				entryId: "e1",
+				indexType: "scripture",
+				textSpan: "Gen 1:1",
+				charStart: 0,
+				charEnd: 8,
+				bboxes: [bbox],
+			},
+			{
+				pageNumber: 1,
+				groupId: "g2",
+				matcherId: "m2",
+				entryId: "e2",
+				indexType: "scripture",
+				textSpan: "Gen 1:1",
+				charStart: 0,
+				charEnd: 8,
+				bboxes: [bbox],
+			},
+		];
+		const deduped = candidates.filter((c) => {
+			const key = buildDedupeKey({
+				projectIndexTypeId,
+				matcherId: c.matcherId,
+				pageNumber: c.pageNumber,
+				bboxes: c.bboxes,
+			});
+			if (seenKeys.has(key)) return false;
+			seenKeys.add(key);
+			return true;
+		});
+		expect(deduped.length).toBe(2);
 	});
 });

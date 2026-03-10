@@ -9,6 +9,7 @@ import {
 	suppressedSuggestions,
 } from "../../db/schema";
 import type { AliasInput } from "./alias-engine.types";
+import { bboxesHash as computeBboxesHash } from "./bbox-canonical.utils";
 import type {
 	CreateDetectionRunInput,
 	CreateSuppressionInput,
@@ -441,11 +442,12 @@ export const createSuggestedMention = async ({
 	textSpan: string;
 	bboxes: Array<{ x: number; y: number; width: number; height: number }>;
 	projectIndexTypeId: string;
-}): Promise<string> => {
+}): Promise<string | null> => {
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
-			const [mention] = await tx
+			const bboxesHash = computeBboxesHash(bboxes);
+			const inserted = await tx
 				.insert(indexMentions)
 				.values({
 					entryId,
@@ -455,16 +457,78 @@ export const createSuggestedMention = async ({
 					pageNumber,
 					textSpan,
 					bboxes: bboxes as never,
+					bboxesHash,
 					rangeType: "single_page",
 					mentionType: "text",
 				})
+				.onConflictDoNothing({
+					target: [
+						indexMentions.projectIndexTypeId,
+						indexMentions.entryId,
+						indexMentions.pageNumber,
+						indexMentions.bboxesHash,
+					],
+				})
 				.returning({ id: indexMentions.id });
 
-			if (!mention) {
-				throw new Error("Failed to create index mention");
-			}
+			const mention = inserted[0];
+			return mention?.id ?? null;
+		},
+	});
+};
 
-			return mention.id;
+/**
+ * Insert matcher mention candidates with bboxes_hash. ON CONFLICT DO NOTHING so
+ * duplicates (same project_index_type_id + entry_id + page_number + bboxes_hash)
+ * are skipped. Returns count of rows actually inserted (created); conflicts count as dedupe.
+ */
+export const insertMatcherMentionsBatch = async ({
+	userId,
+	documentId,
+	detectionRunId,
+	projectIndexTypeId,
+	candidates,
+}: {
+	userId: string;
+	documentId: string;
+	detectionRunId: string;
+	projectIndexTypeId: string;
+	candidates: Array<{
+		entryId: string;
+		pageNumber: number;
+		textSpan: string;
+		bboxes: Array<{ x: number; y: number; width: number; height: number }>;
+	}>;
+}): Promise<number> => {
+	if (candidates.length === 0) return 0;
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const values = candidates.map((c) => ({
+				entryId: c.entryId,
+				projectIndexTypeId,
+				documentId,
+				detectionRunId,
+				pageNumber: c.pageNumber,
+				textSpan: c.textSpan,
+				bboxes: c.bboxes as never,
+				bboxesHash: computeBboxesHash(c.bboxes),
+				rangeType: "single_page" as const,
+				mentionType: "text" as const,
+			}));
+			const inserted = await tx
+				.insert(indexMentions)
+				.values(values)
+				.onConflictDoNothing({
+					target: [
+						indexMentions.projectIndexTypeId,
+						indexMentions.entryId,
+						indexMentions.pageNumber,
+						indexMentions.bboxesHash,
+					],
+				})
+				.returning({ id: indexMentions.id });
+			return inserted.length;
 		},
 	});
 };

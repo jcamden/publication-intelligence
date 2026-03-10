@@ -1,27 +1,20 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1738800000000,
-			"tag": "0000_create_auth_functions",
-			"breakpoints": false
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1773088292171,
-			"tag": "0001_famous_magma",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1773088957994,
-			"tag": "0002_detection_run_metadata",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1738800000000,
+      "tag": "0000_create_auth_functions",
+      "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773160772452,
+      "tag": "0001_slimy_invaders",
+      "breakpoints": true
+    }
+  ]
 }

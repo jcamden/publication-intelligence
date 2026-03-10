@@ -10,6 +10,7 @@ import {
 import { getUserSettings } from "../user-settings/user-settings.repo";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { AliasIndex, ResolvedAliasMatch } from "./alias-engine.types";
+import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
 import type {
@@ -580,12 +581,40 @@ const processMatcher = async ({
 
 	sortMatcherCandidates(allCandidates);
 
+	// In-memory dedupe across entire run (Task 4.2): same projectIndexTypeId + matcherId + pageNumber + canonical bbox => one candidate
+	const seenKeys = new Set<string>();
+	const dedupedCandidates = allCandidates.filter((c) => {
+		const key = buildDedupeKey({
+			projectIndexTypeId,
+			matcherId: c.matcherId,
+			pageNumber: c.pageNumber,
+			bboxes: c.bboxes,
+		});
+		if (seenKeys.has(key)) return false;
+		seenKeys.add(key);
+		return true;
+	});
+
+	const mentionsCreated = await detectionRepo.insertMatcherMentionsBatch({
+		userId,
+		documentId: sourceDoc.id,
+		detectionRunId: runId,
+		projectIndexTypeId,
+		candidates: dedupedCandidates.map((c) => ({
+			entryId: c.entryId,
+			pageNumber: c.pageNumber,
+			textSpan: c.textSpan,
+			bboxes: c.bboxes,
+		})),
+	});
+
 	await detectionRepo.updateDetectionRunStatus({
 		userId,
 		input: {
 			runId,
 			status: "completed",
 			finishedAt: new Date(),
+			mentionsCreated,
 		},
 	});
 };
@@ -900,10 +929,10 @@ const processDetection = async ({
 				`Entry "${entry.label}" (${entry.indexType}): Found ${entryMentions.length} mentions`,
 			);
 
-			// Create mentions
+			// Create mentions (on conflict do nothing; only count actual inserts)
 			for (const mention of entryMentions) {
 				try {
-					await detectionRepo.createSuggestedMention({
+					const id = await detectionRepo.createSuggestedMention({
 						userId,
 						entryId,
 						documentId: sourceDoc.id,
@@ -913,8 +942,7 @@ const processDetection = async ({
 						bboxes: mention.bboxes,
 						projectIndexTypeId,
 					});
-
-					mentionsCreated++;
+					if (id != null) mentionsCreated++;
 				} catch (error) {
 					console.error(
 						`Failed to create mention for entry "${entry.label}":`,

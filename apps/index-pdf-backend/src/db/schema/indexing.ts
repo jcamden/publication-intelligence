@@ -237,6 +237,7 @@ export const indexMentions = pgTable(
 		pageNumberEnd: integer("page_number_end"), // For page ranges
 		textSpan: text("text_span").notNull(), // The actual text
 		bboxes: json("bboxes"), // Array of BoundingBox coordinates
+		bboxesHash: text("bboxes_hash"), // SHA-256 of canonical bbox JSON for uniqueness (Task 4.2)
 		rangeType: mentionRangeTypeEnum("range_type")
 			.default("single_page")
 			.notNull(),
@@ -257,6 +258,15 @@ export const indexMentions = pgTable(
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [
+		// Uniqueness: same entry + page + bbox fingerprint => one mention (Task 4.2). Partial index so existing rows with null bboxes_hash are ignored.
+		uniqueIndex("unique_mention_entry_page_bbox")
+			.on(
+				table.projectIndexTypeId,
+				table.entryId,
+				table.pageNumber,
+				table.bboxesHash,
+			)
+			.where(sql`${table.bboxesHash} IS NOT NULL`),
 		// RLS: Inherit access from entry
 		// index_entries RLS inherits from projects RLS
 		pgPolicy("index_mentions_entry_access", {

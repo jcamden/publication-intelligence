@@ -1,5 +1,7 @@
 CREATE TYPE "public"."canonical_page_rule_type" AS ENUM('positive', 'negative');--> statement-breakpoint
+CREATE TYPE "public"."detection_run_scope" AS ENUM('project', 'page');--> statement-breakpoint
 CREATE TYPE "public"."detection_run_status" AS ENUM('queued', 'running', 'completed', 'failed', 'cancelled');--> statement-breakpoint
+CREATE TYPE "public"."detection_run_type" AS ENUM('llm', 'matcher');--> statement-breakpoint
 CREATE TYPE "public"."entity_type" AS ENUM('IndexEntry', 'IndexMention', 'SourceDocument', 'DocumentPage', 'LLMRun', 'ExportedIndex', 'Project');--> statement-breakpoint
 CREATE TYPE "public"."export_format" AS ENUM('book_index', 'json', 'xml');--> statement-breakpoint
 CREATE TYPE "public"."highlight_type" AS ENUM('subject', 'author', 'scripture', 'exclude', 'page_number');--> statement-breakpoint
@@ -33,6 +35,11 @@ ALTER TABLE "canonical_page_rules" ENABLE ROW LEVEL SECURITY;--> statement-break
 CREATE TABLE "detection_runs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_id" uuid NOT NULL,
+	"run_type" "detection_run_type" DEFAULT 'llm' NOT NULL,
+	"scope" "detection_run_scope",
+	"page_id" uuid,
+	"index_entry_group_ids" json,
+	"run_all_groups" boolean,
 	"status" "detection_run_status" DEFAULT 'queued' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"started_at" timestamp with time zone,
@@ -41,9 +48,9 @@ CREATE TABLE "detection_runs" (
 	"total_pages" integer,
 	"page_range_start" integer,
 	"page_range_end" integer,
-	"model" text NOT NULL,
-	"prompt_version" text NOT NULL,
-	"settings_hash" text NOT NULL,
+	"model" text,
+	"prompt_version" text,
+	"settings_hash" text,
 	"index_type" text NOT NULL,
 	"error_message" text,
 	"cost_estimate_usd" numeric(10, 4),
@@ -190,6 +197,7 @@ CREATE TABLE "index_mentions" (
 	"page_number_end" integer,
 	"text_span" text NOT NULL,
 	"bboxes" json,
+	"bboxes_hash" text,
 	"range_type" "mention_range_type" DEFAULT 'single_page' NOT NULL,
 	"mention_type" "mention_type" DEFAULT 'text' NOT NULL,
 	"page_sublocation" text,
@@ -312,6 +320,7 @@ CREATE UNIQUE INDEX "unique_project_highlight_type" ON "project_highlight_config
 CREATE UNIQUE INDEX "unique_user_index_type" ON "user_index_type_addons" USING btree ("user_id","index_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_index_type_slug" ON "index_entries" USING btree ("project_id","project_index_type_id","slug") WHERE "index_entries"."deleted_at" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_project_index_type_matcher_text" ON "index_matchers" USING btree ("project_index_type_id","text");--> statement-breakpoint
+CREATE UNIQUE INDEX "unique_mention_entry_page_bbox" ON "index_mentions" USING btree ("project_index_type_id","entry_id","page_number","bboxes_hash") WHERE "index_mentions"."bboxes_hash" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_from_to_type" ON "index_relations" USING btree ("from_entry_id","to_entry_id","relation_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_name_version" ON "prompts" USING btree ("name","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_owner_dir" ON "projects" USING btree ("owner_id","project_dir") WHERE "projects"."deleted_at" IS NULL;--> statement-breakpoint

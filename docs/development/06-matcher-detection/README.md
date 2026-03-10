@@ -355,6 +355,34 @@ Planned layout block model (Index page sidebar):
 **Task 4.3: Fallback mention span**
 - On parse-fail-after-context-pass, emit book-level mention using maximum local span available.
 - Include punctuation when that punctuation is part of the matched matcher text.
+- Implementation details (codebase-aligned):
+  - Trigger conditions for fallback:
+    - alias match is found and mapped (`matcherId`, offsets, bboxes available)
+    - parser profile exists for the matcher's group
+    - `contextPrecheck(localWindow)` returns `true`
+    - `parse(localWindow)` returns zero segments
+  - Fallback must not run when:
+    - group has no parser profile (subject/alias-only groups)
+    - `contextPrecheck` fails (treat as no-parse context, not parse failure)
+  - Span selection algorithm (deterministic):
+    - start from alias original span (`originalStart`, `originalEnd`) from alias engine result
+    - include leading/trailing punctuation that is part of matcher text via mapped alias offsets (do not trim matcher punctuation)
+    - attempt right-extension inside parser window (default 120 chars, cap 200) by consuming only citation-like tail chars: digits, spaces, `:`, `.`, `,`, `;`, `-`, `(`, `)`, and optional verse suffix letters (`a-z`)
+    - stop extension at first non-citation-like char
+    - if no valid extension exists, fallback span is matcher span only
+  - Mention payload semantics:
+    - mark candidate as `fallbackBookLevel: true` (or equivalent reason code) for downstream resolution/reporting
+    - keep `textSpan` as exact original substring for the selected fallback span
+    - map fallback span to bboxes with same position->bbox utilities used by normal candidates
+  - Ordering and dedupe:
+    - fallback candidates participate in the same deterministic ordering and dedupe keying as parsed candidates
+    - if both parsed and fallback candidate accidentally resolve to identical key, prefer parsed candidate and drop fallback
+- Suggested test coverage for Task 4.3:
+  - parser-fail test: context passes + parse returns `[]` -> one fallback candidate emitted
+  - no-fallback test: context precheck fails -> no fallback emitted
+  - punctuation test: matcher text like `Gen.` preserves trailing period in fallback span
+  - tail-extension test: `Gen 1:foo` captures only citation-like prefix and stops before invalid token
+  - precedence test: when parsed and fallback collide on same dedupe key, parsed candidate wins
 
 **Acceptance**
 - Re-running same run inputs does not accumulate duplicate identical mentions.
