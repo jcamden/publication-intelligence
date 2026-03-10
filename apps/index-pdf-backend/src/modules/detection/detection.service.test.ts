@@ -366,13 +366,13 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 			charStart: 0,
 			charEnd: 8,
 			bboxes: [bbox],
-			parserSegment: { refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+			parserSegments: [{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 }],
 		};
 		const fallback: MatcherMentionCandidate = {
 			...parsed,
 			textSpan: "Gen",
 			charEnd: 3,
-			parserSegment: undefined,
+			parserSegments: undefined,
 			fallbackBookLevel: true,
 		};
 		const deduped = dedupeMatcherCandidates(
@@ -381,7 +381,8 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 		);
 		expect(deduped.length).toBe(1);
 		expect(deduped[0].fallbackBookLevel).toBeUndefined();
-		expect(deduped[0].parserSegment).toBeDefined();
+		expect(deduped[0].parserSegments).toBeDefined();
+		expect(deduped[0].parserSegments).toHaveLength(1);
 	});
 
 	it("prefers parsed when parsed appears first", () => {
@@ -395,13 +396,13 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 			charStart: 0,
 			charEnd: 8,
 			bboxes: [bbox],
-			parserSegment: { refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+			parserSegments: [{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 }],
 		};
 		const fallback: MatcherMentionCandidate = {
 			...parsed,
 			textSpan: "Gen",
 			charEnd: 3,
-			parserSegment: undefined,
+			parserSegments: undefined,
 			fallbackBookLevel: true,
 		};
 		const deduped = dedupeMatcherCandidates(
@@ -409,6 +410,6 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 			projectIndexTypeId,
 		);
 		expect(deduped.length).toBe(1);
-		expect(deduped[0].parserSegment).toBeDefined();
+		expect(deduped[0].parserSegments).toBeDefined();
 	});
 });

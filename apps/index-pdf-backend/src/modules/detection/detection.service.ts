@@ -13,7 +13,10 @@ import type { AliasIndex, ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
-import { resolveAndPersistSubjectCandidates } from "./entry-resolution.service";
+import {
+	resolveAndPersistScriptureCandidates,
+	resolveAndPersistSubjectCandidates,
+} from "./entry-resolution.service";
 import type {
 	CreateLlmDetectionRunInput,
 	CreateMatcherDetectionRunInput,
@@ -305,35 +308,35 @@ const DEFAULT_PARSER_PROFILE_ID = "scripture-biblical";
 // ============================================================================
 
 /**
- * Run parser profile on local window after alias; return first segment for candidate.
+ * Run parser profile on local window after alias; return all segments for candidate (Task 5.2).
  * Precheck uses first PRECHECK_WINDOW_CHARS; parse uses up to PARSER_WINDOW_CHARS (cap PARSER_WINDOW_CAP).
  */
 function parseLocalWindowForCandidate(
 	pageText: string,
 	aliasEndOffset: number,
 	profile: ParserProfile | undefined,
-): MatcherMentionParserSegment | undefined {
-	if (!profile) return undefined;
+): MatcherMentionParserSegment[] {
+	if (!profile) return [];
 	const windowStart = aliasEndOffset;
 	const precheckSlice = pageText.slice(
 		windowStart,
 		windowStart + PRECHECK_WINDOW_CHARS,
 	);
-	if (!profile.contextPrecheck(precheckSlice)) return undefined;
+	if (!profile.contextPrecheck(precheckSlice)) return [];
 	const parseSlice = pageText.slice(
 		windowStart,
 		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
 	);
 	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
 	const segments = profile.parse(sliceCap);
-	const first = segments[0];
-	if (!first) return undefined;
-	return {
-		refText: first.refText,
-		chapter: first.chapter,
-		verseStart: first.verseStart,
-		verseEnd: first.verseEnd,
-	};
+	return segments.map((s) => ({
+		refText: s.refText,
+		chapter: s.chapter,
+		chapterEnd: s.chapterEnd,
+		verseStart: s.verseStart,
+		verseEnd: s.verseEnd,
+		verseSuffix: s.verseSuffix,
+	}));
 }
 
 /** Citation-like: digits, spaces, separators. Verse suffix a-z allowed only when immediately after a digit (Task 4.3). */
@@ -641,13 +644,13 @@ const processMatcher = async ({
 			if (!withBbox) continue;
 
 			const profile = parserProfile ?? undefined;
-			const parserSegment = parseLocalWindowForCandidate(
+			const parserSegments = parseLocalWindowForCandidate(
 				searchableText,
 				match.originalEnd,
 				profile,
 			);
 
-			if (parserSegment) {
+			if (parserSegments.length > 0) {
 				allCandidates.push({
 					pageNumber: pageNum,
 					groupId: match.groupId,
@@ -658,7 +661,7 @@ const processMatcher = async ({
 					charStart: match.originalStart,
 					charEnd: match.originalEnd,
 					bboxes: withBbox.bboxes,
-					parserSegment,
+					parserSegments,
 				});
 			} else if (profile && shouldEmitFallbackMention(
 				searchableText,
@@ -725,18 +728,26 @@ const processMatcher = async ({
 	const dedupedCandidates = dedupeMatcherCandidates(allCandidates, projectIndexTypeId);
 
 	let mentionsCreated: number;
+	const resolutionContext = {
+		userId,
+		documentId: sourceDoc.id,
+		detectionRunId: runId,
+		projectId: run.projectId,
+		projectIndexTypeId,
+		indexType: run.indexType,
+	};
 	if (run.indexType === "subject") {
 		const result = await resolveAndPersistSubjectCandidates({
 			candidates: dedupedCandidates,
-			context: {
-				userId,
-				documentId: sourceDoc.id,
-				detectionRunId: runId,
-				projectIndexTypeId,
-				indexType: run.indexType,
-			},
+			context: resolutionContext,
 		});
 		mentionsCreated = result.persisted;
+	} else if (run.indexType === "scripture") {
+		const result = await resolveAndPersistScriptureCandidates({
+			candidates: dedupedCandidates,
+			context: resolutionContext,
+		});
+		mentionsCreated = result.mentionsPersisted;
 	} else {
 		mentionsCreated = await detectionRepo.insertMatcherMentionsBatch({
 			userId,

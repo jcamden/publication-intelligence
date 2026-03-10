@@ -602,6 +602,247 @@ export const getMatcherByIdAndProjectIndexTypeId = async ({
 };
 
 /**
+ * Fetch matcher with parent entry fields for scripture resolution (Task 5.2).
+ * Returns entryId, projectId, label, slug when matcher exists and entry is not deleted.
+ */
+export const getMatcherWithEntry = async ({
+	userId,
+	matcherId,
+	projectIndexTypeId,
+}: {
+	userId: string;
+	matcherId: string;
+	projectIndexTypeId: string;
+}): Promise<{
+	entryId: string;
+	projectId: string;
+	label: string;
+	slug: string;
+} | null> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [row] = await tx
+				.select({
+					entryId: indexMatchers.entryId,
+					projectId: indexEntries.projectId,
+					label: indexEntries.label,
+					slug: indexEntries.slug,
+				})
+				.from(indexMatchers)
+				.innerJoin(
+					indexEntries,
+					and(
+						eq(indexMatchers.entryId, indexEntries.id),
+						eq(indexEntries.projectIndexTypeId, indexMatchers.projectIndexTypeId),
+					),
+				)
+				.where(
+					and(
+						eq(indexMatchers.id, matcherId),
+						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.limit(1);
+			return row ?? null;
+		},
+	});
+};
+
+/**
+ * Find entry by project, index type, and slug (Task 5.2 child lookup).
+ * Returns id and parentId for verification.
+ */
+export const getEntryByProjectTypeAndSlug = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	slug,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	slug: string;
+}): Promise<{ id: string; parentId: string | null } | null> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [row] = await tx
+				.select({ id: indexEntries.id, parentId: indexEntries.parentId })
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+						eq(indexEntries.slug, slug),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.limit(1);
+			return row ?? null;
+		},
+	});
+};
+
+/**
+ * Create child entry under parent; idempotent: on slug conflict re-query and return existing id (Task 5.2).
+ */
+export const createChildEntry = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	parentId,
+	slug,
+	label,
+	detectionRunId,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	parentId: string;
+	slug: string;
+	label: string;
+	detectionRunId: string;
+}): Promise<string> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [existing] = await tx
+				.select({ id: indexEntries.id })
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+						eq(indexEntries.slug, slug),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.limit(1);
+			if (existing) return existing.id;
+
+			const [inserted] = await tx
+				.insert(indexEntries)
+				.values({
+					projectId,
+					projectIndexTypeId,
+					parentId,
+					slug,
+					label,
+					detectionRunId,
+					status: "active",
+				})
+				.returning({ id: indexEntries.id });
+			if (inserted) return inserted.id;
+			// Race: another tx inserted same slug; re-query
+			const [again] = await tx
+				.select({ id: indexEntries.id })
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+						eq(indexEntries.slug, slug),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.limit(1);
+			if (!again) throw new Error("Failed to create or find child entry");
+			return again.id;
+		},
+	});
+};
+
+/**
+ * Find matcher by text and projectIndexTypeId (Task 5.2 child matcher lookup).
+ */
+export const getMatcherByTextAndProjectIndexTypeId = async ({
+	userId,
+	projectIndexTypeId,
+	text,
+}: {
+	userId: string;
+	projectIndexTypeId: string;
+	text: string;
+}): Promise<{ id: string; entryId: string } | null> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [row] = await tx
+				.select({ id: indexMatchers.id, entryId: indexMatchers.entryId })
+				.from(indexMatchers)
+				.where(
+					and(
+						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+						eq(indexMatchers.text, text),
+					),
+				)
+				.limit(1);
+			return row ?? null;
+		},
+	});
+};
+
+/**
+ * Create matcher for entry; idempotent: on (projectIndexTypeId, text) conflict re-query and return existing id (Task 5.2).
+ */
+export const createMatcher = async ({
+	userId,
+	entryId,
+	projectIndexTypeId,
+	text,
+}: {
+	userId: string;
+	entryId: string;
+	projectIndexTypeId: string;
+	text: string;
+}): Promise<string> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [existing] = await tx
+				.select({ id: indexMatchers.id })
+				.from(indexMatchers)
+				.where(
+					and(
+						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+						eq(indexMatchers.text, text),
+					),
+				)
+				.limit(1);
+			if (existing) return existing.id;
+
+			try {
+				const [inserted] = await tx
+					.insert(indexMatchers)
+					.values({
+						entryId,
+						projectIndexTypeId,
+						text,
+					})
+					.returning({ id: indexMatchers.id });
+				if (inserted) return inserted.id;
+			} catch {
+				// Unique conflict: re-query
+			}
+			const [again] = await tx
+				.select({ id: indexMatchers.id })
+				.from(indexMatchers)
+				.where(
+					and(
+						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+						eq(indexMatchers.text, text),
+					),
+				)
+				.limit(1);
+			if (!again) throw new Error("Failed to create or find matcher");
+			return again.id;
+		},
+	});
+};
+
+/**
  * List matcher alias rows for a matcher detection run.
  * Used to build the alias index (one snapshot per run).
  * When runAllGroups: all matchers for project + index type.

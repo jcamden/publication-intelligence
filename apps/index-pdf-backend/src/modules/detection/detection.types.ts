@@ -278,7 +278,10 @@ export type MatcherMentionCandidate = {
 	charStart: number;
 	charEnd: number;
 	bboxes: Array<{ x: number; y: number; width: number; height: number }>;
+	/** Single segment (Phase 4 legacy); prefer parserSegments when present for scripture. */
 	parserSegment?: MatcherMentionParserSegment;
+	/** All parsed segments for compound refs (Task 5.2); one resolution unit per segment. */
+	parserSegments?: MatcherMentionParserSegment[];
 	/** True when candidate was emitted as book-level fallback after parse returned no segments (Task 4.3). */
 	fallbackBookLevel?: boolean;
 };

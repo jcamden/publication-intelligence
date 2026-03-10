@@ -633,6 +633,38 @@ Planned layout block model (Index page sidebar):
 **Task 7.1: Dedicated scripture-config table**
 - Persist selected canon + corpora options in dedicated schema.
 - Enforce canon mutual exclusivity based on `canons.ts`.
+- Implementation details (codebase-aligned):
+  - Add `scripture_index_configs` table keyed by project + index type context:
+    - columns: `id`, `project_id`, `project_index_type_id`, `selected_canon`, `include_apocrypha`, `include_jewish_writings`, `include_classical_writings`, `include_christian_writings`, `include_dead_sea_scrolls`, `extra_book_keys`, `created_at`, `updated_at`
+    - `selected_canon` stores canonical id from `packages/core/src/data/texts/bible/canons.ts`
+    - `extra_book_keys` stores explicit additional book keys (outside selected canon) for opt-in bootstrapping
+  - Constraints and uniqueness:
+    - one config row per `(project_id, project_index_type_id)` via unique index
+    - FK to `project_index_types` to ensure config is tied to an existing index type
+    - optional check constraint ensuring this table is only used for scripture-type index configs
+  - Canon mutual exclusivity enforcement:
+    - validate incoming `selected_canon` against canon registry from `canons.ts`
+    - reject payloads that attempt multiple canon selections in one config write
+    - on update, treat canon switch as replace (old canon fully superseded, not merged)
+  - API/service contract:
+    - add repo/service methods: `getScriptureConfig`, `upsertScriptureConfig`
+    - use strict input schema enums for canon ids and corpus toggles
+    - persist via upsert so repeated saves are idempotent
+  - Integration points:
+    - Phase 7.2 bootstrap reads only from `scripture_index_configs` (no ad-hoc UI state)
+    - Phase 6 matcher-group setup can reference config to prebuild default groups when bootstrap runs
+  - Migration/backfill plan:
+    - add table in new migration and wire schema exports/relations
+    - no automatic backfill required for existing projects unless scripture index already exists; if needed, create minimal default config with null canon and all corpora toggles false
+  - Observability:
+    - record config updates in event log/audit trail with before/after canon + corpus flags
+    - expose last-updated timestamp for UI freshness checks
+- Suggested test coverage for Task 7.1:
+  - upsert creates and then updates single config row per project/index type
+  - invalid canon id is rejected at validation boundary
+  - canon switch replaces previous selection (no multi-canon coexistence)
+  - corpus flags and `extra_book_keys` persist/reload round-trip correctly
+  - non-scripture index type cannot write scripture config (if check enforced)
 
 **Task 7.2: Explicit bootstrap workflow**
 - Seed entries/matchers for:
