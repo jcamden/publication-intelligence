@@ -13,10 +13,7 @@ import type { AliasIndex, ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
-import {
-	resolveAndPersistScriptureCandidates,
-	resolveAndPersistSubjectCandidates,
-} from "./entry-resolution.service";
+import { resolveAndPersistCandidates } from "./entry-resolution.service";
 import type {
 	CreateLlmDetectionRunInput,
 	CreateMatcherDetectionRunInput,
@@ -727,7 +724,6 @@ const processMatcher = async ({
 
 	const dedupedCandidates = dedupeMatcherCandidates(allCandidates, projectIndexTypeId);
 
-	let mentionsCreated: number;
 	const resolutionContext = {
 		userId,
 		documentId: sourceDoc.id,
@@ -736,32 +732,11 @@ const processMatcher = async ({
 		projectIndexTypeId,
 		indexType: run.indexType,
 	};
-	if (run.indexType === "subject") {
-		const result = await resolveAndPersistSubjectCandidates({
-			candidates: dedupedCandidates,
-			context: resolutionContext,
-		});
-		mentionsCreated = result.persisted;
-	} else if (run.indexType === "scripture") {
-		const result = await resolveAndPersistScriptureCandidates({
-			candidates: dedupedCandidates,
-			context: resolutionContext,
-		});
-		mentionsCreated = result.mentionsPersisted;
-	} else {
-		mentionsCreated = await detectionRepo.insertMatcherMentionsBatch({
-			userId,
-			documentId: sourceDoc.id,
-			detectionRunId: runId,
-			projectIndexTypeId,
-			candidates: dedupedCandidates.map((c) => ({
-				entryId: c.entryId,
-				pageNumber: c.pageNumber,
-				textSpan: c.textSpan,
-				bboxes: c.bboxes,
-			})),
-		});
-	}
+	const resolutionResult = await resolveAndPersistCandidates({
+		candidates: dedupedCandidates,
+		context: resolutionContext,
+	});
+	const mentionsCreated = resolutionResult.persisted;
 
 	await detectionRepo.updateDetectionRunStatus({
 		userId,

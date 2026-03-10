@@ -6,7 +6,7 @@ import type {
 } from "./detection.types";
 
 // ============================================================================
-// Types (Task 5.1 / 5.3)
+// Types (Task 5.1 / 5.2 / 5.3)
 // ============================================================================
 
 /** Input from Phase 4 matcher flow (deterministic order). */
@@ -18,6 +18,71 @@ export type ResolvedMentionWrite = {
 	pageNumber: number;
 	textSpan: string;
 	bboxes: Array<{ x: number; y: number; width: number; height: number }>;
+};
+
+/** Context for resolution (run + document). */
+export type ResolutionContext = {
+	userId: string;
+	documentId: string;
+	detectionRunId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	indexType: string;
+};
+
+// ----- Task 5.3: Typed resolution outcomes -----
+
+export type ResolvedOutcome = {
+	kind: "resolved";
+	writes: ResolvedMentionWrite[];
+	/** Scripture-only: child entry/matcher metrics for this candidate. */
+	metrics?: {
+		childrenCreated: number;
+		childrenReused: number;
+		matchersCreated: number;
+		matchersReused: number;
+		resolutionMisses: number;
+	};
+};
+
+export type DroppedOutcome = {
+	kind: "dropped";
+	reasonCode: string;
+	/** When true, count as resolution_miss for scripture metrics. */
+	resolutionMiss?: boolean;
+};
+export type FailedOutcome = { kind: "failed"; reasonCode: string };
+
+export type ResolutionOutcome =
+	| ResolvedOutcome
+	| DroppedOutcome
+	| FailedOutcome;
+
+/** Strategy interface: canHandle(indexType) and resolve(candidate, ctx). */
+export type ResolutionStrategy = {
+	canHandle(indexType: string): boolean;
+	resolve(
+		candidate: ResolutionCandidate,
+		ctx: ResolutionContext,
+	): Promise<ResolutionOutcome>;
+};
+
+/** Unified result from resolveAndPersistCandidates (Task 5.3). */
+export type ResolutionRunResult = {
+	candidatesSeen: number;
+	resolved: number;
+	persisted: number;
+	deduped: number;
+	dropped: number;
+	failed: number;
+	warnings: string[];
+	scripture?: {
+		childrenCreated: number;
+		childrenReused: number;
+		matchersCreated: number;
+		matchersReused: number;
+		resolutionMisses: number;
+	};
 };
 
 /** Result of resolving and persisting subject candidates (Task 5.1). */
@@ -43,27 +108,70 @@ export type ScriptureResolutionResult = {
 	warnings: string[];
 };
 
-/** Context for resolution (run + document). */
-export type ResolutionContext = {
-	userId: string;
-	documentId: string;
-	detectionRunId: string;
-	projectId: string;
-	projectIndexTypeId: string;
-	indexType: string;
-};
-
 // ============================================================================
-// Subject resolution (Task 5.1)
+// Subject resolution strategy (Task 5.1 / 5.3)
 // ============================================================================
 
 const SUBJECT_INDEX_TYPE = "subject";
 
 /**
- * Subject resolution strategy: resolve candidate matcherId to existing matcher
- * in same projectIndexTypeId, derive entryId; do not create entries or matchers.
- * Drops candidate and logs resolution_miss when matcher missing/mismatched.
- * Preserves candidate textSpan, pageNumber, bboxes. Applies Task 4.2 dedupe at insert.
+ * Subject resolution: resolve candidate matcherId to existing matcher in same
+ * projectIndexTypeId, derive entryId; do not create entries or matchers.
+ */
+async function resolveSubjectCandidate(
+	candidate: ResolutionCandidate,
+	ctx: ResolutionContext,
+): Promise<ResolutionOutcome> {
+	try {
+		const matcher = await detectionRepo.getMatcherByIdAndProjectIndexTypeId({
+			userId: ctx.userId,
+			matcherId: candidate.matcherId,
+			projectIndexTypeId: ctx.projectIndexTypeId,
+		});
+		if (!matcher) {
+			logEvent({
+				event: "detection.resolution_miss",
+				context: {
+					metadata: {
+						reason: "matcher_not_found",
+						matcherId: candidate.matcherId,
+						projectIndexTypeId: ctx.projectIndexTypeId,
+						pageNumber: candidate.pageNumber,
+					},
+				},
+			});
+			return { kind: "dropped", reasonCode: "matcher_not_found" };
+		}
+		return {
+			kind: "resolved",
+			writes: [
+				{
+					entryId: matcher.entryId,
+					pageNumber: candidate.pageNumber,
+					textSpan: candidate.textSpan,
+					bboxes: candidate.bboxes,
+				},
+			],
+		};
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		return {
+			kind: "failed",
+			reasonCode: `resolution_error: ${message}`,
+		};
+	}
+}
+
+export const subjectResolutionStrategy: ResolutionStrategy = {
+	canHandle(indexType: string): boolean {
+		return indexType === SUBJECT_INDEX_TYPE;
+	},
+	resolve: resolveSubjectCandidate,
+};
+
+/**
+ * Subject resolution (Task 5.1). Delegates to central orchestration.
+ * When indexType is not "subject", returns early with all candidates counted as dropped (no strategy run).
  */
 export const resolveAndPersistSubjectCandidates = async ({
 	candidates,
@@ -72,112 +180,31 @@ export const resolveAndPersistSubjectCandidates = async ({
 	candidates: ResolutionCandidate[];
 	context: ResolutionContext;
 }): Promise<SubjectResolutionResult> => {
-	const {
-		userId,
-		documentId,
-		detectionRunId,
-		projectIndexTypeId,
-		indexType,
-	} = context;
-
-	if (indexType !== SUBJECT_INDEX_TYPE) {
+	if (context.indexType !== SUBJECT_INDEX_TYPE) {
 		return {
 			candidatesSeen: candidates.length,
 			resolved: 0,
 			persisted: 0,
 			deduped: 0,
 			dropped: candidates.length,
-			warnings: [`Subject resolution only handles indexType "${SUBJECT_INDEX_TYPE}", got "${indexType}"`],
+			warnings: [
+				`Subject resolution only handles indexType "${SUBJECT_INDEX_TYPE}", got "${context.indexType}"`,
+			],
 		};
 	}
-
-	const candidatesSeen = candidates.length;
-	const warnings: string[] = [];
-	const toInsert: ResolvedMentionWrite[] = [];
-
-	for (const c of candidates) {
-		try {
-			const matcher = await detectionRepo.getMatcherByIdAndProjectIndexTypeId({
-				userId,
-				matcherId: c.matcherId,
-				projectIndexTypeId,
-			});
-			if (!matcher) {
-				logEvent({
-					event: "detection.resolution_miss",
-					context: {
-						metadata: {
-							reason: "matcher_not_found",
-							matcherId: c.matcherId,
-							projectIndexTypeId,
-							pageNumber: c.pageNumber,
-						},
-					},
-				});
-				continue;
-			}
-			toInsert.push({
-				entryId: matcher.entryId,
-				pageNumber: c.pageNumber,
-				textSpan: c.textSpan,
-				bboxes: c.bboxes,
-			});
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			warnings.push(`resolution failed matcherId=${c.matcherId} page=${c.pageNumber}: ${message}`);
-		}
-	}
-
-	const resolved = toInsert.length;
-	const dropped = candidatesSeen - resolved;
-
-	if (toInsert.length === 0) {
-		return {
-			candidatesSeen,
-			resolved: 0,
-			persisted: 0,
-			deduped: 0,
-			dropped,
-			warnings,
-		};
-	}
-
-	let persisted: number;
-	try {
-		persisted = await detectionRepo.insertMatcherMentionsBatch({
-			userId,
-			documentId,
-			detectionRunId,
-			projectIndexTypeId,
-			candidates: toInsert,
-		});
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		warnings.push(`batch insert failed: ${message}`);
-		return {
-			candidatesSeen,
-			resolved,
-			persisted: 0,
-			deduped: 0,
-			dropped,
-			warnings,
-		};
-	}
-
-	const deduped = resolved - persisted;
-
+	const result = await resolveAndPersistCandidates({ candidates, context });
 	return {
-		candidatesSeen,
-		resolved,
-		persisted,
-		deduped,
-		dropped,
-		warnings,
+		candidatesSeen: result.candidatesSeen,
+		resolved: result.resolved,
+		persisted: result.persisted,
+		deduped: result.deduped,
+		dropped: result.dropped,
+		warnings: result.warnings,
 	};
 };
 
 // ============================================================================
-// Scripture resolution (Task 5.2)
+// Scripture resolution strategy (Task 5.2 / 5.3)
 // ============================================================================
 
 const SCRIPTURE_INDEX_TYPE = "scripture";
@@ -192,10 +219,176 @@ function segmentRefToSlug(refText: string): string {
 		.toLowerCase() || "book";
 }
 
+/** Per-candidate scripture resolution: parent lookup, segment expansion, child entry/matcher create-reuse, writes. */
+async function resolveScriptureCandidate(
+	candidate: ResolutionCandidate,
+	ctx: ResolutionContext,
+): Promise<ResolutionOutcome> {
+	const {
+		userId,
+		projectId,
+		projectIndexTypeId,
+		detectionRunId,
+	} = ctx;
+	try {
+		const parent = await detectionRepo.getMatcherWithEntry({
+			userId,
+			matcherId: candidate.matcherId,
+			projectIndexTypeId,
+		});
+		if (!parent) {
+			logEvent({
+				event: "detection.resolution_miss",
+				context: {
+					metadata: {
+						reason: "matcher_or_entry_not_found",
+						matcherId: candidate.matcherId,
+						projectIndexTypeId,
+						pageNumber: candidate.pageNumber,
+					},
+				},
+			});
+			return {
+				kind: "dropped",
+				reasonCode: "matcher_or_entry_not_found",
+				resolutionMiss: true,
+			};
+		}
+
+		const segments: MatcherMentionParserSegment[] =
+			(candidate.parserSegments?.length ?? 0) > 0
+				? (candidate.parserSegments ?? [])
+				: candidate.parserSegment
+					? [candidate.parserSegment]
+					: [];
+		const isFallback = Boolean(candidate.fallbackBookLevel);
+
+		const writes: ResolvedMentionWrite[] = [];
+		let childrenCreated = 0;
+		let childrenReused = 0;
+		let matchersCreated = 0;
+		let matchersReused = 0;
+
+		if (segments.length > 0) {
+			for (const seg of segments) {
+				const refText = seg.refText ?? "";
+				const isBookLevel = refText.trim() === "";
+
+				if (isBookLevel) {
+					writes.push({
+						entryId: parent.entryId,
+						pageNumber: candidate.pageNumber,
+						textSpan: candidate.textSpan,
+						bboxes: candidate.bboxes,
+					});
+					continue;
+				}
+
+				const segmentSlug = segmentRefToSlug(refText);
+				const childSlug = `${parent.slug}--${segmentSlug}`;
+				const label = refText;
+
+				let childEntryId: string;
+				const existingChild = await detectionRepo.getEntryByProjectTypeAndSlug({
+					userId,
+					projectId,
+					projectIndexTypeId,
+					slug: childSlug,
+				});
+				if (existingChild && existingChild.parentId === parent.entryId) {
+					childEntryId = existingChild.id;
+					childrenReused += 1;
+				} else {
+					childEntryId = await detectionRepo.createChildEntry({
+						userId,
+						projectId,
+						projectIndexTypeId,
+						parentId: parent.entryId,
+						slug: childSlug,
+						label,
+						detectionRunId,
+					});
+					childrenCreated += 1;
+				}
+
+				let matcherText = refText;
+				for (let disambiguate = 0; ; disambiguate++) {
+					const existingMatcher =
+						await detectionRepo.getMatcherByTextAndProjectIndexTypeId({
+							userId,
+							projectIndexTypeId,
+							text: matcherText,
+						});
+					if (!existingMatcher) {
+						await detectionRepo.createMatcher({
+							userId,
+							entryId: childEntryId,
+							projectIndexTypeId,
+							text: matcherText,
+						});
+						matchersCreated += 1;
+						break;
+					}
+					if (existingMatcher.entryId === childEntryId) {
+						matchersReused += 1;
+						break;
+					}
+					matcherText =
+						disambiguate === 0
+							? `${refText} (2)`
+							: `${refText} (${disambiguate + 2})`;
+				}
+
+				writes.push({
+					entryId: childEntryId,
+					pageNumber: candidate.pageNumber,
+					textSpan: candidate.textSpan,
+					bboxes: candidate.bboxes,
+				});
+			}
+		} else if (isFallback) {
+			writes.push({
+				entryId: parent.entryId,
+				pageNumber: candidate.pageNumber,
+				textSpan: candidate.textSpan,
+				bboxes: candidate.bboxes,
+			});
+		}
+
+		if (writes.length === 0) {
+			return { kind: "dropped", reasonCode: "no_segments_or_fallback" };
+		}
+
+		return {
+			kind: "resolved",
+			writes,
+			metrics: {
+				childrenCreated,
+				childrenReused,
+				matchersCreated,
+				matchersReused,
+				resolutionMisses: 0,
+			},
+		};
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		return {
+			kind: "failed",
+			reasonCode: `scripture_resolution_error: ${message}`,
+		};
+	}
+}
+
+export const scriptureResolutionStrategy: ResolutionStrategy = {
+	canHandle(indexType: string): boolean {
+		return indexType === SCRIPTURE_INDEX_TYPE;
+	},
+	resolve: resolveScriptureCandidate,
+};
+
 /**
- * Scripture resolution strategy: resolve book alias -> parent entry; emit one
- * resolution unit per parsed segment (or one book-level unit for fallback).
- * Create/reuse child entries and matchers; attach one mention per unit.
+ * Scripture resolution (Task 5.2). Delegates to central orchestration.
+ * When indexType is not "scripture", returns early with all candidates as resolutionMisses (no strategy run).
  */
 export const resolveAndPersistScriptureCandidates = async ({
 	candidates,
@@ -204,16 +397,7 @@ export const resolveAndPersistScriptureCandidates = async ({
 	candidates: ResolutionCandidate[];
 	context: ResolutionContext;
 }): Promise<ScriptureResolutionResult> => {
-	const {
-		userId,
-		documentId,
-		detectionRunId,
-		projectId,
-		projectIndexTypeId,
-		indexType,
-	} = context;
-
-	if (indexType !== SCRIPTURE_INDEX_TYPE) {
+	if (context.indexType !== SCRIPTURE_INDEX_TYPE) {
 		return {
 			candidatesSeen: candidates.length,
 			childrenCreated: 0,
@@ -224,194 +408,160 @@ export const resolveAndPersistScriptureCandidates = async ({
 			mentionsDeduped: 0,
 			resolutionMisses: candidates.length,
 			warnings: [
-				`Scripture resolution only handles indexType "${SCRIPTURE_INDEX_TYPE}", got "${indexType}"`,
+				`Scripture resolution only handles indexType "${SCRIPTURE_INDEX_TYPE}", got "${context.indexType}"`,
 			],
 		};
 	}
+	const result = await resolveAndPersistCandidates({ candidates, context });
+	const scripture = result.scripture ?? {
+		childrenCreated: 0,
+		childrenReused: 0,
+		matchersCreated: 0,
+		matchersReused: 0,
+		resolutionMisses: 0,
+	};
+	return {
+		candidatesSeen: result.candidatesSeen,
+		childrenCreated: scripture.childrenCreated,
+		childrenReused: scripture.childrenReused,
+		matchersCreated: scripture.matchersCreated,
+		matchersReused: scripture.matchersReused,
+		mentionsPersisted: result.persisted,
+		mentionsDeduped: result.deduped,
+		resolutionMisses: scripture.resolutionMisses,
+		warnings: result.warnings,
+	};
+};
+
+// ============================================================================
+// Central orchestration (Task 5.3)
+// ============================================================================
+
+const RESOLUTION_STRATEGIES: ResolutionStrategy[] = [
+	subjectResolutionStrategy,
+	scriptureResolutionStrategy,
+];
+
+/**
+ * Single integration point: accept deterministic candidate list, dispatch by
+ * run indexType to strategy, apply shared dedupe + persistence, aggregate
+ * counters/errors for run progress.
+ */
+export const resolveAndPersistCandidates = async ({
+	candidates,
+	context,
+}: {
+	candidates: ResolutionCandidate[];
+	context: ResolutionContext;
+}): Promise<ResolutionRunResult> => {
+	const {
+		userId,
+		documentId,
+		detectionRunId,
+		projectIndexTypeId,
+		indexType,
+	} = context;
+
+	const strategy = RESOLUTION_STRATEGIES.find((s) => s.canHandle(indexType));
 
 	const candidatesSeen = candidates.length;
 	const warnings: string[] = [];
-	const toInsert: ResolvedMentionWrite[] = [];
-	let childrenCreated = 0;
-	let childrenReused = 0;
-	let matchersCreated = 0;
-	let matchersReused = 0;
-	let resolutionMisses = 0;
+	const allWrites: ResolvedMentionWrite[] = [];
+	let resolvedCount = 0;
+	let droppedCount = 0;
+	let failedCount = 0;
+	const scriptureAgg = {
+		childrenCreated: 0,
+		childrenReused: 0,
+		matchersCreated: 0,
+		matchersReused: 0,
+		resolutionMisses: 0,
+	};
 
-	for (const c of candidates) {
-		try {
-			const parent = await detectionRepo.getMatcherWithEntry({
-				userId,
-				matcherId: c.matcherId,
-				projectIndexTypeId,
+	if (!strategy) {
+		// Unknown index type: use candidate entryId as-is and persist (legacy fallback)
+		warnings.push(
+			`No resolution strategy for indexType "${indexType}"; persisting with candidate entryId.`,
+		);
+		for (const c of candidates) {
+			allWrites.push({
+				entryId: c.entryId,
+				pageNumber: c.pageNumber,
+				textSpan: c.textSpan,
+				bboxes: c.bboxes,
 			});
-			if (!parent) {
-				resolutionMisses += 1;
-				logEvent({
-					event: "detection.resolution_miss",
-					context: {
-						metadata: {
-							reason: "matcher_or_entry_not_found",
-							matcherId: c.matcherId,
-							projectIndexTypeId,
-							pageNumber: c.pageNumber,
-						},
-					},
-				});
-				continue;
+		}
+		resolvedCount = allWrites.length;
+		droppedCount = candidatesSeen - resolvedCount;
+	} else {
+		for (const c of candidates) {
+			const outcome = await strategy.resolve(c, context);
+			switch (outcome.kind) {
+				case "resolved":
+					resolvedCount += 1;
+					allWrites.push(...outcome.writes);
+					if (outcome.metrics) {
+						scriptureAgg.childrenCreated += outcome.metrics.childrenCreated;
+						scriptureAgg.childrenReused += outcome.metrics.childrenReused;
+						scriptureAgg.matchersCreated += outcome.metrics.matchersCreated;
+						scriptureAgg.matchersReused += outcome.metrics.matchersReused;
+						scriptureAgg.resolutionMisses += outcome.metrics.resolutionMisses;
+					}
+					break;
+				case "dropped":
+					droppedCount += 1;
+					if (outcome.resolutionMiss && indexType === SCRIPTURE_INDEX_TYPE) {
+						scriptureAgg.resolutionMisses += 1;
+					}
+					break;
+				case "failed":
+					failedCount += 1;
+					warnings.push(`matcherId=${c.matcherId} page=${c.pageNumber}: ${outcome.reasonCode}`);
+					break;
 			}
-
-			const segments: MatcherMentionParserSegment[] =
-				(c.parserSegments?.length ?? 0) > 0
-					? (c.parserSegments ?? [])
-					: c.parserSegment
-						? [c.parserSegment]
-						: [];
-			const isFallback = Boolean(c.fallbackBookLevel);
-
-			if (segments.length > 0) {
-				for (const seg of segments) {
-					const refText = seg.refText ?? "";
-					const isBookLevel = refText.trim() === "";
-
-					if (isBookLevel) {
-						toInsert.push({
-							entryId: parent.entryId,
-							pageNumber: c.pageNumber,
-							textSpan: c.textSpan,
-							bboxes: c.bboxes,
-						});
-						continue;
-					}
-
-					const segmentSlug = segmentRefToSlug(refText);
-					const childSlug = `${parent.slug}--${segmentSlug}`;
-					const label = refText;
-
-					let childEntryId: string;
-					const existingChild = await detectionRepo.getEntryByProjectTypeAndSlug({
-						userId,
-						projectId,
-						projectIndexTypeId,
-						slug: childSlug,
-					});
-					if (existingChild && existingChild.parentId === parent.entryId) {
-						childEntryId = existingChild.id;
-						childrenReused += 1;
-					} else {
-						childEntryId = await detectionRepo.createChildEntry({
-							userId,
-							projectId,
-							projectIndexTypeId,
-							parentId: parent.entryId,
-							slug: childSlug,
-							label,
-							detectionRunId,
-						});
-						childrenCreated += 1;
-					}
-
-					let matcherText = refText;
-					for (let disambiguate = 0; ; disambiguate++) {
-						const existingMatcher =
-							await detectionRepo.getMatcherByTextAndProjectIndexTypeId({
-								userId,
-								projectIndexTypeId,
-								text: matcherText,
-							});
-						if (!existingMatcher) {
-							await detectionRepo.createMatcher({
-								userId,
-								entryId: childEntryId,
-								projectIndexTypeId,
-								text: matcherText,
-							});
-							matchersCreated += 1;
-							break;
-						}
-						if (existingMatcher.entryId === childEntryId) {
-							matchersReused += 1;
-							break;
-						}
-						matcherText =
-							disambiguate === 0
-								? `${refText} (2)`
-								: `${refText} (${disambiguate + 2})`;
-					}
-
-					toInsert.push({
-						entryId: childEntryId,
-						pageNumber: c.pageNumber,
-						textSpan: c.textSpan,
-						bboxes: c.bboxes,
-					});
-				}
-			} else if (isFallback) {
-				toInsert.push({
-					entryId: parent.entryId,
-					pageNumber: c.pageNumber,
-					textSpan: c.textSpan,
-					bboxes: c.bboxes,
-				});
-			}
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			warnings.push(
-				`scripture resolution failed matcherId=${c.matcherId} page=${c.pageNumber}: ${message}`,
-			);
 		}
 	}
 
-	if (toInsert.length === 0) {
-		return {
-			candidatesSeen,
-			childrenCreated,
-			childrenReused,
-			matchersCreated,
-			matchersReused,
-			mentionsPersisted: 0,
-			mentionsDeduped: 0,
-			resolutionMisses,
-			warnings,
-		};
+	const totalWrites = allWrites.length;
+	let persisted = 0;
+
+	if (allWrites.length > 0) {
+		try {
+			persisted = await detectionRepo.insertMatcherMentionsBatch({
+				userId,
+				documentId,
+				detectionRunId,
+				projectIndexTypeId,
+				candidates: allWrites,
+			});
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			warnings.push(`batch insert failed: ${message}`);
+			return {
+				candidatesSeen,
+				resolved: resolvedCount,
+				persisted: 0,
+				deduped: 0,
+				dropped: droppedCount,
+				failed: failedCount,
+				warnings,
+				scripture:
+					indexType === SCRIPTURE_INDEX_TYPE ? scriptureAgg : undefined,
+			};
+		}
 	}
 
-	let mentionsPersisted: number;
-	try {
-		mentionsPersisted = await detectionRepo.insertMatcherMentionsBatch({
-			userId,
-			documentId,
-			detectionRunId,
-			projectIndexTypeId,
-			candidates: toInsert,
-		});
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		warnings.push(`scripture batch insert failed: ${message}`);
-		return {
-			candidatesSeen,
-			childrenCreated,
-			childrenReused,
-			matchersCreated,
-			matchersReused,
-			mentionsPersisted: 0,
-			mentionsDeduped: 0,
-			resolutionMisses,
-			warnings,
-		};
-	}
-
-	const mentionsDeduped = toInsert.length - mentionsPersisted;
+	const deduped = totalWrites - persisted;
 
 	return {
 		candidatesSeen,
-		childrenCreated,
-		childrenReused,
-		matchersCreated,
-		matchersReused,
-		mentionsPersisted,
-		mentionsDeduped,
-		resolutionMisses,
+		resolved: resolvedCount,
+		persisted,
+		deduped,
+		dropped: droppedCount,
+		failed: failedCount,
 		warnings,
+		scripture:
+			indexType === SCRIPTURE_INDEX_TYPE ? scriptureAgg : undefined,
 	};
 };

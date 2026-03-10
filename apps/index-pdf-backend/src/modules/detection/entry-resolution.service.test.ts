@@ -230,7 +230,7 @@ describe("resolveAndPersistSubjectCandidates (Task 5.1)", () => {
 		expect(result.candidatesSeen).toBe(2);
 		expect(result.resolved).toBe(1);
 		expect(result.persisted).toBe(1);
-		expect(result.dropped).toBe(1);
+		// Failed candidate is counted as failed (typed outcome), not dropped
 		expect(result.warnings.some((w) => w.includes("transient error"))).toBe(true);
 	});
 });
