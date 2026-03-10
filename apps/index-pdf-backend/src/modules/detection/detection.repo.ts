@@ -216,14 +216,18 @@ export const updateDetectionRunStatus = async ({
 	await withUserContext({
 		userId,
 		fn: async (tx) => {
+			const setPayload: Record<string, unknown> = {
+				status: input.status,
+				startedAt: input.startedAt,
+				finishedAt: input.finishedAt,
+				errorMessage: input.errorMessage,
+			};
+			if (input.mentionsCreated !== undefined) {
+				setPayload.mentionsCreated = input.mentionsCreated;
+			}
 			await tx
 				.update(detectionRuns)
-				.set({
-					status: input.status,
-					startedAt: input.startedAt,
-					finishedAt: input.finishedAt,
-					errorMessage: input.errorMessage,
-				})
+				.set(setPayload as never)
 				.where(eq(detectionRuns.id, input.runId));
 		},
 	});

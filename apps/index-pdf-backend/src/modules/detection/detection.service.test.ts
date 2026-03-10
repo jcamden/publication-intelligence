@@ -78,6 +78,16 @@ describe("sortMatcherCandidates", () => {
 		sortMatcherCandidates(copy2);
 		expect(copy1).toEqual(copy2);
 	});
+
+	it("orders by groupId when pageNumber, charStart and span length equal (Task 6.2)", () => {
+		const candidates: MatcherMentionCandidate[] = [
+			baseCandidate({ pageNumber: 1, charStart: 0, charEnd: 5, groupId: "g-b" }),
+			baseCandidate({ pageNumber: 1, charStart: 0, charEnd: 5, groupId: "g-a" }),
+			baseCandidate({ pageNumber: 1, charStart: 0, charEnd: 5, groupId: "g-c" }),
+		];
+		sortMatcherCandidates(candidates);
+		expect(candidates.map((c) => c.groupId)).toEqual(["g-a", "g-b", "g-c"]);
+	});
 });
 
 // ============================================================================

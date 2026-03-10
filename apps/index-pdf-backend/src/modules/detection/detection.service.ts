@@ -8,12 +8,17 @@ import {
 	listSourceDocumentsByProject,
 } from "../source-document/sourceDocument.repo";
 import { getUserSettings } from "../user-settings/user-settings.repo";
+import { logEvent } from "../../logger";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { AliasIndex, ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
 import { resolveAndPersistCandidates } from "./entry-resolution.service";
+import * as indexEntryGroupRepo from "./index-entry-group.repo";
+import {
+	resolvePageIdToDocumentPageNumber,
+} from "./page-id.utils";
 import type {
 	CreateLlmDetectionRunInput,
 	CreateMatcherDetectionRunInput,
@@ -57,7 +62,17 @@ const createRunAndStartBackgroundProcess = async ({
 	});
 
 	processFn({ userId, runId: run.id }).catch((err) => {
-		console.error("Detection processing error:", err);
+		logEvent({
+			event: "detection.processing_error",
+			context: {
+				userId,
+				metadata: {
+					runId: run.id,
+					error: err instanceof Error ? err.message : String(err),
+				},
+				error: err instanceof Error ? err : new Error(String(err)),
+			},
+		});
 		detectionRepo
 			.updateDetectionRunStatus({
 				userId,
@@ -68,7 +83,15 @@ const createRunAndStartBackgroundProcess = async ({
 					errorMessage: err instanceof Error ? err.message : String(err),
 				},
 			})
-			.catch((e) => console.error("Failed to update run status:", e));
+			.catch((e) =>
+				logEvent({
+					event: "detection.run_status_update_failed",
+					context: {
+						userId,
+						metadata: { runId: run.id, error: String(e) },
+					},
+				}),
+			);
 	});
 
 	return { runId: run.id };
@@ -297,9 +320,6 @@ const PRECHECK_WINDOW_CHARS = 24;
 const PARSER_WINDOW_CHARS = 120;
 const PARSER_WINDOW_CAP = 200;
 
-/** Default parser profile id when group has no assignment (Phase 6). V1: scripture-biblical only. */
-const DEFAULT_PARSER_PROFILE_ID = "scripture-biblical";
-
 // ============================================================================
 // Background Processing
 // ============================================================================
@@ -396,7 +416,7 @@ export function shouldEmitFallbackMention(
 }
 
 /**
- * Deterministic order: pageNumber asc, charStart asc, longer span first (charEnd - charStart desc).
+ * Deterministic order: pageNumber asc, charStart asc, longer span first (charEnd - charStart desc), stable groupId tiebreaker (Task 6.2).
  * Exported for tests (determinism and ordering).
  */
 export function sortMatcherCandidates(
@@ -407,7 +427,8 @@ export function sortMatcherCandidates(
 		if (a.charStart !== b.charStart) return a.charStart - b.charStart;
 		const lenA = a.charEnd - a.charStart;
 		const lenB = b.charEnd - b.charStart;
-		return lenB - lenA;
+		if (lenA !== lenB) return lenB - lenA;
+		return a.groupId.localeCompare(b.groupId);
 	});
 }
 
@@ -528,6 +549,60 @@ const processMatcher = async ({
 		return;
 	}
 
+	// Run input resolution: resolve group IDs; reject when empty (Task 6.2).
+	const groupIds = await indexEntryGroupRepo.resolveRunGroupIds({
+		userId,
+		projectId: run.projectId,
+		projectIndexTypeId,
+		indexEntryGroupIds: run.indexEntryGroupIds,
+		runAllGroups: run.runAllGroups,
+	});
+
+	if (groupIds.length === 0) {
+		await detectionRepo.updateDetectionRunStatus({
+			userId,
+			input: {
+				runId,
+				status: "failed",
+				finishedAt: new Date(),
+				errorMessage:
+					"No groups selected or no valid groups found for this run",
+			},
+		});
+		return;
+	}
+
+	// Group snapshot: fetch metadata (id, parser_profile_id, sort_mode) once per run.
+	const groupMetas = await indexEntryGroupRepo.listGroupsByIds({
+		userId,
+		projectId: run.projectId,
+		projectIndexTypeId,
+		groupIds,
+	});
+
+	// Parser profile mapping: resolve each group's parser_profile_id; fail early on unknown id (Task 6.2).
+	const groupProfileCache = new Map<string, ParserProfile | null>();
+	for (const g of groupMetas) {
+		if (g.parserProfileId != null) {
+			const profile = getParserProfile(g.parserProfileId);
+			if (profile === undefined) {
+				await detectionRepo.updateDetectionRunStatus({
+					userId,
+					input: {
+						runId,
+						status: "failed",
+						finishedAt: new Date(),
+						errorMessage: `Unknown parser profile id: ${g.parserProfileId}`,
+					},
+				});
+				return;
+			}
+			groupProfileCache.set(g.id, profile);
+		} else {
+			groupProfileCache.set(g.id, null);
+		}
+	}
+
 	const aliases = await detectionRepo.listMatcherAliasesForRun({
 		userId,
 		projectId: run.projectId,
@@ -537,33 +612,69 @@ const processMatcher = async ({
 		runAllGroups: run.runAllGroups,
 	});
 
-	if (aliases.length === 0) {
-		await detectionRepo.updateDetectionRunStatus({
-			userId,
-			input: {
-				runId,
-				status: "completed",
-				finishedAt: new Date(),
-			},
-		});
-		return;
-	}
-
+	// One alias index per run; never rebuild per page (Task 6.2).
 	const aliasIndex: AliasIndex = buildAliasIndex(aliases);
 
-	// Pages to process: project = full range (with exclusions); page scope = single page (pageId not yet resolved to number, use 1 as placeholder).
-	const pagesToProcess: number[] =
-		run.scope === "page"
-			? [1]
-			: (() => {
-					const { pagesToProcess: pages } = calculatePagesToProcess({
-						totalPages: run.totalPages,
-						pageRangeStart: run.pageRangeStart,
-						pageRangeEnd: run.pageRangeEnd,
-						canonicalPageRules,
-					});
-					return pages;
-				})();
+	logEvent({
+		event: "detection.matcher_run_started",
+		context: {
+			userId,
+			metadata: {
+				runId,
+				groupIds,
+				groupCount: groupIds.length,
+				matcherCount: aliases.length,
+			},
+		},
+	});
+
+	// Scope: project = canonical-allowed pages in range; page = single page from pageId (Task 6.2).
+	let pagesToProcess: number[];
+	if (run.scope === "page") {
+		if (!run.pageId) {
+			await detectionRepo.updateDetectionRunStatus({
+				userId,
+				input: {
+					runId,
+					status: "failed",
+					finishedAt: new Date(),
+					errorMessage: "pageId is required when scope is page",
+				},
+			});
+			return;
+		}
+		const resolvedPage = resolvePageIdToDocumentPageNumber(
+			sourceDoc.id,
+			run.pageId,
+			run.totalPages,
+		);
+		if (resolvedPage == null) {
+			await detectionRepo.updateDetectionRunStatus({
+				userId,
+				input: {
+					runId,
+					status: "failed",
+					finishedAt: new Date(),
+					errorMessage: "Invalid or out-of-range pageId for this document",
+				},
+			});
+			return;
+		}
+		// Apply canonical rules: if this page is excluded, process nothing.
+		const isExcluded = isPageExcluded({
+			pageNumber: resolvedPage,
+			canonicalPageRules,
+		});
+		pagesToProcess = isExcluded ? [] : [resolvedPage];
+	} else {
+		const { pagesToProcess: pages } = calculatePagesToProcess({
+			totalPages: run.totalPages,
+			pageRangeStart: run.pageRangeStart,
+			pageRangeEnd: run.pageRangeEnd,
+			canonicalPageRules,
+		});
+		pagesToProcess = pages;
+	}
 
 	if (pagesToProcess.length === 0) {
 		await detectionRepo.updateDetectionRunStatus({
@@ -580,7 +691,6 @@ const processMatcher = async ({
 	const excludeRegions: Region[] = [];
 	const pageMemory: PageMemory = { pages: new Map() };
 	const allCandidates: MatcherMentionCandidate[] = [];
-	const parserProfile = getParserProfile(DEFAULT_PARSER_PROFILE_ID);
 
 	for (const pageNum of pagesToProcess) {
 		const currentRun = await detectionRepo.getDetectionRun({
@@ -640,7 +750,24 @@ const processMatcher = async ({
 			);
 			if (!withBbox) continue;
 
-			const profile = parserProfile ?? undefined;
+			const profile = groupProfileCache.get(match.groupId) ?? null;
+
+			// Null profile: alias-only; emit one candidate with alias span only (Task 6.2).
+			if (profile === null) {
+				allCandidates.push({
+					pageNumber: pageNum,
+					groupId: match.groupId,
+					matcherId: match.matcherId,
+					entryId: match.entryId,
+					indexType: match.indexType,
+					textSpan: withBbox.textSpan,
+					charStart: match.originalStart,
+					charEnd: match.originalEnd,
+					bboxes: withBbox.bboxes,
+				});
+				continue;
+			}
+
 			const parserSegments = parseLocalWindowForCandidate(
 				searchableText,
 				match.originalEnd,
@@ -660,7 +787,7 @@ const processMatcher = async ({
 					bboxes: withBbox.bboxes,
 					parserSegments,
 				});
-			} else if (profile && shouldEmitFallbackMention(
+			} else if (shouldEmitFallbackMention(
 				searchableText,
 				match.originalEnd,
 				profile,
@@ -737,6 +864,28 @@ const processMatcher = async ({
 		context: resolutionContext,
 	});
 	const mentionsCreated = resolutionResult.persisted;
+
+	// Observability: aggregated counts (Task 6.2).
+	const segmentsEmitted = allCandidates.filter(
+		(c) => c.parserSegments && c.parserSegments.length > 0,
+	).length;
+	const fallbacksEmitted = allCandidates.filter(
+		(c) => c.fallbackBookLevel === true,
+	).length;
+	logEvent({
+		event: "detection.matcher_run_completed",
+		context: {
+			userId,
+			metadata: {
+				runId,
+				mentionsCreated,
+				candidatesCollected: allCandidates.length,
+				afterDedupe: dedupedCandidates.length,
+				segmentsEmitted,
+				fallbacksEmitted,
+			},
+		},
+	});
 
 	await detectionRepo.updateDetectionRunStatus({
 		userId,

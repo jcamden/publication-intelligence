@@ -278,4 +278,98 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 			expect(aliases).toEqual([]);
 		});
 	});
+
+	describe("listGroupsByIds (Task 6.2)", () => {
+		it("returns empty when groupIds is empty", async () => {
+			const user = await createTestUser();
+			const project = await createTestProject({ userId: user.userId });
+			const pit = await createTestProjectIndexType({
+				projectId: project.id,
+				indexType: "scripture",
+				userId: user.userId,
+			});
+			const metas = await indexEntryGroupRepo.listGroupsByIds({
+				userId: user.userId,
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				groupIds: [],
+			});
+			expect(metas).toEqual([]);
+		});
+
+		it("returns group metadata in deterministic order by name", async () => {
+			const user = await createTestUser();
+			const project = await createTestProject({ userId: user.userId });
+			const pit = await createTestProjectIndexType({
+				projectId: project.id,
+				indexType: "scripture",
+				userId: user.userId,
+			});
+			const gZ = await indexEntryGroupRepo.createGroup({
+				userId: user.userId,
+				input: {
+					projectId: project.id,
+					projectIndexTypeId: pit.id,
+					name: "Zebra",
+					slug: "zebra",
+					parserProfileId: "scripture-biblical",
+					sortMode: "canon_book_order",
+				},
+			});
+			const gA = await indexEntryGroupRepo.createGroup({
+				userId: user.userId,
+				input: {
+					projectId: project.id,
+					projectIndexTypeId: pit.id,
+					name: "Alpha",
+					slug: "alpha",
+					parserProfileId: null,
+					sortMode: "a_z",
+				},
+			});
+			const metas = await indexEntryGroupRepo.listGroupsByIds({
+				userId: user.userId,
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				groupIds: [gZ.id, gA.id],
+			});
+			expect(metas).toHaveLength(2);
+			// Order by name: Alpha before Zebra
+			expect(metas[0].id).toBe(gA.id);
+			expect(metas[0].parserProfileId).toBeNull();
+			expect(metas[0].sortMode).toBe("a_z");
+			expect(metas[1].id).toBe(gZ.id);
+			expect(metas[1].parserProfileId).toBe("scripture-biblical");
+			expect(metas[1].sortMode).toBe("canon_book_order");
+		});
+
+		it("returns only groups that exist and match project+type", async () => {
+			const user = await createTestUser();
+			const project = await createTestProject({ userId: user.userId });
+			const pit = await createTestProjectIndexType({
+				projectId: project.id,
+				indexType: "scripture",
+				userId: user.userId,
+			});
+			const g = await indexEntryGroupRepo.createGroup({
+				userId: user.userId,
+				input: {
+					projectId: project.id,
+					projectIndexTypeId: pit.id,
+					name: "Only",
+					slug: "only",
+					parserProfileId: null,
+					sortMode: "a_z",
+				},
+			});
+			const metas = await indexEntryGroupRepo.listGroupsByIds({
+				userId: user.userId,
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				groupIds: [g.id, "00000000-0000-0000-0000-000000000000"],
+			});
+			expect(metas).toHaveLength(1);
+			expect(metas[0].id).toBe(g.id);
+		});
+	});
 });

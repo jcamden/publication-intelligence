@@ -210,6 +210,61 @@ export const getGroupMatcherSnapshot = async ({
 };
 
 /**
+ * Group metadata for detection run snapshot (id, parser_profile_id, sort_mode).
+ * Used to resolve parser profile per group and cache for the run.
+ */
+export type IndexEntryGroupRunMeta = {
+	id: string;
+	parserProfileId: string | null;
+	sortMode: "a_z" | "canon_book_order";
+};
+
+/**
+ * List group metadata for given IDs (same project + projectIndexTypeId, deterministic order by name).
+ * Used once per run to build group/profile cache. Returns only groups that exist and are not deleted.
+ */
+export const listGroupsByIds = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	groupIds,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	groupIds: string[];
+}): Promise<IndexEntryGroupRunMeta[]> => {
+	if (groupIds.length === 0) return [];
+
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({
+					id: indexEntryGroups.id,
+					parserProfileId: indexEntryGroups.parserProfileId,
+					sortMode: indexEntryGroups.sortMode,
+				})
+				.from(indexEntryGroups)
+				.where(
+					and(
+						inArray(indexEntryGroups.id, groupIds),
+						eq(indexEntryGroups.projectId, projectId),
+						eq(indexEntryGroups.projectIndexTypeId, projectIndexTypeId),
+						isNull(indexEntryGroups.deletedAt),
+					),
+				)
+				.orderBy(asc(indexEntryGroups.name));
+			return rows.map((r) => ({
+				id: r.id,
+				parserProfileId: r.parserProfileId,
+				sortMode: r.sortMode as "a_z" | "canon_book_order",
+			}));
+		},
+	});
+};
+
+/**
  * Resolve group IDs for a matcher run. Validates that groups belong to project + projectIndexTypeId.
  * - When indexEntryGroupIds: returns those IDs that exist, are active, and match project+type.
  * - When runAllGroups: returns all active group IDs for that projectIndexTypeId.

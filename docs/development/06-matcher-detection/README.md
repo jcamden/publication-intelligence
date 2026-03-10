@@ -841,10 +841,87 @@ Planned layout block model (Index page sidebar):
   - group profile/sort settings
   - layout blocks (`H1`, `H2`, `H3`, `GroupRef`)
   - drag/drop ordering
+- Implementation details (codebase-aligned):
+  - Add dedicated Index sidebar surface with two coordinated panels:
+    - `Groups` panel for `IndexEntryGroup` management
+    - `Layout` panel for block-based render structure
+  - `IndexEntryGroup` CRUD UX:
+    - create group with `name`, optional `parserProfileId`, and `sortMode`
+    - edit group metadata (rename, profile, sort mode)
+    - soft-delete group with confirmation and impact preview (member counts, layout references)
+    - manage memberships (entries/matchers) with deterministic ordering controls
+  - Layout block model UI:
+    - block types: `H1`, `H2`, `H3`, `GroupRef`
+    - `GroupRef` block must reference an existing active group id
+    - block-level settings include label text (for heading blocks) and sort override when applicable
+  - Drag/drop behavior:
+    - support reordering blocks and moving groups within sections
+    - persist stable `position` values after reorder
+    - provide keyboard reorder fallback for accessibility
+  - Persistence contracts:
+    - add APIs/repo methods to read/write layout block lists and group metadata atomically
+    - prevent saving layout containing dangling `GroupRef` ids
+    - use optimistic concurrency token/version to avoid overwriting concurrent sidebar edits
+  - Rendering integration:
+    - index page renderer consumes layout blocks in saved order
+    - `GroupRef` resolves entries by group membership and configured sort mode (`a_z`, canon order, etc.)
+    - collapsed/expanded state is UI-local and does not alter persisted block order
+  - Detection integration touchpoint:
+    - sidebar group edits immediately affect matcher-run group targeting options (Tasks 8.1/8.2) after refresh/invalidation
+    - parser profile changes on group update should affect subsequent matcher runs only (not in-flight runs)
+  - Validation and safeguards:
+    - enforce unique group names/slugs per project/index type in UI pre-validation + backend validation
+    - prevent deletion of groups currently referenced by layout unless user chooses replace/remove strategy
+    - show non-blocking warnings when group has zero matchers or zero entries
+  - Observability:
+    - telemetry events for group CRUD, layout reorder, and profile/sort changes
+    - audit records for destructive actions (group delete, block delete, reference replacement)
+- Suggested test coverage for Task 8.3:
+  - create/edit/delete group flows persist correctly and update sidebar state
+  - drag/drop reorder persists deterministic block positions
+  - invalid `GroupRef` cannot be saved
+  - layout render uses saved order and group sort settings
+  - group/profile updates are reflected in detection control group lists after refresh
+  - deleting referenced group requires explicit resolution (replace/remove) path
 
 **Task 8.4: Scripture setup controls**
 - Canon selection + corpora toggles + additional-book selection
 - Trigger bootstrapping endpoint
+- Implementation details (codebase-aligned):
+  - Add Scripture setup section in sidebar tied to the active scripture index type.
+  - Configuration controls:
+    - single-select canon dropdown sourced from `canons.ts` ids/labels
+    - corpus toggles for Apocrypha, Jewish Writings, Classical Writings, Christian Writings, Dead Sea Scrolls
+    - searchable multi-select for `extra_book_keys` (HB/NT books outside selected canon)
+  - Config persistence flow:
+    - load via `getScriptureConfig`
+    - save via `upsertScriptureConfig`
+    - autosave or explicit save button (project convention), with dirty-state indicator
+    - enforce one-canon-only at UI and backend validation layers
+  - Bootstrap trigger UX:
+    - explicit `Bootstrap Scripture Data` action button (never auto-run on config change)
+    - confirmation dialog summarizes selected canon/corpora and expected scope of seeded data
+    - call bootstrap endpoint from Task 7.2 and surface run summary counts on completion
+  - Validation and guardrails:
+    - disable bootstrap action until required config is valid (`selected_canon` present)
+    - show warnings for large corpus combinations (estimate of entries/matchers to seed)
+    - prevent duplicate bootstrap clicks while request is in-flight
+  - Progress/error handling:
+    - show pending/running state and final status (`success`, `partial`, `failed`)
+    - display actionable error messages (invalid canon id, missing scripture index type, permission issues)
+    - provide retry action for failed bootstrap without losing saved config
+  - Integration behavior:
+    - after successful bootstrap, refresh groups/memberships and detection group selectors (Tasks 8.1/8.2)
+    - keep user edits to existing entries/groups intact; bootstrap is additive unless explicit reconcile mode exists
+  - Accessibility/telemetry:
+    - all controls keyboard-accessible with labels/help text
+    - telemetry events for config save and bootstrap trigger/completion/failure with selected option cardinalities
+- Suggested test coverage for Task 8.4:
+  - canon/corpus/extra-book selections persist and reload correctly
+  - bootstrap button is disabled when config is invalid (for example no canon selected)
+  - successful bootstrap call shows completion summary and refreshes dependent sidebar data
+  - bootstrap errors are surfaced without clearing saved config
+  - in-flight bootstrap state prevents double submission
 
 **Acceptance**
 - User can run matcher detection from project or page context.
@@ -856,6 +933,40 @@ Planned layout block model (Index page sidebar):
 - normalization + offset mapping
 - boundary/overlap filtering
 - parser profile contract + scripture parser grammar matrix
+- Implementation details (codebase-aligned):
+  - Keep unit tests close to modules already introduced in earlier phases:
+    - `packages/core/src/text/normalization.test.ts`
+    - `apps/index-pdf-backend/src/modules/detection/alias-engine.test.ts`
+    - `packages/core/src/scripture/ref-parser.test.ts`
+    - add focused unit tests for fallback span and dedupe-key helpers where implemented
+  - Normalization/offset-map unit matrix:
+    - NFKC folding cases, dash normalization variants, whitespace collapse, punctuation preservation
+    - span mapping correctness for collapse/expansion cases (half-open interval contract)
+    - deterministic round-trip assertions for `mapNormalizedSpanToOriginalSpan`
+  - Alias engine unit matrix:
+    - boundary rejection for mid-word hits (letters/numbers/underscore adjacency)
+    - overlap resolution (longest-first, earliest-start tiebreak)
+    - duplicate normalized alias mapping to multiple matcher metas
+    - deterministic sorted output ordering
+  - Parser profile unit matrix:
+    - profile registry lookups (`getParserProfile`, unknown ids)
+    - scripture grammar positives: chapter, verse, ranges, lists, cross-chapter, suffixes
+    - negatives for false positives (`see page 1`, free prose digits)
+    - context precheck behavior for book-only and empty windows
+  - New helper-unit scope:
+    - fallback span extension boundaries and punctuation retention
+    - canonical bbox serializer/hash determinism used by dedupe
+    - candidate ordering comparator stability
+  - Quality gates:
+    - each rule in README contracts should map to at least one explicit test
+    - avoid snapshot-only tests for parser outputs; prefer exact structural assertions
+    - enforce deterministic test seeds/data for stable CI
+- Suggested test coverage for Task 9.1:
+  - offset map returns expected original indices for mixed Unicode whitespace/dash samples
+  - alias overlap case keeps only longest match and stable ordering
+  - parser emits correct segment list for compound refs and rejects known negatives
+  - fallback helper preserves matcher punctuation and stops at invalid tail chars
+  - dedupe key helper yields same key for equivalent bbox permutations
 
 **Task 9.2: Integration tests**
 - matcher-linked mention persistence
@@ -864,58 +975,37 @@ Planned layout block model (Index page sidebar):
 - page-level vs project-level run behavior
 - dedupe/idempotency across repeated runs
 - matcher coverage skip behavior
-
-**Task 9.3: Migration tests**
-- matcher-linked mention migration correctness in current unified tables
-- duplicate constraints (`index_type + matcher + bbox`) enforce correctly while allowing same bbox with different matchers
-
-**Task 9.4: Performance baseline**
-- benchmark matcher scan + parser on representative corpus
-- publish P50/P95 ms per page + peak memory per run
-
-**Acceptance**
-- CI covers parser/resolver/migration/dedupe/matcher-skip flows.
-- Matcher mode materially outperforms LLM mode.
-
-## Suggested Implementation Order
-
-1. Phase 0
-2. Phase 1
-3. Phase 2
-4. Phase 4
-5. Phase 5
-6. Phase 3 (expand profiles after core run path is stable)
-7. Phase 6
-8. Phase 7
-9. Phase 8
-10. Phase 9
-
-Rationale: lock run contract and matcher-linked persistence first, then build extraction correctness, then group/config UX and performance hardening.
-
-## Risks
-
-- Keeping unified tables increases risk of accidental cross-type query/write bugs without strict `index_type` filtering.
-- Parser-profile drift across corpora can create false positives until profile definitions are finalized.
-- Matcher immutability requires explicit create-new-matcher UX for edits.
-- Group/layout complexity can over-expand UI scope without clear v1 constraints.
-- Runtime rebuild of large matcher sets per page can regress performance (build once per run scope where possible).
-
-## Data Model Decision: Keep Unified Tables for MVP
-
-Recommendation:
-- Keep `index_entries`, `index_matchers`, `index_mentions`, and `index_entry_groups` unified for MVP.
-
-Why:
-- Avoids high migration and repo complexity during core matcher rollout.
-- Keeps current read/write paths stable while parser/resolution flows mature.
-- Dedupe constraints can still be explicit via composite uniqueness (`index_type + matcher + bbox`).
-
-When to revisit:
-- if unified-table complexity or index bloat becomes a bottleneck in production.
-
-## Open Questions (Need Decisions Before Non-Biblical Profile Implementation)
-
-1. Predefined profile list: which profile ids should ship in v1 beyond baseline scripture style?
-2. Unique bbox definition for DB constraints: exact bbox tuple fields to enforce uniqueness (page + x/y/w/h + rotation? atom span ids?)?
-3. Which composite indexes are required to keep unified-table matcher queries fast at expected scale?
-4. For same-bbox grouping UI, is frontend-only grouping sufficient in v1, or should we persist a backend `mention_group_id`?
+- Implementation details (codebase-aligned):
+  - Add integration suites under backend detection module using existing test DB/factory setup:
+    - prefer end-to-end module flows through `detection.service` + repo writes
+    - mock expensive external dependencies (LLM, PDF extraction) while preserving real DB behavior
+  - Core matcher persistence scenarios:
+    - matcher run creates expected mention rows linked to resolved matcher/entry contract
+    - rerun with identical inputs is idempotent (no duplicate mentions)
+    - pre-existing mention rows are respected by dedupe logic
+  - Scripture resolution scenarios:
+    - parsed segments create/reuse child entries and child matchers deterministically
+    - compound refs generate one mention per segment in parser order
+    - fallback book-level path persists mention when parse fails after context pass
+  - Group/scope execution scenarios:
+    - selected-group run includes only selected group matchers
+    - run-all mode includes all active groups
+    - page scope limits work to a single page; project scope spans allowed pages
+  - Coverage-skip scenarios:
+    - first run writes matcher/page coverage
+    - second run skips covered matcher/page pairs and performs less processing
+    - partial coverage executes only uncovered matcher/page work
+  - Failure/cancellation scenarios:
+    - run cancellation mid-processing stops further page work and does not write coverage for unfinished slices
+    - per-candidate non-fatal resolution failures are logged while run completes
+  - Assertions/observability:
+    - verify run status transitions and progress counters
+    - assert created/reused/deduped counters where exposed
+    - validate deterministic ordering effects in persisted outputs when applicable
+- Suggested test coverage for Task 9.2:
+  - integration happy path: matcher run persists mentions and marks run `completed`
+  - rerun idempotency: mention count unchanged on second identical run
+  - scripture compound reference path creates expected child hierarchy + mentions
+  - selected-group vs run-all produce different matcher scan sets as expected
+  - page-scope run touches only target page
+  - coverage table causes skip on second run while preserving correctness

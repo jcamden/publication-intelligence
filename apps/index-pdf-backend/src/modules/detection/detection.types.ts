@@ -242,6 +242,7 @@ export type UpdateDetectionRunStatusInput = {
 	startedAt?: Date;
 	finishedAt?: Date;
 	errorMessage?: string;
+	mentionsCreated?: number;
 };
 
 export type UpdateDetectionRunProgressInput = {
