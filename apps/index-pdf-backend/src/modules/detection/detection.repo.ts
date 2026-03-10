@@ -10,6 +10,7 @@ import {
 } from "../../db/schema";
 import type { AliasInput } from "./alias-engine.types";
 import { bboxesHash as computeBboxesHash } from "./bbox-canonical.utils";
+import * as indexEntryGroupRepo from "./index-entry-group.repo";
 import type {
 	CreateDetectionRunInput,
 	CreateSuppressionInput,
@@ -844,18 +845,16 @@ export const createMatcher = async ({
 
 /**
  * List matcher alias rows for a matcher detection run.
- * Used to build the alias index (one snapshot per run).
- * When runAllGroups: all matchers for project + index type.
- * When indexEntryGroupIds: Phase 6 will filter by group membership; until then
- * we return all matchers for project + index type with synthetic groupId.
+ * Run inputs (indexEntryGroupIds / runAllGroups) resolve through index_entry_groups only.
+ * Returns empty array when no groups exist or selected groups have no matchers.
  */
 export const listMatcherAliasesForRun = async ({
 	userId,
 	projectId,
 	projectIndexTypeId,
 	indexType,
-	indexEntryGroupIds: _indexEntryGroupIds,
-	runAllGroups: _runAllGroups,
+	indexEntryGroupIds,
+	runAllGroups,
 }: {
 	userId: string;
 	projectId: string;
@@ -864,40 +863,19 @@ export const listMatcherAliasesForRun = async ({
 	indexEntryGroupIds: string[] | null;
 	runAllGroups: boolean | null;
 }): Promise<AliasInput[]> => {
-	return await withUserContext({
+	const groupIds = await indexEntryGroupRepo.resolveRunGroupIds({
 		userId,
-		fn: async (tx) => {
-			const rows = await tx
-				.select({
-					alias: indexMatchers.text,
-					matcherId: indexMatchers.id,
-					entryId: indexMatchers.entryId,
-				})
-				.from(indexMatchers)
-				.innerJoin(
-					indexEntries,
-					and(
-						eq(indexMatchers.entryId, indexEntries.id),
-						eq(indexEntries.projectIndexTypeId, indexMatchers.projectIndexTypeId),
-					),
-				)
-				.where(
-					and(
-						eq(indexEntries.projectId, projectId),
-						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
-						isNull(indexEntries.deletedAt),
-					),
-				);
-
-			// Synthetic groupId until Phase 6 index_entry_groups: one group per run.
-			const groupId = projectIndexTypeId;
-			return rows.map((r) => ({
-				alias: r.alias,
-				matcherId: r.matcherId,
-				entryId: r.entryId,
-				indexType,
-				groupId,
-			}));
-		},
+		projectId,
+		projectIndexTypeId,
+		indexEntryGroupIds,
+		runAllGroups,
+	});
+	if (groupIds.length === 0) return [];
+	return await indexEntryGroupRepo.listMatcherAliasesByGroupIds({
+		userId,
+		projectId,
+		projectIndexTypeId,
+		indexType,
+		groupIds,
 	});
 };

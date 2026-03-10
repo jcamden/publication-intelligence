@@ -7,6 +7,7 @@ export * from "./enums";
 export * from "./events";
 export * from "./exports";
 export * from "./highlight-configs";
+export * from "./index-entry-groups";
 export * from "./index-type-config";
 export * from "./indexing";
 export * from "./llm";

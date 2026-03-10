@@ -15,6 +15,13 @@
       "when": 1773160772452,
       "tag": "0001_slimy_invaders",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773166480427,
+      "tag": "0002_daily_flatman",
+      "breakpoints": true
     }
   ]
 }

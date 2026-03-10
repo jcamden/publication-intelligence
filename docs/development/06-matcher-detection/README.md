@@ -675,9 +675,80 @@ Planned layout block model (Index page sidebar):
   - Christian Writings
   - Dead Sea Scrolls
   - optional additional HB/NT books not in selected canon
+- Implementation details (codebase-aligned):
+  - Add explicit bootstrap endpoint/service (for example `scriptureBootstrap.run`) invoked only by user action.
+  - Bootstrap input source:
+    - load config from `scripture_index_configs` (Task 7.1)
+    - require `selected_canon` before execution; reject if missing
+    - read corpus toggles and `extra_book_keys` from config only (no implicit defaults)
+  - Source datasets:
+    - canon book lists from `packages/core/src/data/texts/bible/canons.ts`
+    - matcher dictionaries from `packages/core/src/data/texts/*/matchers.ts` (or generated dictionary where appropriate)
+    - labels from canonical text label sources already used in the project
+  - Seeding order (deterministic):
+    - seed selected canon books first
+    - then optional corpora in fixed order: Apocrypha -> Jewish Writings -> Classical Writings -> Christian Writings -> Dead Sea Scrolls
+    - then `extra_book_keys` (HB/NT additions outside selected canon)
+  - Entry/matcher create-or-reuse rules:
+    - top-level entries created/reused by deterministic slug under scripture `projectIndexTypeId`
+    - matcher rows created/reused from source alias lists with stable normalization policy
+    - never mutate existing matcher text in place; create missing matcher rows only
+  - Group assignment during bootstrap:
+    - create/reuse default `IndexEntryGroup` rows per corpus/canon bucket if absent
+    - attach seeded entries/matchers to target groups using membership tables from Phase 6
+    - preserve deterministic membership ordering via `position`
+  - Idempotency and safety:
+    - repeated bootstrap with same config should create zero duplicate entries/matchers/memberships
+    - use upsert or unique-conflict retry/requery paths for all created entities
+    - log summary counts: `entriesCreated`, `entriesReused`, `matchersCreated`, `matchersReused`, `groupsCreated`, `membershipsCreated`
+  - Canon switch behavior:
+    - bootstrap is additive by default (existing rows remain editable)
+    - newly selected canon books are seeded/reused; previously seeded books are not auto-deleted
+    - optional future "reconcile/prune" mode should be explicit and separate from default bootstrap
+  - Run recording/audit:
+    - store bootstrap run metadata (timestamp, config snapshot hash, counts, actor id)
+    - emit structured events for observability and troubleshooting
+- Suggested test coverage for Task 7.2:
+  - bootstrap fails fast when `selected_canon` is missing
+  - selected canon seeds expected book entries and aliases
+  - corpus toggles control whether optional corpora are seeded
+  - rerun with same config is idempotent (no duplicate rows)
+  - canon switch followed by bootstrap adds/reuses new canon content without deleting old rows
+  - default groups and memberships are created/reused deterministically
 
 **Task 7.3: Post-seed editability**
 - Ensure groups/entries/matchers are editable after seed.
+- Implementation details (codebase-aligned):
+  - Treat bootstrap as initial data creation only; seeded rows remain first-class editable records.
+  - Entry edit behavior:
+    - allow updating seeded entry `label`, group memberships, and ordering metadata
+    - keep `slug` stable by default; if slug edits are allowed, enforce uniqueness constraints and non-destructive rename semantics
+    - allow moving entries between groups without breaking existing mentions
+  - Matcher edit behavior:
+    - matcher text is immutable under current matcher policy; "edit" becomes create-new-matcher + optional deactivate/remove old matcher from groups
+    - preserve existing matcher->entry links unless user explicitly reassigns via supported workflow
+    - seeded matcher rows should be removable from groups without deleting underlying mention history
+  - Group edit behavior:
+    - seeded groups can be renamed, reordered, have profile/sort settings changed, and membership adjusted
+    - deleting a group should remove memberships only; it must not delete entries/matchers
+  - Seed provenance model:
+    - mark seeded rows with provenance metadata (for example `seed_source`, `seeded_at`, `seed_run_id`) for audit/debug only
+    - provenance must not gate edit permissions or force read-only UI state
+  - Re-bootstrap interaction:
+    - re-bootstrap should reuse rows by stable keys and preserve user edits where possible (labels/group placement should not be silently overwritten)
+    - optional "force refresh from source labels" mode should be explicit and opt-in
+  - API/service updates:
+    - ensure existing CRUD endpoints for entries/matchers/groups apply equally to seeded and manually-created rows
+    - enforce same validation/authorization paths for both seeded and non-seeded data
+  - Safety constraints:
+    - prevent destructive cascades when editing/deleting seeded organizational structures
+    - preserve mention integrity when matchers are superseded or memberships change
+- Suggested test coverage for Task 7.3:
+  - seeded entry label and group membership can be edited after bootstrap
+  - seeded matcher cannot be mutated in place; replacement flow creates new matcher row
+  - deleting seeded group removes memberships but keeps entries/matchers intact
+  - re-bootstrap does not overwrite user-customized labels/group placements by default
+  - mention links remain valid after post-seed reorganizations
 
 **Acceptance**
 - User can seed via explicit action.
@@ -689,10 +760,80 @@ Planned layout block model (Index page sidebar):
 - Mode selector (`LLM`/`Matcher`)
 - Group selector + run-all option
 - Project-level run action
+- Implementation details (codebase-aligned):
+  - Add project-sidebar control panel component for detection runs with two mutually exclusive modes:
+    - `LLM` mode submits to `detection.runLlm`
+    - `Matcher` mode submits to `detection.runMatcher`
+  - Matcher mode inputs:
+    - `runAllGroups` checkbox/toggle
+    - multiselect `indexEntryGroupIds` (disabled when `runAllGroups=true`)
+    - enforce contract: exactly one of non-empty group selection or `runAllGroups=true`
+  - LLM mode inputs:
+    - retain existing model/prompt version controls
+    - do not show matcher-specific group targeting fields
+  - Shared project-level run behavior:
+    - always submit `scope: "project"` in matcher mode
+    - disable run button while mutation is in-flight
+    - show immediate run creation feedback with run id/status link in run history UI
+  - Validation/error UX:
+    - block submit with inline error when matcher mode has invalid group selection state
+    - surface backend schema errors from `RunMatcherSchema`/`RunLlmSchema` directly in form
+    - show empty-state guidance when no groups exist for matcher mode
+  - Data loading:
+    - fetch available groups for current `projectId` + active index type
+    - include group metadata useful for selection (name, parser profile label, matcher count)
+    - refresh group list after group CRUD changes without full page reload
+  - State persistence:
+    - persist last-used mode and matcher selection per project/index type in local UI state (or project settings if supported)
+    - default to last-used valid combination on reopen
+  - Accessibility/interaction:
+    - keyboard-accessible mode switch and group multiselect
+    - clear disabled/explanatory text when controls are unavailable (for example no groups)
+  - Observability:
+    - emit client telemetry for run trigger events (mode, runAllGroups flag, selected group count, scope)
+    - record failed submit reason buckets (validation vs API failure)
+- Suggested test coverage for Task 8.1:
+  - matcher mode submits `detection.runMatcher` with `scope=project` and correct group payload
+  - run-all toggle and group multiselect remain mutually exclusive
+  - invalid matcher selection state blocks submit and shows inline error
+  - llm mode submits `detection.runLlm` and hides matcher-only controls
+  - no-groups matcher state shows guidance and disables run action
+  - in-flight mutation disables run action and prevents double-submit
 
 **Task 8.2: Page sidebar detection controls**
 - Group selector + run-all option
 - Page-level run action
+- Implementation details (codebase-aligned):
+  - Add page-sidebar matcher control panel for page-scoped runs only.
+  - Inputs and validation mirror project sidebar matcher mode:
+    - `runAllGroups` toggle
+    - `indexEntryGroupIds` multiselect (disabled when `runAllGroups=true`)
+    - enforce exactly one valid targeting mode before submit
+  - Page-scoped submission contract:
+    - call `detection.runMatcher` with `scope: "page"` and current `pageId`
+    - include `projectId`, active `indexType`, and either `runAllGroups=true` or selected `indexEntryGroupIds`
+    - block submit when `pageId` is unavailable/invalid
+  - UX behavior:
+    - disable run action while request is in-flight
+    - show inline feedback on success (run id / queued status) and failure (validation/API errors)
+    - display empty-state guidance when no groups exist and `runAllGroups` is not usable
+  - Data loading/state:
+    - reuse group list source used by Task 8.1 (filtered by current project/index type)
+    - keep per-page sidebar state lightweight; persist last-used group targeting per project/index type
+    - reset invalid cached selections when group list changes
+  - Run history/progress integration:
+    - ensure created run appears in detection run list with `scope=page` and associated `pageId`
+    - page UI should surface status transitions (`queued`, `running`, `completed`, `failed`, `cancelled`)
+  - Accessibility/telemetry:
+    - keyboard-accessible controls and explicit disabled reasons
+    - emit telemetry for page run trigger with `scope=page`, `pageId`, mode, and selected-group cardinality
+- Suggested test coverage for Task 8.2:
+  - submits `detection.runMatcher` with `scope=page` and correct `pageId`
+  - run-all and explicit group selection are mutually exclusive
+  - missing/invalid `pageId` blocks submit and shows inline error
+  - in-flight state prevents duplicate submissions
+  - page-scoped run appears in run history with page metadata
+  - API validation errors are surfaced in page sidebar form
 
 **Task 8.3: Index page group/layout sidebar**
 - New draggable/collapsible sidebar for:

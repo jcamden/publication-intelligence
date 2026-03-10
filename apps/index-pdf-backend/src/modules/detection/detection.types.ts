@@ -1,4 +1,28 @@
+import { getParserProfileIds } from "@pubint/core";
 import { z } from "zod";
+
+// ============================================================================
+// Index entry group validated enums (Task 6.1)
+// ============================================================================
+
+/** Valid sort modes for index entry groups (aligned with DB enum). */
+export const INDEX_ENTRY_GROUP_SORT_MODES = [
+	"a_z",
+	"canon_book_order",
+] as const;
+
+export type IndexEntryGroupSortMode = (typeof INDEX_ENTRY_GROUP_SORT_MODES)[number];
+
+export const indexEntryGroupSortModeSchema = z.enum(INDEX_ENTRY_GROUP_SORT_MODES);
+
+/** Parser profile id must be one of the predefined profiles or null (alias-only group). */
+export const parserProfileIdSchema = z
+	.string()
+	.refine((id) => getParserProfileIds().includes(id), {
+		message: "Invalid parser profile id",
+	})
+	.nullable()
+	.optional();
 
 // ============================================================================
 // DTOs - Data Transfer Objects
@@ -78,6 +102,32 @@ export const CancelDetectionRunSchema = z.object({
 });
 
 export type CancelDetectionRunInput = z.infer<typeof CancelDetectionRunSchema>;
+
+/** Create index entry group input (parser profile and sort mode validated). */
+export const CreateIndexEntryGroupSchema = z.object({
+	projectId: z.string().uuid(),
+	projectIndexTypeId: z.string().uuid(),
+	name: z.string().min(1),
+	slug: z.string().min(1),
+	parserProfileId: parserProfileIdSchema,
+	sortMode: indexEntryGroupSortModeSchema.default("a_z"),
+});
+
+export type CreateIndexEntryGroupSchemaInput = z.infer<
+	typeof CreateIndexEntryGroupSchema
+>;
+
+/** Update index entry group input (parser profile and sort mode validated). */
+export const UpdateIndexEntryGroupSchema = z.object({
+	name: z.string().min(1).optional(),
+	slug: z.string().min(1).optional(),
+	parserProfileId: parserProfileIdSchema,
+	sortMode: indexEntryGroupSortModeSchema.optional(),
+});
+
+export type UpdateIndexEntryGroupSchemaInput = z.infer<
+	typeof UpdateIndexEntryGroupSchema
+>;
 
 // ============================================================================
 // Domain Types

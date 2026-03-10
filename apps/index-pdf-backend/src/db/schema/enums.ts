@@ -136,3 +136,12 @@ export const numeralTypeEnum = pgEnum("numeral_type", [
 	"roman", // i, ii, iii...
 	"arbitrary", // Custom values (e.g., 10a, 10b, A-1, etc.)
 ]);
+
+// Index entry group sort mode (UI/render and matcher snapshot ordering)
+export const indexEntryGroupSortModeEnum = pgEnum(
+	"index_entry_group_sort_mode",
+	[
+		"a_z", // Alphabetical A–Z
+		"canon_book_order", // Scripture canon order (e.g. Gen, Exod, …)
+	],
+);
