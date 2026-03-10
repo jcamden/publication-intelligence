@@ -6,6 +6,7 @@ import { indexMentionRouter } from "../modules/index-mention/index-mention.route
 import { projectRouter } from "../modules/project/project.router";
 import { projectIndexTypeRouter } from "../modules/project-highlight-config/project-highlight-config.router";
 import { projectSettingsRouter } from "../modules/project-settings/project-settings.router";
+import { scriptureIndexConfigRouter } from "../modules/scripture-index-config/scripture-index-config.router";
 import { regionRouter } from "../modules/region/region.router";
 import { sourceDocumentRouter } from "../modules/source-document/sourceDocument.router";
 import { userRouter } from "../modules/user/user.router";
@@ -22,6 +23,7 @@ export const appRouter = router({
 	project: projectRouter,
 	projectIndexType: projectIndexTypeRouter,
 	projectSettings: projectSettingsRouter,
+	scriptureIndexConfig: scriptureIndexConfigRouter,
 	sourceDocument: sourceDocumentRouter,
 	user: userRouter,
 	userSettings: userSettingsRouter,
