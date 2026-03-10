@@ -217,18 +217,18 @@ Planned layout block model (Index page sidebar):
 - Deterministic tests for punctuation/dash/whitespace normalization.
 - Offset map verified with mixed Unicode/punctuation examples.
 
-### Phase 2: Shared Aho Alias Engine
+### Phase 2: Shared Aho Alias Engine  — Completed 2025-03
 
-**Task 2.1: Install and wire `@blackglory/aho-corasick`**
+**Task 2.1: Install and wire `@blackglory/aho-corasick`**  — Completed 2025-03
 - Add dependency to `apps/index-pdf-backend` [already done, and post-install build script ran successfully]
 
-**Task 2.2: Build alias index builder**
+**Task 2.2: Build alias index builder**  — Completed 2025-03
 - Input: array of `{ alias, matcherId, entryId, indexType, groupId }`.
 - Output:
   - normalized alias lookup
   - compiled Aho automaton
 
-**Task 2.3: Candidate filtering + overlap resolution**
+**Task 2.3: Candidate filtering + overlap resolution**  — Completed 2025-03
 - boundary check to reject mid-word hits
 - overlap resolution: longest-match-first
 - output matcher-anchored match objects with normalized/original offsets
@@ -238,13 +238,13 @@ Planned layout block model (Index page sidebar):
 
 ### Phase 3: Parser Profile Framework + Scripture Parser
 
-**Task 3.1: Parser profile contract**
+**Task 3.1: Parser profile contract** — Completed 2025-03
 - Define profile interface for local parsing:
   - context precheck
   - local parse
   - parsed segment emission
 
-**Task 3.2: Scripture parser profile (baseline)**
+**Task 3.2: Scripture parser profile (baseline)** — Completed 2025-03
 - New module suggestion: `packages/core/src/scripture/ref-parser.ts`.
 - Parse local window (default 120 chars, max 200 chars).
 - Minimum support:
@@ -256,7 +256,7 @@ Planned layout block model (Index page sidebar):
   - cross-chapter refs
   - suffixes (`3a`, `3b`)
 
-**Task 3.3: Predefined profiles registry**
+**Task 3.3: Predefined profiles registry** — Completed 2025-03
 - Register predefined profile ids for v1 (exact set pending citation examples for non-biblical corpora).
 
 **Acceptance**

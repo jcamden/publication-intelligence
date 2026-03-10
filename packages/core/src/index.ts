@@ -30,6 +30,7 @@ export * from "./canonical-page.utils";
 export * from "./logger.types";
 export * from "./region.types";
 export * from "./region.utils";
+export * from "./scripture";
 export * from "./text/normalization";
 export * from "./text-atom.types";
 export * from "./validation";
