@@ -1,11 +1,15 @@
 import crypto from "node:crypto";
 import path from "node:path";
+import { getParserProfile } from "@pubint/core";
+import type { ParserProfile } from "@pubint/core";
 import { listRules } from "../canonical-page-rule/canonical-page-rule.repo";
 import {
 	getSourceDocumentById,
 	listSourceDocumentsByProject,
 } from "../source-document/sourceDocument.repo";
 import { getUserSettings } from "../user-settings/user-settings.repo";
+import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
+import type { AliasIndex, ResolvedAliasMatch } from "./alias-engine.types";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
 import type {
@@ -13,6 +17,8 @@ import type {
 	CreateMatcherDetectionRunInput,
 	DetectionRun,
 	DetectionRunListItem,
+	MatcherMentionCandidate,
+	MatcherMentionParserSegment,
 	RunLlmInput,
 	RunMatcherInput,
 } from "./detection.types";
@@ -20,6 +26,7 @@ import { callLLMForDetection } from "./openrouter.client";
 import { buildDetectionPrompt } from "./prompt.utils";
 import {
 	buildPromptText,
+	buildSearchablePageText,
 	extractPages,
 	type PageMemory,
 	type Region,
@@ -168,7 +175,7 @@ export const runMatcher = async ({
 	return createRunAndStartBackgroundProcess({
 		userId,
 		runInput,
-		processFn: processMatcherStub,
+		processFn: processMatcher,
 	});
 };
 
@@ -281,16 +288,91 @@ const calculatePagesToProcess = ({
 };
 
 // ============================================================================
+// Matcher detection constants (Phase 4)
+// ============================================================================
+
+const PRECHECK_WINDOW_CHARS = 24;
+const PARSER_WINDOW_CHARS = 120;
+const PARSER_WINDOW_CAP = 200;
+
+/** Default parser profile id when group has no assignment (Phase 6). V1: scripture-biblical only. */
+const DEFAULT_PARSER_PROFILE_ID = "scripture-biblical";
+
+// ============================================================================
 // Background Processing
 // ============================================================================
 
-const processMatcherStub = async ({
+/**
+ * Run parser profile on local window after alias; return first segment for candidate.
+ * Precheck uses first PRECHECK_WINDOW_CHARS; parse uses up to PARSER_WINDOW_CHARS (cap PARSER_WINDOW_CAP).
+ */
+function parseLocalWindowForCandidate(
+	pageText: string,
+	aliasEndOffset: number,
+	profile: ParserProfile | undefined,
+): MatcherMentionParserSegment | undefined {
+	if (!profile) return undefined;
+	const windowStart = aliasEndOffset;
+	const precheckSlice = pageText.slice(
+		windowStart,
+		windowStart + PRECHECK_WINDOW_CHARS,
+	);
+	if (!profile.contextPrecheck(precheckSlice)) return undefined;
+	const parseSlice = pageText.slice(
+		windowStart,
+		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
+	);
+	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
+	const segments = profile.parse(sliceCap);
+	const first = segments[0];
+	if (!first) return undefined;
+	return {
+		refText: first.refText,
+		chapter: first.chapter,
+		verseStart: first.verseStart,
+		verseEnd: first.verseEnd,
+	};
+}
+
+/**
+ * Deterministic order: pageNumber asc, charStart asc, longer span first (charEnd - charStart desc).
+ * Exported for tests (determinism and ordering).
+ */
+export function sortMatcherCandidates(
+	candidates: MatcherMentionCandidate[],
+): void {
+	candidates.sort((a, b) => {
+		if (a.pageNumber !== b.pageNumber) return a.pageNumber - b.pageNumber;
+		if (a.charStart !== b.charStart) return a.charStart - b.charStart;
+		const lenA = a.charEnd - a.charStart;
+		const lenB = b.charEnd - b.charStart;
+		return lenB - lenA;
+	});
+}
+
+const processMatcher = async ({
 	userId,
 	runId,
 }: {
 	userId: string;
 	runId: string;
 }): Promise<void> => {
+	const run = await detectionRepo.getDetectionRun({ userId, runId });
+
+	if (!run) {
+		throw new Error("Detection run not found");
+	}
+
+	if (
+		run.runType !== "matcher" ||
+		run.settingsHash == null ||
+		run.totalPages == null
+	) {
+		throw new Error(
+			"Detection run is not a matcher run or is missing required fields",
+		);
+	}
+
 	await detectionRepo.updateDetectionRunStatus({
 		userId,
 		input: {
@@ -299,7 +381,205 @@ const processMatcherStub = async ({
 			startedAt: new Date(),
 		},
 	});
-	// Stub: real matcher processing in Phase 5
+
+	const sourceDocuments = await listSourceDocumentsByProject({
+		projectId: run.projectId,
+		userId,
+	});
+
+	if (sourceDocuments.length === 0) {
+		throw new Error("No source document found for this project");
+	}
+
+	const sourceDocListItem = sourceDocuments[0];
+	const sourceDoc = await getSourceDocumentById({
+		userId,
+		documentId: sourceDocListItem.id,
+	});
+
+	if (!sourceDoc) {
+		throw new Error("Source document not found");
+	}
+
+	if (!sourceDoc.storage_key) {
+		throw new Error("Source document has no storage path");
+	}
+
+	const BASE_STORAGE_PATH = path.join(
+		process.cwd(),
+		".data",
+		"source-documents",
+	);
+	const pdfPath = path.join(BASE_STORAGE_PATH, sourceDoc.storage_key);
+
+	const canonicalPageRules = await listRules({
+		projectId: run.projectId,
+		includeDeleted: false,
+	});
+
+	const projectIndexTypeId = await detectionRepo.getProjectIndexTypeByType({
+		userId,
+		projectId: run.projectId,
+		indexType: run.indexType,
+	});
+
+	if (!projectIndexTypeId) {
+		await detectionRepo.updateDetectionRunStatus({
+			userId,
+			input: {
+				runId,
+				status: "failed",
+				finishedAt: new Date(),
+				errorMessage: `Project index type not found for ${run.indexType}`,
+			},
+		});
+		return;
+	}
+
+	const aliases = await detectionRepo.listMatcherAliasesForRun({
+		userId,
+		projectId: run.projectId,
+		projectIndexTypeId,
+		indexType: run.indexType,
+		indexEntryGroupIds: run.indexEntryGroupIds,
+		runAllGroups: run.runAllGroups,
+	});
+
+	if (aliases.length === 0) {
+		await detectionRepo.updateDetectionRunStatus({
+			userId,
+			input: {
+				runId,
+				status: "completed",
+				finishedAt: new Date(),
+			},
+		});
+		return;
+	}
+
+	const aliasIndex: AliasIndex = buildAliasIndex(aliases);
+
+	// Pages to process: project = full range (with exclusions); page scope = single page (pageId not yet resolved to number, use 1 as placeholder).
+	const pagesToProcess: number[] =
+		run.scope === "page"
+			? [1]
+			: (() => {
+					const { pagesToProcess: pages } = calculatePagesToProcess({
+						totalPages: run.totalPages,
+						pageRangeStart: run.pageRangeStart,
+						pageRangeEnd: run.pageRangeEnd,
+						canonicalPageRules,
+					});
+					return pages;
+				})();
+
+	if (pagesToProcess.length === 0) {
+		await detectionRepo.updateDetectionRunStatus({
+			userId,
+			input: {
+				runId,
+				status: "completed",
+				finishedAt: new Date(),
+			},
+		});
+		return;
+	}
+
+	const excludeRegions: Region[] = [];
+	const pageMemory: PageMemory = { pages: new Map() };
+	const allCandidates: MatcherMentionCandidate[] = [];
+	const parserProfile = getParserProfile(DEFAULT_PARSER_PROFILE_ID);
+
+	for (const pageNum of pagesToProcess) {
+		const currentRun = await detectionRepo.getDetectionRun({
+			userId,
+			runId,
+		});
+		if (currentRun?.status === "cancelled") {
+			return;
+		}
+
+		const pagesToExtract =
+			pageMemory.pages.has(pageNum)
+				? []
+				: [pageNum];
+		if (pagesToExtract.length > 0) {
+			const extracted = await extractPages({
+				pdfPath,
+				pageNumbers: pagesToExtract,
+				excludeRegions,
+			});
+			for (const [p, atoms] of extracted) {
+				pageMemory.pages.set(p, atoms);
+			}
+		}
+
+		const atoms = pageMemory.pages.get(pageNum) ?? [];
+		const searchableText = buildSearchablePageText({ atoms });
+		const indexableAtomsWithCorrectedPositions =
+			recalculateCharPositionsForIndexable({ atoms });
+
+		const matches: ResolvedAliasMatch[] = scanTextWithAliasIndex(
+			searchableText,
+			aliasIndex,
+		);
+
+		const mentionsWithPositions = matches.map((m) => ({
+			mention: {
+				entryLabel: "",
+				indexType: m.indexType,
+				pageNumber: pageNum,
+				textSpan: searchableText.slice(m.originalStart, m.originalEnd),
+			},
+			charStart: m.originalStart,
+			charEnd: m.originalEnd,
+		}));
+
+		const { mapped: withBboxes } = mapPositionsToBBoxes({
+			mentionsWithPositions,
+			textAtoms: indexableAtomsWithCorrectedPositions,
+		});
+
+		for (const match of matches) {
+			const withBbox = withBboxes.find(
+				(m) =>
+					m.pageNumber === pageNum &&
+					m.textSpan === searchableText.slice(match.originalStart, match.originalEnd),
+			);
+			if (!withBbox) continue;
+
+			const parserSegment = parseLocalWindowForCandidate(
+				searchableText,
+				match.originalEnd,
+				parserProfile ?? undefined,
+			);
+
+			allCandidates.push({
+				pageNumber: pageNum,
+				groupId: match.groupId,
+				matcherId: match.matcherId,
+				entryId: match.entryId,
+				indexType: match.indexType,
+				textSpan: withBbox.textSpan,
+				charStart: match.originalStart,
+				charEnd: match.originalEnd,
+				bboxes: withBbox.bboxes,
+				parserSegment,
+			});
+		}
+
+		await detectionRepo.updateDetectionRunProgress({
+			userId,
+			input: {
+				runId,
+				progressPage: pageNum,
+				mentionsCreated: allCandidates.length,
+			},
+		});
+	}
+
+	sortMatcherCandidates(allCandidates);
+
 	await detectionRepo.updateDetectionRunStatus({
 		userId,
 		input: {

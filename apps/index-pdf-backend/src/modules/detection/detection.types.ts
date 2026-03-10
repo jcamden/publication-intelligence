@@ -250,5 +250,31 @@ export type CreateSuppressionInput = {
 	meaningType?: string | null;
 	meaningId?: string | null;
 	suppressedBy?: string;
-	reason?: string;
+	reason?: string | null;
+};
+
+// ============================================================================
+// Matcher detection (Phase 4) - in-memory mention candidates
+// ============================================================================
+
+/** Optional parser output per segment (e.g. scripture ref). */
+export type MatcherMentionParserSegment = {
+	refText: string;
+	chapter?: number;
+	verseStart?: number;
+	verseEnd?: number;
+};
+
+/** In-memory mention candidate before persistence (Phase 5). Deterministic order: pageNumber, charStart, longer span first. */
+export type MatcherMentionCandidate = {
+	pageNumber: number;
+	groupId: string;
+	matcherId: string;
+	entryId: string;
+	indexType: string;
+	textSpan: string;
+	charStart: number;
+	charEnd: number;
+	bboxes: Array<{ x: number; y: number; width: number; height: number }>;
+	parserSegment?: MatcherMentionParserSegment;
 };

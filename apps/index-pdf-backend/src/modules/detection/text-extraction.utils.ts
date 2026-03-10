@@ -272,12 +272,16 @@ const extractHeadText = ({
 		.join(" ");
 };
 
-const extractFullText = ({ atoms }: { atoms: TextAtom[] }): string => {
+/** Build searchable text from indexable atoms only (same convention as buildPromptText / recalculateCharPositionsForIndexable). */
+export const buildSearchablePageText = ({ atoms }: { atoms: TextAtom[] }): string => {
 	return atoms
 		.filter((a) => a.isIndexable)
 		.map((a) => a.word)
 		.join(" ");
 };
+
+const extractFullText = ({ atoms }: { atoms: TextAtom[] }): string =>
+	buildSearchablePageText({ atoms });
 
 // Recalculate character positions for indexable atoms only
 export const recalculateCharPositionsForIndexable = ({

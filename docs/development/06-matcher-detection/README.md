@@ -56,7 +56,7 @@ This should support both:
 19. If punctuation is part of a matcher, it must be preserved in match span/dedupe logic.
 20. Compound parsed refs should produce segmented child entries and one mention per segment (for example, `Gen 1:1-3, 2:4-5, 27` => three children + three mentions).
 21. Scripture child matcher labels default to emitted citation text from parsing (no automatic normalized-canonical alias expansion in v1).
-22. Split by index type for core index tables (`IndexEntries`, `IndexMatchers`, `IndexMentions`, and `IndexEntryGroups`) to enforce type-local constraints.
+22. Keep unified core index tables for MVP (`IndexEntries`, `IndexMatchers`, `IndexMentions`, and `IndexEntryGroups`) and enforce type-local constraints via `index_type`-aware uniqueness/indexing.
 23. DB-level dedupe should prevent duplicate `matcher + bbox` combinations within an index type.
 24. Multiple mentions may share the same bbox when they have different matchers/segments.
 25. Frontend should group identical-bbox mentions into one highlight with paging UI (`1 of N`).
@@ -263,41 +263,96 @@ Planned layout block model (Index page sidebar):
 - Parser matrix tests for supported syntax.
 - Negative tests for false positives.
 
-### Phase 4: Split-by-Type Schema + Matcher-Linked Mentions
+### Phase 4: Matcher Detection Run (No LLM) with Global Idempotency
 
-**Task 4.1: Schema migration**
-- Split core tables by index type (`entries`, `matchers`, `mentions`, `entry_groups`) and migrate write/read paths.
-- Ensure mention tables reference type-local matcher tables.
-- Add unique `matcher + bbox` constraints per index type mention table.
-
-**Task 4.2: Pre-MVP destructive cutover**
-- No backfill/dual-read path required.
-- Regenerate schema and seed flows for clean DB initialization.
-- Update repos/services to read/write type-local matcher/mention/entry/group tables only.
-
-**Task 4.3: Cleanup**
-- Remove legacy unified table paths and mention->entry write path.
-
-**Acceptance**
-- New mention writes are matcher-linked.
-- DB uniqueness prevents duplicate per-index-type `matcher + bbox` mentions.
-- Same bbox + different matcher is allowed.
-
-### Phase 5: Matcher Detection Run (No LLM) with Global Idempotency
-
-**Task 5.1: Build page matcher flow**
+**Task 4.1: Build page matcher flow**
 - Reuse extraction + bbox mapping in `detection.service.ts`.
 - For each target page:
   - build searchable text
   - run alias engine for selected groups
   - run parser profile per matched group
   - emit deterministic mention candidates
+- Implementation details (codebase-aligned):
+  - Replace `processMatcherStub` in `apps/index-pdf-backend/src/modules/detection/detection.service.ts` with real matcher processing while keeping the existing run lifecycle pattern used by `processDetection`:
+    - load run
+    - set status `running`
+    - per-page cancellation checks
+    - progress updates
+    - set status `completed` / `failed`
+  - Reuse existing source-document + PDF extraction plumbing from the LLM flow:
+    - `listSourceDocumentsByProject`, `getSourceDocumentById`, `extractPages`
+    - canonical-page exclusions via `listRules` and existing page-range helpers
+  - Build one alias snapshot per run (not per page) from selected groups:
+    - query matcher rows for `indexEntryGroupIds` or all groups (`runAllGroups`)
+    - materialize alias rows as `AliasInput[]` (`alias`, `matcherId`, `entryId`, `indexType`, `groupId`)
+    - compile once with `buildAliasIndex(...)`
+  - For each page:
+    - convert extracted atoms into searchable page text using indexable words only (same convention as `buildPromptText`/`recalculateCharPositionsForIndexable`)
+    - scan with `scanTextWithAliasIndex(...)` (or `findAndResolveMatches(...)` if normalized text is precomputed)
+    - map alias match char spans to bboxes using existing `mapPositionsToBBoxes(...)` + corrected indexable atom offsets
+    - group matches by `groupId`, resolve parser profile id for that group, and run profile parse against local windows anchored at alias hits
+      - precheck window default: 24 chars after alias
+      - parser window default: 120 chars (hard cap 200)
+    - emit in-memory mention candidates in deterministic order (`pageNumber`, `charStart`, longer span first) for later resolution/persistence in Phase 5
+  - Candidate payload target (before persistence):
+    - `pageNumber`, `groupId`, `matcherId`, `entryId`, `indexType`
+    - `textSpan`, `charStart`, `charEnd`, `bboxes`
+    - optional parser output segments (`refText`, `chapter`, `verseStart`, `verseEnd`)
+  - Keep this phase persistence-light:
+    - Task 4.1 should produce deterministic candidates
+    - Task 4.2 handles dedupe semantics
+    - Phase 5 attaches candidates to resolved matcher/entry rows
+- Suggested test coverage for Task 4.1:
+  - service-level test: matcher run completes without LLM API key
+  - page-flow test: alias hit -> bbox mapping -> candidate emission
+  - determinism test: repeated same inputs produce byte-for-byte equivalent candidate ordering
+  - group-profile test: different group parser profiles only parse their own matches
 
-**Task 5.2: Global dedupe policy**
+**Task 4.2: Global dedupe policy**
 - In-memory dedupe within run.
-- DB uniqueness (per index type `matcher + bbox`) prevents identical mention duplicates across runs.
+- DB uniqueness (`index_type + matcher + bbox`) prevents identical mention duplicates across runs.
+- Implementation details (codebase-aligned):
+  - Add deterministic in-memory dedupe before persistence in matcher flow (`detection.service.ts`):
+    - build a stable key per candidate: `projectIndexTypeId + matcherId + pageNumber + canonicalBboxJson`
+    - canonicalize bbox arrays before keying (sort by `y`, then `x`, then `width`, `height`) so equivalent atom orderings dedupe identically
+    - dedupe across the entire run, not just within a page batch
+  - Enforce DB idempotency with a composite uniqueness constraint once matcher-linked mentions land:
+    - target table: `index_mentions`
+    - uniqueness scope: `project_index_type_id + matcher_id + page_number + bboxes_hash` (or equivalent canonical bbox representation)
+    - do not include `detection_run_id` in uniqueness key
+  - Add a persisted bbox fingerprint field for reliable uniqueness:
+    - store normalized JSON or hash derived from canonical bbox array
+    - keep hash generation deterministic and language/runtime stable
+  - Upsert/insert behavior in repo layer:
+    - insert mentions with conflict handling (`on conflict do nothing`) against the composite unique index
+    - count "created" mentions from successful inserts only; skipped conflicts are treated as expected dedupe hits
+  - Scope rules to preserve intended duplicates:
+    - same bbox + different matcher => allowed
+    - same matcher + different bbox => allowed
+    - same matcher + same bbox + same index type => blocked (within run and across reruns)
+- Suggested test coverage for Task 4.2:
+  - unit test: canonical bbox ordering generates identical dedupe keys for equivalent bbox sets
+  - service test: duplicate candidates in one run collapse to one insert attempt
+  - integration test: rerunning identical matcher inputs creates zero additional mentions
+  - integration test: same bbox for two different matchers both persist successfully
+- Dedupe against pre-existing mentions (created before current run):
+  - Immediate (pre-matcher-linked migration):
+    - add repo pre-check query for existing mentions by `project_index_type_id + entry_id + page_number + bboxes_hash`
+    - skip insert when existing row is found
+    - keep in-memory dedupe active to avoid repeated DB reads for identical candidates in same run
+  - Target (after matcher-linked mentions are in place):
+    - enforce unique index on `project_index_type_id + matcher_id + page_number + bboxes_hash`
+    - use `insert ... on conflict do nothing` as the primary guard against pre-existing duplicates
+    - remove/limit application-layer pre-check to reduce race conditions and extra round-trips
+  - Backfill/migration step:
+    - compute canonical `bboxes_hash` for existing `index_mentions`
+    - identify duplicate clusters by the chosen uniqueness key and retain one canonical row (lowest `created_at` or `id`)
+    - only add the unique index after duplicate cleanup succeeds
+  - Operational notes:
+    - dedupe check must ignore `detection_run_id` so older rows still block duplicates
+    - use same canonical bbox serializer in run-time code and migration scripts to avoid hash drift
 
-**Task 5.3: Fallback mention span**
+**Task 4.3: Fallback mention span**
 - On parse-fail-after-context-pass, emit book-level mention using maximum local span available.
 - Include punctuation when that punctuation is part of the matched matcher text.
 
@@ -305,12 +360,12 @@ Planned layout block model (Index page sidebar):
 - Re-running same run inputs does not accumulate duplicate identical mentions.
 - Matcher runs work without LLM/API keys.
 
-### Phase 6: Entry Resolution + Scripture Child Entry/Matcher Emission
+### Phase 5: Entry Resolution + Scripture Child Entry/Matcher Emission
 
-**Task 6.1: Subject resolution**
+**Task 5.1: Subject resolution**
 - Resolve directly to existing matcher/entry rows.
 
-**Task 6.2: Scripture resolution strategy**
+**Task 5.2: Scripture resolution strategy**
 - Resolve canonical book alias -> parent entry.
 - Create/reuse chapter/verse child entries as needed.
 - For compound refs, segment and emit child entries/matchers per segment.
@@ -318,7 +373,7 @@ Planned layout block model (Index page sidebar):
 - Create/reuse matcher rows for emitted child-reference strings, preserving parsed punctuation/token intent.
 - Attach mention to resolved child matcher.
 
-**Task 6.3: Centralize resolution service**
+**Task 5.3: Centralize resolution service**
 - Suggested file: `apps/index-pdf-backend/src/modules/detection/entry-resolution.service.ts`
 - Hide subject/scripture differences behind strategy interface.
 
@@ -327,18 +382,18 @@ Planned layout block model (Index page sidebar):
 - Scripture mentions attach to child matchers under expected child entries.
 - Compound refs create one mention per emitted child segment.
 
-### Phase 7: IndexEntryGroup Data Model + Detection Integration
+### Phase 6: IndexEntryGroup Data Model + Detection Integration
 
-**Task 7.1: Data model**
+**Task 6.1: Data model**
 - Add `index_entry_groups` + membership relation to entries/matchers.
 - Add profile assignment per group.
 - Add group sort mode metadata (`a-z`, canon order, etc.).
 
-**Task 7.2: Detection integration**
+**Task 6.2: Detection integration**
 - Build matcher snapshot by selected groups.
 - Enable per-group runs and run-all mode.
 
-**Task 7.3: Matcher-aware page coverage**
+**Task 6.3: Matcher-aware page coverage**
 - Add run-coverage table keyed by page + matcher.
 - Skip already-covered matcher/page pairs on subsequent runs.
 
@@ -347,13 +402,13 @@ Planned layout block model (Index page sidebar):
 - Run-all mode works.
 - Already-covered matcher/page pairs can be skipped.
 
-### Phase 8: Scripture Bootstrapping + Canon Rules
+### Phase 7: Scripture Bootstrapping + Canon Rules
 
-**Task 8.1: Dedicated scripture-config table**
+**Task 7.1: Dedicated scripture-config table**
 - Persist selected canon + corpora options in dedicated schema.
 - Enforce canon mutual exclusivity based on `canons.ts`.
 
-**Task 8.2: Explicit bootstrap workflow**
+**Task 7.2: Explicit bootstrap workflow**
 - Seed entries/matchers for:
   - selected canon
   - Apocrypha
@@ -363,32 +418,32 @@ Planned layout block model (Index page sidebar):
   - Dead Sea Scrolls
   - optional additional HB/NT books not in selected canon
 
-**Task 8.3: Post-seed editability**
+**Task 7.3: Post-seed editability**
 - Ensure groups/entries/matchers are editable after seed.
 
 **Acceptance**
 - User can seed via explicit action.
 - Seeded data can be reorganized across groups.
 
-### Phase 9: UI Surface (Project Sidebar, Page Sidebar, Index Sidebar)
+### Phase 8: UI Surface (Project Sidebar, Page Sidebar, Index Sidebar)
 
-**Task 9.1: Project sidebar detection controls**
+**Task 8.1: Project sidebar detection controls**
 - Mode selector (`LLM`/`Matcher`)
 - Group selector + run-all option
 - Project-level run action
 
-**Task 9.2: Page sidebar detection controls**
+**Task 8.2: Page sidebar detection controls**
 - Group selector + run-all option
 - Page-level run action
 
-**Task 9.3: Index page group/layout sidebar**
+**Task 8.3: Index page group/layout sidebar**
 - New draggable/collapsible sidebar for:
   - `IndexEntryGroup` CRUD
   - group profile/sort settings
   - layout blocks (`H1`, `H2`, `H3`, `GroupRef`)
   - drag/drop ordering
 
-**Task 9.4: Scripture setup controls**
+**Task 8.4: Scripture setup controls**
 - Canon selection + corpora toggles + additional-book selection
 - Trigger bootstrapping endpoint
 
@@ -396,14 +451,14 @@ Planned layout block model (Index page sidebar):
 - User can run matcher detection from project or page context.
 - User can structure rendered index using layout blocks + group refs.
 
-### Phase 10: Test Strategy + Performance Gates
+### Phase 9: Test Strategy + Performance Gates
 
-**Task 10.1: Unit tests**
+**Task 9.1: Unit tests**
 - normalization + offset mapping
 - boundary/overlap filtering
 - parser profile contract + scripture parser grammar matrix
 
-**Task 10.2: Integration tests**
+**Task 9.2: Integration tests**
 - matcher-linked mention persistence
 - scripture child entry/matcher creation
 - per-group vs run-all run behavior
@@ -411,12 +466,11 @@ Planned layout block model (Index page sidebar):
 - dedupe/idempotency across repeated runs
 - matcher coverage skip behavior
 
-**Task 10.3: Migration tests**
-- destructive cutover migration correctness in clean DB bootstrap
-- split type-local table writes/reads (`entries`, `matchers`, `mentions`, `entry_groups`)
-- duplicate `matcher + bbox` constraints enforce correctly while allowing same bbox with different matchers
+**Task 9.3: Migration tests**
+- matcher-linked mention migration correctness in current unified tables
+- duplicate constraints (`index_type + matcher + bbox`) enforce correctly while allowing same bbox with different matchers
 
-**Task 10.4: Performance baseline**
+**Task 9.4: Performance baseline**
 - benchmark matcher scan + parser on representative corpus
 - publish P50/P95 ms per page + peak memory per run
 
@@ -429,41 +483,40 @@ Planned layout block model (Index page sidebar):
 1. Phase 0
 2. Phase 1
 3. Phase 2
-4. Phase 4 (schema migration early)
+4. Phase 4
 5. Phase 5
-6. Phase 6
-7. Phase 3 (expand profiles after core run path is stable)
+6. Phase 3 (expand profiles after core run path is stable)
+7. Phase 6
 8. Phase 7
 9. Phase 8
 10. Phase 9
-11. Phase 10
 
 Rationale: lock run contract and matcher-linked persistence first, then build extraction correctness, then group/config UX and performance hardening.
 
 ## Risks
 
-- Full type-table split increases query and repo complexity if abstraction boundaries are weak.
+- Keeping unified tables increases risk of accidental cross-type query/write bugs without strict `index_type` filtering.
 - Parser-profile drift across corpora can create false positives until profile definitions are finalized.
 - Matcher immutability requires explicit create-new-matcher UX for edits.
 - Group/layout complexity can over-expand UI scope without clear v1 constraints.
 - Runtime rebuild of large matcher sets per page can regress performance (build once per run scope where possible).
 
-## Data Model Decision: Split by Index Type
+## Data Model Decision: Keep Unified Tables for MVP
 
 Recommendation:
-- Split `index_entries`, `index_matchers`, `index_mentions`, and `index_entry_groups` by index type.
+- Keep `index_entries`, `index_matchers`, `index_mentions`, and `index_entry_groups` unified for MVP.
 
 Why:
-- Type-local uniqueness is simpler and safer to enforce.
-- Type-specific schemas can evolve independently.
-- Dedupe constraints (`matcher + bbox`) are explicit and local.
+- Avoids high migration and repo complexity during core matcher rollout.
+- Keeps current read/write paths stable while parser/resolution flows mature.
+- Dedupe constraints can still be explicit via composite uniqueness (`index_type + matcher + bbox`).
 
 When to revisit:
-- if query/repo duplication overhead outweighs type-local constraint clarity.
+- if unified-table complexity or index bloat becomes a bottleneck in production.
 
 ## Open Questions (Need Decisions Before Non-Biblical Profile Implementation)
 
 1. Predefined profile list: which profile ids should ship in v1 beyond baseline scripture style?
 2. Unique bbox definition for DB constraints: exact bbox tuple fields to enforce uniqueness (page + x/y/w/h + rotation? atom span ids?)?
-3. Split table naming conventions for each index type (`subject_*`, `scripture_*`, etc.)?
+3. Which composite indexes are required to keep unified-table matcher queries fast at expected scale?
 4. For same-bbox grouping UI, is frontend-only grouping sufficient in v1, or should we persist a backend `mention_group_id`?
