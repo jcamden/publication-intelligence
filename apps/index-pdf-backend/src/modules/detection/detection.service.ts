@@ -13,6 +13,7 @@ import type { AliasIndex, ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
+import { resolveAndPersistSubjectCandidates } from "./entry-resolution.service";
 import type {
 	CreateLlmDetectionRunInput,
 	CreateMatcherDetectionRunInput,
@@ -723,18 +724,33 @@ const processMatcher = async ({
 
 	const dedupedCandidates = dedupeMatcherCandidates(allCandidates, projectIndexTypeId);
 
-	const mentionsCreated = await detectionRepo.insertMatcherMentionsBatch({
-		userId,
-		documentId: sourceDoc.id,
-		detectionRunId: runId,
-		projectIndexTypeId,
-		candidates: dedupedCandidates.map((c) => ({
-			entryId: c.entryId,
-			pageNumber: c.pageNumber,
-			textSpan: c.textSpan,
-			bboxes: c.bboxes,
-		})),
-	});
+	let mentionsCreated: number;
+	if (run.indexType === "subject") {
+		const result = await resolveAndPersistSubjectCandidates({
+			candidates: dedupedCandidates,
+			context: {
+				userId,
+				documentId: sourceDoc.id,
+				detectionRunId: runId,
+				projectIndexTypeId,
+				indexType: run.indexType,
+			},
+		});
+		mentionsCreated = result.persisted;
+	} else {
+		mentionsCreated = await detectionRepo.insertMatcherMentionsBatch({
+			userId,
+			documentId: sourceDoc.id,
+			detectionRunId: runId,
+			projectIndexTypeId,
+			candidates: dedupedCandidates.map((c) => ({
+				entryId: c.entryId,
+				pageNumber: c.pageNumber,
+				textSpan: c.textSpan,
+				bboxes: c.bboxes,
+			})),
+		});
+	}
 
 	await detectionRepo.updateDetectionRunStatus({
 		userId,

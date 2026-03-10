@@ -392,6 +392,32 @@ Planned layout block model (Index page sidebar):
 
 **Task 5.1: Subject resolution**
 - Resolve directly to existing matcher/entry rows.
+- Implementation details (codebase-aligned):
+  - Add a subject resolution strategy in `entry-resolution.service.ts` that consumes matcher-phase candidates from Phase 4.
+  - Resolution contract for `subject` index type:
+    - do not create new `index_entries`
+    - do not create new `index_matchers`
+    - require candidate `matcherId` to resolve to an existing matcher in the same `projectIndexTypeId`
+  - Repo lookup behavior:
+    - fetch matcher by `matcherId` (and `projectIndexTypeId` guard)
+    - derive `entryId` from matcher relation
+    - if matcher is missing/mismatched, drop candidate and log as `resolution_miss` (non-fatal)
+  - Mention persistence behavior:
+    - persist mention linked to resolved matcher/entry (current schema may still store `entryId`; keep code path ready for matcher-linked mention schema)
+    - preserve candidate `textSpan`, `pageNumber`, and mapped `bboxes` unchanged
+    - apply Task 4.2 dedupe rules before/at insert
+  - Deterministic processing:
+    - resolve candidates in existing deterministic order from Phase 4
+    - maintain stable counters: `candidatesSeen`, `resolved`, `persisted`, `deduped`, `dropped`
+  - Failure handling:
+    - one candidate resolution/persist failure must not fail the entire run
+    - accumulate per-page warnings and continue
+- Suggested test coverage for Task 5.1:
+  - resolves valid subject candidate to existing matcher->entry and persists mention
+  - does not create entries or matchers during subject resolution
+  - drops candidate when matcher does not exist in current project/index type
+  - preserves original `textSpan` and `bboxes` in persisted mention
+  - duplicate resolved mentions are skipped per Task 4.2 without run failure
 
 **Task 5.2: Scripture resolution strategy**
 - Resolve canonical book alias -> parent entry.
@@ -400,10 +426,81 @@ Planned layout block model (Index page sidebar):
   - Example: `Gen 1:1-3, 2:4-5, 27` => `Genesis > 1:1-3`, `Genesis > 2:4-5`, `Genesis > 2:27`.
 - Create/reuse matcher rows for emitted child-reference strings, preserving parsed punctuation/token intent.
 - Attach mention to resolved child matcher.
+- Implementation details (codebase-aligned):
+  - Add a scripture resolution strategy in `entry-resolution.service.ts` that consumes parser segments from Phase 4 candidates.
+  - Parent book resolution:
+    - use candidate `matcherId` (book alias match) to resolve base matcher + parent entry
+    - validate parent belongs to the run `projectIndexTypeId` and scripture index type
+    - if base matcher/entry missing, drop candidate as `resolution_miss` (non-fatal)
+  - Segment expansion rules:
+    - if parsed segments exist, emit one resolution unit per segment (`refText`, chapter/verse metadata)
+    - if no parsed segments and fallback flag is set, emit one book-level resolution unit
+    - preserve segment order from parser output for deterministic persistence
+  - Child entry create-or-reuse:
+    - build deterministic child label/slug under parent entry from emitted segment text (book-level keeps parent)
+    - lookup existing child by `(projectId, projectIndexTypeId, parentId, slug)` before insert
+    - create missing child with `detectionRunId` set; reuse existing row when present
+  - Child matcher create-or-reuse:
+    - matcher text defaults to emitted `refText` (or book label for fallback/book-only mention)
+    - lookup existing matcher by `(projectIndexTypeId, text)` and verify it points to intended child entry
+    - if matcher exists for different entry, create a deterministic alternate text variant per conflict policy (for example suffixing disambiguator) instead of re-pointing existing matcher
+  - Mention attachment:
+    - persist one mention per emitted resolution unit attached to the resolved child matcher (or parent matcher for book-level fallback)
+    - preserve original page/bbox span from detection candidate; do not rewrite text span during resolution
+    - apply Task 4.2 dedupe semantics at insert time
+  - Transaction and consistency:
+    - per-candidate (or per-page batch) transaction should include child entry create/reuse, child matcher create/reuse, and mention insert
+    - on unique conflict during create, re-query and continue (idempotent retry-safe behavior)
+  - Metrics/logging:
+    - track `childrenCreated`, `childrenReused`, `matchersCreated`, `matchersReused`, `mentionsPersisted`, `mentionsDeduped`, `resolutionMisses`
+- Suggested test coverage for Task 5.2:
+  - resolves book alias + one parsed segment to existing/reused child matcher mention
+  - creates child entry and matcher when segment target does not yet exist
+  - compound refs emit one mention per segment in stable order
+  - fallback book-level candidate attaches mention without creating spurious child refs
+  - rerun idempotency: no duplicate mentions, and child entry/matcher rows are reused
+  - matcher text conflict case does not mutate existing matcher->entry mapping
 
 **Task 5.3: Centralize resolution service**
 - Suggested file: `apps/index-pdf-backend/src/modules/detection/entry-resolution.service.ts`
 - Hide subject/scripture differences behind strategy interface.
+- Implementation details (codebase-aligned):
+  - Create `entry-resolution.service.ts` as the single integration point between Phase 4 candidate emission and DB persistence.
+  - Define shared resolution interfaces:
+    - `ResolutionCandidate` (input from matcher flow)
+    - `ResolvedMentionWrite` (normalized persistence payload)
+    - `ResolutionStrategy` with `canHandle(indexType)` and `resolve(candidate, ctx)` methods
+  - Strategy registration:
+    - `subjectResolutionStrategy` for Task 5.1 behavior
+    - `scriptureResolutionStrategy` for Task 5.2 behavior
+    - dispatch by run `indexType` (and optionally group profile metadata)
+  - Service orchestration responsibilities:
+    - accept deterministic candidate list
+    - execute strategy resolution per candidate
+    - apply shared dedupe + persistence path (Task 4.2)
+    - aggregate counters/errors for run progress updates
+  - Repo boundary split:
+    - keep SQL in `detection.repo.ts` (or new `entry-resolution.repo.ts` if query volume grows)
+    - keep parsing/decision logic in strategy/service layer only
+    - no index-type-specific SQL branching in `detection.service.ts`
+  - Error model:
+    - strategy returns typed outcomes: `resolved`, `dropped`, `deduped`, `failed`
+    - non-fatal candidate failures are collected and logged with structured reason codes
+    - fatal errors only for infrastructure issues (DB unavailable, transaction failure)
+  - Transaction model:
+    - use one transaction boundary per candidate write bundle (or per page batch if performance-tested)
+    - ensure child entry/matcher create-or-reuse + mention insert are atomic for scripture
+  - Migration compatibility:
+    - support current entry-linked mention schema and target matcher-linked mention schema behind one repository adapter
+    - avoid leaking schema transition details into strategy code
+  - `detection.service.ts` integration:
+    - matcher run builds candidates -> calls `resolveAndPersistCandidates(...)` -> receives counters/status
+    - keep run lifecycle (running/progress/completed/failed) unchanged
+- Suggested test coverage for Task 5.3:
+  - dispatch test: subject/scripture candidates route to correct strategy
+  - contract test: both strategies return valid `ResolvedMentionWrite` or typed drop/failure outcomes
+  - orchestration test: mixed candidate set aggregates counters deterministically
+  - adapter test: same resolution payload persists correctly in entry-linked and matcher-linked mention modes
 
 **Acceptance**
 - Subject mentions resolve via existing matchers.
@@ -416,14 +513,115 @@ Planned layout block model (Index page sidebar):
 - Add `index_entry_groups` + membership relation to entries/matchers.
 - Add profile assignment per group.
 - Add group sort mode metadata (`a-z`, canon order, etc.).
+- Implementation details (codebase-aligned):
+  - Add new table `index_entry_groups` (project-scoped, index-type-scoped):
+    - columns: `id`, `project_id`, `project_index_type_id`, `name`, `slug`, `parser_profile_id`, `sort_mode`, `created_at`, `updated_at`, `deleted_at`
+    - `parser_profile_id` stores predefined profile id (for example `scripture-biblical`) or `null` for alias-only groups
+    - `sort_mode` enum/string includes at least `a_z` and canon-aware options used by scripture layouts
+  - Add group membership relations:
+    - `index_entry_group_entries` join table: `group_id`, `entry_id`, optional `position`
+    - `index_entry_group_matchers` join table: `group_id`, `matcher_id`, optional `position`
+    - both joins should support deterministic ordering for UI/render and matcher snapshot building
+  - Constraints/indexes:
+    - unique group slug per `(project_id, project_index_type_id)` excluding soft-deleted groups
+    - unique membership per pair (`group_id + entry_id`, `group_id + matcher_id`)
+    - FK guards ensure all related rows share compatible `project_index_type_id`
+    - indexes for detection queries: `(project_index_type_id, group_id)` and `(group_id, matcher_id)`
+  - RLS/policies:
+    - inherit access from `projects` (same model as other indexing tables)
+    - membership tables inherit via group/entry/matcher ownership checks
+  - Migration plan:
+    - add schema + constraints in one migration
+    - backfill default groups only if required by existing project behavior; otherwise start empty and let UI create groups explicitly
+    - update `db/schema/index.ts` exports and relations for Drizzle typing
+  - API/repo shape updates:
+    - add repository functions to list groups, fetch group matcher snapshot, and manage memberships
+    - expose parser profile ids and sort modes as validated enums in input schemas
+  - Detection integration contract from this task:
+    - matcher run inputs (`indexEntryGroupIds` / `runAllGroups`) must resolve through these new tables only
+    - per-group parser profile resolution reads `parser_profile_id` from `index_entry_groups`
+- Suggested test coverage for Task 6.1:
+  - migration test: tables/constraints created and enforce uniqueness/FK rules
+  - repo test: group membership queries return deterministic matcher sets
+  - validation test: invalid parser profile id or sort mode is rejected
+  - soft-delete test: deleted groups are excluded from run targeting by default
 
 **Task 6.2: Detection integration**
 - Build matcher snapshot by selected groups.
 - Enable per-group runs and run-all mode.
+- Implementation details (codebase-aligned):
+  - Run input resolution:
+    - if `indexEntryGroupIds` is provided, load only those groups (validated to same `projectId` + `projectIndexTypeId`)
+    - if `runAllGroups` is `true`, load all active groups for the run index type
+    - reject run when resolved group set is empty
+  - Group snapshot assembly (once per run):
+    - fetch group metadata (`id`, `parser_profile_id`, `sort_mode`)
+    - fetch group matchers via `index_entry_group_matchers` (or entry-derived matcher expansion if configured)
+    - materialize alias rows as `AliasInput[]` with `groupId` populated
+    - compile one alias index via `buildAliasIndex(...)`
+  - Parser profile mapping:
+    - resolve each group's `parser_profile_id` through `getParserProfile(...)`
+    - for `null` profile groups, run alias-only behavior (no parser call)
+    - if profile id is unknown, fail run early with explicit config error
+  - `runMatcher` service integration:
+    - replace stub processing with: page extraction -> alias scan -> per-group parse/fallback -> candidate emission -> resolution/persist
+    - keep existing run lifecycle semantics (`queued` -> `running` -> `completed|failed|cancelled`)
+    - keep page-level progress updates and cancellation checks
+  - Scope handling:
+    - `scope=project`: process canonical-allowed pages in document range
+    - `scope=page`: resolve `pageId` to one document page and process only that page
+    - both scopes share identical matcher/group pipeline; only target-page set differs
+  - Determinism/performance:
+    - never rebuild alias automaton per page; reuse run-level compiled snapshot
+    - keep deterministic candidate order across groups: `pageNumber`, `charStart`, longer span first, stable `groupId` tiebreaker
+    - cache group/profile lookup in-memory for the run
+  - Observability:
+    - log selected groups and matcher counts at run start
+    - track per-group counters (`matchesFound`, `parseAttempts`, `segmentsEmitted`, `fallbacksEmitted`)
+    - expose aggregated counts in run progress metadata where available
+- Suggested test coverage for Task 6.2:
+  - selected-group run only scans matchers from provided `indexEntryGroupIds`
+  - run-all mode scans all active groups for the index type
+  - page scope processes only the targeted page
+  - null-profile group performs alias-only extraction; profiled group performs parse
+  - unknown parser profile id causes deterministic run failure before scanning
+  - matcher snapshot is built once per run, not once per page
 
 **Task 6.3: Matcher-aware page coverage**
 - Add run-coverage table keyed by page + matcher.
 - Skip already-covered matcher/page pairs on subsequent runs.
+- Implementation details (codebase-aligned):
+  - Add coverage table for matcher runs (suggested: `detection_matcher_page_coverage`):
+    - columns: `id`, `project_id`, `project_index_type_id`, `document_id`, `page_number`, `matcher_id`, `last_detection_run_id`, `covered_at`
+    - optional metadata: `group_id`, `settings_hash` (if future invalidation by config is required)
+  - Core uniqueness/indexing:
+    - unique key on `(project_index_type_id, document_id, page_number, matcher_id)`
+    - supporting indexes for lookup by run scope: `(project_id, project_index_type_id, page_number)` and `(matcher_id, page_number)`
+  - Skip algorithm in matcher flow:
+    - for each target page, compute candidate matcher ids from run snapshot
+    - query existing coverage rows for `(document_id, page_number, matcher_id in snapshot)`
+    - exclude covered matcher ids from alias scan work for that page
+    - if all matchers are covered for page, mark page progress and continue without scan/parse
+  - Coverage write timing:
+    - write coverage rows only after candidate resolution/persistence stage completes for that page+matcher slice
+    - use `insert ... on conflict do update` to refresh `last_detection_run_id` and `covered_at`
+    - do not write coverage for cancelled/failed page processing
+  - Scope and invalidation rules:
+    - coverage is matcher-specific and page-specific; unaffected matchers still run
+    - coverage should not be keyed by run id; it represents accumulated processing state
+    - if matcher text/ownership changes are modeled as new matcher rows (immutable matcher policy), old coverage naturally remains isolated
+  - Interaction with dedupe:
+    - coverage skip prevents unnecessary compute
+    - DB dedupe remains the correctness backstop if coverage is stale/missed
+  - Observability:
+    - track per run: `matchersConsidered`, `matchersSkippedByCoverage`, `pagesFullySkipped`, `coverageRowsWritten`
+    - emit debug logs for first N skipped matcher/page pairs to aid validation
+- Suggested test coverage for Task 6.3:
+  - first run writes coverage rows for processed matcher/page pairs
+  - second identical run skips covered matcher/page pairs and does less work
+  - partial coverage case: page runs only uncovered matchers
+  - cancellation case: no coverage rows are written for uncompleted work
+  - unique constraint test: duplicate coverage inserts collapse via upsert without error
 
 **Acceptance**
 - Each group can run independently.

@@ -562,6 +562,46 @@ export const getProjectIndexTypeByType = async ({
 };
 
 /**
+ * Fetch matcher by id and projectIndexTypeId. Returns entryId when matcher exists
+ * and its entry is not deleted. Used for subject resolution (Task 5.1) to validate
+ * candidate matcherId before persisting mention.
+ */
+export const getMatcherByIdAndProjectIndexTypeId = async ({
+	userId,
+	matcherId,
+	projectIndexTypeId,
+}: {
+	userId: string;
+	matcherId: string;
+	projectIndexTypeId: string;
+}): Promise<{ entryId: string } | null> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [row] = await tx
+				.select({ entryId: indexMatchers.entryId })
+				.from(indexMatchers)
+				.innerJoin(
+					indexEntries,
+					and(
+						eq(indexMatchers.entryId, indexEntries.id),
+						eq(indexEntries.projectIndexTypeId, indexMatchers.projectIndexTypeId),
+					),
+				)
+				.where(
+					and(
+						eq(indexMatchers.id, matcherId),
+						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.limit(1);
+			return row ?? null;
+		},
+	});
+};
+
+/**
  * List matcher alias rows for a matcher detection run.
  * Used to build the alias index (one snapshot per run).
  * When runAllGroups: all matchers for project + index type.
