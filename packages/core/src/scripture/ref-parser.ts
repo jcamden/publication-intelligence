@@ -27,36 +27,35 @@ function looksLikeRef(ref: string): boolean {
 	return tokens.every((t) => /^\d+[a-z]?$/i.test(t));
 }
 
-/** Optional verse suffix (3a, 3b). Return numeric value and ref text for label. */
-function parseVerseNum(s: string): { num: number; refText: string } {
+/** Optional verse suffix (3a, 3b). Return numeric value, ref text, and optional suffix. */
+function parseVerseNum(s: string): { num: number; refText: string; suffix?: string } {
 	const m = s.match(/^(\d+)([a-z])?$/i);
 	if (m) {
 		const num = Number.parseInt(m[1], 10);
 		const refText = m[2] ? `${m[1]}${m[2].toLowerCase()}` : m[1];
-		return { num, refText };
+		const suffix = m[2] ? m[2].toLowerCase() : undefined;
+		return { num, refText, suffix };
 	}
 	const n = Number.parseInt(s, 10);
 	return { num: Number.isNaN(n) ? 0 : n, refText: s };
 }
 
-/** Parse a single ref token (no commas): ch, ch-ch, ch:v, ch.v, ch:v-v, cross-chapter. */
-function parseSingleRef(block: string): ParsedRefSegment | null {
+/** Parse a single ref token (no commas): ch, ch-ch, ch:v, ch.v, ch:v-v, cross-chapter. Returns one segment, or two for cross-chapter. */
+function parseSingleRef(block: string): ParsedRefSegment | ParsedRefSegment[] | null {
 	const t = block.trim();
 	if (t.length === 0) return null;
 
-	// Cross-chapter: 1:20-2:4
+	// Cross-chapter: 1:20-2:4 → two segments (1:20 to end of ch1, 2:1-4)
 	const cross = t.match(/^(\d+)[:.](\d+)-(\d+)[:.](\d+)$/);
 	if (cross) {
 		const c1 = Number.parseInt(cross[1], 10);
 		const v1 = Number.parseInt(cross[2], 10);
 		const c2 = Number.parseInt(cross[3], 10);
 		const v2 = Number.parseInt(cross[4], 10);
-		return {
-			refText: t,
-			chapter: c1,
-			verseStart: v1,
-			verseEnd: v2,
-		};
+		return [
+			{ refText: `${c1}:${v1}`, chapter: c1, verseStart: v1 },
+			{ refText: `${c2}:1-${v2}`, chapter: c2, verseStart: 1, verseEnd: v2 },
+		];
 	}
 
 	// ch:v-v (same chapter): 1:2-4
@@ -65,12 +64,14 @@ function parseSingleRef(block: string): ParsedRefSegment | null {
 		const ch = Number.parseInt(verseRange[1], 10);
 		const v1 = parseVerseNum(verseRange[2]);
 		const v2 = parseVerseNum(verseRange[3]);
-		return {
+		const seg: ParsedRefSegment = {
 			refText: t,
 			chapter: ch,
 			verseStart: v1.num,
 			verseEnd: v2.num,
 		};
+		if (v1.suffix) seg.verseSuffix = v1.suffix;
+		return seg;
 	}
 
 	// ch:v or ch.v (single verse, optional suffix): 1:2, 1.2, 1:3a
@@ -78,20 +79,22 @@ function parseSingleRef(block: string): ParsedRefSegment | null {
 	if (singleVerse) {
 		const ch = Number.parseInt(singleVerse[1], 10);
 		const v = parseVerseNum(singleVerse[2] + (singleVerse[3] ?? ""));
-		return {
+		const seg: ParsedRefSegment = {
 			refText: singleVerse[3] ? `${singleVerse[1]}:${v.refText}` : t,
 			chapter: ch,
 			verseStart: v.num,
 			verseEnd: v.num,
 		};
+		if (v.suffix) seg.verseSuffix = v.suffix;
+		return seg;
 	}
 
-	// Chapter range: 1-3
+	// Chapter range: 1-3 (chapters, not verses; verse mode requires : or .)
 	const chRange = t.match(/^(\d+)-(\d+)$/);
 	if (chRange) {
 		const c1 = Number.parseInt(chRange[1], 10);
 		const c2 = Number.parseInt(chRange[2], 10);
-		return { refText: t, chapter: c1, verseEnd: c2 };
+		return { refText: t, chapter: c1, chapterEnd: c2 };
 	}
 
 	// Chapter only: 1, 2
@@ -104,16 +107,17 @@ function parseSingleRef(block: string): ParsedRefSegment | null {
 	return null;
 }
 
-/** Verse list: 1:1, 2, 3 or 1:1, 3-5, 7. First element sets chapter; rest are verses (single or range). */
+/** Verse list: 1:1, 2, 3 or 1:1, 3-5, 7. First element must be ch:v/ch.v (verse mode); rest are verses. */
 function parseVerseList(block: string): ParsedRefSegment[] {
 	const parts = block.split(",").map((p) => p.trim()).filter(Boolean);
 	if (parts.length === 0) return [];
 
-	const first = parseSingleRef(parts[0]);
+	const firstResult = parseSingleRef(parts[0]);
+	const first = Array.isArray(firstResult) ? firstResult[0] : firstResult;
 	if (!first || first.chapter === undefined) return [];
 
 	const chapter = first.chapter;
-	const segments: ParsedRefSegment[] = [first];
+	const segments: ParsedRefSegment[] = [...(Array.isArray(firstResult) ? firstResult : [first])];
 
 	for (let i = 1; i < parts.length; i++) {
 		const p = parts[i];
@@ -122,43 +126,47 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 		if (range) {
 			const v1 = parseVerseNum(range[1] + (range[2] ?? ""));
 			const v2 = parseVerseNum(range[3] + (range[4] ?? ""));
-			segments.push({
+			const seg: ParsedRefSegment = {
 				refText: p,
 				chapter,
 				verseStart: v1.num,
 				verseEnd: v2.num,
-			});
+			};
+			if (v1.suffix) seg.verseSuffix = v1.suffix;
+			segments.push(seg);
 			continue;
 		}
 		// Single verse in list: 7, 3a
 		const single = p.match(/^(\d+)([a-z])?$/i);
 		if (single) {
 			const v = parseVerseNum(single[1] + (single[2] ?? ""));
-			segments.push({
+			const seg: ParsedRefSegment = {
 				refText: v.refText,
 				chapter,
 				verseStart: v.num,
 				verseEnd: v.num,
-			});
+			};
+			if (v.suffix) seg.verseSuffix = v.suffix;
+			segments.push(seg);
 			continue;
 		}
 		// Not a verse form; treat as single ref and push if valid
 		const one = parseSingleRef(p);
-		if (one) segments.push(one);
+		if (one) {
+			if (Array.isArray(one)) segments.push(...one);
+			else segments.push(one);
+		}
 	}
 
 	return segments;
 }
 
-/** Decide if block is verse list (starts with ch:v or ch then comma-separated verse-like items). */
+/** Verse mode is triggered by : or . (e.g. 1:1 or 2.1). "1, 2, 3" without :/. is chapters, not verse list. */
 function isVerseList(block: string): boolean {
 	const parts = block.split(",").map((p) => p.trim()).filter(Boolean);
 	if (parts.length < 2) return false;
-	// First part must be ch or ch:v
 	const first = parts[0];
-	if (/^\d+$/.test(first)) return true; // chapter only then list
-	if (/^\d+[:.]\d+([a-z])?$/i.test(first)) return true; // ch:v then list
-	return false;
+	return /^\d+[:.]\d+([a-z])?$/i.test(first);
 }
 
 function parseBlock(block: string): ParsedRefSegment[] {
@@ -167,14 +175,17 @@ function parseBlock(block: string): ParsedRefSegment[] {
 
 	if (isVerseList(t)) return parseVerseList(t);
 	const single = parseSingleRef(t);
-	if (single) return [single];
-	// Comma-separated refs (e.g. 1:1-3, 2:4-5)
+	if (single) return Array.isArray(single) ? single : [single];
+	// Comma-separated refs (e.g. 1:1-3, 2:4-5; or 1, 2, 3 = chapters)
 	const parts = t.split(",").map((p) => p.trim()).filter(Boolean);
 	if (parts.length > 1) {
 		const segments: ParsedRefSegment[] = [];
 		for (const p of parts) {
 			const one = parseSingleRef(p);
-			if (one) segments.push(one);
+			if (one) {
+				if (Array.isArray(one)) segments.push(...one);
+				else segments.push(one);
+			}
 		}
 		return segments;
 	}

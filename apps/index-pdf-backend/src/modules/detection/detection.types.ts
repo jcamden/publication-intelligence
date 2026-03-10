@@ -261,8 +261,10 @@ export type CreateSuppressionInput = {
 export type MatcherMentionParserSegment = {
 	refText: string;
 	chapter?: number;
+	chapterEnd?: number;
 	verseStart?: number;
 	verseEnd?: number;
+	verseSuffix?: string;
 };
 
 /** In-memory mention candidate before persistence (Phase 5). Deterministic order: pageNumber, charStart, longer span first. */

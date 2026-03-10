@@ -18,9 +18,17 @@ describe("scripture ref parser - parser matrix", () => {
 		expect(parse("gen 2")).toEqual([{ refText: "2", chapter: 2 }]);
 	});
 
-	it("chapter range: 1-3", () => {
+	it("chapter range: 1-3 (chapters, not verses)", () => {
 		expect(parse("gen 1-3")).toEqual([
-			{ refText: "1-3", chapter: 1, verseEnd: 3 },
+			{ refText: "1-3", chapter: 1, chapterEnd: 3 },
+		]);
+	});
+
+	it("chapters only list: 1, 2, 3 (no verse mode -> three chapter segments)", () => {
+		expect(parse("gen 1, 2, 3")).toEqual([
+			{ refText: "1", chapter: 1 },
+			{ refText: "2", chapter: 2 },
+			{ refText: "3", chapter: 3 },
 		]);
 	});
 
@@ -70,18 +78,19 @@ describe("scripture ref parser - parser matrix", () => {
 		]);
 	});
 
-	it("cross-chapter: 1:20-2:4", () => {
+	it("cross-chapter: 1:20-2:4 -> two segments", () => {
 		expect(parse("gen 1:20-2:4")).toEqual([
-			{ refText: "1:20-2:4", chapter: 1, verseStart: 20, verseEnd: 4 },
+			{ refText: "1:20", chapter: 1, verseStart: 20 },
+			{ refText: "2:1-4", chapter: 2, verseStart: 1, verseEnd: 4 },
 		]);
 	});
 
-	it("suffixes: 3a, 3b", () => {
+	it("suffixes: 3a, 3b (verseSuffix preserved)", () => {
 		expect(parse("gen 1:3a")).toEqual([
-			{ refText: "1:3a", chapter: 1, verseStart: 3, verseEnd: 3 },
+			{ refText: "1:3a", chapter: 1, verseStart: 3, verseEnd: 3, verseSuffix: "a" },
 		]);
 		expect(parse("gen 1:3b")).toEqual([
-			{ refText: "1:3b", chapter: 1, verseStart: 3, verseEnd: 3 },
+			{ refText: "1:3b", chapter: 1, verseStart: 3, verseEnd: 3, verseSuffix: "b" },
 		]);
 	});
 });

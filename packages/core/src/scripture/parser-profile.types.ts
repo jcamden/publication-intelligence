@@ -13,8 +13,12 @@ export type ParsedRefSegment = {
 	refText: string;
 	/** Omitted for book-only refs (e.g. "Romans" with no chapter/verse). */
 	chapter?: number;
+	/** Present for chapter ranges (e.g. "gen 1-3" = chapters 1–3). Verse mode uses : or . */
+	chapterEnd?: number;
 	verseStart?: number;
 	verseEnd?: number;
+	/** Optional verse suffix (e.g. "a" for 3a, "b" for 3b). */
+	verseSuffix?: string;
 };
 
 /**
