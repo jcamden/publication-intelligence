@@ -10,7 +10,7 @@ import {
 import { getUserSettings } from "../user-settings/user-settings.repo";
 import { logEvent } from "../../logger";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
-import type { AliasIndex, ResolvedAliasMatch } from "./alias-engine.types";
+import type { ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
@@ -612,8 +612,15 @@ const processMatcher = async ({
 		runAllGroups: run.runAllGroups,
 	});
 
-	// One alias index per run; never rebuild per page (Task 6.2).
-	const aliasIndex: AliasIndex = buildAliasIndex(aliases);
+	// Run snapshot: unique matcher IDs for coverage skip (Task 6.3). Per-page alias index built from filtered aliases.
+	const runMatcherIds = [...new Set(aliases.map((a) => a.matcherId))];
+
+	// Task 6.3: coverage skip observability
+	let matchersSkippedByCoverage = 0;
+	let pagesFullySkipped = 0;
+	const processedPageMatchers: Array<{ pageNumber: number; matcherId: string }> = [];
+	const skippedForLog: Array<{ pageNumber: number; matcherId: string }> = [];
+	const DEBUG_SKIPPED_LOG_LIMIT = 5;
 
 	logEvent({
 		event: "detection.matcher_run_started",
@@ -624,6 +631,7 @@ const processMatcher = async ({
 				groupIds,
 				groupCount: groupIds.length,
 				matcherCount: aliases.length,
+				matchersConsidered: runMatcherIds.length,
 			},
 		},
 	});
@@ -701,6 +709,41 @@ const processMatcher = async ({
 			return;
 		}
 
+		// Task 6.3: skip already-covered matcher/page pairs
+		const coveredMatcherIds = await detectionRepo.getCoveredMatcherIdsForPage({
+			userId,
+			projectIndexTypeId,
+			documentId: sourceDoc.id,
+			pageNumber: pageNum,
+			matcherIds: runMatcherIds,
+		});
+		matchersSkippedByCoverage += coveredMatcherIds.size;
+		for (const mid of coveredMatcherIds) {
+			skippedForLog.push({ pageNumber: pageNum, matcherId: mid });
+		}
+		if (coveredMatcherIds.size === runMatcherIds.length) {
+			pagesFullySkipped++;
+			await detectionRepo.updateDetectionRunProgress({
+				userId,
+				input: {
+					runId,
+					progressPage: pageNum,
+					mentionsCreated: allCandidates.length,
+				},
+			});
+			continue;
+		}
+		const uncoveredMatcherIds = runMatcherIds.filter(
+			(id) => !coveredMatcherIds.has(id),
+		);
+		const filteredAliases = aliases.filter((a) =>
+			uncoveredMatcherIds.includes(a.matcherId),
+		);
+		const pageAliasIndex = buildAliasIndex(filteredAliases);
+		for (const mid of uncoveredMatcherIds) {
+			processedPageMatchers.push({ pageNumber: pageNum, matcherId: mid });
+		}
+
 		const pagesToExtract =
 			pageMemory.pages.has(pageNum)
 				? []
@@ -723,7 +766,7 @@ const processMatcher = async ({
 
 		const matches: ResolvedAliasMatch[] = scanTextWithAliasIndex(
 			searchableText,
-			aliasIndex,
+			pageAliasIndex,
 		);
 
 		const mentionsWithPositions = matches.map((m) => ({
@@ -865,7 +908,21 @@ const processMatcher = async ({
 	});
 	const mentionsCreated = resolutionResult.persisted;
 
-	// Observability: aggregated counts (Task 6.2).
+	// Task 6.3: write coverage only after persistence; do not write if run was cancelled
+	const finalRun = await detectionRepo.getDetectionRun({ userId, runId });
+	let coverageRowsWritten = 0;
+	if (finalRun?.status !== "cancelled" && processedPageMatchers.length > 0) {
+		coverageRowsWritten = await detectionRepo.upsertMatcherPageCoverage({
+			userId,
+			runId,
+			projectId: run.projectId,
+			projectIndexTypeId,
+			documentId: sourceDoc.id,
+			rows: processedPageMatchers,
+		});
+	}
+
+	// Observability: aggregated counts (Task 6.2) + coverage (Task 6.3)
 	const segmentsEmitted = allCandidates.filter(
 		(c) => c.parserSegments && c.parserSegments.length > 0,
 	).length;
@@ -883,9 +940,27 @@ const processMatcher = async ({
 				afterDedupe: dedupedCandidates.length,
 				segmentsEmitted,
 				fallbacksEmitted,
+				matchersConsidered: runMatcherIds.length,
+				matchersSkippedByCoverage,
+				pagesFullySkipped,
+				coverageRowsWritten,
 			},
 		},
 	});
+	if (skippedForLog.length > 0) {
+		const firstSkipped = skippedForLog.slice(0, DEBUG_SKIPPED_LOG_LIMIT);
+		logEvent({
+			event: "detection.matcher_coverage_skipped_debug",
+			context: {
+				userId,
+				metadata: {
+					runId,
+					firstSkippedPageMatcherPairs: firstSkipped,
+					totalSkippedPairs: skippedForLog.length,
+				},
+			},
+		});
+	}
 
 	await detectionRepo.updateDetectionRunStatus({
 		userId,

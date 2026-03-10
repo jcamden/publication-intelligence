@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
 	foreignKey,
+	index,
 	integer,
 	json,
 	pgPolicy,
@@ -299,3 +300,86 @@ export const indexMentionsRelations = relations(indexMentions, ({ one }) => ({
 		references: [detectionRuns.id],
 	}),
 }));
+
+// DetectionMatcherPageCoverage - skip already-covered matcher/page pairs on subsequent runs (Task 6.3)
+export const detectionMatcherPageCoverage = pgTable(
+	"detection_matcher_page_coverage",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		projectId: uuid("project_id")
+			.references(() => projects.id, { onDelete: "cascade" })
+			.notNull(),
+		projectIndexTypeId: uuid("project_index_type_id")
+			.references(() => projectIndexTypes.id, { onDelete: "cascade" })
+			.notNull(),
+		documentId: uuid("document_id")
+			.references(() => sourceDocuments.id, { onDelete: "cascade" })
+			.notNull(),
+		pageNumber: integer("page_number").notNull(),
+		matcherId: uuid("matcher_id")
+			.references(() => indexMatchers.id, { onDelete: "cascade" })
+			.notNull(),
+		lastDetectionRunId: uuid("last_detection_run_id").references(
+			() => detectionRuns.id,
+			{ onDelete: "set null" },
+		),
+		coveredAt: timestamp("covered_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex(
+			"detection_matcher_page_coverage_project_type_doc_page_matcher_key",
+		).on(
+			table.projectIndexTypeId,
+			table.documentId,
+			table.pageNumber,
+			table.matcherId,
+		),
+		index("detection_matcher_page_coverage_run_scope_idx").on(
+			table.projectId,
+			table.projectIndexTypeId,
+			table.documentId,
+			table.pageNumber,
+		),
+		index("detection_matcher_page_coverage_matcher_page_idx").on(
+			table.matcherId,
+			table.documentId,
+			table.pageNumber,
+		),
+		pgPolicy("detection_matcher_page_coverage_project_access", {
+			for: "all",
+			to: authenticatedRole,
+			using: sql`EXISTS (
+				SELECT 1 FROM projects
+				WHERE projects.id = ${table.projectId}
+			)`,
+		}),
+	],
+);
+
+export const detectionMatcherPageCoverageRelations = relations(
+	detectionMatcherPageCoverage,
+	({ one }) => ({
+		project: one(projects, {
+			fields: [detectionMatcherPageCoverage.projectId],
+			references: [projects.id],
+		}),
+		projectIndexType: one(projectIndexTypes, {
+			fields: [detectionMatcherPageCoverage.projectIndexTypeId],
+			references: [projectIndexTypes.id],
+		}),
+		document: one(sourceDocuments, {
+			fields: [detectionMatcherPageCoverage.documentId],
+			references: [sourceDocuments.id],
+		}),
+		matcher: one(indexMatchers, {
+			fields: [detectionMatcherPageCoverage.matcherId],
+			references: [indexMatchers.id],
+		}),
+		lastDetectionRun: one(detectionRuns, {
+			fields: [detectionMatcherPageCoverage.lastDetectionRunId],
+			references: [detectionRuns.id],
+		}),
+	}),
+);

@@ -1,6 +1,7 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { withUserContext } from "../../db/client";
 import {
+	detectionMatcherPageCoverage,
 	detectionRuns,
 	indexEntries,
 	indexMatchers,
@@ -881,5 +882,101 @@ export const listMatcherAliasesForRun = async ({
 		projectIndexTypeId,
 		indexType,
 		groupIds,
+	});
+};
+
+// ============================================================================
+// Matcher page coverage (Task 6.3)
+// ============================================================================
+
+/**
+ * Return set of matcher IDs that already have coverage for (documentId, pageNumber).
+ * Used to skip scan work for already-covered matcher/page pairs.
+ */
+export const getCoveredMatcherIdsForPage = async ({
+	userId,
+	projectIndexTypeId,
+	documentId,
+	pageNumber,
+	matcherIds,
+}: {
+	userId: string;
+	projectIndexTypeId: string;
+	documentId: string;
+	pageNumber: number;
+	matcherIds: string[];
+}): Promise<Set<string>> => {
+	if (matcherIds.length === 0) return new Set();
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({ matcherId: detectionMatcherPageCoverage.matcherId })
+				.from(detectionMatcherPageCoverage)
+				.where(
+					and(
+						eq(detectionMatcherPageCoverage.projectIndexTypeId, projectIndexTypeId),
+						eq(detectionMatcherPageCoverage.documentId, documentId),
+						eq(detectionMatcherPageCoverage.pageNumber, pageNumber),
+						inArray(detectionMatcherPageCoverage.matcherId, matcherIds),
+					),
+				);
+			return new Set(rows.map((r) => r.matcherId));
+		},
+	});
+};
+
+/**
+ * Upsert coverage rows for (page, matcher) pairs after resolution/persistence.
+ * Uses insert ... on conflict do update to refresh last_detection_run_id and covered_at.
+ * Returns count of rows written (inserted or updated).
+ */
+export const upsertMatcherPageCoverage = async ({
+	userId,
+	runId,
+	projectId,
+	projectIndexTypeId,
+	documentId,
+	rows,
+}: {
+	userId: string;
+	runId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	documentId: string;
+	rows: Array<{ pageNumber: number; matcherId: string }>;
+}): Promise<number> => {
+	if (rows.length === 0) return 0;
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const now = new Date();
+			const values = rows.map((r) => ({
+				projectId,
+				projectIndexTypeId,
+				documentId,
+				pageNumber: r.pageNumber,
+				matcherId: r.matcherId,
+				lastDetectionRunId: runId,
+				coveredAt: now,
+			}));
+			const result = await tx
+				.insert(detectionMatcherPageCoverage)
+				.values(values)
+				.onConflictDoUpdate({
+					target: [
+						detectionMatcherPageCoverage.projectIndexTypeId,
+						detectionMatcherPageCoverage.documentId,
+						detectionMatcherPageCoverage.pageNumber,
+						detectionMatcherPageCoverage.matcherId,
+					],
+					set: {
+						lastDetectionRunId: runId,
+						coveredAt: now,
+					},
+				})
+				.returning({ id: detectionMatcherPageCoverage.id });
+			return result.length;
+		},
 	});
 };
