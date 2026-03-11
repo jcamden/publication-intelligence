@@ -25,7 +25,8 @@ import {
 	findOrCreateMatcher,
 	ensureEntryInGroup,
 	ensureMatcherInGroup,
-	insertBootstrapRun,
+	insertBootstrapRunStart,
+	updateBootstrapRunCounts,
 } from "./scripture-bootstrap.repo";
 
 function configSnapshotHash(config: ScriptureIndexConfig): string {
@@ -50,17 +51,21 @@ function configSnapshotHash(config: ScriptureIndexConfig): string {
 /**
  * Run scripture bootstrap: seed entries/matchers/groups from config.
  * Fails fast when selected_canon is missing. Idempotent for same config.
+ * Re-bootstrap reuses rows by stable keys and preserves user edits unless forceRefreshFromSource is true.
  */
 export async function run({
 	projectId,
 	projectIndexTypeId,
 	userId,
 	requestId,
+	forceRefreshFromSource = false,
 }: {
 	projectId: string;
 	projectIndexTypeId: string;
 	userId: string;
 	requestId: string;
+	/** When true, overwrite labels/group names from source; default false preserves user edits */
+	forceRefreshFromSource?: boolean;
 }): Promise<BootstrapCounts> {
 	const config = await scriptureIndexConfigRepo.getScriptureConfig({
 		projectId,
@@ -92,6 +97,14 @@ export async function run({
 		});
 	}
 
+	const hash = configSnapshotHash(config);
+	const { id: runId } = await insertBootstrapRunStart({
+		userId,
+		projectId,
+		projectIndexTypeId,
+		configSnapshotHash: hash,
+	});
+
 	const canonId = config.selectedCanon as CanonId;
 	const counts: BootstrapCounts = {
 		entriesCreated: 0,
@@ -113,6 +126,8 @@ export async function run({
 			slug: BOOTSTRAP_GROUP_SLUGS[0].slug,
 			name: BOOTSTRAP_GROUP_SLUGS[0].name,
 			parserProfileId: "scripture-biblical",
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 	if (canonGroupCreated) counts.groupsCreated++;
 	let entryPosition = 0;
@@ -127,6 +142,8 @@ export async function run({
 			projectIndexTypeId,
 			slug,
 			label,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (entryCreated) counts.entriesCreated++;
 		else counts.entriesReused++;
@@ -146,6 +163,7 @@ export async function run({
 				entryId,
 				projectIndexTypeId,
 				normalizedText: text,
+				seedRunId: runId,
 			});
 			if (matcherCreated) counts.matchersCreated++;
 			else counts.matchersReused++;
@@ -168,6 +186,8 @@ export async function run({
 			projectIndexTypeId,
 			slug: BOOTSTRAP_GROUP_SLUGS[1].slug,
 			name: BOOTSTRAP_GROUP_SLUGS[1].name,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (created) counts.groupsCreated++;
 		entryPosition = 0;
@@ -180,6 +200,8 @@ export async function run({
 				projectIndexTypeId,
 				slug,
 				label,
+				seedRunId: runId,
+				forceRefreshFromSource,
 			});
 			if (entryCreated) counts.entriesCreated++;
 			else counts.entriesReused++;
@@ -200,6 +222,7 @@ export async function run({
 						entryId,
 						projectIndexTypeId,
 						normalizedText: text,
+						seedRunId: runId,
 					});
 				if (matcherCreated) counts.matchersCreated++;
 				else counts.matchersReused++;
@@ -223,9 +246,20 @@ export async function run({
 			projectIndexTypeId,
 			slug: BOOTSTRAP_GROUP_SLUGS[2].slug,
 			name: BOOTSTRAP_GROUP_SLUGS[2].name,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (created) counts.groupsCreated++;
-		await seedCorpus(userId, projectId, projectIndexTypeId, groupId, matchers, counts);
+		await seedCorpus(
+			userId,
+			projectId,
+			projectIndexTypeId,
+			groupId,
+			matchers,
+			counts,
+			runId,
+			forceRefreshFromSource,
+		);
 	}
 
 	// 4) Classical Writings
@@ -237,9 +271,20 @@ export async function run({
 			projectIndexTypeId,
 			slug: BOOTSTRAP_GROUP_SLUGS[3].slug,
 			name: BOOTSTRAP_GROUP_SLUGS[3].name,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (created) counts.groupsCreated++;
-		await seedCorpus(userId, projectId, projectIndexTypeId, groupId, matchers, counts);
+		await seedCorpus(
+			userId,
+			projectId,
+			projectIndexTypeId,
+			groupId,
+			matchers,
+			counts,
+			runId,
+			forceRefreshFromSource,
+		);
 	}
 
 	// 5) Christian Writings
@@ -251,9 +296,20 @@ export async function run({
 			projectIndexTypeId,
 			slug: BOOTSTRAP_GROUP_SLUGS[4].slug,
 			name: BOOTSTRAP_GROUP_SLUGS[4].name,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (created) counts.groupsCreated++;
-		await seedCorpus(userId, projectId, projectIndexTypeId, groupId, matchers, counts);
+		await seedCorpus(
+			userId,
+			projectId,
+			projectIndexTypeId,
+			groupId,
+			matchers,
+			counts,
+			runId,
+			forceRefreshFromSource,
+		);
 	}
 
 	// 6) Dead Sea Scrolls
@@ -265,9 +321,20 @@ export async function run({
 			projectIndexTypeId,
 			slug: BOOTSTRAP_GROUP_SLUGS[5].slug,
 			name: BOOTSTRAP_GROUP_SLUGS[5].name,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (created) counts.groupsCreated++;
-		await seedCorpus(userId, projectId, projectIndexTypeId, groupId, matchers, counts);
+		await seedCorpus(
+			userId,
+			projectId,
+			projectIndexTypeId,
+			groupId,
+			matchers,
+			counts,
+			runId,
+			forceRefreshFromSource,
+		);
 	}
 
 	// 7) Extra book keys
@@ -279,6 +346,8 @@ export async function run({
 			projectIndexTypeId,
 			slug: BOOTSTRAP_GROUP_SLUGS[6].slug,
 			name: BOOTSTRAP_GROUP_SLUGS[6].name,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (created) counts.groupsCreated++;
 		entryPosition = 0;
@@ -293,6 +362,8 @@ export async function run({
 				projectIndexTypeId,
 				slug,
 				label: label !== bookKey ? label : bookKey,
+				seedRunId: runId,
+				forceRefreshFromSource,
 			});
 			if (entryCreated) counts.entriesCreated++;
 			else counts.entriesReused++;
@@ -313,6 +384,7 @@ export async function run({
 						entryId,
 						projectIndexTypeId,
 						normalizedText: text,
+						seedRunId: runId,
 					});
 				if (matcherCreated) counts.matchersCreated++;
 				else counts.matchersReused++;
@@ -327,14 +399,7 @@ export async function run({
 		}
 	}
 
-	const hash = configSnapshotHash(config);
-	await insertBootstrapRun({
-		userId,
-		projectId,
-		projectIndexTypeId,
-		configSnapshotHash: hash,
-		counts,
-	});
+	await updateBootstrapRunCounts({ userId, runId, counts });
 
 	logEvent({
 		event: "scripture_bootstrap.completed",
@@ -378,6 +443,8 @@ async function seedCorpus(
 	groupId: string,
 	matchers: Record<string, string[]>,
 	counts: BootstrapCounts,
+	runId: string,
+	forceRefreshFromSource: boolean,
 ): Promise<void> {
 	let entryPosition = 0;
 	for (const [key, aliases] of Object.entries(matchers)) {
@@ -389,6 +456,8 @@ async function seedCorpus(
 			projectIndexTypeId,
 			slug,
 			label,
+			seedRunId: runId,
+			forceRefreshFromSource,
 		});
 		if (entryCreated) counts.entriesCreated++;
 		else counts.entriesReused++;
@@ -408,6 +477,7 @@ async function seedCorpus(
 				entryId,
 				projectIndexTypeId,
 				normalizedText: text,
+				seedRunId: runId,
 			});
 			if (matcherCreated) counts.matchersCreated++;
 			else counts.matchersReused++;

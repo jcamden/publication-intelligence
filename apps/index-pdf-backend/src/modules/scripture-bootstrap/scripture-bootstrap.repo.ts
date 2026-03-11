@@ -18,8 +18,12 @@ export type BootstrapCounts = {
 	membershipsCreated: number;
 };
 
+const SEED_SOURCE_SCRIPTURE_BOOTSTRAP = "scripture_bootstrap";
+
 /**
  * Find or create a top-level index entry by slug. Idempotent.
+ * When reusing, preserves existing label unless forceRefreshFromSource is true.
+ * Optional seed provenance (audit only; does not gate edits).
  */
 export async function findOrCreateEntry({
 	userId,
@@ -27,18 +31,22 @@ export async function findOrCreateEntry({
 	projectIndexTypeId,
 	slug,
 	label,
+	seedRunId,
+	forceRefreshFromSource,
 }: {
 	userId: string;
 	projectId: string;
 	projectIndexTypeId: string;
 	slug: string;
 	label: string;
+	seedRunId?: string | null;
+	forceRefreshFromSource?: boolean;
 }): Promise<{ entryId: string; created: boolean }> {
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
 			const existing = await tx
-				.select({ id: indexEntries.id })
+				.select({ id: indexEntries.id, label: indexEntries.label })
 				.from(indexEntries)
 				.where(
 					and(
@@ -49,7 +57,22 @@ export async function findOrCreateEntry({
 					),
 				)
 				.limit(1);
-			if (existing[0]) return { entryId: existing[0].id, created: false };
+			if (existing[0]) {
+				if (forceRefreshFromSource && seedRunId) {
+					await tx
+						.update(indexEntries)
+						.set({
+							label,
+							updatedAt: new Date(),
+							seedRunId,
+							seededAt: new Date(),
+							seedSource: SEED_SOURCE_SCRIPTURE_BOOTSTRAP,
+						})
+						.where(eq(indexEntries.id, existing[0].id));
+				}
+				return { entryId: existing[0].id, created: false };
+			}
+			const now = new Date();
 			const [inserted] = await tx
 				.insert(indexEntries)
 				.values({
@@ -60,6 +83,11 @@ export async function findOrCreateEntry({
 					status: "active",
 					parentId: null,
 					detectionRunId: null,
+					...(seedRunId && {
+						seedSource: SEED_SOURCE_SCRIPTURE_BOOTSTRAP,
+						seededAt: now,
+						seedRunId,
+					}),
 				})
 				.returning({ id: indexEntries.id });
 			if (inserted) return { entryId: inserted.id, created: true };
@@ -83,17 +111,20 @@ export async function findOrCreateEntry({
 
 /**
  * Find or create matcher by normalized text. If a matcher with this text already exists (any entry), return it (reused). Otherwise create under the given entry.
+ * Optional seed provenance when creating (audit only; does not gate edits).
  */
 export async function findOrCreateMatcher({
 	userId,
 	entryId,
 	projectIndexTypeId,
 	normalizedText,
+	seedRunId,
 }: {
 	userId: string;
 	entryId: string;
 	projectIndexTypeId: string;
 	normalizedText: string;
+	seedRunId?: string | null;
 }): Promise<{ matcherId: string; created: boolean }> {
 	const existing = await detectionRepo.getMatcherByTextAndProjectIndexTypeId({
 		userId,
@@ -101,11 +132,17 @@ export async function findOrCreateMatcher({
 		text: normalizedText,
 	});
 	if (existing) return { matcherId: existing.id, created: false };
+	const now = new Date();
 	const id = await detectionRepo.createMatcher({
 		userId,
 		entryId,
 		projectIndexTypeId,
 		text: normalizedText,
+		...(seedRunId && {
+			seedSource: SEED_SOURCE_SCRIPTURE_BOOTSTRAP,
+			seededAt: now,
+			seedRunId,
+		}),
 	});
 	return { matcherId: id, created: true };
 }
@@ -123,6 +160,8 @@ export const BOOTSTRAP_GROUP_SLUGS = [
 
 /**
  * Find group by slug for project + index type, or create it. Idempotent.
+ * When reusing, preserves existing name/settings unless forceRefreshFromSource is true.
+ * Optional seed provenance when creating (audit only; does not gate edits).
  */
 export async function findOrCreateGroup({
 	userId,
@@ -131,6 +170,8 @@ export async function findOrCreateGroup({
 	slug,
 	name,
 	parserProfileId,
+	seedRunId,
+	forceRefreshFromSource,
 }: {
 	userId: string;
 	projectId: string;
@@ -138,6 +179,8 @@ export async function findOrCreateGroup({
 	slug: string;
 	name: string;
 	parserProfileId?: string | null;
+	seedRunId?: string | null;
+	forceRefreshFromSource?: boolean;
 }): Promise<{ groupId: string; created: boolean }> {
 	const groups = await indexEntryGroupRepo.listGroups({
 		userId,
@@ -145,7 +188,19 @@ export async function findOrCreateGroup({
 		projectIndexTypeId,
 	});
 	const existing = groups.find((g) => g.slug === slug);
-	if (existing) return { groupId: existing.id, created: false };
+	if (existing) {
+		if (forceRefreshFromSource) {
+			await indexEntryGroupRepo.updateGroup({
+				userId,
+				groupId: existing.id,
+				input: {
+					name,
+					...(parserProfileId !== undefined && { parserProfileId }),
+				},
+			});
+		}
+		return { groupId: existing.id, created: false };
+	}
 	const created = await indexEntryGroupRepo.createGroup({
 		userId,
 		input: {
@@ -155,6 +210,11 @@ export async function findOrCreateGroup({
 			slug,
 			parserProfileId: parserProfileId ?? null,
 			sortMode: "canon_book_order",
+			...(seedRunId && {
+				seedSource: SEED_SOURCE_SCRIPTURE_BOOTSTRAP,
+				seededAt: new Date(),
+				seedRunId,
+			}),
 		},
 	});
 	return { groupId: created.id, created: true };
@@ -233,36 +293,70 @@ export async function ensureMatcherInGroup({
 }
 
 /**
- * Record a bootstrap run for audit.
+ * Start a bootstrap run (insert run row with zero counts). Returns run id for provenance.
+ * Call updateBootstrapRunCounts with final counts when done.
  */
-export async function insertBootstrapRun({
+export async function insertBootstrapRunStart({
 	userId,
 	projectId,
 	projectIndexTypeId,
 	configSnapshotHash,
-	counts,
 }: {
 	userId: string;
 	projectId: string;
 	projectIndexTypeId: string;
 	configSnapshotHash: string;
+}): Promise<{ id: string }> {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [row] = await tx
+				.insert(scriptureBootstrapRuns)
+				.values({
+					projectId,
+					projectIndexTypeId,
+					configSnapshotHash,
+					entriesCreated: 0,
+					entriesReused: 0,
+					matchersCreated: 0,
+					matchersReused: 0,
+					groupsCreated: 0,
+					membershipsCreated: 0,
+					userId,
+				})
+				.returning({ id: scriptureBootstrapRuns.id });
+			if (!row) throw new Error("Failed to insert bootstrap run");
+			return { id: row.id };
+		},
+	});
+}
+
+/**
+ * Update a bootstrap run with final counts (call after insertBootstrapRunStart).
+ */
+export async function updateBootstrapRunCounts({
+	userId,
+	runId,
+	counts,
+}: {
+	userId: string;
+	runId: string;
 	counts: BootstrapCounts;
 }): Promise<void> {
 	await withUserContext({
 		userId,
 		fn: async (tx) => {
-			await tx.insert(scriptureBootstrapRuns).values({
-				projectId,
-				projectIndexTypeId,
-				configSnapshotHash,
-				entriesCreated: counts.entriesCreated,
-				entriesReused: counts.entriesReused,
-				matchersCreated: counts.matchersCreated,
-				matchersReused: counts.matchersReused,
-				groupsCreated: counts.groupsCreated,
-				membershipsCreated: counts.membershipsCreated,
-				userId,
-			});
+			await tx
+				.update(scriptureBootstrapRuns)
+				.set({
+					entriesCreated: counts.entriesCreated,
+					entriesReused: counts.entriesReused,
+					matchersCreated: counts.matchersCreated,
+					matchersReused: counts.matchersReused,
+					groupsCreated: counts.groupsCreated,
+					membershipsCreated: counts.membershipsCreated,
+				})
+				.where(eq(scriptureBootstrapRuns.id, runId));
 		},
 	});
 }

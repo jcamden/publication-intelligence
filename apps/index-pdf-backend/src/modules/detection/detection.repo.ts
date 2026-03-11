@@ -792,17 +792,24 @@ export const getMatcherByTextAndProjectIndexTypeId = async ({
 
 /**
  * Create matcher for entry; idempotent: on (projectIndexTypeId, text) conflict re-query and return existing id (Task 5.2).
+ * Optional seed provenance (audit only; does not gate edits).
  */
 export const createMatcher = async ({
 	userId,
 	entryId,
 	projectIndexTypeId,
 	text,
+	seedSource,
+	seededAt,
+	seedRunId,
 }: {
 	userId: string;
 	entryId: string;
 	projectIndexTypeId: string;
 	text: string;
+	seedSource?: string | null;
+	seededAt?: Date | null;
+	seedRunId?: string | null;
 }): Promise<string> => {
 	return await withUserContext({
 		userId,
@@ -826,6 +833,9 @@ export const createMatcher = async ({
 						entryId,
 						projectIndexTypeId,
 						text,
+						...(seedSource != null && { seedSource }),
+						...(seededAt != null && { seededAt }),
+						...(seedRunId != null && { seedRunId }),
 					})
 					.returning({ id: indexMatchers.id });
 				if (inserted) return inserted.id;

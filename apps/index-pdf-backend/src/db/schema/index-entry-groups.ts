@@ -13,6 +13,7 @@ import { indexEntryGroupSortModeEnum } from "./enums";
 import { projectIndexTypes } from "./highlight-configs";
 import { indexEntries, indexMatchers } from "./indexing";
 import { projects } from "./projects";
+import { scriptureBootstrapRuns } from "./scripture-bootstrap-runs";
 import { authenticatedRole } from "./users";
 
 /**
@@ -39,6 +40,12 @@ export const indexEntryGroups = pgTable(
 			.notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }),
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
+		// Seed provenance: audit only; does not gate edit permissions
+		seedSource: text("seed_source"),
+		seededAt: timestamp("seeded_at", { withTimezone: true }),
+		seedRunId: uuid("seed_run_id").references(() => scriptureBootstrapRuns.id, {
+			onDelete: "set null",
+		}),
 	},
 	(table) => [
 		uniqueIndex("unique_index_entry_group_slug")

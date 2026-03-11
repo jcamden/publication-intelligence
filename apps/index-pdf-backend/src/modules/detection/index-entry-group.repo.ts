@@ -37,6 +37,10 @@ export type CreateIndexEntryGroupInput = {
 	slug: string;
 	parserProfileId?: string | null;
 	sortMode?: "a_z" | "canon_book_order";
+	/** Seed provenance (audit only; does not gate edits) */
+	seedSource?: string | null;
+	seededAt?: Date | null;
+	seedRunId?: string | null;
 };
 
 export type UpdateIndexEntryGroupInput = {
@@ -428,6 +432,9 @@ export const createGroup = async ({
 					slug: input.slug,
 					parserProfileId: input.parserProfileId ?? null,
 					sortMode: input.sortMode ?? "a_z",
+					...(input.seedSource != null && { seedSource: input.seedSource }),
+					...(input.seededAt != null && { seededAt: input.seededAt }),
+					...(input.seedRunId != null && { seedRunId: input.seedRunId }),
 				})
 				.returning();
 			if (!row) throw new Error("Failed to create index entry group");
@@ -490,7 +497,10 @@ export const updateGroup = async ({
 	});
 };
 
-/** Soft-delete a group. Deleted groups are excluded from run targeting. */
+/**
+ * Soft-delete a group and remove its memberships only.
+ * Entries and matchers are not deleted; mention history is preserved.
+ */
 export const deleteGroup = async ({
 	userId,
 	groupId,
@@ -501,6 +511,13 @@ export const deleteGroup = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			// Remove memberships only; entries and matchers stay intact
+			await tx
+				.delete(indexEntryGroupEntries)
+				.where(eq(indexEntryGroupEntries.groupId, groupId));
+			await tx
+				.delete(indexEntryGroupMatchers)
+				.where(eq(indexEntryGroupMatchers.groupId, groupId));
 			const [row] = await tx
 				.update(indexEntryGroups)
 				.set({ deletedAt: new Date(), updatedAt: new Date() })

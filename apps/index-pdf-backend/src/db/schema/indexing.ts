@@ -23,6 +23,7 @@ import {
 } from "./enums";
 import { projectIndexTypes } from "./highlight-configs";
 import { projects } from "./projects";
+import { scriptureBootstrapRuns } from "./scripture-bootstrap-runs";
 import { authenticatedRole } from "./users";
 
 // IndexEntry - A concept to appear in the index
@@ -54,6 +55,12 @@ export const indexEntries = pgTable(
 			.notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }),
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
+		// Seed provenance: audit only; does not gate edit permissions
+		seedSource: text("seed_source"), // e.g. "scripture_bootstrap"
+		seededAt: timestamp("seeded_at", { withTimezone: true }),
+		seedRunId: uuid("seed_run_id").references(() => scriptureBootstrapRuns.id, {
+			onDelete: "set null",
+		}),
 	},
 	(table) => [
 		// Required by composite FK from index_matchers (entry_id, project_index_type_id)
@@ -124,6 +131,12 @@ export const indexMatchers = pgTable(
 			.defaultNow()
 			.notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }),
+		// Seed provenance: audit only; does not gate edit permissions
+		seedSource: text("seed_source"),
+		seededAt: timestamp("seeded_at", { withTimezone: true }),
+		seedRunId: uuid("seed_run_id").references(() => scriptureBootstrapRuns.id, {
+			onDelete: "set null",
+		}),
 	},
 	(table) => [
 		// Enforce deterministic matcher -> entry mapping per index type.

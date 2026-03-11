@@ -1,6 +1,7 @@
 import "../../test/setup";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import * as indexEntryGroupRepo from "../detection/index-entry-group.repo";
 import {
 	createTestProject,
 	createTestUser,
@@ -57,11 +58,12 @@ async function runBootstrap(
 	request: ReturnType<typeof makeAuthenticatedRequest>,
 	projectId: string,
 	projectIndexTypeId: string,
+	forceRefreshFromSource?: boolean,
 ) {
 	return request.inject({
 		method: "POST",
 		url: "/trpc/scriptureBootstrap.run",
-		payload: { projectId, projectIndexTypeId },
+		payload: { projectId, projectIndexTypeId, forceRefreshFromSource },
 	});
 }
 
@@ -342,5 +344,215 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		const counts2 = JSON.parse(run2.body).result.data;
 		expect(counts2.groupsCreated).toBe(0);
 		expect(counts2.entriesReused).toBe(counts1.entriesCreated + counts1.entriesReused);
+	});
+
+	describe("Task 7.3: Post-seed editability", () => {
+		it("seeded entry label can be edited after bootstrap", async ({
+			authenticatedRequest,
+			testProjectId,
+			scriptureProjectIndexTypeId,
+		}) => {
+			await upsertScriptureConfig(authenticatedRequest, {
+				projectId: testProjectId,
+				projectIndexTypeId: scriptureProjectIndexTypeId,
+				selectedCanon: "protestant",
+			});
+			await runBootstrap(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const listRes = await listIndexEntries(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const entries = JSON.parse(listRes.body).result.data;
+			const genesis = entries.find((e: { slug: string }) => e.slug === "genesis");
+			expect(genesis).toBeDefined();
+			expect(genesis.label).toBe("Genesis");
+
+			const updateRes = await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.update",
+				payload: {
+					id: genesis.id,
+					projectId: testProjectId,
+					projectIndexTypeId: scriptureProjectIndexTypeId,
+					label: "Genesis (Custom)",
+				},
+			});
+			expect(updateRes.statusCode).toBe(200);
+			const updated = JSON.parse(updateRes.body).result.data;
+			expect(updated.label).toBe("Genesis (Custom)");
+
+			const listAfter = await listIndexEntries(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const entriesAfter = JSON.parse(listAfter.body).result.data;
+			const genesisAfter = entriesAfter.find(
+				(e: { slug: string }) => e.slug === "genesis",
+			);
+			expect(genesisAfter.label).toBe("Genesis (Custom)");
+		});
+
+		it("re-bootstrap does not overwrite user-customized labels by default", async ({
+			authenticatedRequest,
+			testProjectId,
+			scriptureProjectIndexTypeId,
+		}) => {
+			await upsertScriptureConfig(authenticatedRequest, {
+				projectId: testProjectId,
+				projectIndexTypeId: scriptureProjectIndexTypeId,
+				selectedCanon: "protestant",
+			});
+			await runBootstrap(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const listRes = await listIndexEntries(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const entries = JSON.parse(listRes.body).result.data;
+			const genesis = entries.find((e: { slug: string }) => e.slug === "genesis");
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.update",
+				payload: {
+					id: genesis.id,
+					projectId: testProjectId,
+					projectIndexTypeId: scriptureProjectIndexTypeId,
+					label: "User Custom Label",
+				},
+			});
+
+			await runBootstrap(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+				false,
+			);
+
+			const listAfter = await listIndexEntries(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const entriesAfter = JSON.parse(listAfter.body).result.data;
+			const genesisAfter = entriesAfter.find(
+				(e: { slug: string }) => e.slug === "genesis",
+			);
+			expect(genesisAfter.label).toBe("User Custom Label");
+		});
+
+		it("re-bootstrap with forceRefreshFromSource overwrites labels from source", async ({
+			authenticatedRequest,
+			testProjectId,
+			scriptureProjectIndexTypeId,
+		}) => {
+			await upsertScriptureConfig(authenticatedRequest, {
+				projectId: testProjectId,
+				projectIndexTypeId: scriptureProjectIndexTypeId,
+				selectedCanon: "protestant",
+			});
+			await runBootstrap(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const listRes = await listIndexEntries(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const entries = JSON.parse(listRes.body).result.data;
+			const genesis = entries.find((e: { slug: string }) => e.slug === "genesis");
+			await authenticatedRequest.inject({
+				method: "POST",
+				url: "/trpc/indexEntry.update",
+				payload: {
+					id: genesis.id,
+					projectId: testProjectId,
+					projectIndexTypeId: scriptureProjectIndexTypeId,
+					label: "User Custom Label",
+				},
+			});
+
+			await runBootstrap(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+				true,
+			);
+
+			const listAfter = await listIndexEntries(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const entriesAfter = JSON.parse(listAfter.body).result.data;
+			const genesisAfter = entriesAfter.find(
+				(e: { slug: string }) => e.slug === "genesis",
+			);
+			expect(genesisAfter.label).toBe("Genesis");
+		});
+
+		it("deleting seeded group removes memberships but keeps entries and matchers intact", async ({
+			authenticatedRequest,
+			testUser,
+			testProjectId,
+			scriptureProjectIndexTypeId,
+		}) => {
+			await upsertScriptureConfig(authenticatedRequest, {
+				projectId: testProjectId,
+				projectIndexTypeId: scriptureProjectIndexTypeId,
+				selectedCanon: "protestant",
+			});
+			await runBootstrap(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const listRes = await listIndexEntries(
+				authenticatedRequest,
+				testProjectId,
+				scriptureProjectIndexTypeId,
+			);
+			const entriesBefore = JSON.parse(listRes.body).result.data;
+			expect(entriesBefore.length).toBeGreaterThan(0);
+
+			const groups = await indexEntryGroupRepo.listGroups({
+				userId: testUser.userId,
+				projectId: testProjectId,
+				projectIndexTypeId: scriptureProjectIndexTypeId,
+			});
+			expect(groups.length).toBeGreaterThan(0);
+			const canonGroup = groups.find((g) => g.slug === "canon");
+			expect(canonGroup).toBeDefined();
+
+			await indexEntryGroupRepo.deleteGroup({
+				userId: testUser.userId,
+				groupId: canonGroup!.id,
+			});
+
+			const entriesAfter = JSON.parse(
+				(
+					await listIndexEntries(
+						authenticatedRequest,
+						testProjectId,
+						scriptureProjectIndexTypeId,
+					)
+				).body,
+			).result.data;
+			expect(entriesAfter.length).toBe(entriesBefore.length);
+			expect(entriesAfter.map((e: { slug: string }) => e.slug)).toContain(
+				"genesis",
+			);
+		});
 	});
 });

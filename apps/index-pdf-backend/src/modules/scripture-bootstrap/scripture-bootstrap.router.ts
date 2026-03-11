@@ -8,6 +8,8 @@ export const scriptureBootstrapRouter = router({
 			z.object({
 				projectId: z.string().uuid(),
 				projectIndexTypeId: z.string().uuid(),
+				/** When true, overwrite labels/group names from source; default false preserves user edits */
+				forceRefreshFromSource: z.boolean().optional().default(false),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -16,6 +18,7 @@ export const scriptureBootstrapRouter = router({
 				projectIndexTypeId: input.projectIndexTypeId,
 				userId: ctx.user.id,
 				requestId: ctx.requestId,
+				forceRefreshFromSource: input.forceRefreshFromSource,
 			});
 		}),
 });
