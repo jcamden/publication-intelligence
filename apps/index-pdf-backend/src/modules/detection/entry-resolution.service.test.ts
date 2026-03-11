@@ -2,9 +2,9 @@ import "../../test/setup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as detectionRepo from "./detection.repo";
 import {
+	type ResolutionCandidate,
 	resolveAndPersistScriptureCandidates,
 	resolveAndPersistSubjectCandidates,
-	type ResolutionCandidate,
 } from "./entry-resolution.service";
 
 // ============================================================================
@@ -66,7 +66,9 @@ describe("resolveAndPersistSubjectCandidates (Task 5.1)", () => {
 		expect(result.resolved).toBe(1);
 		expect(result.persisted).toBe(1);
 		expect(result.dropped).toBe(0);
-		expect(detectionRepo.getMatcherByIdAndProjectIndexTypeId).toHaveBeenCalledWith({
+		expect(
+			detectionRepo.getMatcherByIdAndProjectIndexTypeId,
+		).toHaveBeenCalledWith({
 			userId,
 			matcherId: "m1",
 			projectIndexTypeId,
@@ -101,9 +103,12 @@ describe("resolveAndPersistSubjectCandidates (Task 5.1)", () => {
 		});
 
 		// Only these two repo methods should be called; no insert index_entries / index_matchers
-		expect(detectionRepo.getMatcherByIdAndProjectIndexTypeId).toHaveBeenCalledTimes(1);
+		expect(
+			detectionRepo.getMatcherByIdAndProjectIndexTypeId,
+		).toHaveBeenCalledTimes(1);
 		expect(detectionRepo.insertMatcherMentionsBatch).toHaveBeenCalledTimes(1);
-		const insertCalls = vi.mocked(detectionRepo.insertMatcherMentionsBatch).mock.calls;
+		const insertCalls = vi.mocked(detectionRepo.insertMatcherMentionsBatch).mock
+			.calls;
 		expect(insertCalls.length).toBe(1);
 		expect(insertCalls[0]?.[0].candidates).toHaveLength(1);
 	});
@@ -231,7 +236,9 @@ describe("resolveAndPersistSubjectCandidates (Task 5.1)", () => {
 		expect(result.resolved).toBe(1);
 		expect(result.persisted).toBe(1);
 		// Failed candidate is counted as failed (typed outcome), not dropped
-		expect(result.warnings.some((w) => w.includes("transient error"))).toBe(true);
+		expect(result.warnings.some((w) => w.includes("transient error"))).toBe(
+			true,
+		);
 	});
 });
 
@@ -264,7 +271,9 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			matcherId: "m-gen",
 			entryId: "e-gen",
 			textSpan: "Gen 1:1",
-			parserSegments: [{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 }],
+			parserSegments: [
+				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({
 			entryId: "e-gen",
@@ -276,7 +285,10 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			id: "e-child-1-1",
 			parentId: "e-gen",
 		});
-		vi.spyOn(detectionRepo, "getMatcherByTextAndProjectIndexTypeId").mockResolvedValue({
+		vi.spyOn(
+			detectionRepo,
+			"getMatcherByTextAndProjectIndexTypeId",
+		).mockResolvedValue({
 			id: "mat-1-1",
 			entryId: "e-child-1-1",
 		});
@@ -332,9 +344,16 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			label: "Genesis",
 			slug: "genesis",
 		});
-		vi.spyOn(detectionRepo, "getEntryByProjectTypeAndSlug").mockResolvedValue(null);
-		vi.spyOn(detectionRepo, "createChildEntry").mockResolvedValue("e-child-2-4-5");
-		vi.spyOn(detectionRepo, "getMatcherByTextAndProjectIndexTypeId").mockResolvedValue(null);
+		vi.spyOn(detectionRepo, "getEntryByProjectTypeAndSlug").mockResolvedValue(
+			null,
+		);
+		vi.spyOn(detectionRepo, "createChildEntry").mockResolvedValue(
+			"e-child-2-4-5",
+		);
+		vi.spyOn(
+			detectionRepo,
+			"getMatcherByTextAndProjectIndexTypeId",
+		).mockResolvedValue(null);
 		vi.spyOn(detectionRepo, "createMatcher").mockResolvedValue("mat-2-4-5");
 		vi.spyOn(detectionRepo, "insertMatcherMentionsBatch").mockResolvedValue(1);
 
@@ -388,7 +407,10 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			.mockResolvedValueOnce("e-1-1-3")
 			.mockResolvedValueOnce("e-2-4-5")
 			.mockResolvedValueOnce("e-2-27");
-		vi.spyOn(detectionRepo, "getMatcherByTextAndProjectIndexTypeId").mockResolvedValue(null);
+		vi.spyOn(
+			detectionRepo,
+			"getMatcherByTextAndProjectIndexTypeId",
+		).mockResolvedValue(null);
 		vi.spyOn(detectionRepo, "createMatcher")
 			.mockResolvedValueOnce("mat-1")
 			.mockResolvedValueOnce("mat-2")
@@ -402,7 +424,8 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 
 		expect(result.childrenCreated).toBe(3);
 		expect(result.mentionsPersisted).toBe(3);
-		const insertCall = vi.mocked(detectionRepo.insertMatcherMentionsBatch).mock.calls[0]?.[0];
+		const insertCall = vi.mocked(detectionRepo.insertMatcherMentionsBatch).mock
+			.calls[0]?.[0];
 		expect(insertCall?.candidates).toHaveLength(3);
 		expect(insertCall?.candidates?.map((x) => x.entryId)).toEqual([
 			"e-1-1-3",
@@ -455,7 +478,9 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			matcherId: "m-gen",
 			entryId: "e-gen",
 			textSpan: "Gen 1:1",
-			parserSegments: [{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 }],
+			parserSegments: [
+				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({
 			entryId: "e-gen",
@@ -467,7 +492,10 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			id: "e-child-1-1",
 			parentId: "e-gen",
 		});
-		vi.spyOn(detectionRepo, "getMatcherByTextAndProjectIndexTypeId").mockResolvedValue({
+		vi.spyOn(
+			detectionRepo,
+			"getMatcherByTextAndProjectIndexTypeId",
+		).mockResolvedValue({
 			id: "mat-1-1",
 			entryId: "e-child-1-1",
 		});
@@ -493,7 +521,9 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			matcherId: "m-gen",
 			entryId: "e-gen",
 			textSpan: "Gen 3:1",
-			parserSegments: [{ refText: "3:1", chapter: 3, verseStart: 1, verseEnd: 1 }],
+			parserSegments: [
+				{ refText: "3:1", chapter: 3, verseStart: 1, verseEnd: 1 },
+			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({
 			entryId: "e-gen",
@@ -501,7 +531,9 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			label: "Genesis",
 			slug: "genesis",
 		});
-		vi.spyOn(detectionRepo, "getEntryByProjectTypeAndSlug").mockResolvedValue(null);
+		vi.spyOn(detectionRepo, "getEntryByProjectTypeAndSlug").mockResolvedValue(
+			null,
+		);
 		vi.spyOn(detectionRepo, "createChildEntry").mockResolvedValue("e-gen-3-1");
 		vi.spyOn(detectionRepo, "getMatcherByTextAndProjectIndexTypeId")
 			.mockResolvedValueOnce({

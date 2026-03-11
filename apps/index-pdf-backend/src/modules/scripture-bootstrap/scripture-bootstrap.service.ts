@@ -1,4 +1,3 @@
-import { TRPCError } from "@trpc/server";
 import {
 	getBookLabel,
 	getBootstrapApocryphaMatchers,
@@ -12,19 +11,22 @@ import {
 	normalize,
 	slugifyBootstrapKey,
 } from "@pubint/core";
-import type { CanonId } from "../scripture-index-config/scripture-index-config.types";
-import type { ScriptureIndexConfig } from "../scripture-index-config/scripture-index-config.types";
+import { TRPCError } from "@trpc/server";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
 import * as scriptureIndexConfigRepo from "../scripture-index-config/scripture-index-config.repo";
+import type {
+	CanonId,
+	ScriptureIndexConfig,
+} from "../scripture-index-config/scripture-index-config.types";
 import type { BootstrapCounts } from "./scripture-bootstrap.repo";
 import {
 	BOOTSTRAP_GROUP_SLUGS,
+	ensureEntryInGroup,
+	ensureMatcherInGroup,
 	findOrCreateEntry,
 	findOrCreateGroup,
 	findOrCreateMatcher,
-	ensureEntryInGroup,
-	ensureMatcherInGroup,
 	insertBootstrapRunStart,
 	updateBootstrapRunCounts,
 } from "./scripture-bootstrap.repo";
@@ -76,7 +78,11 @@ export async function run({
 	if (!config) {
 		logEvent({
 			event: "scripture_bootstrap.config_missing",
-			context: { requestId, userId, metadata: { projectId, projectIndexTypeId } },
+			context: {
+				requestId,
+				userId,
+				metadata: { projectId, projectIndexTypeId },
+			},
 		});
 		throw new TRPCError({
 			code: "BAD_REQUEST",
@@ -88,7 +94,11 @@ export async function run({
 	if (!config.selectedCanon) {
 		logEvent({
 			event: "scripture_bootstrap.rejected_no_canon",
-			context: { requestId, userId, metadata: { projectId, projectIndexTypeId } },
+			context: {
+				requestId,
+				userId,
+				metadata: { projectId, projectIndexTypeId },
+			},
 		});
 		throw new TRPCError({
 			code: "BAD_REQUEST",
@@ -419,7 +429,6 @@ export async function run({
 		type: "scripture_bootstrap.run_completed",
 		projectId,
 		userId,
-		entityId: null,
 		metadata: {
 			projectIndexTypeId,
 			configSnapshotHash: hash,

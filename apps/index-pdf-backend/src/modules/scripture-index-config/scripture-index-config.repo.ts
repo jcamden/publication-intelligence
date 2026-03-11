@@ -4,8 +4,10 @@ import {
 	projectHighlightConfigs,
 	scriptureIndexConfigs,
 } from "../../db/schema";
-import type { ScriptureIndexConfig } from "./scripture-index-config.types";
-import type { UpsertScriptureConfigInput } from "./scripture-index-config.types";
+import type {
+	ScriptureIndexConfig,
+	UpsertScriptureConfigInput,
+} from "./scripture-index-config.types";
 
 function rowToConfig(row: {
 	id: string;
@@ -55,10 +57,7 @@ export async function getScriptureConfig({
 				.where(
 					and(
 						eq(scriptureIndexConfigs.projectId, projectId),
-						eq(
-							scriptureIndexConfigs.projectIndexTypeId,
-							projectIndexTypeId,
-						),
+						eq(scriptureIndexConfigs.projectIndexTypeId, projectIndexTypeId),
 					),
 				)
 				.limit(1);

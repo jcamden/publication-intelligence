@@ -23,12 +23,16 @@ function refPortion(window: string): string | null {
 
 /** Ref portion must only contain digits, separators (:.,;-), spaces, and optional verse suffixes (e.g. 3a). Reject "1 and 2", "see page 1" (page is not a suffix). */
 function looksLikeRef(ref: string): boolean {
-	const tokens = ref.split(/[\s:.,;\-]+/).filter(Boolean);
+	const tokens = ref.split(/[\s:.,;-]+/).filter(Boolean);
 	return tokens.every((t) => /^\d+[a-z]?$/i.test(t));
 }
 
 /** Optional verse suffix (3a, 3b). Return numeric value, ref text, and optional suffix. */
-function parseVerseNum(s: string): { num: number; refText: string; suffix?: string } {
+function parseVerseNum(s: string): {
+	num: number;
+	refText: string;
+	suffix?: string;
+} {
 	const m = s.match(/^(\d+)([a-z])?$/i);
 	if (m) {
 		const num = Number.parseInt(m[1], 10);
@@ -41,7 +45,9 @@ function parseVerseNum(s: string): { num: number; refText: string; suffix?: stri
 }
 
 /** Parse a single ref token (no commas): ch, ch-ch, ch:v, ch.v, ch:v-v, cross-chapter. Returns one segment, or two for cross-chapter. */
-function parseSingleRef(block: string): ParsedRefSegment | ParsedRefSegment[] | null {
+function parseSingleRef(
+	block: string,
+): ParsedRefSegment | ParsedRefSegment[] | null {
 	const t = block.trim();
 	if (t.length === 0) return null;
 
@@ -109,7 +115,10 @@ function parseSingleRef(block: string): ParsedRefSegment | ParsedRefSegment[] | 
 
 /** Verse list: 1:1, 2, 3 or 1:1, 3-5, 7. First element must be ch:v/ch.v (verse mode); rest are verses. */
 function parseVerseList(block: string): ParsedRefSegment[] {
-	const parts = block.split(",").map((p) => p.trim()).filter(Boolean);
+	const parts = block
+		.split(",")
+		.map((p) => p.trim())
+		.filter(Boolean);
 	if (parts.length === 0) return [];
 
 	const firstResult = parseSingleRef(parts[0]);
@@ -117,7 +126,9 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 	if (!first || first.chapter === undefined) return [];
 
 	const chapter = first.chapter;
-	const segments: ParsedRefSegment[] = [...(Array.isArray(firstResult) ? firstResult : [first])];
+	const segments: ParsedRefSegment[] = [
+		...(Array.isArray(firstResult) ? firstResult : [first]),
+	];
 
 	for (let i = 1; i < parts.length; i++) {
 		const p = parts[i];
@@ -163,7 +174,10 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 
 /** Verse mode is triggered by : or . (e.g. 1:1 or 2.1). "1, 2, 3" without :/. is chapters, not verse list. */
 function isVerseList(block: string): boolean {
-	const parts = block.split(",").map((p) => p.trim()).filter(Boolean);
+	const parts = block
+		.split(",")
+		.map((p) => p.trim())
+		.filter(Boolean);
 	if (parts.length < 2) return false;
 	const first = parts[0];
 	return /^\d+[:.]\d+([a-z])?$/i.test(first);
@@ -177,7 +191,10 @@ function parseBlock(block: string): ParsedRefSegment[] {
 	const single = parseSingleRef(t);
 	if (single) return Array.isArray(single) ? single : [single];
 	// Comma-separated refs (e.g. 1:1-3, 2:4-5; or 1, 2, 3 = chapters)
-	const parts = t.split(",").map((p) => p.trim()).filter(Boolean);
+	const parts = t
+		.split(",")
+		.map((p) => p.trim())
+		.filter(Boolean);
 	if (parts.length > 1) {
 		const segments: ParsedRefSegment[] = [];
 		for (const p of parts) {
@@ -205,7 +222,10 @@ function parseLocalWindow(localWindow: string): ParsedRefSegment[] {
 	}
 	if (!looksLikeRef(ref)) return [];
 
-	const blocks = ref.split(";").map((b) => b.trim()).filter(Boolean);
+	const blocks = ref
+		.split(";")
+		.map((b) => b.trim())
+		.filter(Boolean);
 	const segments: ParsedRefSegment[] = [];
 	for (const block of blocks) {
 		segments.push(...parseBlock(block));

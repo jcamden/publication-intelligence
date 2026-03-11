@@ -1,5 +1,5 @@
-import { TRPCError } from "@trpc/server";
 import { isValidCanonId } from "@pubint/core";
+import { TRPCError } from "@trpc/server";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
 import * as scriptureIndexConfigRepo from "./scripture-index-config.repo";
@@ -94,12 +94,11 @@ export async function upsertScriptureConfig({
 		});
 	}
 
-	const before =
-		await scriptureIndexConfigRepo.getScriptureConfig({
-			projectId: input.projectId,
-			projectIndexTypeId: input.projectIndexTypeId,
-			userId,
-		});
+	const before = await scriptureIndexConfigRepo.getScriptureConfig({
+		projectId: input.projectId,
+		projectIndexTypeId: input.projectIndexTypeId,
+		userId,
+	});
 
 	const config = await scriptureIndexConfigRepo.upsertScriptureConfig({
 		input,

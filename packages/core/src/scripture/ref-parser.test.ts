@@ -87,10 +87,22 @@ describe("scripture ref parser - parser matrix", () => {
 
 	it("suffixes: 3a, 3b (verseSuffix preserved)", () => {
 		expect(parse("gen 1:3a")).toEqual([
-			{ refText: "1:3a", chapter: 1, verseStart: 3, verseEnd: 3, verseSuffix: "a" },
+			{
+				refText: "1:3a",
+				chapter: 1,
+				verseStart: 3,
+				verseEnd: 3,
+				verseSuffix: "a",
+			},
 		]);
 		expect(parse("gen 1:3b")).toEqual([
-			{ refText: "1:3b", chapter: 1, verseStart: 3, verseEnd: 3, verseSuffix: "b" },
+			{
+				refText: "1:3b",
+				chapter: 1,
+				verseStart: 3,
+				verseEnd: 3,
+				verseSuffix: "b",
+			},
 		]);
 	});
 });
@@ -122,8 +134,12 @@ describe("scripture ref parser - negative tests (false positives)", () => {
 	});
 
 	it("the 1 and 2 of the story -> parse returns []", () => {
-		expect(scriptureParserProfile.contextPrecheck("the 1 and 2 of the story")).toBe(true);
-		expect(scriptureParserProfile.parse("the 1 and 2 of the story")).toEqual([]);
+		expect(
+			scriptureParserProfile.contextPrecheck("the 1 and 2 of the story"),
+		).toBe(true);
+		expect(scriptureParserProfile.parse("the 1 and 2 of the story")).toEqual(
+			[],
+		);
 	});
 });
 

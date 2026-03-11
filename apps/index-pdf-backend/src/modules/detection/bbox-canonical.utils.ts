@@ -20,9 +20,7 @@ export type BboxAtom = {
  * produce the same key regardless of atom order. Deterministic and
  * language/runtime stable for dedupe and DB uniqueness.
  */
-export function canonicalizeBboxes(
-	bboxes: BboxAtom[],
-): BboxAtom[] {
+export function canonicalizeBboxes(bboxes: BboxAtom[]): BboxAtom[] {
 	if (bboxes.length === 0) return [];
 	return [...bboxes].sort((a, b) => {
 		if (a.y !== b.y) return a.y - b.y;

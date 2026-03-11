@@ -11,9 +11,12 @@ export const INDEX_ENTRY_GROUP_SORT_MODES = [
 	"canon_book_order",
 ] as const;
 
-export type IndexEntryGroupSortMode = (typeof INDEX_ENTRY_GROUP_SORT_MODES)[number];
+export type IndexEntryGroupSortMode =
+	(typeof INDEX_ENTRY_GROUP_SORT_MODES)[number];
 
-export const indexEntryGroupSortModeSchema = z.enum(INDEX_ENTRY_GROUP_SORT_MODES);
+export const indexEntryGroupSortModeSchema = z.enum(
+	INDEX_ENTRY_GROUP_SORT_MODES,
+);
 
 /** Parser profile id must be one of the predefined profiles or null (alias-only group). */
 export const parserProfileIdSchema = z
@@ -96,6 +99,15 @@ export const ListDetectionRunsSchema = z.object({
 });
 
 export type ListDetectionRunsInput = z.infer<typeof ListDetectionRunsSchema>;
+
+export const ListIndexEntryGroupsSchema = z.object({
+	projectId: z.string().uuid("Invalid project ID"),
+	projectIndexTypeId: z.string().uuid("Invalid project index type ID"),
+});
+
+export type ListIndexEntryGroupsInput = z.infer<
+	typeof ListIndexEntryGroupsSchema
+>;
 
 export const CancelDetectionRunSchema = z.object({
 	runId: z.string().uuid("Invalid run ID"),

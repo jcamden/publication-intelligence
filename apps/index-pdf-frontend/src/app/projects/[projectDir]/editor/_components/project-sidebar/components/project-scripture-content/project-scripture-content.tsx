@@ -9,6 +9,7 @@ import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/p
 import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
+import { MatcherRunControls } from "../matcher-run-controls";
 
 export const ProjectScriptureContent = () => {
 	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
@@ -121,6 +122,16 @@ export const ProjectScriptureContent = () => {
 
 	return (
 		<>
+			{scriptureProjectIndexTypeId && projectId && (
+				<div className="p-3 border-b border-gray-200 dark:border-gray-700">
+					<MatcherRunControls
+						projectId={projectId}
+						projectIndexTypeId={scriptureProjectIndexTypeId}
+						indexType="scripture"
+						emptyStateMessage="Configure scripture list or bootstrap, then run detection."
+					/>
+				</div>
+			)}
 			<div className="p-3 border-b border-gray-200 dark:border-gray-700">
 				<div className="flex items-center justify-between gap-3">
 					<span className="text-sm font-medium text-gray-700 dark:text-gray-300">

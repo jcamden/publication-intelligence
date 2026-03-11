@@ -1,7 +1,6 @@
 import "../../test/setup";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import * as indexEntryGroupRepo from "../detection/index-entry-group.repo";
 import {
 	createTestProject,
 	createTestUser,
@@ -12,6 +11,7 @@ import {
 	createTestServer,
 	makeAuthenticatedRequest,
 } from "../../test/server-harness";
+import * as indexEntryGroupRepo from "../detection/index-entry-group.repo";
 
 declare module "vitest" {
 	export interface TestContext {
@@ -134,7 +134,9 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		expect(res.statusCode).toBe(400);
 		const body = JSON.parse(res.body);
 		expect(body.error?.data?.code).toBe("BAD_REQUEST");
-		expect(body.error?.message).toMatch(/selected canon|requires a selected canon/i);
+		expect(body.error?.message).toMatch(
+			/selected canon|requires a selected canon/i,
+		);
 	});
 
 	it("bootstrap fails when config is missing", async ({
@@ -212,7 +214,13 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		);
 		expect(run1.statusCode).toBe(200);
 		const entries1 = JSON.parse(
-			(await listIndexEntries(authenticatedRequest, testProjectId, scriptureProjectIndexTypeId)).body,
+			(
+				await listIndexEntries(
+					authenticatedRequest,
+					testProjectId,
+					scriptureProjectIndexTypeId,
+				)
+			).body,
 		).result.data;
 		const slugsNoApoc = entries1.map((e: { slug: string }) => e.slug);
 		expect(slugsNoApoc).not.toContain("tobit");
@@ -229,7 +237,13 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			scriptureProjectIndexTypeId,
 		);
 		const entries2 = JSON.parse(
-			(await listIndexEntries(authenticatedRequest, testProjectId, scriptureProjectIndexTypeId)).body,
+			(
+				await listIndexEntries(
+					authenticatedRequest,
+					testProjectId,
+					scriptureProjectIndexTypeId,
+				)
+			).body,
 		).result.data;
 		const slugsWithApoc = entries2.map((e: { slug: string }) => e.slug);
 		expect(slugsWithApoc).toContain("tobit");
@@ -293,9 +307,17 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			scriptureProjectIndexTypeId,
 		);
 		const entriesAfterProtestant = JSON.parse(
-			(await listIndexEntries(authenticatedRequest, testProjectId, scriptureProjectIndexTypeId)).body,
+			(
+				await listIndexEntries(
+					authenticatedRequest,
+					testProjectId,
+					scriptureProjectIndexTypeId,
+				)
+			).body,
 		).result.data;
-		expect(entriesAfterProtestant.map((e: { slug: string }) => e.slug)).toContain("matthew");
+		expect(
+			entriesAfterProtestant.map((e: { slug: string }) => e.slug),
+		).toContain("matthew");
 
 		await upsertScriptureConfig(authenticatedRequest, {
 			projectId: testProjectId,
@@ -308,10 +330,20 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			scriptureProjectIndexTypeId,
 		);
 		const entriesAfterTanakh = JSON.parse(
-			(await listIndexEntries(authenticatedRequest, testProjectId, scriptureProjectIndexTypeId)).body,
+			(
+				await listIndexEntries(
+					authenticatedRequest,
+					testProjectId,
+					scriptureProjectIndexTypeId,
+				)
+			).body,
 		).result.data;
-		expect(entriesAfterTanakh.map((e: { slug: string }) => e.slug)).toContain("matthew");
-		expect(entriesAfterTanakh.map((e: { slug: string }) => e.slug)).toContain("genesis");
+		expect(entriesAfterTanakh.map((e: { slug: string }) => e.slug)).toContain(
+			"matthew",
+		);
+		expect(entriesAfterTanakh.map((e: { slug: string }) => e.slug)).toContain(
+			"genesis",
+		);
 	});
 
 	it("default groups and memberships are created/reused deterministically", async ({
@@ -343,7 +375,9 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		expect(run2.statusCode).toBe(200);
 		const counts2 = JSON.parse(run2.body).result.data;
 		expect(counts2.groupsCreated).toBe(0);
-		expect(counts2.entriesReused).toBe(counts1.entriesCreated + counts1.entriesReused);
+		expect(counts2.entriesReused).toBe(
+			counts1.entriesCreated + counts1.entriesReused,
+		);
 	});
 
 	describe("Task 7.3: Post-seed editability", () => {
@@ -368,7 +402,9 @@ describe("ScriptureBootstrap API (Integration)", () => {
 				scriptureProjectIndexTypeId,
 			);
 			const entries = JSON.parse(listRes.body).result.data;
-			const genesis = entries.find((e: { slug: string }) => e.slug === "genesis");
+			const genesis = entries.find(
+				(e: { slug: string }) => e.slug === "genesis",
+			);
 			expect(genesis).toBeDefined();
 			expect(genesis.label).toBe("Genesis");
 
@@ -419,7 +455,9 @@ describe("ScriptureBootstrap API (Integration)", () => {
 				scriptureProjectIndexTypeId,
 			);
 			const entries = JSON.parse(listRes.body).result.data;
-			const genesis = entries.find((e: { slug: string }) => e.slug === "genesis");
+			const genesis = entries.find(
+				(e: { slug: string }) => e.slug === "genesis",
+			);
 			await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/indexEntry.update",
@@ -471,7 +509,9 @@ describe("ScriptureBootstrap API (Integration)", () => {
 				scriptureProjectIndexTypeId,
 			);
 			const entries = JSON.parse(listRes.body).result.data;
-			const genesis = entries.find((e: { slug: string }) => e.slug === "genesis");
+			const genesis = entries.find(
+				(e: { slug: string }) => e.slug === "genesis",
+			);
 			await authenticatedRequest.inject({
 				method: "POST",
 				url: "/trpc/indexEntry.update",

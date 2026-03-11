@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { CANON_IDS } from "@pubint/core";
+import { z } from "zod";
 
 // Canon id enum for input validation (single canon only)
 export const canonIdSchema = z.enum(CANON_IDS);

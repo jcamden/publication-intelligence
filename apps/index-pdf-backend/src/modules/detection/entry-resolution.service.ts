@@ -211,12 +211,14 @@ const SCRIPTURE_INDEX_TYPE = "scripture";
 
 /** Deterministic slug fragment from segment refText (e.g. "1:1-3" -> "1-1-3"). */
 function segmentRefToSlug(refText: string): string {
-	return refText
-		.trim()
-		.replace(/[\s:.,;]+/g, "-")
-		.replace(/-+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.toLowerCase() || "book";
+	return (
+		refText
+			.trim()
+			.replace(/[\s:.,;]+/g, "-")
+			.replace(/-+/g, "-")
+			.replace(/^-+|-+$/g, "")
+			.toLowerCase() || "book"
+	);
 }
 
 /** Per-candidate scripture resolution: parent lookup, segment expansion, child entry/matcher create-reuse, writes. */
@@ -224,12 +226,7 @@ async function resolveScriptureCandidate(
 	candidate: ResolutionCandidate,
 	ctx: ResolutionContext,
 ): Promise<ResolutionOutcome> {
-	const {
-		userId,
-		projectId,
-		projectIndexTypeId,
-		detectionRunId,
-	} = ctx;
+	const { userId, projectId, projectIndexTypeId, detectionRunId } = ctx;
 	try {
 		const parent = await detectionRepo.getMatcherWithEntry({
 			userId,
@@ -454,13 +451,8 @@ export const resolveAndPersistCandidates = async ({
 	candidates: ResolutionCandidate[];
 	context: ResolutionContext;
 }): Promise<ResolutionRunResult> => {
-	const {
-		userId,
-		documentId,
-		detectionRunId,
-		projectIndexTypeId,
-		indexType,
-	} = context;
+	const { userId, documentId, detectionRunId, projectIndexTypeId, indexType } =
+		context;
 
 	const strategy = RESOLUTION_STRATEGIES.find((s) => s.canHandle(indexType));
 
@@ -516,7 +508,9 @@ export const resolveAndPersistCandidates = async ({
 					break;
 				case "failed":
 					failedCount += 1;
-					warnings.push(`matcherId=${c.matcherId} page=${c.pageNumber}: ${outcome.reasonCode}`);
+					warnings.push(
+						`matcherId=${c.matcherId} page=${c.pageNumber}: ${outcome.reasonCode}`,
+					);
 					break;
 			}
 		}
@@ -561,7 +555,6 @@ export const resolveAndPersistCandidates = async ({
 		dropped: droppedCount,
 		failed: failedCount,
 		warnings,
-		scripture:
-			indexType === SCRIPTURE_INDEX_TYPE ? scriptureAgg : undefined,
+		scripture: indexType === SCRIPTURE_INDEX_TYPE ? scriptureAgg : undefined,
 	};
 };

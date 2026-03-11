@@ -3,8 +3,10 @@
  * for seeding index entries and matchers from config (Task 7.2).
  */
 
+import { apocryphaOtherMatchers } from "./bible/apocrypha-other/matchers";
 import type { CanonId } from "./bible/canon-registry";
 import { getCanonBookKeys } from "./bible/canon-registry";
+import { getDeuterocanonMatchers } from "./bible/deterocanon/matchers";
 import { getHebrewBibleMatchers } from "./bible/hebrew-bible/matchers";
 import { newTestamentMatchers } from "./bible/new-testament/matchers";
 import {
@@ -13,11 +15,8 @@ import {
 	getProtestantLabel,
 	getRomanCatholicLabel,
 } from "./bible/text-labels-per-canon";
-import { apocryphaOtherMatchers } from "./bible/apocrypha-other/matchers";
-import { getDeuterocanonMatchers } from "./bible/deterocanon/matchers";
-import { JEWISH_WRITINGS_MATCHERS } from "./jewish-writings/matchers";
-import { CLASSICAL_WRITINGS_MATCHERS } from "./classical-writings/matchers";
 import { CHRISTIAN_WRITINGS_MATCHERS } from "./christian-writings/matchers";
+import { CLASSICAL_WRITINGS_MATCHERS } from "./classical-writings/matchers";
 import { CAVE_1_MATCHERS } from "./dss/cave1/matchers";
 import { CAVE_2_MATCHERS } from "./dss/cave2/matchers";
 import { CAVE_3_MATCHERS } from "./dss/cave3/matchers";
@@ -29,6 +28,7 @@ import { CAVE_8_MATCHERS } from "./dss/cave8/matchers";
 import { CAVE_9_MATCHERS } from "./dss/cave9/matchers";
 import { CAVE_10_MATCHERS } from "./dss/cave10/matchers";
 import { CAVE_11_MATCHERS } from "./dss/cave11/matchers";
+import { JEWISH_WRITINGS_MATCHERS } from "./jewish-writings/matchers";
 
 export { getCanonBookKeys };
 
@@ -52,7 +52,8 @@ export function getBookLabel(bookKey: string, canonId: CanonId): string {
 export function getBootstrapCanonMatchers(
 	canonId: CanonId,
 ): Record<string, string[]> {
-	const catholic = canonId === "roman_catholic" || canonId === "eastern_orthodox";
+	const catholic =
+		canonId === "roman_catholic" || canonId === "eastern_orthodox";
 	const hb = getHebrewBibleMatchers({
 		canon: catholic ? "catholic" : "protestant",
 	});
@@ -117,8 +118,10 @@ export function getMatchersForExtraBookKey(bookKey: string): string[] {
 
 /** Deterministic slug for bootstrap entries. Use bookKey for canon/apocrypha; slugify for other corpora. */
 export function slugifyBootstrapKey(key: string): string {
-	return key
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "_")
-		.replace(/^_|_$/g, "") || key;
+	return (
+		key
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "_")
+			.replace(/^_|_$/g, "") || key
+	);
 }

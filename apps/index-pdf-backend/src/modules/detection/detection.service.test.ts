@@ -1,4 +1,5 @@
 import "../../test/setup";
+import type { TextAtom } from "@pubint/core";
 import { getParserProfile } from "@pubint/core";
 import { describe, expect, it } from "vitest";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
@@ -8,22 +9,23 @@ import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import {
 	computeFallbackSpan,
 	dedupeMatcherCandidates,
-	sortMatcherCandidates,
 	shouldEmitFallbackMention,
+	sortMatcherCandidates,
 } from "./detection.service";
 import type { MatcherMentionCandidate } from "./detection.types";
 import {
 	buildSearchablePageText,
 	recalculateCharPositionsForIndexable,
 } from "./text-extraction.utils";
-import type { TextAtom } from "@pubint/core";
 
 // ============================================================================
 // sortMatcherCandidates: ordering and determinism (Task 4.1)
 // ============================================================================
 
 describe("sortMatcherCandidates", () => {
-	const baseCandidate = (overrides: Partial<MatcherMentionCandidate> = {}): MatcherMentionCandidate => ({
+	const baseCandidate = (
+		overrides: Partial<MatcherMentionCandidate> = {},
+	): MatcherMentionCandidate => ({
 		pageNumber: 1,
 		groupId: "g1",
 		matcherId: "m1",
@@ -81,9 +83,24 @@ describe("sortMatcherCandidates", () => {
 
 	it("orders by groupId when pageNumber, charStart and span length equal (Task 6.2)", () => {
 		const candidates: MatcherMentionCandidate[] = [
-			baseCandidate({ pageNumber: 1, charStart: 0, charEnd: 5, groupId: "g-b" }),
-			baseCandidate({ pageNumber: 1, charStart: 0, charEnd: 5, groupId: "g-a" }),
-			baseCandidate({ pageNumber: 1, charStart: 0, charEnd: 5, groupId: "g-c" }),
+			baseCandidate({
+				pageNumber: 1,
+				charStart: 0,
+				charEnd: 5,
+				groupId: "g-b",
+			}),
+			baseCandidate({
+				pageNumber: 1,
+				charStart: 0,
+				charEnd: 5,
+				groupId: "g-a",
+			}),
+			baseCandidate({
+				pageNumber: 1,
+				charStart: 0,
+				charEnd: 5,
+				groupId: "g-c",
+			}),
 		];
 		sortMatcherCandidates(candidates);
 		expect(candidates.map((c) => c.groupId)).toEqual(["g-a", "g-b", "g-c"]);
@@ -376,7 +393,9 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 			charStart: 0,
 			charEnd: 8,
 			bboxes: [bbox],
-			parserSegments: [{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 }],
+			parserSegments: [
+				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+			],
 		};
 		const fallback: MatcherMentionCandidate = {
 			...parsed,
@@ -406,7 +425,9 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 			charStart: 0,
 			charEnd: 8,
 			bboxes: [bbox],
-			parserSegments: [{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 }],
+			parserSegments: [
+				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+			],
 		};
 		const fallback: MatcherMentionCandidate = {
 			...parsed,

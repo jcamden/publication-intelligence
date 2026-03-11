@@ -4,9 +4,11 @@ import {
 	CancelDetectionRunSchema,
 	GetDetectionRunSchema,
 	ListDetectionRunsSchema,
+	ListIndexEntryGroupsSchema,
 	RunLlmSchema,
 	RunMatcherSchema,
 } from "./detection.types";
+import * as indexEntryGroupRepo from "./index-entry-group.repo";
 
 // ============================================================================
 // tRPC Router - HTTP/API layer
@@ -46,6 +48,16 @@ export const detectionRouter = router({
 			return await detectionService.listDetectionRuns({
 				userId: ctx.user.id,
 				projectId: input.projectId,
+			});
+		}),
+
+	listIndexEntryGroups: protectedProcedure
+		.input(ListIndexEntryGroupsSchema)
+		.query(async ({ ctx, input }) => {
+			return await indexEntryGroupRepo.listGroupsWithMeta({
+				userId: ctx.user.id,
+				projectId: input.projectId,
+				projectIndexTypeId: input.projectIndexTypeId,
 			});
 		}),
 

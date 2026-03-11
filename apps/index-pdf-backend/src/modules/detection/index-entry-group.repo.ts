@@ -1,10 +1,10 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
 import { withUserContext } from "../../db/client";
 import {
 	indexEntries,
 	indexEntryGroupEntries,
-	indexEntryGroups,
 	indexEntryGroupMatchers,
+	indexEntryGroups,
 	indexMatchers,
 } from "../../db/schema";
 import type { AliasInput } from "./alias-engine.types";
@@ -24,6 +24,11 @@ export type IndexEntryGroupListItem = {
 	createdAt: Date;
 	updatedAt: Date | null;
 	deletedAt: Date | null;
+};
+
+/** List item with matcher count for detection UI. */
+export type IndexEntryGroupListItemWithMeta = IndexEntryGroupListItem & {
+	matcherCount: number;
 };
 
 export type IndexEntryGroupWithMatchers = IndexEntryGroupListItem & {
@@ -111,6 +116,77 @@ export const listGroups = async ({
 };
 
 /**
+ * List groups for a project + index type with matcher count per group. Excludes soft-deleted.
+ */
+export const listGroupsWithMeta = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+}): Promise<IndexEntryGroupListItemWithMeta[]> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({
+					id: indexEntryGroups.id,
+					projectId: indexEntryGroups.projectId,
+					projectIndexTypeId: indexEntryGroups.projectIndexTypeId,
+					name: indexEntryGroups.name,
+					slug: indexEntryGroups.slug,
+					parserProfileId: indexEntryGroups.parserProfileId,
+					sortMode: indexEntryGroups.sortMode,
+					createdAt: indexEntryGroups.createdAt,
+					updatedAt: indexEntryGroups.updatedAt,
+					deletedAt: indexEntryGroups.deletedAt,
+					matcherCount: count(indexEntryGroupMatchers.matcherId),
+				})
+				.from(indexEntryGroups)
+				.leftJoin(
+					indexEntryGroupMatchers,
+					eq(indexEntryGroupMatchers.groupId, indexEntryGroups.id),
+				)
+				.where(
+					and(
+						eq(indexEntryGroups.projectId, projectId),
+						eq(indexEntryGroups.projectIndexTypeId, projectIndexTypeId),
+						isNull(indexEntryGroups.deletedAt),
+					),
+				)
+				.groupBy(
+					indexEntryGroups.id,
+					indexEntryGroups.projectId,
+					indexEntryGroups.projectIndexTypeId,
+					indexEntryGroups.name,
+					indexEntryGroups.slug,
+					indexEntryGroups.parserProfileId,
+					indexEntryGroups.sortMode,
+					indexEntryGroups.createdAt,
+					indexEntryGroups.updatedAt,
+					indexEntryGroups.deletedAt,
+				)
+				.orderBy(asc(indexEntryGroups.name));
+			return rows.map((r) => ({
+				id: r.id,
+				projectId: r.projectId,
+				projectIndexTypeId: r.projectIndexTypeId,
+				name: r.name,
+				slug: r.slug,
+				parserProfileId: r.parserProfileId,
+				sortMode: r.sortMode as "a_z" | "canon_book_order",
+				createdAt: r.createdAt,
+				updatedAt: r.updatedAt,
+				deletedAt: r.deletedAt,
+				matcherCount: Number(r.matcherCount),
+			}));
+		},
+	});
+};
+
+/**
  * Get one group by id (with RLS). Returns null if not found or deleted.
  */
 export const getGroup = async ({
@@ -189,7 +265,10 @@ export const getGroupMatcherSnapshot = async ({
 					indexEntries,
 					and(
 						eq(indexMatchers.entryId, indexEntries.id),
-						eq(indexEntries.projectIndexTypeId, indexMatchers.projectIndexTypeId),
+						eq(
+							indexEntries.projectIndexTypeId,
+							indexMatchers.projectIndexTypeId,
+						),
 					),
 				)
 				.where(
@@ -304,10 +383,7 @@ export const resolveRunGroupIds = async ({
 					.orderBy(asc(indexEntryGroups.name));
 				return rows.map((r) => r.id);
 			}
-			if (
-				Array.isArray(indexEntryGroupIds) &&
-				indexEntryGroupIds.length > 0
-			) {
+			if (Array.isArray(indexEntryGroupIds) && indexEntryGroupIds.length > 0) {
 				const rows = await tx
 					.select({ id: indexEntryGroups.id })
 					.from(indexEntryGroups)

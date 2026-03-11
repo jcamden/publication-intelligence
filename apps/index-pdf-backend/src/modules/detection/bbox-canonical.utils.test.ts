@@ -1,11 +1,11 @@
 import "../../test/setup";
 import { describe, expect, it } from "vitest";
 import {
+	type BboxAtom,
 	bboxesHash,
 	buildDedupeKey,
 	canonicalBboxJson,
 	canonicalizeBboxes,
-	type BboxAtom,
 } from "./bbox-canonical.utils";
 
 // ============================================================================

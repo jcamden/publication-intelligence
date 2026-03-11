@@ -800,6 +800,20 @@ Planned layout block model (Index page sidebar):
   - no-groups matcher state shows guidance and disables run action
   - in-flight mutation disables run action and prevents double-submit
 
+**Task 8.1.1: Matcher detection without groups (run all matchers)**
+- Allow matcher detection runs when zero index entry groups exist.
+- Rationale: Index entry groups are for organization and index-page rendering (e.g. grouping entries, controlling layout). They are not a prerequisite for running detection. Subject index: users create entries and matchers; detection can run over all matchers for that index type without creating groups. Scripture index: groups are useful for selecting which books/scriptures to include, but detection could also run over all scripture matchers; groups again organize output on the Index page.
+- Implementation details:
+  - Backend: Support a run that uses all matchers for the given `projectId` + `projectIndexTypeId` when no groups exist (or when user explicitly chooses "run all matchers"). Options: (a) when `runAllGroups: true` and the resolved group set is empty, treat as "run all matchers" for that index type; or (b) add an explicit input (e.g. `runAllMatchers: true`) and resolve to all matchers for the projectIndexType. Ensure detection pipeline accepts a matcher set that is not group-scoped (e.g. flat list of aliases from all entries/matchers for that type).
+  - Frontend: In MatcherRunControls (and equivalent page-sidebar control in 8.2), when there are no groups: show a single action "Run matcher detection (all matchers)" instead of empty-state guidance that disables run. When groups exist, keep current behavior (run all groups / select groups). Subject panel: "run all matchers" is the primary path when no groups exist; Scripture panel: same option, with group-based selection available when groups are present.
+  - Telemetry: include a flag or mode indicating "no groups / run all matchers" for analytics.
+- Acceptance:
+  - User with index entries and matchers but no index entry groups can run matcher detection from the Subject (and Scripture) panel.
+  - When groups exist, behavior unchanged (run all groups or select groups).
+
+**Task 8.1.2: Clarify empty-state copy for matcher detection**
+- Update MatcherRunControls (and 8.2 page-sidebar) empty-state messaging to align with 8.1.1: when no groups exist, emphasize "Run detection using all matchers in this index" (or similar) rather than only "create groups first." Keep secondary copy that explains groups are for organization and index layout when the user later adds groups.
+
 **Task 8.2: Page sidebar detection controls**
 - Group selector + run-all option
 - Page-level run action

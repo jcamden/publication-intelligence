@@ -131,6 +131,47 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 												],
 											},
 										};
+									} else if (key.includes("detection.listIndexEntryGroups")) {
+										const batchItem = inputs[key] as
+											| { json?: { projectId?: string } }
+											| undefined;
+										const projectId =
+											batchItem?.json?.projectId ?? "mock-project-id";
+										const emptyGroups = projectId === "empty-groups-project";
+										results[key] = {
+											result: {
+												data: emptyGroups
+													? []
+													: [
+															{
+																id: "mock-group-1",
+																projectId: "mock-project-id",
+																projectIndexTypeId: "mock-pit-subject-id",
+																name: "Group A",
+																slug: "group-a",
+																parserProfileId: null,
+																sortMode: "a_z",
+																createdAt: new Date().toISOString(),
+																updatedAt: null,
+																deletedAt: null,
+																matcherCount: 3,
+															},
+															{
+																id: "mock-group-2",
+																projectId: "mock-project-id",
+																projectIndexTypeId: "mock-pit-subject-id",
+																name: "Group B",
+																slug: "group-b",
+																parserProfileId: "scripture-biblical",
+																sortMode: "a_z",
+																createdAt: new Date().toISOString(),
+																updatedAt: null,
+																deletedAt: null,
+																matcherCount: 1,
+															},
+														],
+											},
+										};
 									}
 								});
 
@@ -447,6 +488,78 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 							JSON.stringify({
 								result: {
 									data: [],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					// detection.listIndexEntryGroups - for MatcherRunControls
+					if (urlString.includes("detection.listIndexEntryGroups")) {
+						const urlObj = new URL(urlString);
+						const input = urlObj.searchParams.get("input");
+						let projectId = "mock-project-id";
+						if (input) {
+							try {
+								const parsed = JSON.parse(input) as {
+									projectId?: string;
+									projectIndexTypeId?: string;
+								};
+								projectId = parsed.projectId ?? projectId;
+							} catch {
+								// use default
+							}
+						}
+						const emptyGroups = projectId === "empty-groups-project";
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: emptyGroups
+										? []
+										: [
+												{
+													id: "mock-group-1",
+													projectId: "mock-project-id",
+													projectIndexTypeId: "mock-pit-subject-id",
+													name: "Group A",
+													slug: "group-a",
+													parserProfileId: null,
+													sortMode: "a_z",
+													createdAt: new Date().toISOString(),
+													updatedAt: null,
+													deletedAt: null,
+													matcherCount: 3,
+												},
+												{
+													id: "mock-group-2",
+													projectId: "mock-project-id",
+													projectIndexTypeId: "mock-pit-subject-id",
+													name: "Group B",
+													slug: "group-b",
+													parserProfileId: "scripture-biblical",
+													sortMode: "a_z",
+													createdAt: new Date().toISOString(),
+													updatedAt: null,
+													deletedAt: null,
+													matcherCount: 1,
+												},
+											],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					// detection.runMatcher - for MatcherRunControls
+					if (urlString.includes("detection.runMatcher")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: { runId: "mock-run-id" },
 								},
 							}),
 							{

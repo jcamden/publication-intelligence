@@ -1,24 +1,19 @@
 import crypto from "node:crypto";
 import path from "node:path";
-import { getParserProfile } from "@pubint/core";
 import type { ParserProfile } from "@pubint/core";
+import { getParserProfile } from "@pubint/core";
+import { logEvent } from "../../logger";
 import { listRules } from "../canonical-page-rule/canonical-page-rule.repo";
 import {
 	getSourceDocumentById,
 	listSourceDocumentsByProject,
 } from "../source-document/sourceDocument.repo";
 import { getUserSettings } from "../user-settings/user-settings.repo";
-import { logEvent } from "../../logger";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
-import { resolveAndPersistCandidates } from "./entry-resolution.service";
-import * as indexEntryGroupRepo from "./index-entry-group.repo";
-import {
-	resolvePageIdToDocumentPageNumber,
-} from "./page-id.utils";
 import type {
 	CreateLlmDetectionRunInput,
 	CreateMatcherDetectionRunInput,
@@ -29,7 +24,10 @@ import type {
 	RunLlmInput,
 	RunMatcherInput,
 } from "./detection.types";
+import { resolveAndPersistCandidates } from "./entry-resolution.service";
+import * as indexEntryGroupRepo from "./index-entry-group.repo";
 import { callLLMForDetection } from "./openrouter.client";
+import { resolvePageIdToDocumentPageNumber } from "./page-id.utils";
 import { buildDetectionPrompt } from "./prompt.utils";
 import {
 	buildPromptText,
@@ -357,14 +355,12 @@ function parseLocalWindowForCandidate(
 }
 
 /** Citation-like: digits, spaces, separators. Verse suffix a-z allowed only when immediately after a digit (Task 4.3). */
-function isCitationLikeTailChar(
-	pageText: string,
-	index: number,
-): boolean {
+function isCitationLikeTailChar(pageText: string, index: number): boolean {
 	const c = pageText[index];
 	if (/[\d\s:.,;\-()]/.test(c)) return true;
 	// Optional verse suffix letter (e.g. 3a) only when preceded by a digit
-	if (/[a-z]/i.test(c) && index > 0 && /\d/.test(pageText[index - 1])) return true;
+	if (/[a-z]/i.test(c) && index > 0 && /\d/.test(pageText[index - 1]))
+		return true;
 	return false;
 }
 
@@ -618,7 +614,10 @@ const processMatcher = async ({
 	// Task 6.3: coverage skip observability
 	let matchersSkippedByCoverage = 0;
 	let pagesFullySkipped = 0;
-	const processedPageMatchers: Array<{ pageNumber: number; matcherId: string }> = [];
+	const processedPageMatchers: Array<{
+		pageNumber: number;
+		matcherId: string;
+	}> = [];
 	const skippedForLog: Array<{ pageNumber: number; matcherId: string }> = [];
 	const DEBUG_SKIPPED_LOG_LIMIT = 5;
 
@@ -744,10 +743,7 @@ const processMatcher = async ({
 			processedPageMatchers.push({ pageNumber: pageNum, matcherId: mid });
 		}
 
-		const pagesToExtract =
-			pageMemory.pages.has(pageNum)
-				? []
-				: [pageNum];
+		const pagesToExtract = pageMemory.pages.has(pageNum) ? [] : [pageNum];
 		if (pagesToExtract.length > 0) {
 			const extracted = await extractPages({
 				pdfPath,
@@ -789,7 +785,8 @@ const processMatcher = async ({
 			const withBbox = withBboxes.find(
 				(m) =>
 					m.pageNumber === pageNum &&
-					m.textSpan === searchableText.slice(match.originalStart, match.originalEnd),
+					m.textSpan ===
+						searchableText.slice(match.originalStart, match.originalEnd),
 			);
 			if (!withBbox) continue;
 
@@ -830,11 +827,9 @@ const processMatcher = async ({
 					bboxes: withBbox.bboxes,
 					parserSegments,
 				});
-			} else if (shouldEmitFallbackMention(
-				searchableText,
-				match.originalEnd,
-				profile,
-			)) {
+			} else if (
+				shouldEmitFallbackMention(searchableText, match.originalEnd, profile)
+			) {
 				const fallbackSpan = computeFallbackSpan(
 					searchableText,
 					match.originalStart,
@@ -844,24 +839,24 @@ const processMatcher = async ({
 					fallbackSpan.charStart,
 					fallbackSpan.charEnd,
 				);
-				const fallbackMentionsWithPositions = [{
-					mention: {
-						entryLabel: "",
-						indexType: match.indexType,
-						pageNumber: pageNum,
-						textSpan: fallbackTextSpan,
+				const fallbackMentionsWithPositions = [
+					{
+						mention: {
+							entryLabel: "",
+							indexType: match.indexType,
+							pageNumber: pageNum,
+							textSpan: fallbackTextSpan,
+						},
+						charStart: fallbackSpan.charStart,
+						charEnd: fallbackSpan.charEnd,
 					},
-					charStart: fallbackSpan.charStart,
-					charEnd: fallbackSpan.charEnd,
-				}];
+				];
 				const { mapped: fallbackWithBboxes } = mapPositionsToBBoxes({
 					mentionsWithPositions: fallbackMentionsWithPositions,
 					textAtoms: indexableAtomsWithCorrectedPositions,
 				});
 				const fallbackWithBbox = fallbackWithBboxes.find(
-					(m) =>
-						m.pageNumber === pageNum &&
-						m.textSpan === fallbackTextSpan,
+					(m) => m.pageNumber === pageNum && m.textSpan === fallbackTextSpan,
 				);
 				if (fallbackWithBbox) {
 					allCandidates.push({
@@ -892,7 +887,10 @@ const processMatcher = async ({
 
 	sortMatcherCandidates(allCandidates);
 
-	const dedupedCandidates = dedupeMatcherCandidates(allCandidates, projectIndexTypeId);
+	const dedupedCandidates = dedupeMatcherCandidates(
+		allCandidates,
+		projectIndexTypeId,
+	);
 
 	const resolutionContext = {
 		userId,

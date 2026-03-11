@@ -3,6 +3,7 @@
 import { Book, Lightbulb, Loader2, Settings, User, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { logError } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
 
@@ -47,7 +48,11 @@ export const DetectionPanel = () => {
 			refetchRuns();
 		},
 		onError: (error) => {
-			console.error("Failed to start detection:", error);
+			logError({
+				event: "detection.run_llm_failed",
+				error,
+				context: { metadata: { message: error.message } },
+			});
 		},
 	});
 
@@ -264,6 +269,11 @@ export const DetectionPanel = () => {
 											<span className="text-sm font-medium">
 												{config?.label || run.indexType}
 											</span>
+											{run.runType && (
+												<span className="text-xs text-neutral-500 capitalize">
+													({run.runType})
+												</span>
+											)}
 											<span
 												className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
 													run.status === "completed"
@@ -353,8 +363,10 @@ export const DetectionPanel = () => {
 										</div>
 									)}
 
-									<div className="flex gap-4 text-xs text-neutral-500">
-										<span>Model: {run.model}</span>
+									<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+										{run.runType === "llm" && run.model && (
+											<span>Model: {run.model}</span>
+										)}
 										{(run.pageRangeStart || run.pageRangeEnd) && (
 											<span>
 												Pages: {run.pageRangeStart || 1} -{" "}

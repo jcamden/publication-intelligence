@@ -11,7 +11,6 @@ import {
 } from "../../db/schema";
 import type { AliasInput } from "./alias-engine.types";
 import { bboxesHash as computeBboxesHash } from "./bbox-canonical.utils";
-import * as indexEntryGroupRepo from "./index-entry-group.repo";
 import type {
 	CreateDetectionRunInput,
 	CreateSuppressionInput,
@@ -22,6 +21,7 @@ import type {
 	UpdateDetectionRunStatusInput,
 } from "./detection.types";
 import { isLlmRunInput } from "./detection.types";
+import * as indexEntryGroupRepo from "./index-entry-group.repo";
 
 // ============================================================================
 // Repository Layer - Drizzle ORM queries
@@ -591,7 +591,10 @@ export const getMatcherByIdAndProjectIndexTypeId = async ({
 					indexEntries,
 					and(
 						eq(indexMatchers.entryId, indexEntries.id),
-						eq(indexEntries.projectIndexTypeId, indexMatchers.projectIndexTypeId),
+						eq(
+							indexEntries.projectIndexTypeId,
+							indexMatchers.projectIndexTypeId,
+						),
 					),
 				)
 				.where(
@@ -640,7 +643,10 @@ export const getMatcherWithEntry = async ({
 					indexEntries,
 					and(
 						eq(indexMatchers.entryId, indexEntries.id),
-						eq(indexEntries.projectIndexTypeId, indexMatchers.projectIndexTypeId),
+						eq(
+							indexEntries.projectIndexTypeId,
+							indexMatchers.projectIndexTypeId,
+						),
 					),
 				)
 				.where(
@@ -925,7 +931,10 @@ export const getCoveredMatcherIdsForPage = async ({
 				.from(detectionMatcherPageCoverage)
 				.where(
 					and(
-						eq(detectionMatcherPageCoverage.projectIndexTypeId, projectIndexTypeId),
+						eq(
+							detectionMatcherPageCoverage.projectIndexTypeId,
+							projectIndexTypeId,
+						),
 						eq(detectionMatcherPageCoverage.documentId, documentId),
 						eq(detectionMatcherPageCoverage.pageNumber, pageNumber),
 						inArray(detectionMatcherPageCoverage.matcherId, matcherIds),
