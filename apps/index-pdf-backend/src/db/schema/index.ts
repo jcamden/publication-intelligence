@@ -13,5 +13,6 @@ export * from "./indexing";
 export * from "./llm";
 export * from "./project-settings";
 export * from "./projects";
+export * from "./scripture-bootstrap-runs";
 export * from "./scripture-index-config";
 export * from "./users";
