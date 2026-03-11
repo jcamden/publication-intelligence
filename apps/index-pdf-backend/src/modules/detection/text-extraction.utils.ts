@@ -81,7 +81,7 @@ export const callPyMuPDFExtractor = async ({
 
 	if (!existsSync(venvPython)) {
 		throw new Error(
-			`Python venv not found at: ${venvPython}. Please run: cd apps/index-pdf-extractor && python3.11 -m venv venv && source venv/bin/activate && pip install -e .`,
+			`Python venv not found at: ${venvPython}. Please run: cd apps/index-pdf-extractor && python3 -m venv venv && source venv/bin/activate && pip install -e . (Python 3.11+ required)`,
 		);
 	}
 

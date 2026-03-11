@@ -140,7 +140,23 @@ async function resolveSubjectCandidate(
 					},
 				},
 			});
-			return { kind: "dropped", reasonCode: "matcher_not_found" };
+			// Fallback: use candidate.entryId from alias (run-all-matchers / alias built at run start)
+			// so we still persist mentions when lookup fails (e.g. RLS or timing).
+			const entryId = candidate.entryId;
+			if (!entryId) {
+				return { kind: "dropped", reasonCode: "matcher_not_found" };
+			}
+			return {
+				kind: "resolved",
+				writes: [
+					{
+						entryId,
+						pageNumber: candidate.pageNumber,
+						textSpan: candidate.textSpan,
+						bboxes: candidate.bboxes,
+					},
+				],
+			};
 		}
 		return {
 			kind: "resolved",
@@ -531,6 +547,17 @@ export const resolveAndPersistCandidates = async ({
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			warnings.push(`batch insert failed: ${message}`);
+			logEvent({
+				event: "detection.resolution_batch_insert_failed",
+				context: {
+					metadata: {
+						detectionRunId,
+						indexType,
+						totalWrites,
+						error: message,
+					},
+				},
+			});
 			return {
 				candidatesSeen,
 				resolved: resolvedCount,
@@ -544,6 +571,32 @@ export const resolveAndPersistCandidates = async ({
 			};
 		}
 	}
+
+	// Log resolution outcome to diagnose mentionsCreated: 0
+	logEvent({
+		event: "detection.resolution_run_result",
+		context: {
+			metadata: {
+				detectionRunId,
+				indexType,
+				candidatesSeen,
+				resolved: resolvedCount,
+				dropped: droppedCount,
+				failed: failedCount,
+				totalWrites,
+				persisted,
+				...(persisted === 0 &&
+					totalWrites > 0 && {
+						persistZeroReason: "all_conflicts_or_constraint",
+						firstWarning: warnings[0],
+					}),
+				...(persisted === 0 &&
+					totalWrites === 0 && {
+						persistZeroReason: "no_writes",
+					}),
+			},
+		},
+	});
 
 	const deduped = totalWrites - persisted;
 

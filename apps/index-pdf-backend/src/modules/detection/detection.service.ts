@@ -14,6 +14,7 @@ import type { ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
+import { RUN_ALL_MATCHERS_GROUP_ID } from "./detection.repo";
 import type {
 	CreateLlmDetectionRunInput,
 	CreateMatcherDetectionRunInput,
@@ -60,13 +61,16 @@ const createRunAndStartBackgroundProcess = async ({
 	});
 
 	processFn({ userId, runId: run.id }).catch((err) => {
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		const stack = err instanceof Error ? err.stack : undefined;
 		logEvent({
 			event: "detection.processing_error",
 			context: {
 				userId,
 				metadata: {
 					runId: run.id,
-					error: err instanceof Error ? err.message : String(err),
+					error: errorMessage,
+					...(stack && { stack }),
 				},
 				error: err instanceof Error ? err : new Error(String(err)),
 			},
@@ -172,8 +176,39 @@ export const runMatcher = async ({
 	}
 
 	const sourceDocListItem = sourceDocuments[0];
+	if (
+		input.scope === "project" &&
+		(sourceDocListItem.page_count == null || sourceDocListItem.page_count < 1)
+	) {
+		throw new Error(
+			"Source document has no page count or has zero pages; matcher detection cannot run",
+		);
+	}
 	const totalPages =
 		input.scope === "page" ? 1 : (sourceDocListItem.page_count ?? 1);
+
+	if (
+		input.scope === "project" &&
+		sourceDocListItem.page_count != null &&
+		sourceDocListItem.page_count >= 1
+	) {
+		if (
+			input.pageRangeStart != null &&
+			input.pageRangeStart > sourceDocListItem.page_count
+		) {
+			throw new Error(
+				`Page range start (${input.pageRangeStart}) exceeds document page count (${sourceDocListItem.page_count})`,
+			);
+		}
+		if (
+			input.pageRangeEnd != null &&
+			input.pageRangeEnd > sourceDocListItem.page_count
+		) {
+			throw new Error(
+				`Page range end (${input.pageRangeEnd}) exceeds document page count (${sourceDocListItem.page_count})`,
+			);
+		}
+	}
 
 	const settingsHash = calculateMatcherSettingsHash({
 		projectId: input.projectId,
@@ -182,6 +217,8 @@ export const runMatcher = async ({
 		pageId: input.pageId,
 		indexEntryGroupIds: input.indexEntryGroupIds,
 		runAllGroups: input.runAllGroups,
+		pageRangeStart: input.pageRangeStart,
+		pageRangeEnd: input.pageRangeEnd,
 	});
 
 	const runInput: CreateMatcherDetectionRunInput = {
@@ -191,6 +228,8 @@ export const runMatcher = async ({
 		pageId: input.pageId,
 		indexEntryGroupIds: input.indexEntryGroupIds,
 		runAllGroups: input.runAllGroups,
+		pageRangeStart: input.pageRangeStart,
+		pageRangeEnd: input.pageRangeEnd,
 		settingsHash,
 		totalPages,
 	};
@@ -442,6 +481,7 @@ export function dedupeMatcherCandidates(
 			projectIndexTypeId,
 			matcherId: c.matcherId,
 			pageNumber: c.pageNumber,
+			charStart: c.charStart,
 			bboxes: c.bboxes,
 		});
 		const existing = candidateByKey.get(key);
@@ -545,7 +585,7 @@ const processMatcher = async ({
 		return;
 	}
 
-	// Run input resolution: resolve group IDs; reject when empty (Task 6.2).
+	// Run input resolution: resolve group IDs. When empty with runAllGroups (no groups), treat as run-all-matchers (Task 8.1.1).
 	const groupIds = await indexEntryGroupRepo.resolveRunGroupIds({
 		userId,
 		projectId: run.projectId,
@@ -554,48 +594,38 @@ const processMatcher = async ({
 		runAllGroups: run.runAllGroups,
 	});
 
-	if (groupIds.length === 0) {
-		await detectionRepo.updateDetectionRunStatus({
-			userId,
-			input: {
-				runId,
-				status: "failed",
-				finishedAt: new Date(),
-				errorMessage:
-					"No groups selected or no valid groups found for this run",
-			},
-		});
-		return;
-	}
+	const runAllMatchers = groupIds.length === 0;
 
-	// Group snapshot: fetch metadata (id, parser_profile_id, sort_mode) once per run.
-	const groupMetas = await indexEntryGroupRepo.listGroupsByIds({
-		userId,
-		projectId: run.projectId,
-		projectIndexTypeId,
-		groupIds,
-	});
-
-	// Parser profile mapping: resolve each group's parser_profile_id; fail early on unknown id (Task 6.2).
+	// Group snapshot and parser profile cache. When runAllMatchers, use sentinel only (alias-only; no parser segments).
 	const groupProfileCache = new Map<string, ParserProfile | null>();
-	for (const g of groupMetas) {
-		if (g.parserProfileId != null) {
-			const profile = getParserProfile(g.parserProfileId);
-			if (profile === undefined) {
-				await detectionRepo.updateDetectionRunStatus({
-					userId,
-					input: {
-						runId,
-						status: "failed",
-						finishedAt: new Date(),
-						errorMessage: `Unknown parser profile id: ${g.parserProfileId}`,
-					},
-				});
-				return;
+	if (runAllMatchers) {
+		groupProfileCache.set(RUN_ALL_MATCHERS_GROUP_ID, null);
+	} else {
+		const groupMetas = await indexEntryGroupRepo.listGroupsByIds({
+			userId,
+			projectId: run.projectId,
+			projectIndexTypeId,
+			groupIds,
+		});
+		for (const g of groupMetas) {
+			if (g.parserProfileId != null) {
+				const profile = getParserProfile(g.parserProfileId);
+				if (profile === undefined) {
+					await detectionRepo.updateDetectionRunStatus({
+						userId,
+						input: {
+							runId,
+							status: "failed",
+							finishedAt: new Date(),
+							errorMessage: `Unknown parser profile id: ${g.parserProfileId}`,
+						},
+					});
+					return;
+				}
+				groupProfileCache.set(g.id, profile);
+			} else {
+				groupProfileCache.set(g.id, null);
 			}
-			groupProfileCache.set(g.id, profile);
-		} else {
-			groupProfileCache.set(g.id, null);
 		}
 	}
 
@@ -629,6 +659,7 @@ const processMatcher = async ({
 				runId,
 				groupIds,
 				groupCount: groupIds.length,
+				runAllMatchers,
 				matcherCount: aliases.length,
 				matchersConsidered: runMatcherIds.length,
 			},
@@ -684,6 +715,18 @@ const processMatcher = async ({
 	}
 
 	if (pagesToProcess.length === 0) {
+		logEvent({
+			event: "detection.matcher_run_completed",
+			context: {
+				userId,
+				metadata: {
+					runId,
+					mentionsCreated: 0,
+					reason: "no_pages_to_process",
+					totalPages: run.totalPages,
+				},
+			},
+		});
 		await detectionRepo.updateDetectionRunStatus({
 			userId,
 			input: {
@@ -695,11 +738,32 @@ const processMatcher = async ({
 		return;
 	}
 
+	logEvent({
+		event: "detection.matcher_run_pages_scheduled",
+		context: {
+			userId,
+			metadata: {
+				runId,
+				pageCount: pagesToProcess.length,
+			},
+		},
+	});
+
 	const excludeRegions: Region[] = [];
 	const pageMemory: PageMemory = { pages: new Map() };
 	const allCandidates: MatcherMentionCandidate[] = [];
 
 	for (const pageNum of pagesToProcess) {
+		if (pageNum === 1 || pageNum % 50 === 0) {
+			logEvent({
+				event: "detection.matcher_run_page_progress",
+				context: {
+					userId,
+					metadata: { runId, pageNum, totalPages: pagesToProcess.length },
+				},
+			});
+		}
+
 		const currentRun = await detectionRepo.getDetectionRun({
 			userId,
 			runId,
@@ -745,11 +809,29 @@ const processMatcher = async ({
 
 		const pagesToExtract = pageMemory.pages.has(pageNum) ? [] : [pageNum];
 		if (pagesToExtract.length > 0) {
+			if (pageNum === 1) {
+				logEvent({
+					event: "detection.matcher_run_extract_start",
+					context: {
+						userId,
+						metadata: { runId, pageNum },
+					},
+				});
+			}
 			const extracted = await extractPages({
 				pdfPath,
 				pageNumbers: pagesToExtract,
 				excludeRegions,
 			});
+			if (pageNum === 1) {
+				logEvent({
+					event: "detection.matcher_run_extract_done",
+					context: {
+						userId,
+						metadata: { runId, pageNum },
+					},
+				});
+			}
 			for (const [p, atoms] of extracted) {
 				pageMemory.pages.set(p, atoms);
 			}
@@ -781,13 +863,11 @@ const processMatcher = async ({
 			textAtoms: indexableAtomsWithCorrectedPositions,
 		});
 
-		for (const match of matches) {
-			const withBbox = withBboxes.find(
-				(m) =>
-					m.pageNumber === pageNum &&
-					m.textSpan ===
-						searchableText.slice(match.originalStart, match.originalEnd),
-			);
+		// Pair by index: withBboxes[i] is the bbox for matches[i] (same order as mentionsWithPositions).
+		// Do not match by textSpan—multiple occurrences (e.g. 11× "Qumran") would all get the first withBbox.
+		for (let i = 0; i < matches.length; i++) {
+			const match = matches[i];
+			const withBbox = withBboxes[i];
 			if (!withBbox) continue;
 
 			const profile = groupProfileCache.get(match.groupId) ?? null;
@@ -892,6 +972,17 @@ const processMatcher = async ({
 		projectIndexTypeId,
 	);
 
+	logEvent({
+		event: "detection.matcher_run_loop_done",
+		context: {
+			userId,
+			metadata: {
+				runId,
+				candidatesCollected: allCandidates.length,
+			},
+		},
+	});
+
 	const resolutionContext = {
 		userId,
 		documentId: sourceDoc.id,
@@ -907,18 +998,19 @@ const processMatcher = async ({
 	const mentionsCreated = resolutionResult.persisted;
 
 	// Task 6.3: write coverage only after persistence; do not write if run was cancelled
-	const finalRun = await detectionRepo.getDetectionRun({ userId, runId });
-	let coverageRowsWritten = 0;
-	if (finalRun?.status !== "cancelled" && processedPageMatchers.length > 0) {
-		coverageRowsWritten = await detectionRepo.upsertMatcherPageCoverage({
-			userId,
-			runId,
-			projectId: run.projectId,
-			projectIndexTypeId,
-			documentId: sourceDoc.id,
-			rows: processedPageMatchers,
-		});
-	}
+	// TODO: re-enable coverage once detection runs are producing mentions.
+	// const finalRun = await detectionRepo.getDetectionRun({ userId, runId });
+	// let coverageRowsWritten = 0;
+	// if (finalRun?.status !== "cancelled" && processedPageMatchers.length > 0) {
+	// 	coverageRowsWritten = await detectionRepo.upsertMatcherPageCoverage({
+	// 		userId,
+	// 		runId,
+	// 		projectId: run.projectId,
+	// 		projectIndexTypeId,
+	// 		documentId: sourceDoc.id,
+	// 		rows: processedPageMatchers,
+	// 	});
+	// }
 
 	// Observability: aggregated counts (Task 6.2) + coverage (Task 6.3)
 	const segmentsEmitted = allCandidates.filter(
@@ -941,7 +1033,8 @@ const processMatcher = async ({
 				matchersConsidered: runMatcherIds.length,
 				matchersSkippedByCoverage,
 				pagesFullySkipped,
-				coverageRowsWritten,
+				// TODO: re-enable coverage once detection runs are producing mentions.
+				// coverageRowsWritten,
 			},
 		},
 	});
@@ -1380,6 +1473,8 @@ const calculateMatcherSettingsHash = ({
 	pageId,
 	indexEntryGroupIds,
 	runAllGroups,
+	pageRangeStart,
+	pageRangeEnd,
 }: {
 	projectId: string;
 	indexType: string;
@@ -1387,6 +1482,8 @@ const calculateMatcherSettingsHash = ({
 	pageId?: string;
 	indexEntryGroupIds?: string[];
 	runAllGroups?: boolean;
+	pageRangeStart?: number;
+	pageRangeEnd?: number;
 }): string => {
 	const data = JSON.stringify({
 		projectId,
@@ -1395,6 +1492,8 @@ const calculateMatcherSettingsHash = ({
 		pageId,
 		indexEntryGroupIds,
 		runAllGroups,
+		pageRangeStart,
+		pageRangeEnd,
 	});
 	return crypto.createHash("sha256").update(data).digest("hex");
 };

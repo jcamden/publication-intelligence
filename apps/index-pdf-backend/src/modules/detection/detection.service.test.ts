@@ -220,12 +220,14 @@ describe("matcher dedupe (Task 4.2)", () => {
 			projectIndexTypeId,
 			matcherId: candidate1.matcherId,
 			pageNumber: candidate1.pageNumber,
+			charStart: candidate1.charStart,
 			bboxes: candidate1.bboxes,
 		});
 		const key2 = buildDedupeKey({
 			projectIndexTypeId,
 			matcherId: candidate2.matcherId,
 			pageNumber: candidate2.pageNumber,
+			charStart: candidate2.charStart,
 			bboxes: candidate2.bboxes,
 		});
 		expect(key1).toBe(key2);
@@ -262,6 +264,7 @@ describe("matcher dedupe (Task 4.2)", () => {
 				projectIndexTypeId,
 				matcherId: c.matcherId,
 				pageNumber: c.pageNumber,
+				charStart: c.charStart,
 				bboxes: c.bboxes,
 			});
 			if (seenKeys.has(key)) return false;
@@ -302,6 +305,7 @@ describe("matcher dedupe (Task 4.2)", () => {
 				projectIndexTypeId,
 				matcherId: c.matcherId,
 				pageNumber: c.pageNumber,
+				charStart: c.charStart,
 				bboxes: c.bboxes,
 			});
 			if (seenKeys.has(key)) return false;

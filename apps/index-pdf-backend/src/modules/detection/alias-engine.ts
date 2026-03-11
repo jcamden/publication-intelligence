@@ -53,18 +53,37 @@ export function buildAliasIndex(aliases: AliasInput[]): AliasIndex {
 // Task 2.3: Candidate collection (slide + findAll)
 // ============================================================================
 
+/**
+ * Find all start indices of `pattern` in `text` (overlapping occurrences allowed).
+ */
+function findAllOccurrences(text: string, pattern: string): number[] {
+	const indices: number[] = [];
+	let pos = 0;
+	while (true) {
+		const i = text.indexOf(pattern, pos);
+		if (i === -1) break;
+		indices.push(i);
+		pos = i + 1;
+	}
+	return indices;
+}
+
+/**
+ * Collect all alias match candidates with correct normalized spans.
+ * findAll() returns patterns that appear anywhere in the text, not positions,
+ * so we locate each pattern's occurrences and record (start, end) per occurrence.
+ */
 function collectCandidates(
 	normalizedText: string,
 	automaton: AliasIndex["automaton"],
 ): AliasMatchCandidate[] {
 	const candidates: AliasMatchCandidate[] = [];
-	for (let i = 0; i < normalizedText.length; i++) {
-		const slice = normalizedText.slice(i);
-		const matched = automaton.findAll(slice);
-		for (const p of matched) {
+	const matchedPatterns = automaton.findAll(normalizedText);
+	for (const p of matchedPatterns) {
+		for (const pos of findAllOccurrences(normalizedText, p)) {
 			candidates.push({
-				normalizedStart: i,
-				normalizedEnd: i + p.length,
+				normalizedStart: pos,
+				normalizedEnd: pos + p.length,
 				matchedAlias: p,
 			});
 		}

@@ -1,0 +1,2 @@
+DROP INDEX "unique_mention_entry_page_bbox";--> statement-breakpoint
+CREATE UNIQUE INDEX "unique_mention_entry_page_bbox" ON "index_mentions" USING btree ("project_index_type_id","entry_id","page_number","bboxes_hash");

@@ -113,8 +113,44 @@ describe("resolveAndPersistSubjectCandidates (Task 5.1)", () => {
 		expect(insertCalls[0]?.[0].candidates).toHaveLength(1);
 	});
 
-	it("drops candidate when matcher does not exist in current project/index type", async () => {
-		const candidate = baseCandidate({ matcherId: "missing-matcher" });
+	it("resolves and persists when matcher not found but candidate has entryId (fallback)", async () => {
+		const candidate = baseCandidate({ matcherId: "missing-matcher", entryId: "e1" });
+		vi.spyOn(
+			detectionRepo,
+			"getMatcherByIdAndProjectIndexTypeId",
+		).mockResolvedValue(null);
+		vi.spyOn(detectionRepo, "insertMatcherMentionsBatch").mockResolvedValue(1);
+
+		const result = await resolveAndPersistSubjectCandidates({
+			candidates: [candidate],
+			context: baseContext,
+		});
+
+		expect(result.candidatesSeen).toBe(1);
+		expect(result.resolved).toBe(1);
+		expect(result.persisted).toBe(1);
+		expect(result.dropped).toBe(0);
+		expect(detectionRepo.insertMatcherMentionsBatch).toHaveBeenCalledWith({
+			userId,
+			documentId,
+			detectionRunId,
+			projectIndexTypeId,
+			candidates: [
+				{
+					entryId: "e1",
+					pageNumber: 1,
+					textSpan: "Genesis",
+					bboxes: [{ x: 0, y: 10, width: 50, height: 8 }],
+				},
+			],
+		});
+	});
+
+	it("drops candidate when matcher does not exist and candidate has no entryId", async () => {
+		const candidate = baseCandidate({
+			matcherId: "missing-matcher",
+			entryId: "",
+		});
 		vi.spyOn(
 			detectionRepo,
 			"getMatcherByIdAndProjectIndexTypeId",

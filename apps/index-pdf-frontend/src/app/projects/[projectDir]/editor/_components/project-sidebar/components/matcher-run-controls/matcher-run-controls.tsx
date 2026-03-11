@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { logEvent } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_utils/trpc";
 
@@ -68,13 +68,15 @@ export const MatcherRunControls = ({
 	projectId,
 	projectIndexTypeId,
 	indexType,
-	emptyStateMessage,
+	emptyStateMessage: _emptyStateMessage,
 }: MatcherRunControlsProps) => {
 	const [runAllGroups, setRunAllGroups] = useState(false);
 	const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(
 		() => new Set(),
 	);
 	const [validationError, setValidationError] = useState<string | null>(null);
+	const [pageRangeStart, setPageRangeStart] = useState<string>("");
+	const [pageRangeEnd, setPageRangeEnd] = useState<string>("");
 
 	const utils = trpc.useUtils();
 
@@ -83,6 +85,30 @@ export const MatcherRunControls = ({
 			{ projectId, projectIndexTypeId },
 			{ enabled: !!projectId && !!projectIndexTypeId },
 		);
+
+	const { data: detectionRuns = [] } = trpc.detection.listDetectionRuns.useQuery(
+		{ projectId: projectId || "" },
+		{
+			enabled: !!projectId,
+			refetchInterval: (query) => {
+				const runs = query.state.data || [];
+				const hasActiveMatcherRun = runs.some(
+					(run) =>
+						run.runType === "matcher" &&
+						run.indexType === indexType &&
+						(run.status === "running" || run.status === "queued"),
+				);
+				return hasActiveMatcherRun ? 2000 : false;
+			},
+		},
+	);
+
+	const activeMatcherRun = detectionRuns.find(
+		(run) =>
+			run.runType === "matcher" &&
+			run.indexType === indexType &&
+			(run.status === "running" || run.status === "queued"),
+	);
 
 	// Hydrate from localStorage once groups are loaded; apply only if IDs still exist
 	useEffect(() => {
@@ -147,13 +173,39 @@ export const MatcherRunControls = ({
 			return;
 		}
 
+		const startPage = pageRangeStart
+			? Number.parseInt(pageRangeStart, 10)
+			: undefined;
+		const endPage = pageRangeEnd
+			? Number.parseInt(pageRangeEnd, 10)
+			: undefined;
+		if (startPage != null && endPage != null && startPage > endPage) {
+			setValidationError("Start page must be ≤ end page.");
+			return;
+		}
+
 		const payload = runAllGroups
-			? { projectId, indexType, scope: "project" as const, runAllGroups: true }
+			? {
+					projectId,
+					indexType,
+					scope: "project" as const,
+					runAllGroups: true,
+					...(startPage != null &&
+						endPage != null && {
+							pageRangeStart: startPage,
+							pageRangeEnd: endPage,
+						}),
+				}
 			: {
 					projectId,
 					indexType,
 					scope: "project" as const,
 					indexEntryGroupIds: Array.from(selectedGroupIds),
+					...(startPage != null &&
+						endPage != null && {
+							pageRangeStart: startPage,
+							pageRangeEnd: endPage,
+						}),
 				};
 
 		savePersistedSelection(projectId, indexType, {
@@ -175,7 +227,15 @@ export const MatcherRunControls = ({
 		});
 
 		runMatcher.mutate(payload);
-	}, [projectId, indexType, runAllGroups, selectedGroupIds, runMatcher]);
+	}, [
+		projectId,
+		indexType,
+		runAllGroups,
+		selectedGroupIds,
+		pageRangeStart,
+		pageRangeEnd,
+		runMatcher,
+	]);
 
 	const toggleGroup = useCallback((groupId: string) => {
 		setSelectedGroupIds((prev) => {
@@ -194,24 +254,137 @@ export const MatcherRunControls = ({
 		setValidationError(null);
 	}, [runAllGroups]);
 
-	const canSubmit = useMemo(() => {
-		if (groups.length === 0) return false;
-		return runAllGroups || selectedGroupIds.size > 0;
-	}, [groups.length, runAllGroups, selectedGroupIds.size]);
-
 	const isPending = runMatcher.isPending;
+
+	const handleRunAllMatchers = useCallback(() => {
+		setValidationError(null);
+		logEvent({
+			event: "detection.run_triggered",
+			context: {
+				metadata: {
+					mode: "matcher",
+					scope: "project",
+					indexType,
+					runAllMatchers: true,
+				},
+			},
+		});
+		const startPage = pageRangeStart
+			? Number.parseInt(pageRangeStart, 10)
+			: undefined;
+		const endPage = pageRangeEnd
+			? Number.parseInt(pageRangeEnd, 10)
+			: undefined;
+		if (startPage != null && endPage != null && startPage > endPage) {
+			setValidationError("Start page must be ≤ end page.");
+			return;
+		}
+		runMatcher.mutate({
+			projectId,
+			indexType,
+			scope: "project",
+			runAllGroups: true,
+			...(startPage != null &&
+				endPage != null && {
+					pageRangeStart: startPage,
+					pageRangeEnd: endPage,
+				}),
+		});
+	}, [projectId, indexType, pageRangeStart, pageRangeEnd, runMatcher]);
 
 	if (groups.length === 0 && groupsLoaded) {
 		return (
 			<div className="rounded-lg border border-border bg-surface p-4">
 				<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
-				<output className="block text-sm text-neutral-500">
-					{emptyStateMessage}
-				</output>
-				<p className="text-xs text-neutral-400 mt-1">
-					No groups for this index type. Run is disabled until you add groups
-					and matchers.
+				<p className="text-sm text-neutral-500">
+					Run detection using all matchers in this index. Add groups later to
+					organize entries and control index layout.
 				</p>
+				<div className="mt-3 space-y-1">
+					<span className="text-xs font-medium text-neutral-500">
+						Page range (optional)
+					</span>
+					<div className="flex gap-2 items-center">
+						<input
+							id="matcher-page-start"
+							type="number"
+							min={1}
+							placeholder="Start"
+							value={pageRangeStart}
+							onChange={(e) => setPageRangeStart(e.target.value)}
+							className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+							aria-label="Start page"
+						/>
+						<span className="text-neutral-400">–</span>
+						<input
+							id="matcher-page-end"
+							type="number"
+							min={1}
+							placeholder="End"
+							value={pageRangeEnd}
+							onChange={(e) => setPageRangeEnd(e.target.value)}
+							className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+							aria-label="End page"
+						/>
+					</div>
+					<p className="text-xs text-neutral-400">
+						Leave blank to run on the full document.
+					</p>
+				</div>
+				{validationError && (
+					<p
+						className="text-sm text-red-600 dark:text-red-400 mt-2"
+						role="alert"
+					>
+						{validationError}
+					</p>
+				)}
+				<button
+					type="button"
+					onClick={handleRunAllMatchers}
+					disabled={isPending}
+					className="mt-3 flex gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+					aria-busy={isPending}
+					aria-disabled={isPending}
+				>
+					{isPending ? (
+						<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+					) : null}
+					{isPending ? "Running…" : "Run matcher detection (all matchers)"}
+				</button>
+				{activeMatcherRun &&
+					activeMatcherRun.totalPages != null &&
+					activeMatcherRun.totalPages > 0 && (
+						<div className="mt-3 space-y-1">
+							<div className="flex justify-between text-xs text-neutral-500">
+								<span>
+									Page {activeMatcherRun.progressPage ?? 0} of{" "}
+									{activeMatcherRun.totalPages}
+								</span>
+								<span>
+									{Math.round(
+										((activeMatcherRun.progressPage ?? 0) /
+											activeMatcherRun.totalPages) *
+											100,
+									)}
+									%
+								</span>
+							</div>
+							<div className="h-2 w-full rounded-full bg-border">
+								<div
+									className="h-2 rounded-full bg-primary transition-all"
+									style={{
+										width: `${Math.min(
+											100,
+											((activeMatcherRun.progressPage ?? 0) /
+												activeMatcherRun.totalPages) *
+												100,
+										)}%`,
+									}}
+								/>
+							</div>
+						</div>
+					)}
 			</div>
 		);
 	}
@@ -268,6 +441,38 @@ export const MatcherRunControls = ({
 					</div>
 				</fieldset>
 
+				<div className="space-y-1">
+					<span className="text-xs font-medium text-neutral-500">
+						Page range (optional)
+					</span>
+					<div className="flex gap-2 items-center">
+						<input
+							id="matcher-page-start-groups"
+							type="number"
+							min={1}
+							placeholder="Start"
+							value={pageRangeStart}
+							onChange={(e) => setPageRangeStart(e.target.value)}
+							className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+							aria-label="Start page"
+						/>
+						<span className="text-neutral-400">–</span>
+						<input
+							id="matcher-page-end-groups"
+							type="number"
+							min={1}
+							placeholder="End"
+							value={pageRangeEnd}
+							onChange={(e) => setPageRangeEnd(e.target.value)}
+							className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+							aria-label="End page"
+						/>
+					</div>
+					<p className="text-xs text-neutral-400">
+						Leave blank to run on the full document.
+					</p>
+				</div>
+
 				{validationError && (
 					<p className="text-sm text-red-600 dark:text-red-400" role="alert">
 						{validationError}
@@ -287,6 +492,39 @@ export const MatcherRunControls = ({
 					) : null}
 					{isPending ? "Running…" : "Run matcher detection"}
 				</button>
+				{activeMatcherRun &&
+					activeMatcherRun.totalPages != null &&
+					activeMatcherRun.totalPages > 0 && (
+						<div className="mt-3 space-y-1">
+							<div className="flex justify-between text-xs text-neutral-500">
+								<span>
+									Page {activeMatcherRun.progressPage ?? 0} of{" "}
+									{activeMatcherRun.totalPages}
+								</span>
+								<span>
+									{Math.round(
+										((activeMatcherRun.progressPage ?? 0) /
+											activeMatcherRun.totalPages) *
+											100,
+									)}
+									%
+								</span>
+							</div>
+							<div className="h-2 w-full rounded-full bg-border">
+								<div
+									className="h-2 rounded-full bg-primary transition-all"
+									style={{
+										width: `${Math.min(
+											100,
+											((activeMatcherRun.progressPage ?? 0) /
+												activeMatcherRun.totalPages) *
+												100,
+										)}%`,
+									}}
+								/>
+							</div>
+						</div>
+					)}
 			</div>
 		</div>
 	);

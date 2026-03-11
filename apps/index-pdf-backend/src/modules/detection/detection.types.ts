@@ -62,7 +62,21 @@ export const RunMatcherSchema = z
 		pageId: z.string().uuid("Invalid page ID").optional(),
 		indexEntryGroupIds: z.array(z.string().uuid()).optional(),
 		runAllGroups: z.boolean().optional(),
+		pageRangeStart: z.number().int().min(1).optional(),
+		pageRangeEnd: z.number().int().min(1).optional(),
 	})
+	.refine(
+		(data) => {
+			if (data.pageRangeStart != null && data.pageRangeEnd != null) {
+				return data.pageRangeStart <= data.pageRangeEnd;
+			}
+			return true;
+		},
+		{
+			message: "pageRangeStart must be <= pageRangeEnd",
+			path: ["pageRangeEnd"],
+		},
+	)
 	.refine(
 		(data) => {
 			if (data.scope === "page") {
@@ -221,6 +235,8 @@ export type CreateMatcherDetectionRunInput = {
 	pageId?: string;
 	indexEntryGroupIds?: string[];
 	runAllGroups?: boolean;
+	pageRangeStart?: number;
+	pageRangeEnd?: number;
 	settingsHash: string;
 	totalPages: number;
 };

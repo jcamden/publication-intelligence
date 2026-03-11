@@ -272,15 +272,16 @@ export const indexMentions = pgTable(
 		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [
-		// Uniqueness: same entry + page + bbox fingerprint => one mention (Task 4.2). Partial index so existing rows with null bboxes_hash are ignored.
+		// Uniqueness: same entry + page + bbox fingerprint => one mention (Task 4.2).
+		// Non-partial so ON CONFLICT (cols) in insertMatcherMentionsBatch can match.
+		// New inserts always set bboxes_hash; backfill existing nulls before adding this if needed.
 		uniqueIndex("unique_mention_entry_page_bbox")
 			.on(
 				table.projectIndexTypeId,
 				table.entryId,
 				table.pageNumber,
 				table.bboxesHash,
-			)
-			.where(sql`${table.bboxesHash} IS NOT NULL`),
+			),
 		// RLS: Inherit access from entry
 		// index_entries RLS inherits from projects RLS
 		pgPolicy("index_mentions_entry_access", {

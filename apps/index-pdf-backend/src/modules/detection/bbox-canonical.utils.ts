@@ -48,21 +48,24 @@ export function bboxesHash(bboxes: BboxAtom[]): string {
 }
 
 /**
- * In-memory dedupe key per candidate: projectIndexTypeId + matcherId + pageNumber + canonicalBboxJson.
- * Same matcher + same bbox + same index type => same key => blocked (one insert).
- * Different matcher or different bbox => different key => allowed.
+ * In-memory dedupe key per candidate: projectIndexTypeId + matcherId + pageNumber + charStart + canonicalBboxJson.
+ * Same matcher + same page + same occurrence (charStart) + same bbox => same key => one insert.
+ * Different charStart or different bbox => different key (e.g. multiple "Qumran" on same page).
+ * Parsed vs fallback for same occurrence share charStart so they collapse to one; we keep parsed.
  */
 export function buildDedupeKey({
 	projectIndexTypeId,
 	matcherId,
 	pageNumber,
+	charStart,
 	bboxes,
 }: {
 	projectIndexTypeId: string;
 	matcherId: string;
 	pageNumber: number;
+	charStart: number;
 	bboxes: BboxAtom[];
 }): string {
 	const canonical = canonicalBboxJson(bboxes);
-	return `${projectIndexTypeId}:${matcherId}:${pageNumber}:${canonical}`;
+	return `${projectIndexTypeId}:${matcherId}:${pageNumber}:${charStart}:${canonical}`;
 }

@@ -10,6 +10,7 @@ import {
 	createTestUser,
 } from "../../test/factories";
 import * as detectionRepo from "./detection.repo";
+import { RUN_ALL_MATCHERS_GROUP_ID } from "./detection.repo";
 import * as indexEntryGroupRepo from "./index-entry-group.repo";
 
 describe("index-entry-group.repo (Task 6.1)", () => {
@@ -257,14 +258,75 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 		});
 	});
 
-	describe("listMatcherAliasesForRun (detection.repo) uses groups only", () => {
-		it("returns empty when no groups exist (runAllGroups)", async () => {
+	describe("listMatcherAliasesByProjectIndexType (detection.repo, Task 8.1.1)", () => {
+		it("returns all matchers for project index type with sentinel groupId", async () => {
+			const user = await createTestUser();
+			const project = await createTestProject({ userId: user.userId });
+			const pit = await createTestProjectIndexType({
+				projectId: project.id,
+				indexType: "subject",
+				userId: user.userId,
+			});
+			const entry = await createTestIndexEntry({
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				label: "Foo",
+				slug: "foo",
+				userId: user.userId,
+				matchers: ["foo", "bar"],
+			});
+			const aliases =
+				await detectionRepo.listMatcherAliasesByProjectIndexType({
+					userId: user.userId,
+					projectId: project.id,
+					projectIndexTypeId: pit.id,
+					indexType: "subject",
+				});
+			expect(aliases).toHaveLength(2);
+			for (const a of aliases) {
+				expect(a.groupId).toBe(RUN_ALL_MATCHERS_GROUP_ID);
+				expect(a.entryId).toBe(entry.id);
+				expect(a.indexType).toBe("subject");
+			}
+			expect(aliases.map((a) => a.alias).sort()).toEqual(["bar", "foo"]);
+		});
+	});
+
+	describe("listMatcherAliasesForRun (detection.repo)", () => {
+		it("returns empty when no groups and no matchers exist (runAllGroups)", async () => {
 			const user = await createTestUser();
 			const project = await createTestProject({ userId: user.userId });
 			const pit = await createTestProjectIndexType({
 				projectId: project.id,
 				indexType: "scripture",
 				userId: user.userId,
+			});
+			const aliases = await detectionRepo.listMatcherAliasesForRun({
+				userId: user.userId,
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				indexType: "scripture",
+				indexEntryGroupIds: null,
+				runAllGroups: true,
+			});
+			expect(aliases).toEqual([]);
+		});
+
+		it("returns all matchers with sentinel groupId when runAllGroups and no groups but matchers exist (Task 8.1.1)", async () => {
+			const user = await createTestUser();
+			const project = await createTestProject({ userId: user.userId });
+			const pit = await createTestProjectIndexType({
+				projectId: project.id,
+				indexType: "scripture",
+				userId: user.userId,
+			});
+			const entry = await createTestIndexEntry({
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				label: "Genesis",
+				slug: "genesis",
+				userId: user.userId,
+				matchers: ["genesis", "gen"],
 			});
 			// No groups created
 			const aliases = await detectionRepo.listMatcherAliasesForRun({
@@ -275,7 +337,13 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 				indexEntryGroupIds: null,
 				runAllGroups: true,
 			});
-			expect(aliases).toEqual([]);
+			expect(aliases.length).toBeGreaterThanOrEqual(1);
+			for (const a of aliases) {
+				expect(a.groupId).toBe(RUN_ALL_MATCHERS_GROUP_ID);
+				expect(a.entryId).toBe(entry.id);
+				expect(a.indexType).toBe("scripture");
+			}
+			expect(aliases.map((a) => a.alias).sort()).toEqual(["gen", "genesis"]);
 		});
 	});
 

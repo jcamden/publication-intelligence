@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { withUserContext } from "../../db/client";
 import {
 	detectionMatcherPageCoverage,
@@ -69,8 +69,8 @@ export const createDetectionRun = async ({
 						runAllGroups: input.runAllGroups ?? null,
 						model: null,
 						promptVersion: null,
-						pageRangeStart: undefined,
-						pageRangeEnd: undefined,
+						pageRangeStart: input.pageRangeStart ?? null,
+						pageRangeEnd: input.pageRangeEnd ?? null,
 					};
 
 			const [newRun] = await tx
@@ -864,10 +864,68 @@ export const createMatcher = async ({
 	});
 };
 
+/** Sentinel groupId for run-all-matchers (no index entry groups). */
+export const RUN_ALL_MATCHERS_GROUP_ID = "";
+
+/**
+ * List all matcher aliases for a project index type (no group filter).
+ * Used when runAllGroups is true but no groups exist ("run all matchers").
+ * Deterministic order: entry slug asc, matcher id asc.
+ */
+export const listMatcherAliasesByProjectIndexType = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	indexType,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	indexType: string;
+}): Promise<AliasInput[]> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({
+					alias: indexMatchers.text,
+					matcherId: indexMatchers.id,
+					entryId: indexMatchers.entryId,
+				})
+				.from(indexMatchers)
+				.innerJoin(
+					indexEntries,
+					and(
+						eq(indexMatchers.entryId, indexEntries.id),
+						eq(
+							indexEntries.projectIndexTypeId,
+							indexMatchers.projectIndexTypeId,
+						),
+					),
+				)
+				.where(
+					and(
+						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+						eq(indexEntries.projectId, projectId),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.orderBy(asc(indexEntries.slug), asc(indexMatchers.id));
+			return rows.map((r) => ({
+				alias: r.alias,
+				matcherId: r.matcherId,
+				entryId: r.entryId,
+				indexType,
+				groupId: RUN_ALL_MATCHERS_GROUP_ID,
+			}));
+		},
+	});
+};
+
 /**
  * List matcher alias rows for a matcher detection run.
  * Run inputs (indexEntryGroupIds / runAllGroups) resolve through index_entry_groups only.
- * Returns empty array when no groups exist or selected groups have no matchers.
+ * When resolved group set is empty (runAllGroups true, no groups), returns all matchers for the project index type (run-all-matchers).
  */
 export const listMatcherAliasesForRun = async ({
 	userId,
@@ -891,7 +949,14 @@ export const listMatcherAliasesForRun = async ({
 		indexEntryGroupIds,
 		runAllGroups,
 	});
-	if (groupIds.length === 0) return [];
+	if (groupIds.length === 0) {
+		return await listMatcherAliasesByProjectIndexType({
+			userId,
+			projectId,
+			projectIndexTypeId,
+			indexType,
+		});
+	}
 	return await indexEntryGroupRepo.listMatcherAliasesByGroupIds({
 		userId,
 		projectId,

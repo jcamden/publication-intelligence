@@ -24,9 +24,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * No-groups state shows guidance message and no run button (run is disabled; empty state UI does not show the run button).
+ * No-groups state shows run-all-matchers copy and "Run matcher detection (all matchers)" button (Task 8.1.1).
  */
-export const NoGroupsShowsGuidanceAndDisablesRun: Story = {
+export const NoGroupsShowsRunAllMatchersButton: Story = {
 	args: {
 		projectId: "empty-groups-project",
 		projectIndexTypeId: "mock-pit-subject-id",
@@ -37,12 +37,12 @@ export const NoGroupsShowsGuidanceAndDisablesRun: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await step("Wait for empty state to load", async () => {
+		await step("Wait for no-groups state to load", async () => {
 			await waitFor(
 				() => {
 					expect(
 						canvas.getByText(
-							"Create groups and matchers in this index, then run detection.",
+							/Run detection using all matchers in this index/i,
 						),
 					).toBeInTheDocument();
 				},
@@ -50,17 +50,56 @@ export const NoGroupsShowsGuidanceAndDisablesRun: Story = {
 			);
 		});
 
-		await step("Verify no run button in empty state", async () => {
-			const runButton = canvas.queryByRole("button", {
-				name: /run matcher detection/i,
+		await step("Verify Run matcher detection (all matchers) button is visible", async () => {
+			const runButton = canvas.getByRole("button", {
+				name: /run matcher detection \(all matchers\)/i,
 			});
-			expect(runButton).not.toBeInTheDocument();
+			expect(runButton).toBeInTheDocument();
+		});
+	},
+};
+
+/**
+ * No-groups: clicking Run matcher detection (all matchers) triggers run with runAllGroups true.
+ */
+export const NoGroupsClickRunAllMatchersCallsRunMatcher: Story = {
+	args: {
+		projectId: "empty-groups-project",
+		projectIndexTypeId: "mock-pit-subject-id",
+		indexType: "subject",
+		emptyStateMessage:
+			"Create groups and matchers in this index, then run detection.",
+	},
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+
+		await step("Wait for no-groups state and click Run matcher detection (all matchers)", async () => {
+			await waitFor(
+				() => {
+					expect(
+						canvas.getByText(
+							/Run detection using all matchers in this index/i,
+						),
+					).toBeInTheDocument();
+				},
+				{ timeout: 3000 },
+			);
+			const runButton = canvas.getByRole("button", {
+				name: /run matcher detection \(all matchers\)/i,
+			});
+			await userEvent.click(runButton);
 		});
 
-		await step("Verify guidance about adding groups", async () => {
-			expect(
-				canvas.getByText(/no groups for this index type/i),
-			).toBeInTheDocument();
+		await step("Button shows loading then settles", async () => {
+			const runButton = canvas.getByRole("button", {
+				name: /run matcher detection \(all matchers\)|running/i,
+			});
+			await waitFor(
+				() => {
+					expect(runButton).not.toHaveAttribute("aria-busy", "true");
+				},
+				{ timeout: 2000 },
+			);
 		});
 	},
 };

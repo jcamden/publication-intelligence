@@ -79,10 +79,11 @@ describe("bboxesHash", () => {
 });
 
 describe("buildDedupeKey", () => {
-	it("produces identical key for same matcher + page + equivalent bboxes", () => {
+	it("produces identical key for same matcher + page + charStart + equivalent bboxes", () => {
 		const projectIndexTypeId = "pit-1";
 		const matcherId = "m1";
 		const pageNumber = 1;
+		const charStart = 0;
 		const bboxes1: BboxAtom[] = [
 			{ x: 1, y: 0, width: 2, height: 1 },
 			{ x: 0, y: 0, width: 2, height: 1 },
@@ -95,12 +96,14 @@ describe("buildDedupeKey", () => {
 			projectIndexTypeId,
 			matcherId,
 			pageNumber,
+			charStart,
 			bboxes: bboxes1,
 		});
 		const key2 = buildDedupeKey({
 			projectIndexTypeId,
 			matcherId,
 			pageNumber,
+			charStart,
 			bboxes: bboxes2,
 		});
 		expect(key1).toBe(key2);
@@ -112,12 +115,14 @@ describe("buildDedupeKey", () => {
 			projectIndexTypeId: "pit-1",
 			matcherId: "m1",
 			pageNumber: 1,
+			charStart: 0,
 			bboxes,
 		});
 		const key2 = buildDedupeKey({
 			projectIndexTypeId: "pit-1",
 			matcherId: "m2",
 			pageNumber: 1,
+			charStart: 0,
 			bboxes,
 		});
 		expect(key1).not.toBe(key2);
@@ -128,13 +133,34 @@ describe("buildDedupeKey", () => {
 			projectIndexTypeId: "pit-1",
 			matcherId: "m1",
 			pageNumber: 1,
+			charStart: 0,
 			bboxes: [{ x: 0, y: 0, width: 1, height: 1 }],
 		});
 		const key2 = buildDedupeKey({
 			projectIndexTypeId: "pit-1",
 			matcherId: "m1",
 			pageNumber: 1,
+			charStart: 0,
 			bboxes: [{ x: 0, y: 0, width: 2, height: 1 }],
+		});
+		expect(key1).not.toBe(key2);
+	});
+
+	it("produces different keys for different charStart (same page + matcher + bbox)", () => {
+		const bboxes: BboxAtom[] = [{ x: 0, y: 0, width: 10, height: 2 }];
+		const key1 = buildDedupeKey({
+			projectIndexTypeId: "pit-1",
+			matcherId: "m1",
+			pageNumber: 1,
+			charStart: 0,
+			bboxes,
+		});
+		const key2 = buildDedupeKey({
+			projectIndexTypeId: "pit-1",
+			matcherId: "m1",
+			pageNumber: 1,
+			charStart: 50,
+			bboxes,
 		});
 		expect(key1).not.toBe(key2);
 	});
