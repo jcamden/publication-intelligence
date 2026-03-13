@@ -1,12 +1,19 @@
 import { protectedProcedure, router } from "../../trpc";
 import * as detectionService from "./detection.service";
 import {
+	AddEntryToGroupSchema,
 	CancelDetectionRunSchema,
+	CreateIndexEntryGroupSchema,
+	DeleteIndexEntryGroupSchema,
 	GetDetectionRunSchema,
+	GetIndexEntryGroupSchema,
 	ListDetectionRunsSchema,
 	ListIndexEntryGroupsSchema,
+	RemoveEntryFromGroupSchema,
+	ReorderGroupEntriesSchema,
 	RunLlmSchema,
 	RunMatcherSchema,
+	UpdateIndexEntryGroupSchema,
 } from "./detection.types";
 import * as indexEntryGroupRepo from "./index-entry-group.repo";
 
@@ -59,6 +66,84 @@ export const detectionRouter = router({
 				projectId: input.projectId,
 				projectIndexTypeId: input.projectIndexTypeId,
 			});
+		}),
+
+	getIndexEntryGroup: protectedProcedure
+		.input(GetIndexEntryGroupSchema)
+		.query(async ({ ctx, input }) => {
+			return await indexEntryGroupRepo.getGroupWithEntries({
+				userId: ctx.user.id,
+				groupId: input.groupId,
+			});
+		}),
+
+	createIndexEntryGroup: protectedProcedure
+		.input(CreateIndexEntryGroupSchema)
+		.mutation(async ({ ctx, input }) => {
+			return await indexEntryGroupRepo.createGroup({
+				userId: ctx.user.id,
+				input: {
+					projectId: input.projectId,
+					projectIndexTypeId: input.projectIndexTypeId,
+					name: input.name,
+					slug: input.slug,
+					parserProfileId: input.parserProfileId,
+					sortMode: input.sortMode,
+				},
+			});
+		}),
+
+	updateIndexEntryGroup: protectedProcedure
+		.input(UpdateIndexEntryGroupSchema)
+		.mutation(async ({ ctx, input }) => {
+			const { groupId, ...rest } = input;
+			return await indexEntryGroupRepo.updateGroup({
+				userId: ctx.user.id,
+				groupId,
+				input: rest,
+			});
+		}),
+
+	deleteIndexEntryGroup: protectedProcedure
+		.input(DeleteIndexEntryGroupSchema)
+		.mutation(async ({ ctx, input }) => {
+			return await indexEntryGroupRepo.deleteGroup({
+				userId: ctx.user.id,
+				groupId: input.groupId,
+			});
+		}),
+
+	addEntryToGroup: protectedProcedure
+		.input(AddEntryToGroupSchema)
+		.mutation(async ({ ctx, input }) => {
+			return await indexEntryGroupRepo.addEntryToGroup({
+				userId: ctx.user.id,
+				groupId: input.groupId,
+				entryId: input.entryId,
+				position: input.position,
+			});
+		}),
+
+	removeEntryFromGroup: protectedProcedure
+		.input(RemoveEntryFromGroupSchema)
+		.mutation(async ({ ctx, input }) => {
+			await indexEntryGroupRepo.removeEntryFromGroup({
+				userId: ctx.user.id,
+				groupId: input.groupId,
+				entryId: input.entryId,
+			});
+			return { success: true };
+		}),
+
+	reorderGroupEntries: protectedProcedure
+		.input(ReorderGroupEntriesSchema)
+		.mutation(async ({ ctx, input }) => {
+			await indexEntryGroupRepo.reorderGroupEntries({
+				userId: ctx.user.id,
+				groupId: input.groupId,
+				entryIds: input.entryIds,
+			});
+			return { success: true };
 		}),
 
 	cancelDetectionRun: protectedProcedure

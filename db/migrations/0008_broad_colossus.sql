@@ -1,0 +1,1 @@
+ALTER TYPE "public"."index_entry_group_sort_mode" ADD VALUE 'custom';

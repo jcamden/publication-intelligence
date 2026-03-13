@@ -182,16 +182,28 @@ describe("Index entry group schemas (Task 6.1)", () => {
 	});
 
 	describe("UpdateIndexEntryGroupSchema", () => {
+		const validGroupId = "550e8400-e29b-41d4-a716-446655440000";
+
 		it("accepts valid parser profile and sort mode", () => {
 			const result = UpdateIndexEntryGroupSchema.safeParse({
+				groupId: validGroupId,
 				parserProfileId: "scripture-biblical",
 				sortMode: "canon_book_order",
 			});
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts custom sort mode", () => {
+			const result = UpdateIndexEntryGroupSchema.safeParse({
+				groupId: validGroupId,
+				sortMode: "custom",
+			});
+			expect(result.success).toBe(true);
+		});
+
 		it("rejects invalid parser profile id", () => {
 			const result = UpdateIndexEntryGroupSchema.safeParse({
+				groupId: validGroupId,
 				parserProfileId: "bad-profile",
 			});
 			expect(result.success).toBe(false);
@@ -199,16 +211,25 @@ describe("Index entry group schemas (Task 6.1)", () => {
 
 		it("rejects invalid sort mode", () => {
 			const result = UpdateIndexEntryGroupSchema.safeParse({
+				groupId: validGroupId,
 				sortMode: "xyz",
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects missing groupId", () => {
+			const result = UpdateIndexEntryGroupSchema.safeParse({
+				sortMode: "custom",
 			});
 			expect(result.success).toBe(false);
 		});
 	});
 
 	describe("INDEX_ENTRY_GROUP_SORT_MODES", () => {
-		it("includes a_z and canon_book_order", () => {
+		it("includes a_z, canon_book_order, and custom", () => {
 			expect(INDEX_ENTRY_GROUP_SORT_MODES).toContain("a_z");
 			expect(INDEX_ENTRY_GROUP_SORT_MODES).toContain("canon_book_order");
+			expect(INDEX_ENTRY_GROUP_SORT_MODES).toContain("custom");
 		});
 	});
 });

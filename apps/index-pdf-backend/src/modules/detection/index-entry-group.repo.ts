@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, ne } from "drizzle-orm";
 import { withUserContext } from "../../db/client";
 import {
 	indexEntries,
@@ -20,7 +20,7 @@ export type IndexEntryGroupListItem = {
 	name: string;
 	slug: string;
 	parserProfileId: string | null;
-	sortMode: "a_z" | "canon_book_order";
+	sortMode: "a_z" | "canon_book_order" | "custom";
 	createdAt: Date;
 	updatedAt: Date | null;
 	deletedAt: Date | null;
@@ -41,7 +41,7 @@ export type CreateIndexEntryGroupInput = {
 	name: string;
 	slug: string;
 	parserProfileId?: string | null;
-	sortMode?: "a_z" | "canon_book_order";
+	sortMode?: "a_z" | "canon_book_order" | "custom";
 	/** Seed provenance (audit only; does not gate edits) */
 	seedSource?: string | null;
 	seededAt?: Date | null;
@@ -52,7 +52,7 @@ export type UpdateIndexEntryGroupInput = {
 	name?: string;
 	slug?: string;
 	parserProfileId?: string | null;
-	sortMode?: "a_z" | "canon_book_order";
+	sortMode?: "a_z" | "canon_book_order" | "custom";
 };
 
 // ============================================================================
@@ -106,7 +106,7 @@ export const listGroups = async ({
 				name: r.name,
 				slug: r.slug,
 				parserProfileId: r.parserProfileId,
-				sortMode: r.sortMode as "a_z" | "canon_book_order",
+				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
 				createdAt: r.createdAt,
 				updatedAt: r.updatedAt,
 				deletedAt: r.deletedAt,
@@ -176,7 +176,7 @@ export const listGroupsWithMeta = async ({
 				name: r.name,
 				slug: r.slug,
 				parserProfileId: r.parserProfileId,
-				sortMode: r.sortMode as "a_z" | "canon_book_order",
+				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
 				createdAt: r.createdAt,
 				updatedAt: r.updatedAt,
 				deletedAt: r.deletedAt,
@@ -223,10 +223,94 @@ export const getGroup = async ({
 				name: row.name,
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
-				sortMode: row.sortMode as "a_z" | "canon_book_order",
+				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
 				deletedAt: row.deletedAt,
+			};
+		},
+	});
+};
+
+/** Group with entries for Edit Group modal. */
+export type IndexEntryGroupWithEntries = IndexEntryGroupListItem & {
+	entries: Array<{
+		entryId: string;
+		label: string;
+		slug: string;
+		position: number | null;
+		matcherCount: number;
+	}>;
+	matcherCount: number;
+};
+
+/**
+ * Get group with entries (for Edit Group modal). Returns null if not found or deleted.
+ */
+export const getGroupWithEntries = async ({
+	userId,
+	groupId,
+}: {
+	userId: string;
+	groupId: string;
+}): Promise<IndexEntryGroupWithEntries | null> => {
+	const group = await getGroup({ userId, groupId });
+	if (!group || group.deletedAt) return null;
+
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [matcherCountRow] = await tx
+				.select({ count: count() })
+				.from(indexEntryGroupMatchers)
+				.where(eq(indexEntryGroupMatchers.groupId, groupId));
+
+			const entryRows = await tx
+				.select({
+					entryId: indexEntryGroupEntries.entryId,
+					position: indexEntryGroupEntries.position,
+					label: indexEntries.label,
+					slug: indexEntries.slug,
+				})
+				.from(indexEntryGroupEntries)
+				.innerJoin(
+					indexEntries,
+					eq(indexEntryGroupEntries.entryId, indexEntries.id),
+				)
+				.where(
+					and(
+						eq(indexEntryGroupEntries.groupId, groupId),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.orderBy(asc(indexEntryGroupEntries.position), asc(indexEntries.label));
+
+			const entryIds = entryRows.map((r) => r.entryId);
+			const matcherCounts =
+				entryIds.length > 0
+					? await tx
+							.select({
+								entryId: indexMatchers.entryId,
+								count: count(),
+							})
+							.from(indexMatchers)
+							.where(inArray(indexMatchers.entryId, entryIds))
+							.groupBy(indexMatchers.entryId)
+					: [];
+			const matcherCountMap = new Map(
+				matcherCounts.map((m) => [m.entryId, Number(m.count)]),
+			);
+
+			return {
+				...group,
+				matcherCount: Number(matcherCountRow?.count ?? 0),
+				entries: entryRows.map((r) => ({
+					entryId: r.entryId,
+					label: r.label,
+					slug: r.slug,
+					position: r.position,
+					matcherCount: matcherCountMap.get(r.entryId) ?? 0,
+				})),
 			};
 		},
 	});
@@ -299,7 +383,7 @@ export const getGroupMatcherSnapshot = async ({
 export type IndexEntryGroupRunMeta = {
 	id: string;
 	parserProfileId: string | null;
-	sortMode: "a_z" | "canon_book_order";
+	sortMode: "a_z" | "canon_book_order" | "custom";
 };
 
 /**
@@ -341,7 +425,7 @@ export const listGroupsByIds = async ({
 			return rows.map((r) => ({
 				id: r.id,
 				parserProfileId: r.parserProfileId,
-				sortMode: r.sortMode as "a_z" | "canon_book_order",
+				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
 			}));
 		},
 	});
@@ -521,7 +605,7 @@ export const createGroup = async ({
 				name: row.name,
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
-				sortMode: row.sortMode as "a_z" | "canon_book_order",
+				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
 				deletedAt: row.deletedAt,
@@ -542,6 +626,46 @@ export const updateGroup = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			const switchingToCustom = input.sortMode === "custom";
+
+			if (switchingToCustom) {
+				// Snapshot current order into position before switching
+				const [current] = await tx
+					.select({ sortMode: indexEntryGroups.sortMode })
+					.from(indexEntryGroups)
+					.where(eq(indexEntryGroups.id, groupId))
+					.limit(1);
+				if (current && current.sortMode !== "custom") {
+					const entries = await tx
+						.select({
+							entryId: indexEntryGroupEntries.entryId,
+							position: indexEntryGroupEntries.position,
+							label: indexEntries.label,
+						})
+						.from(indexEntryGroupEntries)
+						.innerJoin(
+							indexEntries,
+							eq(indexEntryGroupEntries.entryId, indexEntries.id),
+						)
+						.where(eq(indexEntryGroupEntries.groupId, groupId))
+						.orderBy(
+							asc(indexEntryGroupEntries.position),
+							asc(indexEntries.label),
+						);
+					for (let i = 0; i < entries.length; i++) {
+						await tx
+							.update(indexEntryGroupEntries)
+							.set({ position: i })
+							.where(
+								and(
+									eq(indexEntryGroupEntries.groupId, groupId),
+									eq(indexEntryGroupEntries.entryId, entries[i].entryId),
+								),
+							);
+					}
+				}
+			}
+
 			const updatePayload: Record<string, unknown> = {
 				updatedAt: new Date(),
 			};
@@ -564,7 +688,7 @@ export const updateGroup = async ({
 				name: row.name,
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
-				sortMode: row.sortMode as "a_z" | "canon_book_order",
+				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
 				deletedAt: row.deletedAt,
@@ -608,6 +732,10 @@ export const deleteGroup = async ({
 // Membership: entries
 // ============================================================================
 
+export type AddEntryToGroupResult = {
+	transferredFrom: string | null;
+};
+
 export const addEntryToGroup = async ({
 	userId,
 	groupId,
@@ -618,19 +746,35 @@ export const addEntryToGroup = async ({
 	groupId: string;
 	entryId: string;
 	position?: number | null;
-}): Promise<void> => {
-	await withUserContext({
+}): Promise<AddEntryToGroupResult> => {
+	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			// One group per entry: remove from any other group first
+			const deleted = await tx
+				.delete(indexEntryGroupEntries)
+				.where(
+					and(
+						eq(indexEntryGroupEntries.entryId, entryId),
+						ne(indexEntryGroupEntries.groupId, groupId),
+					),
+				)
+				.returning({ groupId: indexEntryGroupEntries.groupId });
+
+			const transferredFrom = deleted.length > 0 ? deleted[0].groupId : null;
+
 			await tx
 				.insert(indexEntryGroupEntries)
 				.values({ groupId, entryId, position: position ?? null })
-				.onConflictDoNothing({
+				.onConflictDoUpdate({
 					target: [
 						indexEntryGroupEntries.groupId,
 						indexEntryGroupEntries.entryId,
 					],
+					set: { position: position ?? null },
 				});
+
+			return { transferredFrom };
 		},
 	});
 };
@@ -655,6 +799,36 @@ export const removeEntryFromGroup = async ({
 						eq(indexEntryGroupEntries.entryId, entryId),
 					),
 				);
+		},
+	});
+};
+
+/**
+ * Reorder entries within a group (custom sort mode). Updates position for each entry.
+ */
+export const reorderGroupEntries = async ({
+	userId,
+	groupId,
+	entryIds,
+}: {
+	userId: string;
+	groupId: string;
+	entryIds: string[];
+}): Promise<void> => {
+	await withUserContext({
+		userId,
+		fn: async (tx) => {
+			for (let i = 0; i < entryIds.length; i++) {
+				await tx
+					.update(indexEntryGroupEntries)
+					.set({ position: i })
+					.where(
+						and(
+							eq(indexEntryGroupEntries.groupId, groupId),
+							eq(indexEntryGroupEntries.entryId, entryIds[i]),
+						),
+					);
+			}
 		},
 	});
 };

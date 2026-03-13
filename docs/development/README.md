@@ -23,6 +23,30 @@ This directory tracks implementation epics and loose engineering todos that do n
 - When falling back, show both the page number and an exclamation mark in red so the mismatch is obvious.
 - Nice-to-have: clicking the red page number should navigate to the Editor with that page active in the PDF viewer.
 
+### Auth
+
+- Fix the auth flow so the form state doesn't revert before navigating after successful authentication.
+
+### Index Editor
+
+- Move the create-entry and create-group buttons out of `EntryTree`.
+- Make `EntryTree` scrollable.
+- Make `EntryTree` filterable/searchable.
+
+### Page Sidebar
+
+- Make `IndexMentions` scrollable in the page sidebar.
+- Make `IndexMentions` filterable/searchable in the page sidebar.
+
+### Project Flow
+
+- Fix the "PDF not found" error when navigating to the Editor too quickly after creating a project.
+
+### Mention Geometry
+
+- Horizontally join multiple bounding boxes on the same line for `IndexMentions` that have multiple bounding boxes.
+- Prefer merging those bounding boxes before saving the `IndexMention`; alternatively, handle the merge in highlight rendering if persistence-layer merging is not appropriate.
+
 ### Misc
 
 - Add a small convention note for when a todo should be promoted into its own epic/task doc.

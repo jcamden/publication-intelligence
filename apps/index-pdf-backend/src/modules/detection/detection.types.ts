@@ -9,6 +9,7 @@ import { z } from "zod";
 export const INDEX_ENTRY_GROUP_SORT_MODES = [
 	"a_z",
 	"canon_book_order",
+	"custom",
 ] as const;
 
 export type IndexEntryGroupSortMode =
@@ -145,14 +146,59 @@ export type CreateIndexEntryGroupSchemaInput = z.infer<
 
 /** Update index entry group input (parser profile and sort mode validated). */
 export const UpdateIndexEntryGroupSchema = z.object({
+	groupId: z.string().uuid("Invalid group ID"),
 	name: z.string().min(1).optional(),
 	slug: z.string().min(1).optional(),
-	parserProfileId: parserProfileIdSchema,
+	parserProfileId: parserProfileIdSchema.optional(),
 	sortMode: indexEntryGroupSortModeSchema.optional(),
 });
 
 export type UpdateIndexEntryGroupSchemaInput = z.infer<
 	typeof UpdateIndexEntryGroupSchema
+>;
+
+// ============================================================================
+// Index entry group membership schemas
+// ============================================================================
+
+export const GetIndexEntryGroupSchema = z.object({
+	groupId: z.string().uuid("Invalid group ID"),
+});
+
+export type GetIndexEntryGroupInput = z.infer<typeof GetIndexEntryGroupSchema>;
+
+export const DeleteIndexEntryGroupSchema = z.object({
+	groupId: z.string().uuid("Invalid group ID"),
+});
+
+export type DeleteIndexEntryGroupInput = z.infer<
+	typeof DeleteIndexEntryGroupSchema
+>;
+
+export const AddEntryToGroupSchema = z.object({
+	groupId: z.string().uuid("Invalid group ID"),
+	entryId: z.string().uuid("Invalid entry ID"),
+	position: z.number().int().min(0).optional(),
+});
+
+export type AddEntryToGroupInput = z.infer<typeof AddEntryToGroupSchema>;
+
+export const RemoveEntryFromGroupSchema = z.object({
+	groupId: z.string().uuid("Invalid group ID"),
+	entryId: z.string().uuid("Invalid entry ID"),
+});
+
+export type RemoveEntryFromGroupInput = z.infer<
+	typeof RemoveEntryFromGroupSchema
+>;
+
+export const ReorderGroupEntriesSchema = z.object({
+	groupId: z.string().uuid("Invalid group ID"),
+	entryIds: z.array(z.string().uuid()).min(1, "At least one entry ID required"),
+});
+
+export type ReorderGroupEntriesInput = z.infer<
+	typeof ReorderGroupEntriesSchema
 >;
 
 // ============================================================================

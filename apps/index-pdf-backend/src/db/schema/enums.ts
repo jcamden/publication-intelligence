@@ -143,5 +143,6 @@ export const indexEntryGroupSortModeEnum = pgEnum(
 	[
 		"a_z", // Alphabetical A–Z
 		"canon_book_order", // Scripture canon order (e.g. Gen, Exod, …)
+		"custom", // User-defined order via drag-to-reorder
 	],
 );
