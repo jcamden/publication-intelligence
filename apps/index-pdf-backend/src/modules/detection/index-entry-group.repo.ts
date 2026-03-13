@@ -487,7 +487,8 @@ export const resolveRunGroupIds = async ({
 };
 
 /**
- * List matcher aliases for detection run: only matchers that belong to the given group IDs.
+ * List matcher aliases for detection run: matchers from (1) index_entry_group_matchers
+ * and (2) entries in index_entry_group_entries and their descendants.
  * Deterministic order: by group (name), then position, then matcher id.
  */
 export const listMatcherAliasesByGroupIds = async ({
@@ -523,7 +524,10 @@ export const listMatcherAliasesByGroupIds = async ({
 
 			const result: AliasInput[] = [];
 			for (const g of orderedGroups) {
-				const rows = await tx
+				const seenMatcherIds = new Set<string>();
+
+				// (1) Matchers from index_entry_group_matchers (direct matcher-to-group)
+				const directRows = await tx
 					.select({
 						alias: indexMatchers.text,
 						matcherId: indexMatchers.id,
@@ -554,7 +558,8 @@ export const listMatcherAliasesByGroupIds = async ({
 						asc(indexEntryGroupMatchers.position),
 						asc(indexEntryGroupMatchers.matcherId),
 					);
-				for (const r of rows) {
+				for (const r of directRows) {
+					seenMatcherIds.add(r.matcherId);
 					result.push({
 						alias: r.alias,
 						matcherId: r.matcherId,
@@ -562,6 +567,72 @@ export const listMatcherAliasesByGroupIds = async ({
 						indexType,
 						groupId: g.id,
 					});
+				}
+
+				// (2) Matchers from entries in index_entry_group_entries and their descendants
+				// Collect root entry IDs, then iteratively add descendants
+				const rootEntryRows = await tx
+					.select({ entryId: indexEntryGroupEntries.entryId })
+					.from(indexEntryGroupEntries)
+					.where(eq(indexEntryGroupEntries.groupId, g.id));
+				const entryIds = new Set(rootEntryRows.map((r) => r.entryId));
+				for (;;) {
+					const parentIds = [...entryIds];
+					const children = await tx
+						.select({ id: indexEntries.id })
+						.from(indexEntries)
+						.where(
+							and(
+								inArray(indexEntries.parentId, parentIds),
+								isNull(indexEntries.deletedAt),
+							),
+						);
+					let added = 0;
+					for (const c of children) {
+						if (!entryIds.has(c.id)) {
+							entryIds.add(c.id);
+							added++;
+						}
+					}
+					if (added === 0) break;
+				}
+				if (entryIds.size > 0) {
+					const entryBasedRows = await tx
+						.select({
+							alias: indexMatchers.text,
+							matcherId: indexMatchers.id,
+							entryId: indexMatchers.entryId,
+						})
+						.from(indexMatchers)
+						.innerJoin(
+							indexEntries,
+							and(
+								eq(indexMatchers.entryId, indexEntries.id),
+								eq(
+									indexEntries.projectIndexTypeId,
+									indexMatchers.projectIndexTypeId,
+								),
+							),
+						)
+						.where(
+							and(
+								inArray(indexMatchers.entryId, [...entryIds]),
+								eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+								isNull(indexEntries.deletedAt),
+							),
+						)
+						.orderBy(asc(indexMatchers.id));
+					for (const r of entryBasedRows) {
+						if (seenMatcherIds.has(r.matcherId)) continue;
+						seenMatcherIds.add(r.matcherId);
+						result.push({
+							alias: r.alias,
+							matcherId: r.matcherId,
+							entryId: r.entryId,
+							indexType,
+							groupId: g.id,
+						});
+					}
 				}
 			}
 			return result;

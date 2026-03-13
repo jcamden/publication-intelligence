@@ -256,6 +256,66 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 			expect(aliases[0].entryId).toBe(entry.id);
 			expect(["genesis", "gen"]).toContain(aliases[0].alias);
 		});
+
+		it("returns matchers from entry-based group (index_entry_group_entries + descendants)", async () => {
+			const user = await createTestUser();
+			const project = await createTestProject({ userId: user.userId });
+			const pit = await createTestProjectIndexType({
+				projectId: project.id,
+				indexType: "scripture",
+				userId: user.userId,
+			});
+			const parent = await createTestIndexEntry({
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				label: "Genesis",
+				slug: "genesis",
+				userId: user.userId,
+				matchers: ["genesis", "gen"],
+			});
+			const child = await createTestIndexEntry({
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				label: "Genesis 1",
+				slug: "genesis-1",
+				userId: user.userId,
+				parentId: parent.id,
+				matchers: ["genesis 1", "gen 1"],
+			});
+
+			const g = await indexEntryGroupRepo.createGroup({
+				userId: user.userId,
+				input: {
+					projectId: project.id,
+					projectIndexTypeId: pit.id,
+					name: "Biblical",
+					slug: "biblical",
+				},
+			});
+			// Add parent entry to group (no direct matchers on group)
+			await indexEntryGroupRepo.addEntryToGroup({
+				userId: user.userId,
+				groupId: g.id,
+				entryId: parent.id,
+			});
+
+			const aliases = await indexEntryGroupRepo.listMatcherAliasesByGroupIds({
+				userId: user.userId,
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				indexType: "scripture",
+				groupIds: [g.id],
+			});
+			// Should include matchers from parent and child (descendants)
+			expect(aliases.length).toBeGreaterThanOrEqual(2);
+			const aliasTexts = aliases.map((a) => a.alias);
+			expect(aliasTexts).toContain("genesis");
+			expect(aliasTexts).toContain("genesis 1");
+			for (const a of aliases) {
+				expect(a.groupId).toBe(g.id);
+				expect([parent.id, child.id]).toContain(a.entryId);
+			}
+		});
 	});
 
 	describe("listMatcherAliasesByProjectIndexType (detection.repo, Task 8.1.1)", () => {

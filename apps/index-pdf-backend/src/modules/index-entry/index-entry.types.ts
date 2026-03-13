@@ -56,6 +56,8 @@ export type IndexEntryListItem = {
 		indexType: string;
 		colorHue: number;
 	};
+	/** Group ID when entry is a root member of a group (index_entry_group_entries). */
+	groupId: string | null;
 	mentionCount: number;
 	childCount: number;
 	matchers: IndexMatcher[];

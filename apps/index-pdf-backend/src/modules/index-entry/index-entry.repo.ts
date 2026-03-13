@@ -2,6 +2,8 @@ import { and, count, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db, withUserContext } from "../../db/client";
 import {
 	indexEntries,
+	indexEntryGroupEntries,
+	indexEntryGroups,
 	indexMatchers,
 	indexMentions,
 	indexRelations,
@@ -72,46 +74,79 @@ export const listIndexEntries = async ({
 		return [];
 	}
 
-	const [mentionCounts, childCounts, matchers] = await Promise.all([
-		db
-			.select({
-				entryId: indexMentions.entryId,
-				count: count(),
-			})
-			.from(indexMentions)
-			.where(
-				and(
-					inArray(indexMentions.entryId, entryIds),
-					isNull(indexMentions.deletedAt),
+	const [mentionCounts, childCounts, matchers, groupMemberships] =
+		await Promise.all([
+			db
+				.select({
+					entryId: indexMentions.entryId,
+					count: count(),
+				})
+				.from(indexMentions)
+				.where(
+					and(
+						inArray(indexMentions.entryId, entryIds),
+						isNull(indexMentions.deletedAt),
+					),
+				)
+				.groupBy(indexMentions.entryId),
+			db
+				.select({
+					parentId: indexEntries.parentId,
+					count: count(),
+				})
+				.from(indexEntries)
+				.where(
+					and(
+						inArray(indexEntries.parentId, entryIds),
+						isNull(indexEntries.deletedAt),
+					),
+				)
+				.groupBy(indexEntries.parentId),
+			db
+				.select({
+					id: indexMatchers.id,
+					entryId: indexMatchers.entryId,
+					text: indexMatchers.text,
+					matcherType: indexMatchers.matcherType,
+					revision: indexMatchers.revision,
+					createdAt: indexMatchers.createdAt,
+					updatedAt: indexMatchers.updatedAt,
+				})
+				.from(indexMatchers)
+				.where(inArray(indexMatchers.entryId, entryIds)),
+			db
+				.select({
+					entryId: indexEntryGroupEntries.entryId,
+					groupId: indexEntryGroupEntries.groupId,
+				})
+				.from(indexEntryGroupEntries)
+				.innerJoin(
+					indexEntryGroups,
+					and(
+						eq(indexEntryGroupEntries.groupId, indexEntryGroups.id),
+						eq(indexEntryGroups.projectId, projectId),
+						isNull(indexEntryGroups.deletedAt),
+					),
+				)
+				.innerJoin(
+					indexEntries,
+					and(
+						eq(indexEntryGroupEntries.entryId, indexEntries.id),
+						eq(
+							indexEntries.projectIndexTypeId,
+							indexEntryGroups.projectIndexTypeId,
+						),
+					),
+				)
+				.where(
+					and(
+						inArray(indexEntryGroupEntries.entryId, entryIds),
+						projectIndexTypeId
+							? eq(indexEntryGroups.projectIndexTypeId, projectIndexTypeId)
+							: undefined,
+					),
 				),
-			)
-			.groupBy(indexMentions.entryId),
-		db
-			.select({
-				parentId: indexEntries.parentId,
-				count: count(),
-			})
-			.from(indexEntries)
-			.where(
-				and(
-					inArray(indexEntries.parentId, entryIds),
-					isNull(indexEntries.deletedAt),
-				),
-			)
-			.groupBy(indexEntries.parentId),
-		db
-			.select({
-				id: indexMatchers.id,
-				entryId: indexMatchers.entryId,
-				text: indexMatchers.text,
-				matcherType: indexMatchers.matcherType,
-				revision: indexMatchers.revision,
-				createdAt: indexMatchers.createdAt,
-				updatedAt: indexMatchers.updatedAt,
-			})
-			.from(indexMatchers)
-			.where(inArray(indexMatchers.entryId, entryIds)),
-	]);
+		]);
 
 	const mentionCountMap = new Map(
 		mentionCounts.map((mc) => [mc.entryId, mc.count]),
@@ -145,6 +180,10 @@ export const listIndexEntries = async ({
 
 	const parentMap = new Map(parentEntries.map((p) => [p.id, p]));
 
+	const groupByEntry = new Map(
+		groupMemberships.map((g) => [g.entryId, g.groupId]),
+	);
+
 	return entries.map((entry) => ({
 		id: entry.id,
 		projectIndexTypeId: entry.projectIndexTypeId,
@@ -154,6 +193,7 @@ export const listIndexEntries = async ({
 		parentId: entry.parentId,
 		parent: entry.parentId ? parentMap.get(entry.parentId) || null : null,
 		projectIndexType: entry.projectIndexType,
+		groupId: groupByEntry.get(entry.id) ?? null,
 		mentionCount: mentionCountMap.get(entry.id) || 0,
 		childCount: childCountMap.get(entry.id) || 0,
 		matchers: (matchersMap.get(entry.id) || []).map((m) => ({
