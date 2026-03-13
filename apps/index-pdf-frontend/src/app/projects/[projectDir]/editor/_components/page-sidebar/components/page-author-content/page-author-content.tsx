@@ -1,5 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
+import { trpc } from "@/app/_common/_utils/trpc";
+import { PageMatcherRunControls } from "../page-matcher-run-controls";
 import { PageSectionContent } from "../page-section-content/page-section-content";
 
 type MentionData = {
@@ -29,15 +32,42 @@ export const PageAuthorContent = ({
 	documentId,
 	pageNumber,
 }: PageAuthorContentProps) => {
+	const { data: projectIndexTypes } = trpc.projectIndexType.list.useQuery(
+		{ projectId: projectId || "" },
+		{ enabled: !!projectId },
+	);
+
+	const authorProjectIndexTypeId = useMemo(
+		() =>
+			projectIndexTypes?.find((t) => t.indexType === "author")?.id || undefined,
+		[projectIndexTypes],
+	);
+
 	return (
-		<PageSectionContent
-			mentions={mentions}
-			onMentionClick={onMentionClick}
-			onMentionEdit={onMentionEdit}
-			onMentionDelete={onMentionDelete}
-			projectId={projectId}
-			documentId={documentId}
-			pageNumber={pageNumber}
-		/>
+		<div className="space-y-4">
+			{authorProjectIndexTypeId &&
+				projectId &&
+				documentId &&
+				pageNumber != null &&
+				pageNumber >= 1 && (
+					<PageMatcherRunControls
+						projectId={projectId}
+						projectIndexTypeId={authorProjectIndexTypeId}
+						indexType="author"
+						documentId={documentId}
+						pageNumber={pageNumber}
+						emptyStateMessage="Create groups and matchers in this index, then run detection."
+					/>
+				)}
+			<PageSectionContent
+				mentions={mentions}
+				onMentionClick={onMentionClick}
+				onMentionEdit={onMentionEdit}
+				onMentionDelete={onMentionDelete}
+				projectId={projectId}
+				documentId={documentId}
+				pageNumber={pageNumber}
+			/>
+		</div>
 	);
 };

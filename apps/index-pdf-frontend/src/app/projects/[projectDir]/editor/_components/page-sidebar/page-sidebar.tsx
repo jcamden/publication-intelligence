@@ -146,7 +146,13 @@ export const PageSidebar = ({
 		"page-ai": {
 			title: "AI",
 			icon: Sparkles,
-			content: PageAiContent,
+			content: () => (
+				<PageAiContent
+					projectId={projectId}
+					documentId={documentId}
+					pageNumber={currentPage}
+				/>
+			),
 		},
 		"page-subject": {
 			title: "Subject Index",

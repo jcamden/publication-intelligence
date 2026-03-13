@@ -183,15 +183,16 @@ export const runMatcher = async ({
 
 	const sourceDocListItem = sourceDocuments[0];
 	if (
-		input.scope === "project" &&
-		(sourceDocListItem.page_count == null || sourceDocListItem.page_count < 1)
+		sourceDocListItem.page_count == null ||
+		sourceDocListItem.page_count < 1
 	) {
 		throw new Error(
 			"Source document has no page count or has zero pages; matcher detection cannot run",
 		);
 	}
-	const totalPages =
-		input.scope === "page" ? 1 : (sourceDocListItem.page_count ?? 1);
+	// Use actual document page count for both scopes so resolvePageIdToDocumentPageNumber
+	// can find the correct page when scope is "page".
+	const totalPages = sourceDocListItem.page_count ?? 1;
 
 	if (
 		input.scope === "project" &&

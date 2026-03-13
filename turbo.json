@@ -1,6 +1,10 @@
 {
 	"$schema": "https://turbo.build/schema.json",
 	"tasks": {
+		"build": {
+			"cache": true,
+			"outputs": ["dist/**", ".next/**", "storybook-static/**"]
+		},
 		"lint:biome": {
 			"cache": true,
 			"inputs": ["src/**", "*.json", "*.config.*", "biome.json"]
@@ -8,6 +12,18 @@
 		"typecheck": {
 			"cache": true,
 			"inputs": ["src/**", "*.json", "tsconfig.json"]
+		},
+		"test": {
+			"cache": true,
+			"outputs": ["test-results/**", "coverage/**"],
+			"inputs": [
+				"src/**",
+				"*.json",
+				"*.config.*",
+				"test/**",
+				"vitest.*.ts",
+				".storybook-interaction/**"
+			]
 		},
 		"test:unit": {
 			"cache": true,
@@ -17,6 +33,52 @@
 			"cache": true,
 			"outputs": ["test-results/**"],
 			"inputs": ["src/**", ".storybook-interaction/**", "*.config.*"]
+		},
+		"build-storybook": {
+			"cache": true,
+			"outputs": ["storybook-static/**"],
+			"inputs": ["src/**", ".storybook/**", "*.config.*", "*.stories.*"]
+		},
+		"vrt:yaboujee": {
+			"cache": true,
+			"outputs": [
+				"suites/**/test-results/**",
+				"suites/**/playwright-report/**",
+				"**/__snapshots__/**"
+			],
+			"inputs": ["**/*.ts", "**/*.tsx", "**/*.stories.*", "scripts/**"]
+		},
+		"vrt:yaboujee:update": {
+			"cache": true,
+			"outputs": [
+				"suites/**/test-results/**",
+				"suites/**/playwright-report/**",
+				"**/__snapshots__/**"
+			],
+			"inputs": ["**/*.ts", "**/*.tsx", "**/*.stories.*", "scripts/**"]
+		},
+		"vrt:frontend": {
+			"cache": true,
+			"outputs": [
+				"suites/**/test-results/**",
+				"suites/**/playwright-report/**",
+				"**/__snapshots__/**"
+			],
+			"inputs": ["**/*.ts", "**/*.tsx", "**/*.stories.*", "scripts/**"]
+		},
+		"vrt:frontend:update": {
+			"cache": true,
+			"outputs": [
+				"suites/**/test-results/**",
+				"suites/**/playwright-report/**",
+				"**/__snapshots__/**"
+			],
+			"inputs": ["**/*.ts", "**/*.tsx", "**/*.stories.*", "scripts/**"]
+		},
+		"test:e2e": {
+			"cache": true,
+			"outputs": ["test-results/**", "playwright-report/**"],
+			"inputs": ["**/*.ts", "**/*.tsx", "playwright/**", "e2e/**"]
 		}
 	}
 }

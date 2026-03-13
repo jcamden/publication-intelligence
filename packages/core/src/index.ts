@@ -29,6 +29,7 @@ export * from "./canonical-page.types";
 export * from "./canonical-page.utils";
 export * from "./data/texts/bible/canon-registry";
 export * from "./data/texts/bootstrap";
+export * from "./document-page-id";
 export * from "./logger.types";
 export * from "./region.types";
 export * from "./region.utils";

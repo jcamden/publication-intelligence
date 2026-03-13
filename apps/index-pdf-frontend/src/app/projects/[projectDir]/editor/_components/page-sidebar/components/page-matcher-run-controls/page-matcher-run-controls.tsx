@@ -1,36 +1,38 @@
 "use client";
 
+import { documentPageId } from "@pubint/core";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { logEvent } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { formatTrpcErrorMessage } from "@/app/_common/_utils/trpc-error";
 import {
 	MatcherRunControlsEmptyState,
 	MatcherRunControlsShared,
-} from "./matcher-run-controls-shared";
+} from "@/app/projects/[projectDir]/editor/_components/project-sidebar/components/matcher-run-controls/matcher-run-controls-shared";
 import {
 	savePersistedSelection,
 	useMatcherRunState,
-} from "./use-matcher-run-state";
+} from "@/app/projects/[projectDir]/editor/_components/project-sidebar/components/matcher-run-controls/use-matcher-run-state";
 
-export type MatcherRunControlsProps = {
+export type PageMatcherRunControlsProps = {
 	projectId: string;
 	projectIndexTypeId: string;
 	indexType: string;
+	documentId: string;
+	pageNumber: number;
 	/** Shown when there are no groups; run button is disabled. */
 	emptyStateMessage: string;
 };
 
-export const MatcherRunControls = ({
+export const PageMatcherRunControls = ({
 	projectId,
 	projectIndexTypeId,
 	indexType,
+	documentId,
+	pageNumber,
 	emptyStateMessage: _emptyStateMessage,
-}: MatcherRunControlsProps) => {
-	const [pageRangeStart, setPageRangeStart] = useState<string>("");
-	const [pageRangeEnd, setPageRangeEnd] = useState<string>("");
-
+}: PageMatcherRunControlsProps) => {
 	const utils = trpc.useUtils();
 
 	const { data: groups = [], isSuccess: groupsLoaded } =
@@ -50,7 +52,7 @@ export const MatcherRunControls = ({
 	} = useMatcherRunState({
 		projectId,
 		indexType,
-		scope: "project",
+		scope: "page",
 		groups,
 		groupsLoaded,
 	});
@@ -65,6 +67,7 @@ export const MatcherRunControls = ({
 					(run) =>
 						run.runType === "matcher" &&
 						run.indexType === indexType &&
+						run.scope === "page" &&
 						(run.status === "running" || run.status === "queued"),
 				);
 				return hasActiveMatcherRun ? 2000 : false;
@@ -75,20 +78,32 @@ export const MatcherRunControls = ({
 		? detectionRunsData
 		: [];
 
+	const currentPageId =
+		documentId && pageNumber >= 1
+			? documentPageId(documentId, pageNumber)
+			: null;
+
 	const activeMatcherRun = detectionRuns.find(
 		(run) =>
 			run.runType === "matcher" &&
 			run.indexType === indexType &&
+			run.scope === "page" &&
+			run.pageId === currentPageId &&
 			(run.status === "running" || run.status === "queued"),
 	);
 
-	// Invalidate mentions when a matcher run completes (so highlights update without refresh)
+	// Invalidate mentions when a matcher run completes
 	const prevRunStatusesRef = useRef<Map<string, string>>(new Map());
 	useEffect(() => {
 		if (!projectId) return;
 		let didComplete = false;
 		for (const run of detectionRuns) {
-			if (run.runType !== "matcher" || run.indexType !== indexType) continue;
+			if (
+				run.runType !== "matcher" ||
+				run.indexType !== indexType ||
+				run.scope !== "page"
+			)
+				continue;
 			const prev = prevRunStatusesRef.current.get(run.id);
 			const wasActive = prev === "running" || prev === "queued";
 			const nowCompleted = run.status === "completed";
@@ -114,7 +129,7 @@ export const MatcherRunControls = ({
 				context: {
 					metadata: {
 						mode: "matcher",
-						scope: "project",
+						scope: "page",
 						indexType,
 						reason: "api_failure",
 						message: error.message,
@@ -127,6 +142,23 @@ export const MatcherRunControls = ({
 	const handleRun = useCallback(() => {
 		setValidationError(null);
 
+		if (!documentId || !pageNumber || pageNumber < 1) {
+			setValidationError("Page is required for page-scoped detection.");
+			logEvent({
+				event: "detection.run_triggered",
+				context: {
+					metadata: {
+						mode: "matcher",
+						scope: "page",
+						indexType,
+						reason: "validation",
+						message: "missing_page",
+					},
+				},
+			});
+			return;
+		}
+
 		if (!hasValidTargeting) {
 			const msg = "Select at least one group or enable Run all groups.";
 			setValidationError(msg);
@@ -135,7 +167,7 @@ export const MatcherRunControls = ({
 				context: {
 					metadata: {
 						mode: "matcher",
-						scope: "project",
+						scope: "page",
 						indexType,
 						reason: "validation",
 					},
@@ -144,42 +176,9 @@ export const MatcherRunControls = ({
 			return;
 		}
 
-		const startPage = pageRangeStart
-			? Number.parseInt(pageRangeStart, 10)
-			: undefined;
-		const endPage = pageRangeEnd
-			? Number.parseInt(pageRangeEnd, 10)
-			: undefined;
-		if (startPage != null && endPage != null && startPage > endPage) {
-			setValidationError("Start page must be ≤ end page.");
-			return;
-		}
+		const pageId = documentPageId(documentId, pageNumber);
 
-		const payload = runAllGroups
-			? {
-					projectId,
-					indexType,
-					scope: "project" as const,
-					runAllGroups: true,
-					...(startPage != null &&
-						endPage != null && {
-							pageRangeStart: startPage,
-							pageRangeEnd: endPage,
-						}),
-				}
-			: {
-					projectId,
-					indexType,
-					scope: "project" as const,
-					indexEntryGroupIds: Array.from(selectedGroupIds),
-					...(startPage != null &&
-						endPage != null && {
-							pageRangeStart: startPage,
-							pageRangeEnd: endPage,
-						}),
-				};
-
-		savePersistedSelection(projectId, indexType, "project", {
+		savePersistedSelection(projectId, indexType, "page", {
 			runAllGroups,
 			selectedGroupIds: Array.from(selectedGroupIds),
 		});
@@ -189,71 +188,83 @@ export const MatcherRunControls = ({
 			context: {
 				metadata: {
 					mode: "matcher",
-					scope: "project",
+					scope: "page",
 					indexType,
+					pageId,
 					runAllGroups,
 					selectedGroupCount: runAllGroups ? undefined : selectedGroupIds.size,
 				},
 			},
 		});
 
+		const payload = runAllGroups
+			? {
+					projectId,
+					indexType,
+					scope: "page" as const,
+					pageId,
+					runAllGroups: true,
+				}
+			: {
+					projectId,
+					indexType,
+					scope: "page" as const,
+					pageId,
+					indexEntryGroupIds: Array.from(selectedGroupIds),
+				};
+
 		runMatcher.mutate(payload);
 	}, [
 		projectId,
 		indexType,
+		documentId,
+		pageNumber,
 		runAllGroups,
 		selectedGroupIds,
 		hasValidTargeting,
-		pageRangeStart,
-		pageRangeEnd,
 		runMatcher,
 		setValidationError,
 	]);
 
-	const isPending = runMatcher.isPending;
-
 	const handleRunAllMatchers = useCallback(() => {
 		setValidationError(null);
+
+		if (!documentId || !pageNumber || pageNumber < 1) {
+			setValidationError("Page is required for page-scoped detection.");
+			return;
+		}
+
+		const pageId = documentPageId(documentId, pageNumber);
+
 		logEvent({
 			event: "detection.run_triggered",
 			context: {
 				metadata: {
 					mode: "matcher",
-					scope: "project",
+					scope: "page",
 					indexType,
 					runAllMatchers: true,
 				},
 			},
 		});
-		const startPage = pageRangeStart
-			? Number.parseInt(pageRangeStart, 10)
-			: undefined;
-		const endPage = pageRangeEnd
-			? Number.parseInt(pageRangeEnd, 10)
-			: undefined;
-		if (startPage != null && endPage != null && startPage > endPage) {
-			setValidationError("Start page must be ≤ end page.");
-			return;
-		}
+
 		runMatcher.mutate({
 			projectId,
 			indexType,
-			scope: "project",
+			scope: "page",
+			pageId,
 			runAllGroups: true,
-			...(startPage != null &&
-				endPage != null && {
-					pageRangeStart: startPage,
-					pageRangeEnd: endPage,
-				}),
 		});
 	}, [
 		projectId,
 		indexType,
-		pageRangeStart,
-		pageRangeEnd,
+		documentId,
+		pageNumber,
 		runMatcher,
 		setValidationError,
 	]);
+
+	const isPending = runMatcher.isPending;
 
 	const progressBar =
 		activeMatcherRun &&
@@ -294,47 +305,16 @@ export const MatcherRunControls = ({
 		return (
 			<div className="rounded-lg border border-border bg-surface p-4">
 				<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
-				<div className="mt-3 space-y-1">
-					<span className="text-xs font-medium text-neutral-500">
-						Page range (optional)
-					</span>
-					<div className="flex gap-2 items-center">
-						<input
-							id="matcher-page-start"
-							type="number"
-							min={1}
-							placeholder="Start"
-							value={pageRangeStart}
-							onChange={(e) => setPageRangeStart(e.target.value)}
-							className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-							aria-label="Start page"
-						/>
-						<span className="text-neutral-400">–</span>
-						<input
-							id="matcher-page-end"
-							type="number"
-							min={1}
-							placeholder="End"
-							value={pageRangeEnd}
-							onChange={(e) => setPageRangeEnd(e.target.value)}
-							className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-							aria-label="End page"
-						/>
-					</div>
-					<p className="text-xs text-neutral-400">
-						Leave blank to run on the full document.
-					</p>
-				</div>
 				<MatcherRunControlsEmptyState
 					validationError={validationError}
 					runButton={
 						<button
 							type="button"
 							onClick={handleRunAllMatchers}
-							disabled={isPending}
+							disabled={isPending || !documentId || !pageNumber}
 							className="mt-3 flex gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
 							aria-busy={isPending}
-							aria-disabled={isPending}
+							aria-disabled={isPending || !documentId || !pageNumber}
 						>
 							{isPending ? (
 								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -358,47 +338,14 @@ export const MatcherRunControls = ({
 				toggleGroup={toggleGroup}
 				toggleRunAll={toggleRunAll}
 				validationError={validationError}
-				middleSection={
-					<div className="space-y-1">
-						<span className="text-xs font-medium text-neutral-500">
-							Page range (optional)
-						</span>
-						<div className="flex gap-2 items-center">
-							<input
-								id="matcher-page-start-groups"
-								type="number"
-								min={1}
-								placeholder="Start"
-								value={pageRangeStart}
-								onChange={(e) => setPageRangeStart(e.target.value)}
-								className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-								aria-label="Start page"
-							/>
-							<span className="text-neutral-400">–</span>
-							<input
-								id="matcher-page-end-groups"
-								type="number"
-								min={1}
-								placeholder="End"
-								value={pageRangeEnd}
-								onChange={(e) => setPageRangeEnd(e.target.value)}
-								className="w-20 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-								aria-label="End page"
-							/>
-						</div>
-						<p className="text-xs text-neutral-400">
-							Leave blank to run on the full document.
-						</p>
-					</div>
-				}
 				runButton={
 					<button
 						type="button"
 						onClick={handleRun}
-						disabled={isPending}
+						disabled={isPending || !documentId || !pageNumber}
 						className="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-busy={isPending}
-						aria-disabled={isPending}
+						aria-disabled={isPending || !documentId || !pageNumber}
 					>
 						{isPending ? (
 							<Loader2 className="h-4 w-4 animate-spin" aria-hidden />

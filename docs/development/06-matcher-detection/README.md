@@ -849,6 +849,12 @@ Planned layout block model (Index page sidebar):
   - page-scoped run appears in run history with page metadata
   - API validation errors are surfaced in page sidebar form
 
+**Task 8.2 implementation (completed):**
+- **Matcher controls** in Subject, Author, Scripture index panels: `PageMatcherRunControls` component in each panel. Reuses `useMatcherRunState` and shared UI from project sidebar. Calls `detection.runMatcher` with `scope: "page"` and `pageId` (computed via `documentPageId` frontend utility). No page range inputs (page scope = single page). Persists group targeting in localStorage with `detection-matcher-page-{projectId}-{indexType}` key.
+- **LLM controls** in AI section: `PageDetectionPanel` in `PageAiContent`. Separate from matcher controls, mirroring project sidebar structure. Calls `detection.runLlm` with `pageRangeStart=pageRangeEnd=currentPage` (no backend changes). Index type buttons (Subject, Author, Scripture), run history, cancel support.
+- **Shared utilities:** `documentPageId` from `@pubint/core` (cross-platform SHA-256 via @noble/hashes), `useMatcherRunState` hook, `MatcherRunControlsShared` and `MatcherRunControlsEmptyState` components.
+- **Deviations:** LLM page-level runs added (not in original spec); uses `pageRangeStart=pageRangeEnd` rather than a dedicated `scope=page` for LLM.
+
 **Task 8.3: Index page group/layout sidebar**
 - New draggable/collapsible sidebar for:
   - `IndexEntryGroup` CRUD

@@ -272,11 +272,11 @@ export const EscapeKeyClosesPopover: Story = {
 		});
 
 		await step(
-			"Focus popover so Escape is dispatched in correct context",
+			"Focus popover container (not Close button — it captures first Escape)",
 			async () => {
 				const body = within(document.body);
-				const dialog = body.getByRole("dialog", { hidden: true });
-				(dialog as HTMLElement).focus();
+				const popover = body.getByRole("dialog", { hidden: true });
+				(popover as HTMLElement).focus();
 			},
 		);
 
@@ -284,14 +284,20 @@ export const EscapeKeyClosesPopover: Story = {
 			await userEvent.keyboard("{Escape}");
 		});
 
+		// Allow close handler and Base UI exit animation (~100ms) to complete before asserting
+		await step("Wait for close to settle", async () => {
+			await new Promise((resolve) => setTimeout(resolve, 150));
+		});
+
 		await step("Verify popover closes", async () => {
 			await waitFor(
 				async () => {
-					const body = within(document.body);
-					const popover = body.queryByRole("dialog", { hidden: true });
-					expect(popover).not.toBeInTheDocument();
+					const popover = document.querySelector(
+						"[data-pdf-annotation-popover]",
+					);
+					expect(popover).toBeNull();
 				},
-				{ timeout: 2000 },
+				{ timeout: 5000, interval: 100 },
 			);
 		});
 	},
