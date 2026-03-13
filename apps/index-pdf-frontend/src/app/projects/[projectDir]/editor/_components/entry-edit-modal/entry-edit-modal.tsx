@@ -19,6 +19,7 @@ import {
 import { FormInput, Modal } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useUpdateEntry } from "@/app/_common/_hooks/use-update-entry";
 import { trpc } from "@/app/_common/_utils/trpc";
 import type { IndexEntry } from "../../_types/index-entry";
@@ -46,6 +47,7 @@ export const EntryEditModal = ({
 	projectIndexTypeId,
 	existingEntries,
 }: EntryEditModalProps) => {
+	const utils = trpc.useUtils();
 	const [matchers, setMatchers] = useState<string[]>([]);
 	const [activeTab, setActiveTab] = useState("basic");
 	const [hasUnsavedCrossRefTarget, setHasUnsavedCrossRefTarget] =
@@ -64,6 +66,23 @@ export const EntryEditModal = ({
 			{ enabled: open },
 		);
 
+	const { data: groups = [] } = trpc.detection.listIndexEntryGroups.useQuery(
+		{ projectId, projectIndexTypeId },
+		{ enabled: open && !!projectId && !!projectIndexTypeId },
+	);
+
+	const addEntryToGroup = trpc.detection.addEntryToGroup.useMutation({
+		onError: (error) => {
+			toast.error(`Failed to add entry to group: ${error.message}`);
+		},
+	});
+
+	const removeEntryFromGroup = trpc.detection.removeEntryFromGroup.useMutation({
+		onError: (error) => {
+			toast.error(`Failed to remove entry from group: ${error.message}`);
+		},
+	});
+
 	const availableParents = useMemo(
 		() =>
 			getAvailableParents({
@@ -77,9 +96,12 @@ export const EntryEditModal = ({
 		defaultValues: {
 			label: entry.label,
 			parentId: entry.parentId as string | null,
+			groupId: (entry.groupId ?? null) as string | null,
 		},
 		onSubmit: async ({ value }) => {
 			const label = value.label.trim();
+			const newGroupId = value.groupId ?? null;
+			const oldGroupId = entry.groupId ?? null;
 
 			updateEntry.mutate(
 				{
@@ -90,7 +112,30 @@ export const EntryEditModal = ({
 					matchers: matchers,
 				},
 				{
-					onSuccess: () => {
+					onSuccess: async () => {
+						// Handle group changes (root entries only)
+						if (entry.parentId == null) {
+							if (oldGroupId && oldGroupId !== newGroupId) {
+								await removeEntryFromGroup.mutateAsync({
+									groupId: oldGroupId,
+									entryId: entry.id,
+								});
+							}
+							if (newGroupId) {
+								await addEntryToGroup.mutateAsync({
+									groupId: newGroupId,
+									entryId: entry.id,
+								});
+							}
+							utils.detection.listIndexEntryGroups.invalidate({
+								projectId,
+								projectIndexTypeId,
+							});
+							utils.indexEntry.list.invalidate({
+								projectId,
+								projectIndexTypeId,
+							});
+						}
 						onClose();
 					},
 				},
@@ -106,10 +151,11 @@ export const EntryEditModal = ({
 
 	useEffect(() => {
 		if (open) {
+			form.setFieldValue("groupId", (entry.groupId ?? null) as string | null);
 			setHasUnsavedCrossRefTarget(false);
 			setCrossRefValidationError(null);
 		}
-	}, [open]);
+	}, [open, entry.groupId, form]);
 
 	const handleCancel = useCallback(() => {
 		form.reset();
@@ -258,6 +304,63 @@ export const EntryEditModal = ({
 								</Field>
 							)}
 						</form.Field>
+
+						{/* Group selector - root entries only */}
+						{entry.parentId == null && (
+							<form.Field name="groupId">
+								{(field) => {
+									const currentGroupId = entry.groupId ?? null;
+									const selectedGroupId = field.state.value ?? null;
+									const isTransfer =
+										currentGroupId &&
+										selectedGroupId &&
+										selectedGroupId !== currentGroupId;
+									const currentGroup = groups.find(
+										(g) => g.id === currentGroupId,
+									);
+									const selectedGroup = groups.find(
+										(g) => g.id === selectedGroupId,
+									);
+
+									return (
+										<Field>
+											<FieldLabel htmlFor="groupId">
+												Group (optional)
+											</FieldLabel>
+											<Select
+												value={field.state.value ?? ""}
+												onValueChange={(v) =>
+													field.handleChange(v === "" ? null : v)
+												}
+											>
+												<SelectTrigger id="groupId" className="w-full">
+													<SelectValue placeholder="None">
+														{selectedGroup?.name ?? "None"}
+													</SelectValue>
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="">None</SelectItem>
+													{groups.map((g) => (
+														<SelectItem key={g.id} value={g.id}>
+															{g.name}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											{isTransfer && currentGroup && selectedGroup && (
+												<p
+													className="mt-1.5 text-sm text-amber-600 dark:text-amber-400"
+													role="alert"
+												>
+													Entry will be transferred from "{currentGroup.name}"
+													to "{selectedGroup.name}".
+												</p>
+											)}
+										</Field>
+									);
+								}}
+							</form.Field>
+						)}
 					</form>
 				</TabsContent>
 

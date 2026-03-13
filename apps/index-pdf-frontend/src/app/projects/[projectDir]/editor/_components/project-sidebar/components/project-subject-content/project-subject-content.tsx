@@ -78,6 +78,7 @@ export const ProjectSubjectContent = () => {
 		indexType: "subject" as const,
 		projectId: projectId || undefined,
 		projectIndexTypeId: subjectProjectIndexTypeId,
+		groupId: e.groupId ?? null,
 		metadata: {
 			matchers: e.matchers?.map((m) => m.text) || [],
 		},

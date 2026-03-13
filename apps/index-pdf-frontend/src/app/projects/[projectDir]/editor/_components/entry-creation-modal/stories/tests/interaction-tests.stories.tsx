@@ -122,9 +122,7 @@ export const AllowSameLabelUnderDifferentParent: Story = {
 		await step(
 			"Select different parent (Science instead of Philosophy)",
 			async () => {
-				const parentInput = body.getByRole("combobox", {
-					hidden: false,
-				});
+				const parentInput = body.getByLabelText(/Parent Entry/);
 				await userEvent.click(parentInput);
 
 				await waitFor(
@@ -188,10 +186,7 @@ export const CreateEntryWithParent: Story = {
 		});
 
 		await step("Select parent entry", async () => {
-			// Find the parent entry combobox by its ID
-			const parentInput = body.getByRole("combobox", {
-				hidden: false,
-			});
+			const parentInput = body.getByLabelText(/Parent Entry/);
 			await userEvent.click(parentInput);
 
 			// Wait for options to appear

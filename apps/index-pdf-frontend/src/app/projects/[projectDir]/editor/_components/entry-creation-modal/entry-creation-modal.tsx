@@ -2,6 +2,13 @@
 
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { Field, FieldLabel } from "@pubint/yabasic/components/ui/field";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@pubint/yabasic/components/ui/select";
 import { Spinner } from "@pubint/yabasic/components/ui/spinner";
 import {
 	Tabs,
@@ -43,12 +50,6 @@ export const EntryCreationModal = ({
 	prefillParentId = null,
 	onEntryCreated,
 }: EntryCreationModalProps) => {
-	console.log("[EntryCreationModal] Component rendered/updated:", {
-		open,
-		prefillLabel,
-		prefillParentId,
-		existingEntriesCount: existingEntries.length,
-	});
 	const utils = trpc.useUtils();
 	const createEntry = useCreateEntry();
 	const [matchers, setMatchers] = useState<string[]>([]);
@@ -61,6 +62,17 @@ export const EntryCreationModal = ({
 	const [crossRefValidationError, setCrossRefValidationError] = useState<
 		string | null
 	>(null);
+
+	const { data: groups = [] } = trpc.detection.listIndexEntryGroups.useQuery(
+		{ projectId, projectIndexTypeId },
+		{ enabled: open && !!projectId && !!projectIndexTypeId },
+	);
+
+	const addEntryToGroup = trpc.detection.addEntryToGroup.useMutation({
+		onError: (error) => {
+			toast.error(`Failed to add entry to group: ${error.message}`);
+		},
+	});
 
 	const createCrossReference =
 		trpc.indexEntry.crossReference.create.useMutation({
@@ -82,9 +94,9 @@ export const EntryCreationModal = ({
 		defaultValues: {
 			label: prefillLabel,
 			parentId: prefillParentId,
+			groupId: null as string | null,
 		},
 		onSubmit: async ({ value }) => {
-			console.log("[EntryCreationModal] onSubmit called with value:", value);
 			const label = value.label.trim();
 
 			const mutationInput = {
@@ -95,13 +107,21 @@ export const EntryCreationModal = ({
 				matchers: matchers.length > 0 ? matchers : undefined,
 			};
 
-			console.log(
-				"[EntryCreationModal] Calling createEntry.mutate with:",
-				mutationInput,
-			);
-
 			createEntry.mutate(mutationInput, {
 				onSuccess: async (newEntry) => {
+					// Add to group if selected (root entries only)
+					const selectedGroupId = value.groupId ?? null;
+					if (selectedGroupId && !value.parentId) {
+						await addEntryToGroup.mutateAsync({
+							groupId: selectedGroupId,
+							entryId: newEntry.id,
+						});
+						utils.detection.listIndexEntryGroups.invalidate({
+							projectId,
+							projectIndexTypeId,
+						});
+					}
+
 					// Create cross-references if any were added
 					if (pendingCrossReferences.length > 0) {
 						try {
@@ -129,28 +149,17 @@ export const EntryCreationModal = ({
 
 					// Convert backend entry to frontend format with indexType
 					const indexType = existingEntries[0]?.indexType || "subject";
-					console.log("[EntryCreationModal] Creating frontend entry:", {
-						backendEntry: newEntry,
-						existingEntriesCount: existingEntries.length,
-						derivedIndexType: indexType,
-						projectId,
-						projectIndexTypeId,
-					});
 
 					const frontendEntry: IndexEntry = {
 						...newEntry,
 						indexType,
 						projectId: projectId,
 						projectIndexTypeId: projectIndexTypeId,
+						groupId: value.groupId ?? null,
 						metadata: {
 							matchers: newEntry.matchers?.map((m) => m.text) || [],
 						},
 					};
-
-					console.log(
-						"[EntryCreationModal] Frontend entry created:",
-						frontendEntry,
-					);
 
 					onEntryCreated?.(frontendEntry);
 					onClose();
@@ -182,6 +191,7 @@ export const EntryCreationModal = ({
 		if (open) {
 			form.setFieldValue("label", prefillLabel);
 			form.setFieldValue("parentId", prefillParentId);
+			form.setFieldValue("groupId", null);
 			if (prefillLabel) {
 				setMatchers([prefillLabel]);
 			}
@@ -275,20 +285,7 @@ export const EntryCreationModal = ({
 							name="label"
 							validators={{
 								onSubmit: ({ value, fieldApi }) => {
-									console.log("[EntryCreationModal] Label validator running:", {
-										value,
-										existingEntriesCount: existingEntries.length,
-										existingEntries: existingEntries.map((e) => ({
-											id: e.id,
-											label: e.label,
-											parentId: e.parentId,
-										})),
-									});
-
 									if (!value || !value.trim()) {
-										console.log(
-											"[EntryCreationModal] Validation failed: Label is required",
-										);
 										return "Label is required";
 									}
 
@@ -302,21 +299,9 @@ export const EntryCreationModal = ({
 									);
 
 									if (exists) {
-										console.log(
-											"[EntryCreationModal] Validation failed: Entry already exists with same parent",
-											{
-												matchingEntry: existingEntries.find(
-													(e) =>
-														e.label.toLowerCase() ===
-															value.trim().toLowerCase() &&
-														e.parentId === currentParentId,
-												),
-											},
-										);
 										return "An entry with this label already exists under this parent";
 									}
 
-									console.log("[EntryCreationModal] Validation passed");
 									return undefined;
 								},
 							}}
@@ -348,6 +333,40 @@ export const EntryCreationModal = ({
 								</Field>
 							)}
 						</form.Field>
+
+						{/* Group selector - root entries only (no parent = top-level) */}
+						{form.state.values.parentId == null && (
+							<form.Field name="groupId">
+								{(field) => (
+									<Field>
+										<FieldLabel htmlFor="groupId">Group (optional)</FieldLabel>
+										<Select
+											value={field.state.value ?? ""}
+											onValueChange={(v) =>
+												field.handleChange(v === "" ? null : v)
+											}
+										>
+											<SelectTrigger id="groupId" className="w-full">
+												<SelectValue placeholder="None">
+													{field.state.value
+														? groups.find((g) => g.id === field.state.value)
+																?.name
+														: "None"}
+												</SelectValue>
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="">None</SelectItem>
+												{groups.map((g) => (
+													<SelectItem key={g.id} value={g.id}>
+														{g.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</Field>
+								)}
+							</form.Field>
+						)}
 					</form>
 				</TabsContent>
 

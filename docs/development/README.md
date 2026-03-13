@@ -1,15 +1,4 @@
-# Development Backlog
-
-This directory tracks implementation epics and loose engineering todos that do not yet need a dedicated spec.
-
-## Epics
-
-- [03-index-editor](./03-index-editor/README.md)
-- [04-export-publishing](./04-export-publishing/README.md)
-- [05-infrastructure](./05-infrastructure/README.md)
-- [06-matcher-detection](./06-matcher-detection/README.md)
-
-## Random Todos
+# Random Todos
 
 ### Detection
 
@@ -41,13 +30,9 @@ This directory tracks implementation epics and loose engineering todos that do n
 ### Project Flow
 
 - Fix the "PDF not found" error when navigating to the Editor too quickly after creating a project.
+- Remove or fix index types in the create/edit project modal.
 
 ### Mention Geometry
 
 - Horizontally join multiple bounding boxes on the same line for `IndexMentions` that have multiple bounding boxes.
-- Prefer merging those bounding boxes before saving the `IndexMention`; alternatively, handle the merge in highlight rendering if persistence-layer merging is not appropriate.
-
-### Misc
-
-- Add a small convention note for when a todo should be promoted into its own epic/task doc.
-- Periodically prune completed one-off todos from this file once they are represented elsewhere.
+    - Prefer merging those bounding boxes before saving the `IndexMention`; alternatively, handle the merge in highlight rendering if persistence-layer merging is not appropriate.

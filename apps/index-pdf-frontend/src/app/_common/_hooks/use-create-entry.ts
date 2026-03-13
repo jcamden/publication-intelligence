@@ -112,7 +112,8 @@ export const useCreateEntry = () => {
 										indexType: "",
 										colorHue: 0,
 									},
-									groupId: (data as { groupId?: string | null }).groupId ?? null,
+									groupId:
+										(data as { groupId?: string | null }).groupId ?? null,
 									matchers: data.matchers ?? [],
 									mentionCount: data.mentionCount ?? 0,
 									childCount: data.childCount ?? 0,
