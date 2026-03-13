@@ -82,6 +82,7 @@ export const ProjectAuthorContent = () => {
 		projectId: projectId || undefined,
 		projectIndexTypeId: authorProjectIndexTypeId,
 		groupId: e.groupId ?? null,
+		groupPosition: e.groupPosition ?? null,
 		metadata: {
 			matchers: e.matchers?.map((m) => m.text) || [],
 		},
@@ -162,6 +163,51 @@ export const ProjectAuthorContent = () => {
 		[addEntryToGroup],
 	);
 
+	const reorderGroups = trpc.detection.reorderGroups.useMutation({
+		onSuccess: () => {
+			utils.detection.listIndexEntryGroups.invalidate({
+				projectId: projectId || "",
+				projectIndexTypeId: authorProjectIndexTypeId ?? "",
+			});
+		},
+		onError: (error) => {
+			toast.error(`Failed to reorder groups: ${error.message}`);
+		},
+	});
+
+	const handleReorderGroups = useCallback(
+		(groupIds: string[]) => {
+			reorderGroups.mutate({
+				projectId: projectId || "",
+				projectIndexTypeId: authorProjectIndexTypeId ?? "",
+				groupIds,
+			});
+		},
+		[reorderGroups, projectId, authorProjectIndexTypeId],
+	);
+
+	const reorderGroupEntries = trpc.detection.reorderGroupEntries.useMutation({
+		onSuccess: (_, variables) => {
+			utils.detection.getIndexEntryGroup.invalidate({
+				groupId: variables.groupId,
+			});
+			utils.indexEntry.list.invalidate({
+				projectId: projectId || "",
+				projectIndexTypeId: authorProjectIndexTypeId,
+			});
+		},
+		onError: (error) => {
+			toast.error(`Failed to reorder entries: ${error.message}`);
+		},
+	});
+
+	const handleReorderEntriesInGroup = useCallback(
+		(groupId: string, entryIds: string[]) => {
+			reorderGroupEntries.mutate({ groupId, entryIds });
+		},
+		[reorderGroupEntries],
+	);
+
 	const isLoading =
 		isLoadingIndexTypes ||
 		isLoadingEntries ||
@@ -189,13 +235,19 @@ export const ProjectAuthorContent = () => {
 			<EntryTree
 				entries={entries}
 				mentions={allMentions}
-				groups={groups.map((g) => ({ id: g.id, name: g.name }))}
+				groups={groups.map((g) => ({
+					id: g.id,
+					name: g.name,
+					sortMode: g.sortMode,
+				}))}
 				projectId={projectId}
 				projectIndexTypeId={authorProjectIndexTypeId}
 				onCreateEntry={() => setModalOpen(true)}
 				onCreateGroup={() => setGroupModalState("create")}
 				onEditGroup={(id) => setGroupModalState(id)}
 				onAddEntryToGroup={handleAddEntryToGroup}
+				onReorderGroups={handleReorderGroups}
+				onReorderEntriesInGroup={handleReorderEntriesInGroup}
 				isLoading={isLoading}
 				error={entriesError ? (entriesError as unknown as Error) : null}
 			/>

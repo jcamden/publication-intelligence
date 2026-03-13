@@ -9,13 +9,18 @@ import { DeleteEntryDialog } from "../delete-entry-dialog/delete-entry-dialog";
 import type { Mention } from "../editor/editor";
 import { EntryEditModal } from "../entry-edit-modal/entry-edit-modal";
 import { EntryMergeModal } from "../entry-merge-modal/entry-merge-modal";
+import { MergeGroupModal } from "../merge-group-modal";
 import { CreateEntryButton } from "./components/create-entry-button";
+import { EntryDropZone } from "./components/entry-drop-zone";
 import { EntryItem } from "./components/entry-item";
 import { EntryListSkeleton } from "./components/entry-list-skeleton";
+import { GroupDropZone } from "./components/group-drop-zone";
+import { GroupItem } from "./components/group-item";
 
 export type EntryTreeGroup = {
 	id: string;
 	name: string;
+	sortMode?: "a_z" | "canon_book_order" | "custom";
 };
 
 export type EntryTreeProps = {
@@ -29,6 +34,8 @@ export type EntryTreeProps = {
 	onCreateGroup?: () => void; // Open create group modal
 	onEditGroup?: (groupId: string) => void; // Open edit group modal
 	onAddEntryToGroup?: (groupId: string, entryId: string) => void; // Add root entry to group (e.g. on drag-drop)
+	onReorderGroups?: (groupIds: string[]) => void; // Reorder groups (drag to reorder)
+	onReorderEntriesInGroup?: (groupId: string, entryIds: string[]) => void; // Reorder entries within group (custom sort only)
 	isLoading?: boolean; // Loading state
 	error?: Error | null; // Error state
 };
@@ -130,18 +137,41 @@ export const EntryTree = ({
 	onCreateGroup,
 	onEditGroup,
 	onAddEntryToGroup,
+	onReorderGroups,
+	onReorderEntriesInGroup,
 	isLoading = false,
 	error = null,
 }: EntryTreeProps) => {
 	const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
+	const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);
 	const [isRootDropTarget, setIsRootDropTarget] = useState(false);
 	const [groupDropTargetId, setGroupDropTargetId] = useState<string | null>(
 		null,
 	);
+	const [groupReorderDropIndex, setGroupReorderDropIndex] = useState<
+		number | null
+	>(null);
+	const [entryReorderDropTarget, setEntryReorderDropTarget] = useState<{
+		groupId: string;
+		insertIndex: number;
+	} | null>(null);
 	const [editingEntry, setEditingEntry] = useState<IndexEntry | null>(null);
 	const [deletingEntry, setDeletingEntry] = useState<IndexEntry | null>(null);
 	const [mergingEntry, setMergingEntry] = useState<IndexEntry | null>(null);
+	const [mergingGroup, setMergingGroup] = useState<EntryTreeGroup | null>(null);
+	const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(
+		new Set(),
+	);
 	const updateParent = useUpdateEntryParent({ projectId });
+
+	const toggleGroupExpanded = (groupId: string) => {
+		setCollapsedGroupIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(groupId)) next.delete(groupId);
+			else next.add(groupId);
+			return next;
+		});
+	};
 
 	// Clear deletingEntry if it no longer exists in the entries list
 	useEffect(() => {
@@ -156,6 +186,7 @@ export const EntryTree = ({
 	);
 
 	// Partition top-level entries by group (for group-as-section layout)
+	// Sort by groupPosition when group has custom sort
 	const entriesByGroup = useMemo(() => {
 		const byGroup = new Map<string | null, IndexEntry[]>();
 		for (const entry of topLevelEntries) {
@@ -164,8 +195,19 @@ export const EntryTree = ({
 			list.push(entry);
 			byGroup.set(gid, list);
 		}
+		// Sort entries within each group by groupPosition when group has custom sort
+		for (const group of groups) {
+			const list = byGroup.get(group.id) ?? [];
+			if (group.sortMode === "custom" && list.length > 1) {
+				list.sort((a, b) => {
+					const posA = a.groupPosition ?? 999999;
+					const posB = b.groupPosition ?? 999999;
+					return posA - posB;
+				});
+			}
+		}
 		return byGroup;
-	}, [topLevelEntries]);
+	}, [topLevelEntries, groups]);
 
 	const ungroupedEntries = entriesByGroup.get(null) ?? [];
 	const hasGroups = groups.length > 0;
@@ -205,7 +247,84 @@ export const EntryTree = ({
 		handleDrop(null);
 	};
 
-	const handleGroupDragOver = (e: React.DragEvent, groupId: string) => {
+	const handleGroupDragStart = (groupId: string) => {
+		setDraggedGroupId(groupId);
+	};
+
+	const handleGroupDropForReorder = (insertIndex: number) => {
+		if (!draggedGroupId || insertIndex < 0 || !onReorderGroups) {
+			setDraggedGroupId(null);
+			setGroupReorderDropIndex(null);
+			return;
+		}
+		const currentIds = groups.map((g) => g.id);
+		const fromIdx = currentIds.indexOf(draggedGroupId);
+		if (fromIdx === -1) {
+			setDraggedGroupId(null);
+			setGroupReorderDropIndex(null);
+			return;
+		}
+		// Adjust insertIndex if we're moving from before the drop zone
+		const toIdx = fromIdx < insertIndex ? insertIndex - 1 : insertIndex;
+		const newIds = [...currentIds];
+		newIds.splice(fromIdx, 1);
+		newIds.splice(toIdx, 0, draggedGroupId);
+		onReorderGroups(newIds);
+		setDraggedGroupId(null);
+		setGroupReorderDropIndex(null);
+	};
+
+	const handleEntryDropForReorder = (
+		groupId: string,
+		insertIndex: number,
+		listEntries: IndexEntry[],
+	) => {
+		if (
+			!draggedEntryId ||
+			insertIndex < 0 ||
+			!onReorderEntriesInGroup ||
+			!listEntries.some((e) => e.id === draggedEntryId)
+		) {
+			setDraggedEntryId(null);
+			setEntryReorderDropTarget(null);
+			return;
+		}
+		const fromIdx = listEntries.findIndex((e) => e.id === draggedEntryId);
+		const toIdx = fromIdx < insertIndex ? insertIndex - 1 : insertIndex;
+		const newOrder = [...listEntries.map((e) => e.id)];
+		newOrder.splice(fromIdx, 1);
+		newOrder.splice(toIdx, 0, draggedEntryId);
+		onReorderEntriesInGroup(groupId, newOrder);
+		setDraggedEntryId(null);
+		setEntryReorderDropTarget(null);
+	};
+
+	const handleGroupDropZoneDragOver = (
+		e: React.DragEvent,
+		insertIndex: number,
+	) => {
+		if (
+			e.dataTransfer.types.includes("application/x-group-id") &&
+			onReorderGroups
+		) {
+			e.preventDefault();
+			e.dataTransfer.dropEffect = "move";
+			e.stopPropagation();
+			setEntryReorderDropTarget(null);
+			setGroupReorderDropIndex(insertIndex);
+		}
+	};
+
+	const handleGroupDropZoneDrop = (e: React.DragEvent, insertIndex: number) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.dataTransfer.types.includes("application/x-group-id")) {
+			handleGroupDropForReorder(insertIndex);
+		}
+	};
+
+	const handleSectionDragOver = (e: React.DragEvent, groupId: string) => {
+		// Only handle entry drag (add to group) - not group reorder
 		const entry = draggedEntryId
 			? entries.find((x) => x.id === draggedEntryId)
 			: null;
@@ -217,17 +336,14 @@ export const EntryTree = ({
 		}
 	};
 
-	const handleGroupDragLeave = (e: React.DragEvent, groupId: string) => {
+	const handleSectionDragLeave = (e: React.DragEvent, groupId: string) => {
 		const related = e.relatedTarget as Node | null;
-		if (
-			groupDropTargetId === groupId &&
-			(!related || !e.currentTarget.contains(related))
-		) {
-			setGroupDropTargetId(null);
+		if (!related || !e.currentTarget.contains(related)) {
+			if (groupDropTargetId === groupId) setGroupDropTargetId(null);
 		}
 	};
 
-	const handleGroupDrop = (e: React.DragEvent, groupId: string) => {
+	const handleSectionDrop = (e: React.DragEvent, groupId: string) => {
 		e.preventDefault();
 		e.stopPropagation();
 		setGroupDropTargetId(null);
@@ -239,6 +355,34 @@ export const EntryTree = ({
 			onAddEntryToGroup(groupId, draggedEntryId);
 			setDraggedEntryId(null);
 		}
+	};
+
+	const handleEntryDropZoneDragOver = (
+		e: React.DragEvent,
+		groupId: string,
+		insertIndex: number,
+	) => {
+		if (!draggedEntryId || !onReorderEntriesInGroup) return;
+		const entry = entries.find((x) => x.id === draggedEntryId);
+		if (!entry || entry.parentId !== null) return;
+		const groupEntries = entriesByGroup.get(groupId) ?? [];
+		if (!groupEntries.some((e) => e.id === draggedEntryId)) return;
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "move";
+		e.stopPropagation();
+		setGroupReorderDropIndex(null);
+		setEntryReorderDropTarget({ groupId, insertIndex });
+	};
+
+	const handleEntryDropZoneDrop = (
+		e: React.DragEvent,
+		groupId: string,
+		insertIndex: number,
+		listEntries: IndexEntry[],
+	) => {
+		e.preventDefault();
+		e.stopPropagation();
+		handleEntryDropForReorder(groupId, insertIndex, listEntries);
 	};
 
 	if (error) {
@@ -351,43 +495,143 @@ export const EntryTree = ({
 								{renderEntryList(ungroupedEntries)}
 							</div>
 						)}
-						{/* Groups in bordered boxes (including empty groups for visibility and drag-drop) */}
-						{groups.map((group) => {
+						{/* Groups with drop zones between them (groups are not drop targets) */}
+						{groups.flatMap((group, groupIndex) => {
 							const groupEntries = entriesByGroup.get(group.id) ?? [];
-							const isDropTarget = groupDropTargetId === group.id;
-							return (
+							const isEntryDropTarget = groupDropTargetId === group.id;
+							const isCustomSort = group.sortMode === "custom";
+							return [
+								<GroupDropZone
+									key={`group-drop-before-${group.id}`}
+									insertIndex={groupIndex}
+									isActive={groupReorderDropIndex === groupIndex}
+									onDragOver={(e) => handleGroupDropZoneDragOver(e, groupIndex)}
+									onDragLeave={() => setGroupReorderDropIndex(null)}
+									onDrop={(e) => handleGroupDropZoneDrop(e, groupIndex)}
+								/>,
 								<section
 									key={group.id}
 									aria-label={`Group: ${group.name}`}
 									className={`border rounded-lg p-2 mb-2 transition-colors ${
-										isDropTarget
+										isEntryDropTarget
 											? "border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/50"
 											: "border-neutral-200 dark:border-neutral-700"
 									}`}
-									onDragOver={(e) => handleGroupDragOver(e, group.id)}
-									onDragLeave={(e) => handleGroupDragLeave(e, group.id)}
-									onDrop={(e) => handleGroupDrop(e, group.id)}
+									onDragOver={(e) => handleSectionDragOver(e, group.id)}
+									onDragLeave={(e) => handleSectionDragLeave(e, group.id)}
+									onDrop={(e) => handleSectionDrop(e, group.id)}
 								>
-									<button
-										type="button"
-										onClick={() => onEditGroup?.(group.id)}
-										className="w-full flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded mb-1"
-									>
-										<FolderOpen className="w-4 h-4" />
-										{group.name}
-									</button>
-									<div className="space-y-1 min-h-[2px]">
-										{groupEntries.length > 0 ? (
-											renderEntryList(groupEntries)
-										) : (
-											<p className="text-xs text-neutral-500 dark:text-neutral-400 py-1 px-2">
-												Drop entries here
-											</p>
-										)}
-									</div>
-								</section>
-							);
+									<GroupItem
+										group={group}
+										hasEntries={groupEntries.length > 0}
+										expanded={!collapsedGroupIds.has(group.id)}
+										onToggleExpand={() => toggleGroupExpanded(group.id)}
+										onEdit={onEditGroup}
+										onDelete={onEditGroup}
+										onMerge={() => setMergingGroup(group)}
+										onDragStart={handleGroupDragStart}
+										isDragging={draggedGroupId === group.id}
+									/>
+									{!collapsedGroupIds.has(group.id) && (
+										<div className="space-y-1 min-h-[2px] mt-1">
+											{groupEntries.length > 0 ? (
+												isCustomSort && onReorderEntriesInGroup ? (
+													<div className="flex flex-col gap-1">
+														{groupEntries.flatMap((entry, entryIndex) => [
+															<EntryDropZone
+																key={`entry-drop-${group.id}-before-${entry.id}`}
+																insertIndex={entryIndex}
+																isActive={
+																	entryReorderDropTarget?.groupId ===
+																		group.id &&
+																	entryReorderDropTarget?.insertIndex ===
+																		entryIndex
+																}
+																onDragOver={(e) =>
+																	handleEntryDropZoneDragOver(
+																		e,
+																		group.id,
+																		entryIndex,
+																	)
+																}
+																onDragLeave={() =>
+																	setEntryReorderDropTarget(null)
+																}
+																onDrop={(e) =>
+																	handleEntryDropZoneDrop(
+																		e,
+																		group.id,
+																		entryIndex,
+																		groupEntries,
+																	)
+																}
+															/>,
+															<EntryTreeNode
+																key={entry.id}
+																entry={entry}
+																entries={entries}
+																mentions={mentions}
+																depth={0}
+																projectId={projectId}
+																projectIndexTypeId={projectIndexTypeId}
+																onEntryClick={onEntryClick}
+																onDragStart={handleDragStart}
+																onDrop={handleDrop}
+																draggedEntryId={draggedEntryId}
+																onEdit={setEditingEntry}
+																onDelete={setDeletingEntry}
+																onMerge={setMergingEntry}
+															/>,
+														])}
+														<EntryDropZone
+															key={`entry-drop-${group.id}-end`}
+															insertIndex={groupEntries.length}
+															isActive={
+																entryReorderDropTarget?.groupId === group.id &&
+																entryReorderDropTarget?.insertIndex ===
+																	groupEntries.length
+															}
+															onDragOver={(e) =>
+																handleEntryDropZoneDragOver(
+																	e,
+																	group.id,
+																	groupEntries.length,
+																)
+															}
+															onDragLeave={() =>
+																setEntryReorderDropTarget(null)
+															}
+															onDrop={(e) =>
+																handleEntryDropZoneDrop(
+																	e,
+																	group.id,
+																	groupEntries.length,
+																	groupEntries,
+																)
+															}
+														/>
+													</div>
+												) : (
+													renderEntryList(groupEntries)
+												)
+											) : (
+												<p className="text-xs text-neutral-500 dark:text-neutral-400 py-1 px-2">
+													Drop entries here
+												</p>
+											)}
+										</div>
+									)}
+								</section>,
+							];
 						})}
+						<GroupDropZone
+							key="group-drop-end"
+							insertIndex={groups.length}
+							isActive={groupReorderDropIndex === groups.length}
+							onDragOver={(e) => handleGroupDropZoneDragOver(e, groups.length)}
+							onDragLeave={() => setGroupReorderDropIndex(null)}
+							onDrop={(e) => handleGroupDropZoneDrop(e, groups.length)}
+						/>
 					</>
 				) : (
 					<div className="space-y-1">{renderEntryList(topLevelEntries)}</div>
@@ -419,19 +663,24 @@ export const EntryTree = ({
 				/>
 			)}
 			{deletingEntry && (
-				<>
-					{console.log("[EntryTree] Rendering DeleteEntryDialog:", {
-						deletingEntryId: deletingEntry.id,
-						deletingEntryLabel: deletingEntry.label,
-					})}
-					<DeleteEntryDialog
-						entry={deletingEntry}
-						open={true}
-						onOpenChange={(open) => {
-							if (!open) setDeletingEntry(null);
-						}}
-					/>
-				</>
+				<DeleteEntryDialog
+					entry={deletingEntry}
+					open={true}
+					onOpenChange={(open) => {
+						if (!open) setDeletingEntry(null);
+					}}
+				/>
+			)}
+			{mergingGroup && projectId && projectIndexTypeId && (
+				<MergeGroupModal
+					open={true}
+					onClose={() => setMergingGroup(null)}
+					sourceGroup={mergingGroup}
+					groups={groups.filter((g) => g.id !== mergingGroup.id)}
+					projectId={projectId}
+					projectIndexTypeId={projectIndexTypeId}
+					onMerged={() => setMergingGroup(null)}
+				/>
 			)}
 		</>
 	);

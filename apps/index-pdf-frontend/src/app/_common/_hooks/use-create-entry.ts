@@ -59,6 +59,7 @@ export const useCreateEntry = () => {
 						},
 						parentId: newEntry.parentId || null,
 						groupId: null,
+						groupPosition: null,
 						matchers: [],
 						mentionCount: 0,
 						childCount: 0,
@@ -114,6 +115,9 @@ export const useCreateEntry = () => {
 									},
 									groupId:
 										(data as { groupId?: string | null }).groupId ?? null,
+									groupPosition:
+										(data as { groupPosition?: number | null }).groupPosition ??
+										null,
 									matchers: data.matchers ?? [],
 									mentionCount: data.mentionCount ?? 0,
 									childCount: data.childCount ?? 0,

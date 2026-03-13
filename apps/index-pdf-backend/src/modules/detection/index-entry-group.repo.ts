@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { withUserContext } from "../../db/client";
 import {
 	indexEntries,
@@ -21,6 +21,7 @@ export type IndexEntryGroupListItem = {
 	slug: string;
 	parserProfileId: string | null;
 	sortMode: "a_z" | "canon_book_order" | "custom";
+	position: number | null;
 	createdAt: Date;
 	updatedAt: Date | null;
 	deletedAt: Date | null;
@@ -92,13 +93,17 @@ export const listGroups = async ({
 					slug: indexEntryGroups.slug,
 					parserProfileId: indexEntryGroups.parserProfileId,
 					sortMode: indexEntryGroups.sortMode,
+					position: indexEntryGroups.position,
 					createdAt: indexEntryGroups.createdAt,
 					updatedAt: indexEntryGroups.updatedAt,
 					deletedAt: indexEntryGroups.deletedAt,
 				})
 				.from(indexEntryGroups)
 				.where(and(...conditions))
-				.orderBy(asc(indexEntryGroups.name));
+				.orderBy(
+					sql`${indexEntryGroups.position} ASC NULLS LAST`,
+					asc(indexEntryGroups.name),
+				);
 			return rows.map((r) => ({
 				id: r.id,
 				projectId: r.projectId,
@@ -107,6 +112,7 @@ export const listGroups = async ({
 				slug: r.slug,
 				parserProfileId: r.parserProfileId,
 				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
+				position: r.position,
 				createdAt: r.createdAt,
 				updatedAt: r.updatedAt,
 				deletedAt: r.deletedAt,
@@ -139,6 +145,7 @@ export const listGroupsWithMeta = async ({
 					slug: indexEntryGroups.slug,
 					parserProfileId: indexEntryGroups.parserProfileId,
 					sortMode: indexEntryGroups.sortMode,
+					position: indexEntryGroups.position,
 					createdAt: indexEntryGroups.createdAt,
 					updatedAt: indexEntryGroups.updatedAt,
 					deletedAt: indexEntryGroups.deletedAt,
@@ -164,11 +171,15 @@ export const listGroupsWithMeta = async ({
 					indexEntryGroups.slug,
 					indexEntryGroups.parserProfileId,
 					indexEntryGroups.sortMode,
+					indexEntryGroups.position,
 					indexEntryGroups.createdAt,
 					indexEntryGroups.updatedAt,
 					indexEntryGroups.deletedAt,
 				)
-				.orderBy(asc(indexEntryGroups.name));
+				.orderBy(
+					sql`${indexEntryGroups.position} ASC NULLS LAST`,
+					asc(indexEntryGroups.name),
+				);
 			return rows.map((r) => ({
 				id: r.id,
 				projectId: r.projectId,
@@ -177,6 +188,7 @@ export const listGroupsWithMeta = async ({
 				slug: r.slug,
 				parserProfileId: r.parserProfileId,
 				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
+				position: r.position,
 				createdAt: r.createdAt,
 				updatedAt: r.updatedAt,
 				deletedAt: r.deletedAt,
@@ -208,6 +220,7 @@ export const getGroup = async ({
 					slug: indexEntryGroups.slug,
 					parserProfileId: indexEntryGroups.parserProfileId,
 					sortMode: indexEntryGroups.sortMode,
+					position: indexEntryGroups.position,
 					createdAt: indexEntryGroups.createdAt,
 					updatedAt: indexEntryGroups.updatedAt,
 					deletedAt: indexEntryGroups.deletedAt,
@@ -224,6 +237,7 @@ export const getGroup = async ({
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
 				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
+				position: row.position,
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
 				deletedAt: row.deletedAt,
@@ -421,7 +435,10 @@ export const listGroupsByIds = async ({
 						isNull(indexEntryGroups.deletedAt),
 					),
 				)
-				.orderBy(asc(indexEntryGroups.name));
+				.orderBy(
+					sql`${indexEntryGroups.position} ASC NULLS LAST`,
+					asc(indexEntryGroups.name),
+				);
 			return rows.map((r) => ({
 				id: r.id,
 				parserProfileId: r.parserProfileId,
@@ -464,7 +481,10 @@ export const resolveRunGroupIds = async ({
 							isNull(indexEntryGroups.deletedAt),
 						),
 					)
-					.orderBy(asc(indexEntryGroups.name));
+					.orderBy(
+						sql`${indexEntryGroups.position} ASC NULLS LAST`,
+						asc(indexEntryGroups.name),
+					);
 				return rows.map((r) => r.id);
 			}
 			if (Array.isArray(indexEntryGroupIds) && indexEntryGroupIds.length > 0) {
@@ -509,7 +529,7 @@ export const listMatcherAliasesByGroupIds = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
-			// Order groups by name so snapshot order is deterministic
+			// Order groups by position then name so snapshot order is deterministic
 			const orderedGroups = await tx
 				.select({ id: indexEntryGroups.id })
 				.from(indexEntryGroups)
@@ -520,7 +540,10 @@ export const listMatcherAliasesByGroupIds = async ({
 						eq(indexEntryGroups.projectIndexTypeId, projectIndexTypeId),
 					),
 				)
-				.orderBy(asc(indexEntryGroups.name));
+				.orderBy(
+					sql`${indexEntryGroups.position} ASC NULLS LAST`,
+					asc(indexEntryGroups.name),
+				);
 
 			const result: AliasInput[] = [];
 			for (const g of orderedGroups) {
@@ -677,6 +700,7 @@ export const createGroup = async ({
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
 				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
+				position: row.position,
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
 				deletedAt: row.deletedAt,
@@ -760,10 +784,207 @@ export const updateGroup = async ({
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
 				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
+				position: row.position,
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
 				deletedAt: row.deletedAt,
 			};
+		},
+	});
+};
+
+/**
+ * Reorder groups by updating position for each group. Validates all groupIds
+ * belong to project + projectIndexTypeId.
+ */
+export const reorderGroups = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	groupIds,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	groupIds: string[];
+}): Promise<void> => {
+	if (groupIds.length === 0) return;
+
+	await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// Validate all groups exist and belong to project+type
+			const rows = await tx
+				.select({ id: indexEntryGroups.id })
+				.from(indexEntryGroups)
+				.where(
+					and(
+						inArray(indexEntryGroups.id, groupIds),
+						eq(indexEntryGroups.projectId, projectId),
+						eq(indexEntryGroups.projectIndexTypeId, projectIndexTypeId),
+						isNull(indexEntryGroups.deletedAt),
+					),
+				);
+			const foundIds = new Set(rows.map((r) => r.id));
+			if (foundIds.size !== groupIds.length) {
+				const missing = groupIds.filter((id) => !foundIds.has(id));
+				throw new Error(
+					`Invalid group IDs or not in project: ${missing.join(", ")}`,
+				);
+			}
+			for (let i = 0; i < groupIds.length; i++) {
+				await tx
+					.update(indexEntryGroups)
+					.set({ position: i, updatedAt: new Date() })
+					.where(
+						and(
+							eq(indexEntryGroups.id, groupIds[i]),
+							eq(indexEntryGroups.projectId, projectId),
+							eq(indexEntryGroups.projectIndexTypeId, projectIndexTypeId),
+						),
+					);
+			}
+		},
+	});
+};
+
+/**
+ * Merge source group into target: move all entries and matchers to target,
+ * then soft-delete source. Both groups must exist, not be deleted, and belong
+ * to the same project + projectIndexTypeId.
+ */
+export const mergeGroups = async ({
+	userId,
+	sourceGroupId,
+	targetGroupId,
+}: {
+	userId: string;
+	sourceGroupId: string;
+	targetGroupId: string;
+}): Promise<void> => {
+	if (sourceGroupId === targetGroupId) {
+		throw new Error("Source and target group must be different");
+	}
+
+	await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [source, target] = await Promise.all([
+				tx
+					.select({
+						id: indexEntryGroups.id,
+						projectId: indexEntryGroups.projectId,
+						projectIndexTypeId: indexEntryGroups.projectIndexTypeId,
+					})
+					.from(indexEntryGroups)
+					.where(
+						and(
+							eq(indexEntryGroups.id, sourceGroupId),
+							isNull(indexEntryGroups.deletedAt),
+						),
+					)
+					.limit(1),
+				tx
+					.select({
+						id: indexEntryGroups.id,
+						projectId: indexEntryGroups.projectId,
+						projectIndexTypeId: indexEntryGroups.projectIndexTypeId,
+					})
+					.from(indexEntryGroups)
+					.where(
+						and(
+							eq(indexEntryGroups.id, targetGroupId),
+							isNull(indexEntryGroups.deletedAt),
+						),
+					)
+					.limit(1),
+			]);
+
+			const sourceRow = source[0];
+			const targetRow = target[0];
+			if (!sourceRow || !targetRow) {
+				throw new Error("Source or target group not found or deleted");
+			}
+			if (sourceRow.projectId !== targetRow.projectId) {
+				throw new Error("Groups must belong to same project");
+			}
+			if (sourceRow.projectIndexTypeId !== targetRow.projectIndexTypeId) {
+				throw new Error("Groups must belong to same index type");
+			}
+
+			// Move entries: delete from source, add to target (transfer logic)
+			const sourceEntries = await tx
+				.select({
+					entryId: indexEntryGroupEntries.entryId,
+					position: indexEntryGroupEntries.position,
+				})
+				.from(indexEntryGroupEntries)
+				.where(eq(indexEntryGroupEntries.groupId, sourceGroupId));
+
+			await tx
+				.delete(indexEntryGroupEntries)
+				.where(eq(indexEntryGroupEntries.groupId, sourceGroupId));
+
+			for (const { entryId, position } of sourceEntries) {
+				// Remove from any other group (one group per entry)
+				await tx
+					.delete(indexEntryGroupEntries)
+					.where(
+						and(
+							eq(indexEntryGroupEntries.entryId, entryId),
+							ne(indexEntryGroupEntries.groupId, targetGroupId),
+						),
+					);
+				await tx
+					.insert(indexEntryGroupEntries)
+					.values({
+						groupId: targetGroupId,
+						entryId,
+						position,
+					})
+					.onConflictDoUpdate({
+						target: [
+							indexEntryGroupEntries.groupId,
+							indexEntryGroupEntries.entryId,
+						],
+						set: { position },
+					});
+			}
+
+			// Move matchers: delete from source, add to target
+			const sourceMatchers = await tx
+				.select({
+					matcherId: indexEntryGroupMatchers.matcherId,
+					position: indexEntryGroupMatchers.position,
+				})
+				.from(indexEntryGroupMatchers)
+				.where(eq(indexEntryGroupMatchers.groupId, sourceGroupId));
+
+			await tx
+				.delete(indexEntryGroupMatchers)
+				.where(eq(indexEntryGroupMatchers.groupId, sourceGroupId));
+
+			for (const { matcherId, position } of sourceMatchers) {
+				await tx
+					.insert(indexEntryGroupMatchers)
+					.values({
+						groupId: targetGroupId,
+						matcherId,
+						position,
+					})
+					.onConflictDoNothing({
+						target: [
+							indexEntryGroupMatchers.groupId,
+							indexEntryGroupMatchers.matcherId,
+						],
+					});
+			}
+
+			// Soft-delete source group
+			await tx
+				.update(indexEntryGroups)
+				.set({ deletedAt: new Date(), updatedAt: new Date() })
+				.where(eq(indexEntryGroups.id, sourceGroupId));
 		},
 	});
 };

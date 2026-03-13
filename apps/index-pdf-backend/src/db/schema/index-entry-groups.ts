@@ -35,6 +35,7 @@ export const indexEntryGroups = pgTable(
 		slug: text("slug").notNull(),
 		parserProfileId: text("parser_profile_id"), // e.g. "scripture-biblical"; null = alias-only
 		sortMode: indexEntryGroupSortModeEnum("sort_mode").default("a_z").notNull(),
+		position: integer("position"), // nullable; null = use name as fallback
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),

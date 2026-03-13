@@ -201,6 +201,21 @@ export type ReorderGroupEntriesInput = z.infer<
 	typeof ReorderGroupEntriesSchema
 >;
 
+export const ReorderGroupsSchema = z.object({
+	projectId: z.string().uuid("Invalid project ID"),
+	projectIndexTypeId: z.string().uuid("Invalid project index type ID"),
+	groupIds: z.array(z.string().uuid()),
+});
+
+export type ReorderGroupsInput = z.infer<typeof ReorderGroupsSchema>;
+
+export const MergeGroupsSchema = z.object({
+	sourceGroupId: z.string().uuid("Invalid source group ID"),
+	targetGroupId: z.string().uuid("Invalid target group ID"),
+});
+
+export type MergeGroupsInput = z.infer<typeof MergeGroupsSchema>;
+
 // ============================================================================
 // Domain Types
 // ============================================================================

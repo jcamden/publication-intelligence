@@ -1,0 +1,1 @@
+ALTER TABLE "index_entry_groups" ADD COLUMN "position" integer;

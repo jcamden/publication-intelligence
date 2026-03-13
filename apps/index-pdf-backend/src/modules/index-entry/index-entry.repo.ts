@@ -118,6 +118,7 @@ export const listIndexEntries = async ({
 				.select({
 					entryId: indexEntryGroupEntries.entryId,
 					groupId: indexEntryGroupEntries.groupId,
+					position: indexEntryGroupEntries.position,
 				})
 				.from(indexEntryGroupEntries)
 				.innerJoin(
@@ -181,33 +182,40 @@ export const listIndexEntries = async ({
 	const parentMap = new Map(parentEntries.map((p) => [p.id, p]));
 
 	const groupByEntry = new Map(
-		groupMemberships.map((g) => [g.entryId, g.groupId]),
+		groupMemberships.map((g) => [
+			g.entryId,
+			{ groupId: g.groupId, position: g.position },
+		]),
 	);
 
-	return entries.map((entry) => ({
-		id: entry.id,
-		projectIndexTypeId: entry.projectIndexTypeId,
-		slug: entry.slug,
-		label: entry.label,
-		status: entry.status,
-		parentId: entry.parentId,
-		parent: entry.parentId ? parentMap.get(entry.parentId) || null : null,
-		projectIndexType: entry.projectIndexType,
-		groupId: groupByEntry.get(entry.id) ?? null,
-		mentionCount: mentionCountMap.get(entry.id) || 0,
-		childCount: childCountMap.get(entry.id) || 0,
-		matchers: (matchersMap.get(entry.id) || []).map((m) => ({
-			id: m.id,
-			entryId: m.entryId,
-			text: m.text,
-			matcherType: m.matcherType,
-			revision: m.revision,
-			createdAt: m.createdAt.toISOString(),
-			updatedAt: m.updatedAt?.toISOString() || null,
-		})),
-		createdAt: entry.createdAt.toISOString(),
-		updatedAt: entry.updatedAt?.toISOString() || null,
-	}));
+	return entries.map((entry) => {
+		const groupInfo = groupByEntry.get(entry.id);
+		return {
+			id: entry.id,
+			projectIndexTypeId: entry.projectIndexTypeId,
+			slug: entry.slug,
+			label: entry.label,
+			status: entry.status,
+			parentId: entry.parentId,
+			parent: entry.parentId ? parentMap.get(entry.parentId) || null : null,
+			projectIndexType: entry.projectIndexType,
+			groupId: groupInfo?.groupId ?? null,
+			groupPosition: groupInfo?.position ?? null,
+			mentionCount: mentionCountMap.get(entry.id) || 0,
+			childCount: childCountMap.get(entry.id) || 0,
+			matchers: (matchersMap.get(entry.id) || []).map((m) => ({
+				id: m.id,
+				entryId: m.entryId,
+				text: m.text,
+				matcherType: m.matcherType,
+				revision: m.revision,
+				createdAt: m.createdAt.toISOString(),
+				updatedAt: m.updatedAt?.toISOString() || null,
+			})),
+			createdAt: entry.createdAt.toISOString(),
+			updatedAt: entry.updatedAt?.toISOString() || null,
+		};
+	});
 };
 
 export const getIndexEntryById = async ({

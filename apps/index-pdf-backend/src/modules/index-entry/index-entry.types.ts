@@ -58,6 +58,8 @@ export type IndexEntryListItem = {
 	};
 	/** Group ID when entry is a root member of a group (index_entry_group_entries). */
 	groupId: string | null;
+	/** Position within group (for custom sort). Null when not in group or unordered. */
+	groupPosition: number | null;
 	mentionCount: number;
 	childCount: number;
 	matchers: IndexMatcher[];

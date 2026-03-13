@@ -16,6 +16,8 @@ export type IndexEntry = {
 	parentId: string | null; // For hierarchy within same index type
 	/** Group ID when entry is a root member of a group (root entries only). */
 	groupId?: string | null;
+	/** Position within group (for custom sort). */
+	groupPosition?: number | null;
 	status?: string; // "suggested" | "approved" | etc
 	projectId?: string; // Optional project ID for mutations
 	projectIndexTypeId?: string; // Optional for backend operations

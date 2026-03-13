@@ -120,6 +120,10 @@ export const EntryCreationModal = ({
 							projectId,
 							projectIndexTypeId,
 						});
+						utils.indexEntry.list.invalidate({
+							projectId,
+							projectIndexTypeId,
+						});
 					}
 
 					// Create cross-references if any were added

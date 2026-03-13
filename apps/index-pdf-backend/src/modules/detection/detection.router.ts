@@ -9,8 +9,10 @@ import {
 	GetIndexEntryGroupSchema,
 	ListDetectionRunsSchema,
 	ListIndexEntryGroupsSchema,
+	MergeGroupsSchema,
 	RemoveEntryFromGroupSchema,
 	ReorderGroupEntriesSchema,
+	ReorderGroupsSchema,
 	RunLlmSchema,
 	RunMatcherSchema,
 	UpdateIndexEntryGroupSchema,
@@ -142,6 +144,29 @@ export const detectionRouter = router({
 				userId: ctx.user.id,
 				groupId: input.groupId,
 				entryIds: input.entryIds,
+			});
+			return { success: true };
+		}),
+
+	reorderGroups: protectedProcedure
+		.input(ReorderGroupsSchema)
+		.mutation(async ({ ctx, input }) => {
+			await indexEntryGroupRepo.reorderGroups({
+				userId: ctx.user.id,
+				projectId: input.projectId,
+				projectIndexTypeId: input.projectIndexTypeId,
+				groupIds: input.groupIds,
+			});
+			return { success: true };
+		}),
+
+	mergeGroups: protectedProcedure
+		.input(MergeGroupsSchema)
+		.mutation(async ({ ctx, input }) => {
+			await indexEntryGroupRepo.mergeGroups({
+				userId: ctx.user.id,
+				sourceGroupId: input.sourceGroupId,
+				targetGroupId: input.targetGroupId,
 			});
 			return { success: true };
 		}),
