@@ -1,4 +1,10 @@
 import { logEvent } from "../../logger";
+import * as indexMentionRepo from "../index-mention/index-mention.repo";
+import {
+	DEFAULT_OVERLAP_THRESHOLD,
+	type FuzzyExistingMention,
+	filterFuzzyDuplicateCandidates,
+} from "./bbox-overlap.utils";
 import * as detectionRepo from "./detection.repo";
 import type {
 	MatcherMentionCandidate,
@@ -534,15 +540,115 @@ export const resolveAndPersistCandidates = async ({
 
 	const totalWrites = allWrites.length;
 	let persisted = 0;
+	let fuzzyDedupedCount = 0;
+	let writesAfterFuzzy = totalWrites;
 
 	if (allWrites.length > 0) {
+		// Load pre-existing mentions for fuzzy bbox dedupe (same doc + type).
+		// Use withUserContext so RLS returns rows when called from background detection.
+		const existingList =
+			await indexMentionRepo.listIndexMentionsWithUserContext({
+				userId: context.userId,
+				projectId: context.projectId,
+				documentId,
+				projectIndexTypeIds: [projectIndexTypeId],
+				includeDeleted: false,
+			});
+		const existingForFuzzy: FuzzyExistingMention[] = existingList.map((m) => ({
+			pageNumber: m.pageNumber,
+			textSpan: m.textSpan,
+			bboxes: m.bboxes as FuzzyExistingMention["bboxes"],
+			projectIndexTypeId:
+				m.indexTypes[0]?.projectIndexTypeId ?? projectIndexTypeId,
+		}));
+		const existingWithBboxes = existingForFuzzy.filter(
+			(e) => e.bboxes != null && e.bboxes.length > 0,
+		);
+
+		logEvent({
+			event: "detection.fuzzy_dedupe_debug",
+			context: {
+				metadata: {
+					detectionRunId,
+					indexType,
+					queryParams: {
+						projectId: context.projectId,
+						documentId,
+						projectIndexTypeId,
+					},
+					existingCount: existingList.length,
+					existingWithBboxesCount: existingWithBboxes.length,
+					totalWrites,
+					existingSample: existingWithBboxes.slice(0, 3).map((e) => ({
+						pageNumber: e.pageNumber,
+						textSpan: e.textSpan,
+						bboxes: e.bboxes,
+					})),
+					candidatesSample: allWrites.slice(0, 3).map((w) => ({
+						pageNumber: w.pageNumber,
+						textSpan: w.textSpan,
+						bboxes: w.bboxes,
+					})),
+				},
+			},
+		});
+
+		const comparisonLog: Array<{
+			candidate: { pageNumber: number; textSpan: string; bboxes: unknown };
+			existing: { pageNumber: number; textSpan: string; bboxes: unknown };
+			overlapRatio: number;
+			matched: boolean;
+		}> = [];
+		const candidatesForFuzzy = allWrites.map((w) => ({
+			...w,
+			projectIndexTypeId,
+		}));
+		const passedFuzzy = filterFuzzyDuplicateCandidates(
+			candidatesForFuzzy,
+			existingForFuzzy,
+			{
+				overlapThreshold: DEFAULT_OVERLAP_THRESHOLD,
+				debugLog: (info) => {
+					comparisonLog.push({
+						candidate: info.candidate,
+						existing: info.existing,
+						overlapRatio: info.overlapRatio,
+						matched: info.matched,
+					});
+				},
+			},
+		);
+		const indicesToKeep = new Set(
+			passedFuzzy.map((c) =>
+				candidatesForFuzzy.indexOf(c as (typeof candidatesForFuzzy)[number]),
+			),
+		);
+		const allWritesFiltered = allWrites.filter((_, i) => indicesToKeep.has(i));
+		fuzzyDedupedCount = totalWrites - allWritesFiltered.length;
+		writesAfterFuzzy = allWritesFiltered.length;
+
+		logEvent({
+			event: "detection.fuzzy_dedupe_result",
+			context: {
+				metadata: {
+					detectionRunId,
+					indexType,
+					fuzzyDedupedCount,
+					passedFuzzyCount: passedFuzzy.length,
+					comparisonCount: comparisonLog.length,
+					comparisonsSample: comparisonLog.slice(0, 10),
+					matchedComparisons: comparisonLog.filter((c) => c.matched),
+				},
+			},
+		});
+
 		try {
 			persisted = await detectionRepo.insertMatcherMentionsBatch({
 				userId,
 				documentId,
 				detectionRunId,
 				projectIndexTypeId,
-				candidates: allWrites,
+				candidates: allWritesFiltered,
 			});
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
@@ -572,7 +678,9 @@ export const resolveAndPersistCandidates = async ({
 		}
 	}
 
-	// Log resolution outcome to diagnose mentionsCreated: 0
+	// deduped = hash conflicts at insert (within run)
+	const deduped = writesAfterFuzzy - persisted;
+
 	logEvent({
 		event: "detection.resolution_run_result",
 		context: {
@@ -585,6 +693,8 @@ export const resolveAndPersistCandidates = async ({
 				failed: failedCount,
 				totalWrites,
 				persisted,
+				deduped,
+				fuzzyDedupedCount,
 				...(persisted === 0 &&
 					totalWrites > 0 && {
 						persistZeroReason: "all_conflicts_or_constraint",
@@ -597,8 +707,6 @@ export const resolveAndPersistCandidates = async ({
 			},
 		},
 	});
-
-	const deduped = totalWrites - persisted;
 
 	return {
 		candidatesSeen,

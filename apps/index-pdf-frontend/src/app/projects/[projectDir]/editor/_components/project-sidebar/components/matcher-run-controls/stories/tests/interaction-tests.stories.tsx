@@ -41,21 +41,22 @@ export const NoGroupsShowsRunAllMatchersButton: Story = {
 			await waitFor(
 				() => {
 					expect(
-						canvas.getByText(
-							/Run detection using all matchers in this index/i,
-						),
+						canvas.getByText(/Run detection using all matchers in this index/i),
 					).toBeInTheDocument();
 				},
 				{ timeout: 3000 },
 			);
 		});
 
-		await step("Verify Run matcher detection (all matchers) button is visible", async () => {
-			const runButton = canvas.getByRole("button", {
-				name: /run matcher detection \(all matchers\)/i,
-			});
-			expect(runButton).toBeInTheDocument();
-		});
+		await step(
+			"Verify Run matcher detection (all matchers) button is visible",
+			async () => {
+				const runButton = canvas.getByRole("button", {
+					name: /run matcher detection \(all matchers\)/i,
+				});
+				expect(runButton).toBeInTheDocument();
+			},
+		);
 	},
 };
 
@@ -73,22 +74,25 @@ export const NoGroupsClickRunAllMatchersCallsRunMatcher: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await step("Wait for no-groups state and click Run matcher detection (all matchers)", async () => {
-			await waitFor(
-				() => {
-					expect(
-						canvas.getByText(
-							/Run detection using all matchers in this index/i,
-						),
-					).toBeInTheDocument();
-				},
-				{ timeout: 3000 },
-			);
-			const runButton = canvas.getByRole("button", {
-				name: /run matcher detection \(all matchers\)/i,
-			});
-			await userEvent.click(runButton);
-		});
+		await step(
+			"Wait for no-groups state and click Run matcher detection (all matchers)",
+			async () => {
+				await waitFor(
+					() => {
+						expect(
+							canvas.getByText(
+								/Run detection using all matchers in this index/i,
+							),
+						).toBeInTheDocument();
+					},
+					{ timeout: 3000 },
+				);
+				const runButton = canvas.getByRole("button", {
+					name: /run matcher detection \(all matchers\)/i,
+				});
+				await userEvent.click(runButton);
+			},
+		);
 
 		await step("Button shows loading then settles", async () => {
 			const runButton = canvas.getByRole("button", {

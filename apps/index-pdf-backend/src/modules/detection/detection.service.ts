@@ -4,6 +4,7 @@ import type { ParserProfile } from "@pubint/core";
 import { getParserProfile } from "@pubint/core";
 import { logEvent } from "../../logger";
 import { listRules } from "../canonical-page-rule/canonical-page-rule.repo";
+import * as indexMentionRepo from "../index-mention/index-mention.repo";
 import {
 	getSourceDocumentById,
 	listSourceDocumentsByProject,
@@ -12,6 +13,11 @@ import { getUserSettings } from "../user-settings/user-settings.repo";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { ResolvedAliasMatch } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
+import {
+	DEFAULT_OVERLAP_THRESHOLD,
+	type FuzzyExistingMention,
+	filterFuzzyDuplicateCandidates,
+} from "./bbox-overlap.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
 import { RUN_ALL_MATCHERS_GROUP_ID } from "./detection.repo";
@@ -1193,6 +1199,24 @@ const processDetection = async ({
 		pageMemory.pages.set(pageNum, atoms);
 	}
 
+	// Load pre-existing mentions for fuzzy bbox dedupe (all types for this document).
+	// Use withUserContext so RLS returns rows when called from background detection.
+	const existingMentionsList =
+		await indexMentionRepo.listIndexMentionsWithUserContext({
+			userId,
+			projectId: run.projectId,
+			documentId: sourceDoc.id,
+			includeDeleted: false,
+		});
+	const existingForFuzzyDoc: FuzzyExistingMention[] = existingMentionsList.map(
+		(m) => ({
+			pageNumber: m.pageNumber,
+			textSpan: m.textSpan,
+			bboxes: m.bboxes as FuzzyExistingMention["bboxes"],
+			projectIndexTypeId: m.indexTypes[0]?.projectIndexTypeId ?? "",
+		}),
+	);
+
 	// Process each page with sliding window
 	for (const pageNum of pagesToProcess) {
 		// Check if cancelled
@@ -1374,8 +1398,33 @@ const processDetection = async ({
 				`Entry "${entry.label}" (${entry.indexType}): Found ${entryMentions.length} mentions`,
 			);
 
+			// Fuzzy dedupe against pre-existing mentions (same page, text, ≥90% bbox overlap)
+			const candidates: Array<{
+				pageNumber: number;
+				textSpan: string;
+				bboxes: (typeof entryMentions)[0]["bboxes"];
+				projectIndexTypeId: string;
+			}> = entryMentions.map((m) => ({
+				pageNumber: m.pageNumber,
+				textSpan: m.textSpan,
+				bboxes: m.bboxes,
+				projectIndexTypeId,
+			}));
+			const filteredCandidates = filterFuzzyDuplicateCandidates(
+				candidates,
+				existingForFuzzyDoc,
+				{ overlapThreshold: DEFAULT_OVERLAP_THRESHOLD },
+			);
+			const filteredIndices = new Set(
+				filteredCandidates.map((c) =>
+					candidates.indexOf(c as (typeof candidates)[number]),
+				),
+			);
+
 			// Create mentions (on conflict do nothing; only count actual inserts)
-			for (const mention of entryMentions) {
+			for (let i = 0; i < entryMentions.length; i++) {
+				if (!filteredIndices.has(i)) continue;
+				const mention = entryMentions[i];
 				try {
 					const id = await detectionRepo.createSuggestedMention({
 						userId,

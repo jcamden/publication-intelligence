@@ -172,6 +172,12 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 														],
 											},
 										};
+									} else if (key.includes("detection.listDetectionRuns")) {
+										results[key] = {
+											result: {
+												data: [],
+											},
+										};
 									}
 								});
 

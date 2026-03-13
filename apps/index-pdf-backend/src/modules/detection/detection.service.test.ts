@@ -373,7 +373,7 @@ describe("shouldEmitFallbackMention (Task 4.3)", () => {
 
 	it("returns false when context precheck fails (no fallback)", () => {
 		// 24 spaces after alias -> precheck slice is whitespace only -> contextPrecheck false
-		const pageText = "Genesis" + " ".repeat(24);
+		const pageText = `Genesis${" ".repeat(24)}`;
 		expect(shouldEmitFallbackMention(pageText, 7, profile)).toBe(false);
 	});
 

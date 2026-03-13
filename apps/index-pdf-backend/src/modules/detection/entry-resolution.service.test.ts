@@ -1,5 +1,6 @@
 import "../../test/setup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as indexMentionRepo from "../index-mention/index-mention.repo";
 import * as detectionRepo from "./detection.repo";
 import {
 	type ResolutionCandidate,
@@ -43,6 +44,10 @@ const baseCandidate = (
 describe("resolveAndPersistSubjectCandidates (Task 5.1)", () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
+		vi.spyOn(
+			indexMentionRepo,
+			"listIndexMentionsWithUserContext",
+		).mockResolvedValue([]);
 	});
 
 	afterEach(() => {
@@ -114,7 +119,10 @@ describe("resolveAndPersistSubjectCandidates (Task 5.1)", () => {
 	});
 
 	it("resolves and persists when matcher not found but candidate has entryId (fallback)", async () => {
-		const candidate = baseCandidate({ matcherId: "missing-matcher", entryId: "e1" });
+		const candidate = baseCandidate({
+			matcherId: "missing-matcher",
+			entryId: "e1",
+		});
 		vi.spyOn(
 			detectionRepo,
 			"getMatcherByIdAndProjectIndexTypeId",
@@ -296,6 +304,10 @@ const scriptureCandidate = (
 describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 	beforeEach(() => {
 		vi.restoreAllMocks();
+		vi.spyOn(
+			indexMentionRepo,
+			"listIndexMentionsWithUserContext",
+		).mockResolvedValue([]);
 	});
 
 	afterEach(() => {

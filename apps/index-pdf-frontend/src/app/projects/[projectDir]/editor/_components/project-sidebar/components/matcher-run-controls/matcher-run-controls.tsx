@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { logEvent } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_utils/trpc";
 
@@ -86,12 +86,12 @@ export const MatcherRunControls = ({
 			{ enabled: !!projectId && !!projectIndexTypeId },
 		);
 
-	const { data: detectionRuns = [] } = trpc.detection.listDetectionRuns.useQuery(
+	const { data: detectionRunsData } = trpc.detection.listDetectionRuns.useQuery(
 		{ projectId: projectId || "" },
 		{
 			enabled: !!projectId,
 			refetchInterval: (query) => {
-				const runs = query.state.data || [];
+				const runs = Array.isArray(query.state.data) ? query.state.data : [];
 				const hasActiveMatcherRun = runs.some(
 					(run) =>
 						run.runType === "matcher" &&
@@ -102,6 +102,9 @@ export const MatcherRunControls = ({
 			},
 		},
 	);
+	const detectionRuns = Array.isArray(detectionRunsData)
+		? detectionRunsData
+		: [];
 
 	const activeMatcherRun = detectionRuns.find(
 		(run) =>
@@ -109,6 +112,26 @@ export const MatcherRunControls = ({
 			run.indexType === indexType &&
 			(run.status === "running" || run.status === "queued"),
 	);
+
+	// Invalidate mentions when a matcher run completes (so highlights update without refresh)
+	const prevRunStatusesRef = useRef<Map<string, string>>(new Map());
+	useEffect(() => {
+		if (!projectId) return;
+		let didComplete = false;
+		for (const run of detectionRuns) {
+			if (run.runType !== "matcher" || run.indexType !== indexType) continue;
+			const prev = prevRunStatusesRef.current.get(run.id);
+			const wasActive = prev === "running" || prev === "queued";
+			const nowCompleted = run.status === "completed";
+			if (wasActive && nowCompleted) {
+				didComplete = true;
+			}
+			prevRunStatusesRef.current.set(run.id, run.status);
+		}
+		if (didComplete) {
+			utils.indexMention.list.invalidate({ projectId });
+		}
+	}, [detectionRuns, projectId, indexType, utils.indexMention.list]);
 
 	// Hydrate from localStorage once groups are loaded; apply only if IDs still exist
 	useEffect(() => {

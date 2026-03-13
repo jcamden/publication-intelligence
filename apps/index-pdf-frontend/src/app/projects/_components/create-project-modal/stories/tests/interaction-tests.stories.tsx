@@ -114,29 +114,41 @@ export const AutoPopulatesProjectDir: StoryObj<typeof CreateProjectModal> = {
 		// Modal renders in portal - query from document.body
 		const body = within(document.body);
 
-		// Wait for modal dialog to appear
+		// Wait for CreateProjectModal dialog (by name) to appear.
+		// Scoping by name avoids matching stale dialogs from previous stories when pre-commit
+		// runs multiple test suites and DOM cleanup may lag.
 		await waitFor(
 			async () => {
-				const dialog = body.getByRole("dialog", { hidden: true });
+				const dialog = body.getByRole("dialog", {
+					name: /create new project/i,
+					hidden: true,
+				});
 				await expect(dialog).toBeInTheDocument();
 			},
-			{ timeout: 3000 },
+			{ timeout: 5000 },
 		);
 
-		const titleInput = body.getByLabelText(/project title/i);
-		const projectDirInput = body.getByLabelText(/project directory/i);
+		const dialog = body.getByRole("dialog", {
+			name: /create new project/i,
+			hidden: true,
+		});
+		const modal = within(dialog);
+		const titleInput = modal.getByLabelText(/project title/i);
+		const projectDirInput = modal.getByLabelText(/project directory/i);
 
 		// Type with delay between characters to let form subscription fire
 		await user.type(titleInput, "Word Biblical Commentary: Daniel");
 
-		// Wait for auto-population (debounced at 150ms)
-		// Need to wait for debounce timer + form update time
+		// Wait for auto-population (debounced at 500ms in ProjectForm).
+		// Use waitFor with generous timeout - pre-commit runs multiple tasks in parallel
+		// and can be CPU-bound, causing debounce/React updates to run slower.
 		await waitFor(
 			async () => {
-				const value = (projectDirInput as HTMLInputElement).value;
-				await expect(value).toBe("word-biblical-commentary-daniel");
+				await expect(projectDirInput).toHaveValue(
+					"word-biblical-commentary-daniel",
+				);
 			},
-			{ timeout: 3000, interval: 100 },
+			{ timeout: 8000, interval: 150 },
 		);
 	},
 };

@@ -275,13 +275,12 @@ export const indexMentions = pgTable(
 		// Uniqueness: same entry + page + bbox fingerprint => one mention (Task 4.2).
 		// Non-partial so ON CONFLICT (cols) in insertMatcherMentionsBatch can match.
 		// New inserts always set bboxes_hash; backfill existing nulls before adding this if needed.
-		uniqueIndex("unique_mention_entry_page_bbox")
-			.on(
-				table.projectIndexTypeId,
-				table.entryId,
-				table.pageNumber,
-				table.bboxesHash,
-			),
+		uniqueIndex("unique_mention_entry_page_bbox").on(
+			table.projectIndexTypeId,
+			table.entryId,
+			table.pageNumber,
+			table.bboxesHash,
+		),
 		// RLS: Inherit access from entry
 		// index_entries RLS inherits from projects RLS
 		pgPolicy("index_mentions_entry_access", {

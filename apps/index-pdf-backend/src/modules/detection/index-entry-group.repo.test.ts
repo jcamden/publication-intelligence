@@ -275,13 +275,12 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 				userId: user.userId,
 				matchers: ["foo", "bar"],
 			});
-			const aliases =
-				await detectionRepo.listMatcherAliasesByProjectIndexType({
-					userId: user.userId,
-					projectId: project.id,
-					projectIndexTypeId: pit.id,
-					indexType: "subject",
-				});
+			const aliases = await detectionRepo.listMatcherAliasesByProjectIndexType({
+				userId: user.userId,
+				projectId: project.id,
+				projectIndexTypeId: pit.id,
+				indexType: "subject",
+			});
 			expect(aliases).toHaveLength(2);
 			for (const a of aliases) {
 				expect(a.groupId).toBe(RUN_ALL_MATCHERS_GROUP_ID);

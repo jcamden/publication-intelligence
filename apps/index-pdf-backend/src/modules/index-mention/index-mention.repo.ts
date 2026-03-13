@@ -110,6 +110,111 @@ export const listIndexMentions = async ({
 	});
 };
 
+/**
+ * Same as listIndexMentions but runs within withUserContext for RLS.
+ * Use when calling from background processes (e.g. detection) where the db
+ * connection may not have user context set.
+ */
+export const listIndexMentionsWithUserContext = async ({
+	userId,
+	projectId,
+	documentId,
+	pageNumber,
+	projectIndexTypeIds,
+	includeDeleted = false,
+}: {
+	userId: string;
+	projectId: string;
+	documentId?: string;
+	pageNumber?: number;
+	projectIndexTypeIds?: string[];
+	includeDeleted?: boolean;
+}): Promise<IndexMentionListItem[]> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const mentions = await tx
+				.select({
+					id: indexMentions.id,
+					entryId: indexMentions.entryId,
+					projectIndexTypeId: indexMentions.projectIndexTypeId,
+					pageNumber: indexMentions.pageNumber,
+					textSpan: indexMentions.textSpan,
+					bboxes: indexMentions.bboxes,
+					mentionType: indexMentions.mentionType,
+					pageSublocation: indexMentions.pageSublocation,
+					detectionRunId: indexMentions.detectionRunId,
+					createdAt: indexMentions.createdAt,
+					entry: {
+						id: indexEntries.id,
+						label: indexEntries.label,
+					},
+				})
+				.from(indexMentions)
+				.innerJoin(indexEntries, eq(indexMentions.entryId, indexEntries.id))
+				.innerJoin(
+					sourceDocuments,
+					eq(indexMentions.documentId, sourceDocuments.id),
+				)
+				.where(
+					and(
+						eq(sourceDocuments.projectId, projectId),
+						documentId ? eq(indexMentions.documentId, documentId) : undefined,
+						pageNumber ? eq(indexMentions.pageNumber, pageNumber) : undefined,
+						projectIndexTypeIds && projectIndexTypeIds.length > 0
+							? inArray(indexMentions.projectIndexTypeId, projectIndexTypeIds)
+							: undefined,
+						includeDeleted ? undefined : isNull(indexMentions.deletedAt),
+					),
+				)
+				.orderBy(indexMentions.pageNumber, indexMentions.createdAt);
+
+			if (mentions.length === 0) {
+				return [];
+			}
+
+			const uniqueTypeIds = [
+				...new Set(mentions.map((m) => m.projectIndexTypeId)),
+			];
+			const indexTypes = await tx
+				.select({
+					id: projectIndexTypes.id,
+					indexType: projectIndexTypes.highlightType,
+					colorHue: projectIndexTypes.colorHue,
+				})
+				.from(projectIndexTypes)
+				.where(inArray(projectIndexTypes.id, uniqueTypeIds));
+
+			const indexTypeMap = new Map(indexTypes.map((t) => [t.id, t]));
+
+			return mentions.map((mention) => {
+				const indexType = indexTypeMap.get(mention.projectIndexTypeId);
+				return {
+					id: mention.id,
+					entryId: mention.entryId,
+					entry: mention.entry,
+					pageNumber: mention.pageNumber,
+					textSpan: mention.textSpan,
+					bboxes: mention.bboxes as unknown as BoundingBox[] | null,
+					mentionType: mention.mentionType,
+					pageSublocation: mention.pageSublocation,
+					detectionRunId: mention.detectionRunId,
+					indexTypes: indexType
+						? [
+								{
+									projectIndexTypeId: mention.projectIndexTypeId,
+									indexType: indexType.indexType,
+									colorHue: indexType.colorHue,
+								},
+							]
+						: [],
+					createdAt: mention.createdAt.toISOString(),
+				};
+			});
+		},
+	});
+};
+
 export type MentionPageSpan = {
 	entryId: string;
 	pageNumber: number;

@@ -2,7 +2,7 @@
 
 import { Book, Lightbulb, Loader2, Settings, User, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { logError } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
@@ -11,12 +11,13 @@ type IndexType = "subject" | "author" | "scripture";
 
 export const DetectionPanel = () => {
 	const { projectId } = useProjectContext();
+	const utils = trpc.useUtils();
 	const [pageRangeStart, setPageRangeStart] = useState<string>("");
 	const [pageRangeEnd, setPageRangeEnd] = useState<string>("");
 
 	// Fetch detection runs
 	const {
-		data: detectionRuns = [],
+		data: detectionRunsData,
 		isLoading: isLoadingRuns,
 		refetch: refetchRuns,
 	} = trpc.detection.listDetectionRuns.useQuery(
@@ -25,7 +26,7 @@ export const DetectionPanel = () => {
 			enabled: !!projectId,
 			// Only poll when there's an active detection run
 			refetchInterval: (query) => {
-				const runs = query.state.data || [];
+				const runs = Array.isArray(query.state.data) ? query.state.data : [];
 				const hasActiveRun = runs.some(
 					(run) => run.status === "running" || run.status === "queued",
 				);
@@ -96,9 +97,33 @@ export const DetectionPanel = () => {
 		cancelDetection.mutate({ runId });
 	};
 
+	const detectionRuns = Array.isArray(detectionRunsData)
+		? detectionRunsData
+		: [];
+
 	const hasActiveRun = detectionRuns.some(
 		(run) => run.status === "running" || run.status === "queued",
 	);
+
+	// Invalidate mentions when an LLM detection run completes (so highlights update without refresh)
+	const prevRunStatusesRef = useRef<Map<string, string>>(new Map());
+	useEffect(() => {
+		if (!projectId) return;
+		let didComplete = false;
+		for (const run of detectionRuns) {
+			if (run.runType !== "llm") continue;
+			const prev = prevRunStatusesRef.current.get(run.id);
+			const wasActive = prev === "running" || prev === "queued";
+			const nowCompleted = run.status === "completed";
+			if (wasActive && nowCompleted) {
+				didComplete = true;
+			}
+			prevRunStatusesRef.current.set(run.id, run.status);
+		}
+		if (didComplete) {
+			utils.indexMention.list.invalidate({ projectId });
+		}
+	}, [detectionRuns, projectId, utils.indexMention.list]);
 
 	const hasApiKey =
 		!!settings?.openrouterApiKey ||

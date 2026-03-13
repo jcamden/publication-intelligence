@@ -577,6 +577,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 
 			await indexEntryGroupRepo.deleteGroup({
 				userId: testUser.userId,
+				// biome-ignore lint/style/noNonNullAssertion: test don't care
 				groupId: canonGroup!.id,
 			});
 
