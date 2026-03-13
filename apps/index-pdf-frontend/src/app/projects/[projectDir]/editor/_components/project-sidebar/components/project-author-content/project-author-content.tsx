@@ -2,9 +2,11 @@
 
 import { OklchColorPicker } from "@pubint/yaboujee/components/ui/oklch-color-picker/oklch-color-picker";
 import { useAtom } from "jotai";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { trpc } from "@/app/_common/_utils/trpc";
 import { colorConfigAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
+import { EditGroupModal } from "@/app/projects/[projectDir]/editor/_components/edit-group-modal";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
 import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
@@ -15,6 +17,10 @@ export const ProjectAuthorContent = () => {
 	const { projectId, documentId } = useProjectContext();
 
 	const [modalOpen, setModalOpen] = useState(false);
+	/** "create" | groupId | null. When "create", show EditGroupModal in create mode. */
+	const [groupModalState, setGroupModalState] = useState<
+		"create" | string | null
+	>(null);
 
 	const { data: projectIndexTypes, isLoading: isLoadingIndexTypes } =
 		trpc.projectIndexType.list.useQuery(
@@ -75,11 +81,21 @@ export const ProjectAuthorContent = () => {
 		indexType: "author" as const,
 		projectId: projectId || undefined,
 		projectIndexTypeId: authorProjectIndexTypeId,
+		groupId: e.groupId ?? null,
 		metadata: {
 			matchers: e.matchers?.map((m) => m.text) || [],
 		},
 		crossReferences: allCrossReferences.get(e.id) || [],
 	}));
+
+	// Fetch groups for this index type
+	const { data: groups = [] } = trpc.detection.listIndexEntryGroups.useQuery(
+		{
+			projectId: projectId || "",
+			projectIndexTypeId: authorProjectIndexTypeId ?? "",
+		},
+		{ enabled: !!projectId && !!authorProjectIndexTypeId },
+	);
 
 	// Fetch mentions for this document
 	const { data: backendMentions = [], isLoading: isLoadingMentions } =
@@ -113,6 +129,39 @@ export const ProjectAuthorContent = () => {
 		enabled: !!projectId,
 	});
 
+	const utils = trpc.useUtils();
+	const addEntryToGroup = trpc.detection.addEntryToGroup.useMutation({
+		onSuccess: (result, variables) => {
+			if (result.transferredFrom) {
+				toast.info("Entry transferred to this group");
+				utils.detection.getIndexEntryGroup.invalidate({
+					groupId: result.transferredFrom,
+				});
+			}
+			utils.detection.getIndexEntryGroup.invalidate({
+				groupId: variables.groupId,
+			});
+			utils.detection.listIndexEntryGroups.invalidate({
+				projectId: projectId || "",
+				projectIndexTypeId: authorProjectIndexTypeId ?? "",
+			});
+			utils.indexEntry.list.invalidate({
+				projectId: projectId || "",
+				projectIndexTypeId: authorProjectIndexTypeId,
+			});
+		},
+		onError: (error) => {
+			toast.error(`Failed to add entry to group: ${error.message}`);
+		},
+	});
+
+	const handleAddEntryToGroup = useCallback(
+		(groupId: string, entryId: string) => {
+			addEntryToGroup.mutate({ groupId, entryId });
+		},
+		[addEntryToGroup],
+	);
+
 	const isLoading =
 		isLoadingIndexTypes ||
 		isLoadingEntries ||
@@ -140,20 +189,36 @@ export const ProjectAuthorContent = () => {
 			<EntryTree
 				entries={entries}
 				mentions={allMentions}
+				groups={groups.map((g) => ({ id: g.id, name: g.name }))}
 				projectId={projectId}
 				projectIndexTypeId={authorProjectIndexTypeId}
 				onCreateEntry={() => setModalOpen(true)}
+				onCreateGroup={() => setGroupModalState("create")}
+				onEditGroup={(id) => setGroupModalState(id)}
+				onAddEntryToGroup={handleAddEntryToGroup}
 				isLoading={isLoading}
 				error={entriesError ? (entriesError as unknown as Error) : null}
 			/>
 			{authorProjectIndexTypeId && projectId && (
-				<EntryCreationModal
-					open={modalOpen}
-					onClose={() => setModalOpen(false)}
-					projectId={projectId}
-					projectIndexTypeId={authorProjectIndexTypeId}
-					existingEntries={entries}
-				/>
+				<>
+					<EntryCreationModal
+						open={modalOpen}
+						onClose={() => setModalOpen(false)}
+						projectId={projectId}
+						projectIndexTypeId={authorProjectIndexTypeId}
+						existingEntries={entries}
+					/>
+					{groupModalState !== null && (
+						<EditGroupModal
+							open={true}
+							onClose={() => setGroupModalState(null)}
+							groupId={groupModalState === "create" ? null : groupModalState}
+							projectId={projectId}
+							projectIndexTypeId={authorProjectIndexTypeId}
+							existingEntries={entries}
+						/>
+					)}
+				</>
 			)}
 		</>
 	);
