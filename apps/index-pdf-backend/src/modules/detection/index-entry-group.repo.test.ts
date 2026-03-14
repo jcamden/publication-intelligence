@@ -47,8 +47,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Biblical",
-					slug: "biblical",
-					parserProfileId: "scripture-biblical",
 					sortMode: "a_z",
 				},
 			});
@@ -61,7 +59,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 			expect(groups).toHaveLength(1);
 			expect(groups[0].id).toBe(created.id);
 			expect(groups[0].name).toBe("Biblical");
-			expect(groups[0].parserProfileId).toBe("scripture-biblical");
 			expect(groups[0].sortMode).toBe("a_z");
 
 			await indexEntryGroupRepo.deleteGroup({
@@ -112,7 +109,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Group A",
-					slug: "group-a",
 				},
 			});
 			const g2 = await indexEntryGroupRepo.createGroup({
@@ -121,7 +117,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Group B",
-					slug: "group-b",
 				},
 			});
 
@@ -154,7 +149,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "To Delete",
-					slug: "to-delete",
 				},
 			});
 
@@ -187,7 +181,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Only",
-					slug: "only",
 				},
 			});
 
@@ -234,7 +227,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Biblical",
-					slug: "biblical",
 				},
 			});
 			await indexEntryGroupRepo.addMatcherToGroup({
@@ -289,7 +281,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Biblical",
-					slug: "biblical",
 				},
 			});
 			// Add parent entry to group (no direct matchers on group)
@@ -438,8 +429,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Zebra",
-					slug: "zebra",
-					parserProfileId: "scripture-biblical",
 					sortMode: "canon_book_order",
 				},
 			});
@@ -449,8 +438,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Alpha",
-					slug: "alpha",
-					parserProfileId: null,
 					sortMode: "a_z",
 				},
 			});
@@ -463,10 +450,8 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 			expect(metas).toHaveLength(2);
 			// Order by name: Alpha before Zebra
 			expect(metas[0].id).toBe(gA.id);
-			expect(metas[0].parserProfileId).toBeNull();
 			expect(metas[0].sortMode).toBe("a_z");
 			expect(metas[1].id).toBe(gZ.id);
-			expect(metas[1].parserProfileId).toBe("scripture-biblical");
 			expect(metas[1].sortMode).toBe("canon_book_order");
 		});
 
@@ -484,8 +469,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Only",
-					slug: "only",
-					parserProfileId: null,
 					sortMode: "a_z",
 				},
 			});
@@ -522,7 +505,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Group A",
-					slug: "group-a",
 				},
 			});
 
@@ -555,7 +537,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Group A",
-					slug: "group-a",
 				},
 			});
 			const g2 = await indexEntryGroupRepo.createGroup({
@@ -564,7 +545,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Group B",
-					slug: "group-b",
 				},
 			});
 
@@ -613,7 +593,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Group A",
-					slug: "group-a",
 				},
 			});
 			await indexEntryGroupRepo.addEntryToGroup({
@@ -667,7 +646,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Group",
-					slug: "group",
 					sortMode: "custom",
 				},
 			});
@@ -715,7 +693,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "First",
-					slug: "first",
 				},
 			});
 			const g2 = await indexEntryGroupRepo.createGroup({
@@ -724,7 +701,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Second",
-					slug: "second",
 				},
 			});
 
@@ -776,7 +752,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Source",
-					slug: "source",
 				},
 			});
 			const gTarget = await indexEntryGroupRepo.createGroup({
@@ -785,7 +760,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Target",
-					slug: "target",
 				},
 			});
 			await indexEntryGroupRepo.addEntryToGroup({
@@ -835,7 +809,6 @@ describe("index-entry-group.repo (Task 6.1)", () => {
 					projectId: project.id,
 					projectIndexTypeId: pit.id,
 					name: "Only",
-					slug: "only",
 				},
 			});
 

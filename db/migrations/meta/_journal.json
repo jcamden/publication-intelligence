@@ -78,6 +78,13 @@
 			"when": 1773497569043,
 			"tag": "0010_spicy_mister_fear",
 			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1773498797511,
+			"tag": "0011_typical_sunfire",
+			"breakpoints": true
 		}
 	]
 }

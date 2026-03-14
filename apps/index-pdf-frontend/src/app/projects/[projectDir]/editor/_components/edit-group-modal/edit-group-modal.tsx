@@ -1,6 +1,6 @@
 "use client";
 
-import { CANON_LABELS, getParserProfileIds } from "@pubint/core";
+import { CANON_LABELS } from "@pubint/core";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -56,13 +56,6 @@ type SortModeValue =
 	| "roman_catholic"
 	| "tanakh"
 	| "eastern_orthodox";
-
-const slugFromName = (name: string): string =>
-	name
-		.trim()
-		.toLowerCase()
-		.replace(/\s+/g, "-")
-		.replace(/[^a-z0-9-]/g, "");
 
 export type EditGroupModalProps = {
 	open: boolean;
@@ -186,15 +179,11 @@ export const EditGroupModal = ({
 	const form = useForm({
 		defaultValues: {
 			name: "",
-			slug: "",
 			sortMode: "a_z" as SortModeValue,
-			parserProfileId: null as string | null,
 		},
 		onSubmit: async ({ value }) => {
 			const name = value.name.trim();
-			const slug = value.slug.trim() || slugFromName(value.name);
 			const sortMode = value.sortMode;
-			const parserProfileId = value.parserProfileId;
 
 			try {
 				if (isCreateMode) {
@@ -202,9 +191,7 @@ export const EditGroupModal = ({
 						projectId,
 						projectIndexTypeId,
 						name,
-						slug,
 						sortMode,
-						parserProfileId,
 					});
 					const transferredFromIds = new Set<string>();
 					for (const entryId of localMemberEntryIds) {
@@ -254,9 +241,7 @@ export const EditGroupModal = ({
 				await updateGroup.mutateAsync({
 					groupId: editGroupId,
 					name,
-					slug,
 					sortMode,
-					parserProfileId,
 				});
 
 				for (const entryId of toRemove) {
@@ -302,13 +287,10 @@ export const EditGroupModal = ({
 		if (open) {
 			if (isCreateMode) {
 				form.setFieldValue("name", "");
-				form.setFieldValue("slug", "");
 				form.setFieldValue("sortMode", "a_z");
-				form.setFieldValue("parserProfileId", null);
 				setLocalMemberEntryIds([]);
 			} else if (group) {
 				form.setFieldValue("name", group.name);
-				form.setFieldValue("slug", group.slug);
 				// Legacy canon_book_order → protestant for display
 				const sortMode =
 					group.sortMode === "canon_book_order" ? "protestant" : group.sortMode;
@@ -316,7 +298,6 @@ export const EditGroupModal = ({
 					"sortMode",
 					sortModes.some((m) => m.value === sortMode) ? sortMode : "a_z",
 				);
-				form.setFieldValue("parserProfileId", group.parserProfileId ?? null);
 				setLocalMemberEntryIds(group.entries?.map((e) => e.entryId) ?? []);
 			}
 		}
@@ -340,8 +321,6 @@ export const EditGroupModal = ({
 	const handleRemoveEntry = useCallback((entryId: string) => {
 		setLocalMemberEntryIds((prev) => prev.filter((id) => id !== entryId));
 	}, []);
-
-	const parserProfileIds = useMemo(() => getParserProfileIds(), []);
 
 	if (!isCreateMode && !group && !isLoadingGroup) {
 		return null;
@@ -430,16 +409,6 @@ export const EditGroupModal = ({
 								)}
 							</form.Field>
 
-							<form.Field name="slug">
-								{(field) => (
-									<FormInput
-										field={field}
-										label="Slug (optional)"
-										placeholder="Auto-generated from name"
-									/>
-								)}
-							</form.Field>
-
 							<form.Field name="sortMode">
 								{(field) => {
 									const selectedLabel =
@@ -468,32 +437,6 @@ export const EditGroupModal = ({
 										</Field>
 									);
 								}}
-							</form.Field>
-
-							<form.Field name="parserProfileId">
-								{(field) => (
-									<Field>
-										<FieldLabel>Parser profile (optional)</FieldLabel>
-										<Select
-											value={field.state.value ?? ""}
-											onValueChange={(v) =>
-												field.handleChange(v === "" ? null : v)
-											}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="None (alias-only)" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="">None (alias-only)</SelectItem>
-												{parserProfileIds.map((id) => (
-													<SelectItem key={id} value={id}>
-														{id}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</Field>
-								)}
 							</form.Field>
 						</form>
 

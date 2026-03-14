@@ -1,9 +1,10 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { withUserContext } from "../../db/client";
 import {
 	indexEntries,
 	indexEntryGroupEntries,
 	indexEntryGroupMatchers,
+	indexEntryGroups,
 	scriptureBootstrapRuns,
 } from "../../db/schema";
 import * as detectionRepo from "../detection/detection.repo";
@@ -147,19 +148,19 @@ export async function findOrCreateMatcher({
 	return { matcherId: id, created: true };
 }
 
-/** Default group slug/name for corpus buckets. */
-export const BOOTSTRAP_GROUP_SLUGS = [
-	{ slug: "canon", name: "Canon" },
-	{ slug: "apocrypha", name: "Apocrypha" },
-	{ slug: "jewish_writings", name: "Jewish Writings" },
-	{ slug: "classical_writings", name: "Classical Writings" },
-	{ slug: "christian_writings", name: "Christian Writings" },
-	{ slug: "dead_sea_scrolls", name: "Dead Sea Scrolls" },
-	{ slug: "extra_books", name: "Extra Books" },
+/** Default group names for corpus buckets. */
+export const BOOTSTRAP_GROUP_NAMES = [
+	"Canon",
+	"Apocrypha",
+	"Jewish Writings",
+	"Classical Writings",
+	"Christian Writings",
+	"Dead Sea Scrolls",
+	"Extra Books",
 ] as const;
 
 /**
- * Find group by slug for project + index type, or create it. Idempotent.
+ * Find group by name for project + index type, or create it. Idempotent.
  * When reusing, preserves existing name/settings unless forceRefreshFromSource is true.
  * Optional seed provenance when creating (audit only; does not gate edits).
  */
@@ -167,9 +168,7 @@ export async function findOrCreateGroup({
 	userId,
 	projectId,
 	projectIndexTypeId,
-	slug,
 	name,
-	parserProfileId,
 	sortMode,
 	seedRunId,
 	forceRefreshFromSource,
@@ -177,9 +176,7 @@ export async function findOrCreateGroup({
 	userId: string;
 	projectId: string;
 	projectIndexTypeId: string;
-	slug: string;
 	name: string;
-	parserProfileId?: string | null;
 	/** Canon sort mode for scripture groups (e.g. protestant); omit for non-canon groups */
 	sortMode?: "protestant" | "roman_catholic" | "tanakh" | "eastern_orthodox";
 	seedRunId?: string | null;
@@ -190,17 +187,13 @@ export async function findOrCreateGroup({
 		projectId,
 		projectIndexTypeId,
 	});
-	const existing = groups.find((g) => g.slug === slug);
+	const existing = groups.find((g) => g.name === name);
 	if (existing) {
-		if (forceRefreshFromSource) {
+		if (forceRefreshFromSource && sortMode !== undefined) {
 			await indexEntryGroupRepo.updateGroup({
 				userId,
 				groupId: existing.id,
-				input: {
-					name,
-					...(parserProfileId !== undefined && { parserProfileId }),
-					...(sortMode !== undefined && { sortMode }),
-				},
+				input: { name, sortMode },
 			});
 		}
 		return { groupId: existing.id, created: false };
@@ -211,8 +204,6 @@ export async function findOrCreateGroup({
 			projectId,
 			projectIndexTypeId,
 			name,
-			slug,
-			parserProfileId: parserProfileId ?? null,
 			sortMode: sortMode ?? "a_z",
 			...(seedRunId && {
 				seedSource: SEED_SOURCE_SCRIPTURE_BOOTSTRAP,
@@ -225,7 +216,8 @@ export async function findOrCreateGroup({
 }
 
 /**
- * Add entry to group at position (idempotent). Returns true if a new membership was created.
+ * Add entry to group at position. With 1:1 constraint, removes from any other group first (transfer).
+ * Returns true if a new membership was created (insert or transfer).
  */
 export async function ensureEntryInGroup({
 	userId,
@@ -238,26 +230,19 @@ export async function ensureEntryInGroup({
 	entryId: string;
 	position: number;
 }): Promise<boolean> {
-	return await withUserContext({
+	const alreadyInGroup = await indexEntryGroupRepo.hasEntryInGroup({
 		userId,
-		fn: async (tx) => {
-			const [existing] = await tx
-				.select({ groupId: indexEntryGroupEntries.groupId })
-				.from(indexEntryGroupEntries)
-				.where(
-					and(
-						eq(indexEntryGroupEntries.groupId, groupId),
-						eq(indexEntryGroupEntries.entryId, entryId),
-					),
-				)
-				.limit(1);
-			if (existing) return false;
-			await tx
-				.insert(indexEntryGroupEntries)
-				.values({ groupId, entryId, position });
-			return true;
-		},
+		groupId,
+		entryId,
 	});
+	if (alreadyInGroup) return false;
+	await indexEntryGroupRepo.addEntryToGroup({
+		userId,
+		groupId,
+		entryId,
+		position,
+	});
+	return true;
 }
 
 /**
@@ -292,6 +277,68 @@ export async function ensureMatcherInGroup({
 				.insert(indexEntryGroupMatchers)
 				.values({ groupId, matcherId, position });
 			return true;
+		},
+	});
+}
+
+/**
+ * Find entries by slugs and return their current group (if any).
+ * Used for previewConflicts to detect entries that would need to be transferred.
+ */
+export async function findEntriesWithGroupBySlugs({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	slugs,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	slugs: string[];
+}): Promise<
+	Array<{
+		slug: string;
+		label: string;
+		groupId: string | null;
+		groupName: string | null;
+	}>
+> {
+	if (slugs.length === 0) return [];
+
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({
+					slug: indexEntries.slug,
+					label: indexEntries.label,
+					groupId: indexEntryGroupEntries.groupId,
+					groupName: indexEntryGroups.name,
+				})
+				.from(indexEntries)
+				.leftJoin(
+					indexEntryGroupEntries,
+					eq(indexEntryGroupEntries.entryId, indexEntries.id),
+				)
+				.leftJoin(
+					indexEntryGroups,
+					eq(indexEntryGroups.id, indexEntryGroupEntries.groupId),
+				)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+						inArray(indexEntries.slug, slugs),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+
+			return rows.map((r) => ({
+				slug: r.slug,
+				label: r.label,
+				groupId: r.groupId,
+				groupName: r.groupName ?? null,
+			}));
 		},
 	});
 }

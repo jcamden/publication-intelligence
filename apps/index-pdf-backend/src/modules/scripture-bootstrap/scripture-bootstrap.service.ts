@@ -29,15 +29,161 @@ type AddEntriesConfig = {
 
 import type { BootstrapCounts } from "./scripture-bootstrap.repo";
 import {
-	BOOTSTRAP_GROUP_SLUGS,
+	BOOTSTRAP_GROUP_NAMES,
 	ensureEntryInGroup,
 	ensureMatcherInGroup,
+	findEntriesWithGroupBySlugs,
 	findOrCreateEntry,
 	findOrCreateGroup,
 	findOrCreateMatcher,
 	insertBootstrapRunStart,
 	updateBootstrapRunCounts,
 } from "./scripture-bootstrap.repo";
+
+export type BootstrapConflictPreview = {
+	hasConflicts: boolean;
+	conflictingEntries: Array<{
+		slug: string;
+		label: string;
+		currentGroupName: string;
+		newGroupName: string;
+	}>;
+};
+
+/**
+ * Compute which entry slugs would be added to which groups for the given config.
+ * Returns array of { newGroupName, slug }.
+ */
+function getPlannedEntriesForConfig(
+	config: AddEntriesConfig,
+): Array<{ newGroupName: string; slug: string }> {
+	const planned: Array<{ newGroupName: string; slug: string }> = [];
+	if (!config.selectedCanon) return planned;
+
+	const canonId = config.selectedCanon as CanonId;
+
+	// 1) Canon
+	const canonBookKeys = getCanonBookKeys(canonId);
+	const canonGroupName = getCanonGroupDisplayName(canonId);
+	for (const bookKey of canonBookKeys) {
+		planned.push({ newGroupName: canonGroupName, slug: bookKey });
+	}
+
+	// 2) Apocrypha
+	if (config.includeApocrypha) {
+		const apocMatchers = getBootstrapApocryphaMatchers();
+		for (const key of Object.keys(apocMatchers)) {
+			planned.push({
+				newGroupName: BOOTSTRAP_GROUP_NAMES[1],
+				slug: slugifyBootstrapKey(key),
+			});
+		}
+	}
+
+	// 3) Jewish Writings
+	if (config.includeJewishWritings) {
+		const matchers = getBootstrapJewishWritingsMatchers();
+		for (const key of Object.keys(matchers)) {
+			planned.push({
+				newGroupName: BOOTSTRAP_GROUP_NAMES[2],
+				slug: slugifyBootstrapKey(key),
+			});
+		}
+	}
+
+	// 4) Classical Writings
+	if (config.includeClassicalWritings) {
+		const matchers = getBootstrapClassicalWritingsMatchers();
+		for (const key of Object.keys(matchers)) {
+			planned.push({
+				newGroupName: BOOTSTRAP_GROUP_NAMES[3],
+				slug: slugifyBootstrapKey(key),
+			});
+		}
+	}
+
+	// 5) Christian Writings
+	if (config.includeChristianWritings) {
+		const matchers = getBootstrapChristianWritingsMatchers();
+		for (const key of Object.keys(matchers)) {
+			planned.push({
+				newGroupName: BOOTSTRAP_GROUP_NAMES[4],
+				slug: slugifyBootstrapKey(key),
+			});
+		}
+	}
+
+	// 6) Dead Sea Scrolls
+	if (config.includeDeadSeaScrolls) {
+		const matchers = getBootstrapDeadSeaScrollsMatchers();
+		for (const key of Object.keys(matchers)) {
+			planned.push({
+				newGroupName: BOOTSTRAP_GROUP_NAMES[5],
+				slug: slugifyBootstrapKey(key),
+			});
+		}
+	}
+
+	// 7) Extra books
+	for (const bookKey of config.extraBookKeys ?? []) {
+		planned.push({
+			newGroupName: BOOTSTRAP_GROUP_NAMES[6],
+			slug: slugifyBootstrapKey(bookKey),
+		});
+	}
+
+	return planned;
+}
+
+/**
+ * Preview conflicts: entries that would be added to a new group but already exist in another group.
+ */
+export async function previewConflicts({
+	projectId,
+	projectIndexTypeId,
+	config,
+	userId,
+}: {
+	projectId: string;
+	projectIndexTypeId: string;
+	config: AddEntriesConfig;
+	userId: string;
+}): Promise<BootstrapConflictPreview> {
+	const planned = getPlannedEntriesForConfig(config);
+	if (planned.length === 0) {
+		return { hasConflicts: false, conflictingEntries: [] };
+	}
+
+	const slugs = [...new Set(planned.map((p) => p.slug))];
+	const slugToNewGroup = new Map(planned.map((p) => [p.slug, p.newGroupName]));
+
+	const entriesWithGroups = await findEntriesWithGroupBySlugs({
+		userId,
+		projectId,
+		projectIndexTypeId,
+		slugs,
+	});
+
+	const conflictingEntries: BootstrapConflictPreview["conflictingEntries"] = [];
+	for (const e of entriesWithGroups) {
+		if (e.groupName == null) continue;
+		const newGroupName = slugToNewGroup.get(e.slug);
+		if (newGroupName == null) continue;
+		if (e.groupName !== newGroupName) {
+			conflictingEntries.push({
+				slug: e.slug,
+				label: e.label,
+				currentGroupName: e.groupName,
+				newGroupName,
+			});
+		}
+	}
+
+	return {
+		hasConflicts: conflictingEntries.length > 0,
+		conflictingEntries,
+	};
+}
 
 function configSnapshotHash(config: AddEntriesConfig): string {
 	const str = JSON.stringify({
@@ -71,6 +217,7 @@ export async function run({
 	userId,
 	requestId,
 	forceRefreshFromSource = false,
+	conflictResolution = "transfer",
 }: {
 	projectId: string;
 	projectIndexTypeId: string;
@@ -79,6 +226,8 @@ export async function run({
 	requestId: string;
 	/** When true, overwrite labels/group names from source; default false preserves user edits */
 	forceRefreshFromSource?: boolean;
+	/** When entries exist in another group: "leave" = skip adding; "transfer" = move them */
+	conflictResolution?: "leave" | "transfer";
 }): Promise<BootstrapCounts> {
 	if (!config.selectedCanon) {
 		logEvent({
@@ -105,6 +254,21 @@ export async function run({
 	});
 
 	const canonId = config.selectedCanon as CanonId;
+
+	// When "leave", skip adding entries that are already in another group
+	const slugsToSkip =
+		conflictResolution === "leave"
+			? new Set(
+					(
+						await previewConflicts({
+							projectId,
+							projectIndexTypeId,
+							config,
+							userId,
+						})
+					).conflictingEntries.map((e) => e.slug),
+				)
+			: null;
 	const counts: BootstrapCounts = {
 		entriesCreated: 0,
 		entriesReused: 0,
@@ -123,9 +287,7 @@ export async function run({
 			userId,
 			projectId,
 			projectIndexTypeId,
-			slug: BOOTSTRAP_GROUP_SLUGS[0].slug,
 			name: canonGroupName,
-			parserProfileId: "scripture-biblical",
 			sortMode: canonId,
 			seedRunId: runId,
 			forceRefreshFromSource,
@@ -148,13 +310,17 @@ export async function run({
 		});
 		if (entryCreated) counts.entriesCreated++;
 		else counts.entriesReused++;
-		const added = await ensureEntryInGroup({
-			userId,
-			groupId: canonGroupId,
-			entryId,
-			position: entryPosition++,
-		});
-		if (added) counts.membershipsCreated++;
+		if (slugsToSkip?.has(slug)) {
+			entryPosition++;
+		} else {
+			const added = await ensureEntryInGroup({
+				userId,
+				groupId: canonGroupId,
+				entryId,
+				position: entryPosition++,
+			});
+			if (added) counts.membershipsCreated++;
+		}
 		let matcherPosition = 0;
 		for (const raw of aliases) {
 			const text = normalize(raw);
@@ -185,8 +351,7 @@ export async function run({
 			userId,
 			projectId,
 			projectIndexTypeId,
-			slug: BOOTSTRAP_GROUP_SLUGS[1].slug,
-			name: BOOTSTRAP_GROUP_SLUGS[1].name,
+			name: BOOTSTRAP_GROUP_NAMES[1],
 			seedRunId: runId,
 			forceRefreshFromSource,
 		});
@@ -208,13 +373,17 @@ export async function run({
 			});
 			if (entryCreated) counts.entriesCreated++;
 			else counts.entriesReused++;
-			const added = await ensureEntryInGroup({
-				userId,
-				groupId,
-				entryId,
-				position: entryPosition++,
-			});
-			if (added) counts.membershipsCreated++;
+			if (slugsToSkip?.has(slug)) {
+				entryPosition++;
+			} else {
+				const added = await ensureEntryInGroup({
+					userId,
+					groupId,
+					entryId,
+					position: entryPosition++,
+				});
+				if (added) counts.membershipsCreated++;
+			}
 			let matcherPosition = 0;
 			for (const raw of aliases) {
 				const text = normalize(raw);
@@ -247,8 +416,7 @@ export async function run({
 			userId,
 			projectId,
 			projectIndexTypeId,
-			slug: BOOTSTRAP_GROUP_SLUGS[2].slug,
-			name: BOOTSTRAP_GROUP_SLUGS[2].name,
+			name: BOOTSTRAP_GROUP_NAMES[2],
 			seedRunId: runId,
 			forceRefreshFromSource,
 		});
@@ -262,6 +430,7 @@ export async function run({
 			counts,
 			runId,
 			forceRefreshFromSource,
+			slugsToSkip,
 		);
 	}
 
@@ -272,8 +441,7 @@ export async function run({
 			userId,
 			projectId,
 			projectIndexTypeId,
-			slug: BOOTSTRAP_GROUP_SLUGS[3].slug,
-			name: BOOTSTRAP_GROUP_SLUGS[3].name,
+			name: BOOTSTRAP_GROUP_NAMES[3],
 			seedRunId: runId,
 			forceRefreshFromSource,
 		});
@@ -287,6 +455,7 @@ export async function run({
 			counts,
 			runId,
 			forceRefreshFromSource,
+			slugsToSkip,
 		);
 	}
 
@@ -297,8 +466,7 @@ export async function run({
 			userId,
 			projectId,
 			projectIndexTypeId,
-			slug: BOOTSTRAP_GROUP_SLUGS[4].slug,
-			name: BOOTSTRAP_GROUP_SLUGS[4].name,
+			name: BOOTSTRAP_GROUP_NAMES[4],
 			seedRunId: runId,
 			forceRefreshFromSource,
 		});
@@ -312,6 +480,7 @@ export async function run({
 			counts,
 			runId,
 			forceRefreshFromSource,
+			slugsToSkip,
 		);
 	}
 
@@ -322,8 +491,7 @@ export async function run({
 			userId,
 			projectId,
 			projectIndexTypeId,
-			slug: BOOTSTRAP_GROUP_SLUGS[5].slug,
-			name: BOOTSTRAP_GROUP_SLUGS[5].name,
+			name: BOOTSTRAP_GROUP_NAMES[5],
 			seedRunId: runId,
 			forceRefreshFromSource,
 		});
@@ -337,6 +505,7 @@ export async function run({
 			counts,
 			runId,
 			forceRefreshFromSource,
+			slugsToSkip,
 		);
 	}
 
@@ -347,8 +516,7 @@ export async function run({
 			userId,
 			projectId,
 			projectIndexTypeId,
-			slug: BOOTSTRAP_GROUP_SLUGS[6].slug,
-			name: BOOTSTRAP_GROUP_SLUGS[6].name,
+			name: BOOTSTRAP_GROUP_NAMES[6],
 			seedRunId: runId,
 			forceRefreshFromSource,
 		});
@@ -372,13 +540,17 @@ export async function run({
 			});
 			if (entryCreated) counts.entriesCreated++;
 			else counts.entriesReused++;
-			const added = await ensureEntryInGroup({
-				userId,
-				groupId,
-				entryId,
-				position: entryPosition++,
-			});
-			if (added) counts.membershipsCreated++;
+			if (slugsToSkip?.has(slug)) {
+				entryPosition++;
+			} else {
+				const added = await ensureEntryInGroup({
+					userId,
+					groupId,
+					entryId,
+					position: entryPosition++,
+				});
+				if (added) counts.membershipsCreated++;
+			}
 			let matcherPosition = 0;
 			for (const raw of aliases) {
 				const text = normalize(raw);
@@ -449,6 +621,7 @@ async function seedCorpus(
 	counts: BootstrapCounts,
 	runId: string,
 	forceRefreshFromSource: boolean,
+	slugsToSkip: Set<string> | null,
 ): Promise<void> {
 	let entryPosition = 0;
 	for (const [key, aliases] of Object.entries(matchers)) {
@@ -465,13 +638,17 @@ async function seedCorpus(
 		});
 		if (entryCreated) counts.entriesCreated++;
 		else counts.entriesReused++;
-		const added = await ensureEntryInGroup({
-			userId,
-			groupId,
-			entryId,
-			position: entryPosition++,
-		});
-		if (added) counts.membershipsCreated++;
+		if (slugsToSkip?.has(slug)) {
+			entryPosition++;
+		} else {
+			const added = await ensureEntryInGroup({
+				userId,
+				groupId,
+				entryId,
+				position: entryPosition++,
+			});
+			if (added) counts.membershipsCreated++;
+		}
 		let matcherPosition = 0;
 		for (const raw of aliases) {
 			const text = normalize(raw);

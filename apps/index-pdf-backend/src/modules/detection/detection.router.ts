@@ -90,8 +90,6 @@ export const detectionRouter = router({
 					projectId: input.projectId,
 					projectIndexTypeId: input.projectIndexTypeId,
 					name: input.name,
-					slug: input.slug,
-					parserProfileId: input.parserProfileId,
 					sortMode: input.sortMode,
 				},
 			});

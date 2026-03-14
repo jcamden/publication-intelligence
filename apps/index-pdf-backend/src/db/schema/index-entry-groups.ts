@@ -19,7 +19,6 @@ import { authenticatedRole } from "./users";
 /**
  * Index entry groups: project- and index-type-scoped groups of entries/matchers
  * used for matcher detection runs (e.g. "Biblical books", "Subject A–Z").
- * parser_profile_id: predefined profile id (e.g. scripture-biblical) or null for alias-only.
  */
 export const indexEntryGroups = pgTable(
 	"index_entry_groups",
@@ -32,8 +31,6 @@ export const indexEntryGroups = pgTable(
 			.references(() => projectIndexTypes.id, { onDelete: "cascade" })
 			.notNull(),
 		name: text("name").notNull(),
-		slug: text("slug").notNull(),
-		parserProfileId: text("parser_profile_id"), // e.g. "scripture-biblical"; null = alias-only
 		sortMode: indexEntryGroupSortModeEnum("sort_mode").default("a_z").notNull(),
 		position: integer("position"), // nullable; null = use name as fallback
 		createdAt: timestamp("created_at", { withTimezone: true })
@@ -49,8 +46,8 @@ export const indexEntryGroups = pgTable(
 		}),
 	},
 	(table) => [
-		uniqueIndex("unique_index_entry_group_slug")
-			.on(table.projectId, table.projectIndexTypeId, table.slug)
+		uniqueIndex("unique_index_entry_group_name")
+			.on(table.projectId, table.projectIndexTypeId, table.name)
 			.where(sql`${table.deletedAt} IS NULL`),
 		uniqueIndex("idx_index_entry_groups_project_index_type").on(
 			table.projectIndexTypeId,
@@ -100,6 +97,7 @@ export const indexEntryGroupEntries = pgTable(
 			table.groupId,
 			table.entryId,
 		),
+		unique("unique_index_entry_group_entries_entry").on(table.entryId),
 		pgPolicy("index_entry_group_entries_access", {
 			for: "all",
 			to: authenticatedRole,

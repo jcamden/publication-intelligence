@@ -14,6 +14,23 @@ const addEntriesConfigSchema = z.object({
 });
 
 export const scriptureBootstrapRouter = router({
+	previewConflicts: protectedProcedure
+		.input(
+			z.object({
+				projectId: z.string().uuid(),
+				projectIndexTypeId: z.string().uuid(),
+				config: addEntriesConfigSchema,
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return await scriptureBootstrapService.previewConflicts({
+				projectId: input.projectId,
+				projectIndexTypeId: input.projectIndexTypeId,
+				config: input.config,
+				userId: ctx.user.id,
+			});
+		}),
+
 	run: protectedProcedure
 		.input(
 			z.object({
@@ -23,6 +40,11 @@ export const scriptureBootstrapRouter = router({
 				config: addEntriesConfigSchema,
 				/** When true, overwrite labels/group names from source; default false preserves user edits */
 				forceRefreshFromSource: z.boolean().optional().default(false),
+				/** When entries exist in another group: "leave" = skip adding them; "transfer" = move them to the new group. Default "transfer". */
+				conflictResolution: z
+					.enum(["leave", "transfer"])
+					.optional()
+					.default("transfer"),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -33,6 +55,7 @@ export const scriptureBootstrapRouter = router({
 				userId: ctx.user.id,
 				requestId: ctx.requestId,
 				forceRefreshFromSource: input.forceRefreshFromSource,
+				conflictResolution: input.conflictResolution,
 			});
 		}),
 });

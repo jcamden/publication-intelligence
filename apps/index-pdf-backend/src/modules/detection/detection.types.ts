@@ -1,4 +1,3 @@
-import { getParserProfileIds } from "@pubint/core";
 import { z } from "zod";
 
 // ============================================================================
@@ -47,15 +46,6 @@ export function getCanonIdForSortMode(
 	if (mode === "canon_book_order") return "protestant";
 	return null;
 }
-
-/** Parser profile id must be one of the predefined profiles or null (alias-only group). */
-export const parserProfileIdSchema = z
-	.string()
-	.refine((id) => getParserProfileIds().includes(id), {
-		message: "Invalid parser profile id",
-	})
-	.nullable()
-	.optional();
 
 // ============================================================================
 // DTOs - Data Transfer Objects
@@ -159,13 +149,11 @@ export const CancelDetectionRunSchema = z.object({
 
 export type CancelDetectionRunInput = z.infer<typeof CancelDetectionRunSchema>;
 
-/** Create index entry group input (parser profile and sort mode validated). */
+/** Create index entry group input. */
 export const CreateIndexEntryGroupSchema = z.object({
 	projectId: z.string().uuid(),
 	projectIndexTypeId: z.string().uuid(),
 	name: z.string().min(1),
-	slug: z.string().min(1),
-	parserProfileId: parserProfileIdSchema,
 	sortMode: indexEntryGroupSortModeSchema.default("a_z"),
 });
 
@@ -173,12 +161,10 @@ export type CreateIndexEntryGroupSchemaInput = z.infer<
 	typeof CreateIndexEntryGroupSchema
 >;
 
-/** Update index entry group input (parser profile and sort mode validated). */
+/** Update index entry group input. */
 export const UpdateIndexEntryGroupSchema = z.object({
 	groupId: z.string().uuid("Invalid group ID"),
 	name: z.string().min(1).optional(),
-	slug: z.string().min(1).optional(),
-	parserProfileId: parserProfileIdSchema.optional(),
 	sortMode: indexEntryGroupSortModeSchema.optional(),
 });
 

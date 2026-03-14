@@ -502,7 +502,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 				projectIndexTypeId: scriptureProjectIndexTypeId,
 			});
 			expect(groups.length).toBeGreaterThan(0);
-			const canonGroup = groups.find((g) => g.slug === "canon");
+			const canonGroup = groups.find((g) => g.name === "Protestant Canon");
 			expect(canonGroup).toBeDefined();
 
 			await indexEntryGroupRepo.deleteGroup({

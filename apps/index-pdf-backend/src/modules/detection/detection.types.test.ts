@@ -134,34 +134,23 @@ describe("Index entry group schemas (Task 6.1)", () => {
 		projectId: PROJECT_ID,
 		projectIndexTypeId: "a1b2c3d4-e5f6-4789-a012-3456789abcde",
 		name: "Biblical",
-		slug: "biblical",
 	};
 
 	describe("CreateIndexEntryGroupSchema", () => {
-		it("accepts valid input with parser profile scripture-biblical", () => {
+		it("accepts valid input with sort mode", () => {
 			const result = CreateIndexEntryGroupSchema.safeParse({
 				...validGroupInput,
-				parserProfileId: "scripture-biblical",
 				sortMode: "a_z",
 			});
 			expect(result.success).toBe(true);
 		});
 
-		it("accepts valid input with null parser profile (alias-only)", () => {
+		it("accepts valid input with canon_book_order sort mode", () => {
 			const result = CreateIndexEntryGroupSchema.safeParse({
 				...validGroupInput,
-				parserProfileId: null,
 				sortMode: "canon_book_order",
 			});
 			expect(result.success).toBe(true);
-		});
-
-		it("rejects invalid parser profile id", () => {
-			const result = CreateIndexEntryGroupSchema.safeParse({
-				...validGroupInput,
-				parserProfileId: "unknown-profile",
-			});
-			expect(result.success).toBe(false);
 		});
 
 		it("rejects invalid sort mode", () => {
@@ -184,10 +173,9 @@ describe("Index entry group schemas (Task 6.1)", () => {
 	describe("UpdateIndexEntryGroupSchema", () => {
 		const validGroupId = "550e8400-e29b-41d4-a716-446655440000";
 
-		it("accepts valid parser profile and sort mode", () => {
+		it("accepts valid sort mode", () => {
 			const result = UpdateIndexEntryGroupSchema.safeParse({
 				groupId: validGroupId,
-				parserProfileId: "scripture-biblical",
 				sortMode: "canon_book_order",
 			});
 			expect(result.success).toBe(true);
@@ -199,14 +187,6 @@ describe("Index entry group schemas (Task 6.1)", () => {
 				sortMode: "custom",
 			});
 			expect(result.success).toBe(true);
-		});
-
-		it("rejects invalid parser profile id", () => {
-			const result = UpdateIndexEntryGroupSchema.safeParse({
-				groupId: validGroupId,
-				parserProfileId: "bad-profile",
-			});
-			expect(result.success).toBe(false);
 		});
 
 		it("rejects invalid sort mode", () => {

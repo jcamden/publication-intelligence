@@ -125,7 +125,9 @@ export const MergeGroupModal = ({
 						onValueChange={(v) => setTargetGroupId(v || null)}
 					>
 						<SelectTrigger id="target-group">
-							<SelectValue placeholder="Select target group..." />
+							<SelectValue placeholder="Select target group...">
+								{targetGroup?.name}
+							</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
 							{groups.map((g) => (

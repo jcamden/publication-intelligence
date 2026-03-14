@@ -150,21 +150,40 @@ export const AddEntriesFromBooksModal = ({
 		setBootstrapDialogOpen(true);
 	}, [formState]);
 
-	const handleBootstrapConfirm = useCallback(() => {
-		bootstrapRun.mutate({
-			projectId,
-			projectIndexTypeId,
-			config: {
-				selectedCanon: formState.selectedCanon,
-				includeApocrypha: formState.includeApocrypha,
-				includeJewishWritings: formState.includeJewishWritings,
-				includeClassicalWritings: formState.includeClassicalWritings,
-				includeChristianWritings: formState.includeChristianWritings,
-				includeDeadSeaScrolls: formState.includeDeadSeaScrolls,
-				extraBookKeys: formState.extraBookKeys,
+	const config = useMemo(
+		() => ({
+			selectedCanon: formState.selectedCanon,
+			includeApocrypha: formState.includeApocrypha,
+			includeJewishWritings: formState.includeJewishWritings,
+			includeClassicalWritings: formState.includeClassicalWritings,
+			includeChristianWritings: formState.includeChristianWritings,
+			includeDeadSeaScrolls: formState.includeDeadSeaScrolls,
+			extraBookKeys: formState.extraBookKeys,
+		}),
+		[formState],
+	);
+
+	const { data: conflictPreview } =
+		trpc.scriptureBootstrap.previewConflicts.useQuery(
+			{
+				projectId,
+				projectIndexTypeId,
+				config,
 			},
-		});
-	}, [bootstrapRun, projectId, projectIndexTypeId, formState]);
+			{ enabled: bootstrapDialogOpen && !!projectId && !!projectIndexTypeId },
+		);
+
+	const handleBootstrapConfirm = useCallback(
+		(conflictResolution: "leave" | "transfer") => {
+			bootstrapRun.mutate({
+				projectId,
+				projectIndexTypeId,
+				config,
+				conflictResolution,
+			});
+		},
+		[bootstrapRun, projectId, projectIndexTypeId, config],
+	);
 
 	const toggleExtraBook = useCallback((key: string) => {
 		setFormState((prev) => {
@@ -401,6 +420,7 @@ export const AddEntriesFromBooksModal = ({
 				}
 				enabledCorpora={enabledCorpora}
 				extraBookCount={formState.extraBookKeys.length}
+				conflictingEntries={conflictPreview?.conflictingEntries}
 			/>
 		</>
 	);

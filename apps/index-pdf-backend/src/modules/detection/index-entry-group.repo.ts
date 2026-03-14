@@ -28,8 +28,6 @@ export type IndexEntryGroupListItem = {
 	projectId: string;
 	projectIndexTypeId: string;
 	name: string;
-	slug: string;
-	parserProfileId: string | null;
 	sortMode: IndexEntryGroupSortMode;
 	position: number | null;
 	createdAt: Date;
@@ -50,8 +48,6 @@ export type CreateIndexEntryGroupInput = {
 	projectId: string;
 	projectIndexTypeId: string;
 	name: string;
-	slug: string;
-	parserProfileId?: string | null;
 	sortMode?: IndexEntryGroupSortMode;
 	/** Seed provenance (audit only; does not gate edits) */
 	seedSource?: string | null;
@@ -61,8 +57,6 @@ export type CreateIndexEntryGroupInput = {
 
 export type UpdateIndexEntryGroupInput = {
 	name?: string;
-	slug?: string;
-	parserProfileId?: string | null;
 	sortMode?: IndexEntryGroupSortMode;
 };
 
@@ -100,8 +94,6 @@ export const listGroups = async ({
 					projectId: indexEntryGroups.projectId,
 					projectIndexTypeId: indexEntryGroups.projectIndexTypeId,
 					name: indexEntryGroups.name,
-					slug: indexEntryGroups.slug,
-					parserProfileId: indexEntryGroups.parserProfileId,
 					sortMode: indexEntryGroups.sortMode,
 					position: indexEntryGroups.position,
 					createdAt: indexEntryGroups.createdAt,
@@ -119,8 +111,6 @@ export const listGroups = async ({
 				projectId: r.projectId,
 				projectIndexTypeId: r.projectIndexTypeId,
 				name: r.name,
-				slug: r.slug,
-				parserProfileId: r.parserProfileId,
 				sortMode: r.sortMode as IndexEntryGroupSortMode,
 				position: r.position,
 				createdAt: r.createdAt,
@@ -152,8 +142,6 @@ export const listGroupsWithMeta = async ({
 					projectId: indexEntryGroups.projectId,
 					projectIndexTypeId: indexEntryGroups.projectIndexTypeId,
 					name: indexEntryGroups.name,
-					slug: indexEntryGroups.slug,
-					parserProfileId: indexEntryGroups.parserProfileId,
 					sortMode: indexEntryGroups.sortMode,
 					position: indexEntryGroups.position,
 					createdAt: indexEntryGroups.createdAt,
@@ -178,8 +166,6 @@ export const listGroupsWithMeta = async ({
 					indexEntryGroups.projectId,
 					indexEntryGroups.projectIndexTypeId,
 					indexEntryGroups.name,
-					indexEntryGroups.slug,
-					indexEntryGroups.parserProfileId,
 					indexEntryGroups.sortMode,
 					indexEntryGroups.position,
 					indexEntryGroups.createdAt,
@@ -195,8 +181,6 @@ export const listGroupsWithMeta = async ({
 				projectId: r.projectId,
 				projectIndexTypeId: r.projectIndexTypeId,
 				name: r.name,
-				slug: r.slug,
-				parserProfileId: r.parserProfileId,
 				sortMode: r.sortMode as IndexEntryGroupSortMode,
 				position: r.position,
 				createdAt: r.createdAt,
@@ -227,8 +211,6 @@ export const getGroup = async ({
 					projectId: indexEntryGroups.projectId,
 					projectIndexTypeId: indexEntryGroups.projectIndexTypeId,
 					name: indexEntryGroups.name,
-					slug: indexEntryGroups.slug,
-					parserProfileId: indexEntryGroups.parserProfileId,
 					sortMode: indexEntryGroups.sortMode,
 					position: indexEntryGroups.position,
 					createdAt: indexEntryGroups.createdAt,
@@ -244,8 +226,6 @@ export const getGroup = async ({
 				projectId: row.projectId,
 				projectIndexTypeId: row.projectIndexTypeId,
 				name: row.name,
-				slug: row.slug,
-				parserProfileId: row.parserProfileId,
 				sortMode: row.sortMode as IndexEntryGroupSortMode,
 				position: row.position,
 				createdAt: row.createdAt,
@@ -401,18 +381,17 @@ export const getGroupMatcherSnapshot = async ({
 };
 
 /**
- * Group metadata for detection run snapshot (id, parser_profile_id, sort_mode).
- * Used to resolve parser profile per group and cache for the run.
+ * Group metadata for detection run snapshot (id, sort_mode).
+ * Parser profile is derived from index type, not per group.
  */
 export type IndexEntryGroupRunMeta = {
 	id: string;
-	parserProfileId: string | null;
 	sortMode: IndexEntryGroupSortMode;
 };
 
 /**
  * List group metadata for given IDs (same project + projectIndexTypeId, deterministic order by name).
- * Used once per run to build group/profile cache. Returns only groups that exist and are not deleted.
+ * Returns only groups that exist and are not deleted.
  */
 export const listGroupsByIds = async ({
 	userId,
@@ -433,7 +412,6 @@ export const listGroupsByIds = async ({
 			const rows = await tx
 				.select({
 					id: indexEntryGroups.id,
-					parserProfileId: indexEntryGroups.parserProfileId,
 					sortMode: indexEntryGroups.sortMode,
 				})
 				.from(indexEntryGroups)
@@ -451,7 +429,6 @@ export const listGroupsByIds = async ({
 				);
 			return rows.map((r) => ({
 				id: r.id,
-				parserProfileId: r.parserProfileId,
 				sortMode: r.sortMode as IndexEntryGroupSortMode,
 			}));
 		},
@@ -693,8 +670,6 @@ export const createGroup = async ({
 					projectId: input.projectId,
 					projectIndexTypeId: input.projectIndexTypeId,
 					name: input.name,
-					slug: input.slug,
-					parserProfileId: input.parserProfileId ?? null,
 					sortMode: input.sortMode ?? "a_z",
 					...(input.seedSource != null && { seedSource: input.seedSource }),
 					...(input.seededAt != null && { seededAt: input.seededAt }),
@@ -707,8 +682,6 @@ export const createGroup = async ({
 				projectId: row.projectId,
 				projectIndexTypeId: row.projectIndexTypeId,
 				name: row.name,
-				slug: row.slug,
-				parserProfileId: row.parserProfileId,
 				sortMode: row.sortMode as IndexEntryGroupSortMode,
 				position: row.position,
 				createdAt: row.createdAt,
@@ -775,9 +748,6 @@ export const updateGroup = async ({
 				updatedAt: new Date(),
 			};
 			if (input.name !== undefined) updatePayload.name = input.name;
-			if (input.slug !== undefined) updatePayload.slug = input.slug;
-			if (input.parserProfileId !== undefined)
-				updatePayload.parserProfileId = input.parserProfileId;
 			if (input.sortMode !== undefined) updatePayload.sortMode = input.sortMode;
 
 			const [row] = await tx
@@ -791,8 +761,6 @@ export const updateGroup = async ({
 				projectId: row.projectId,
 				projectIndexTypeId: row.projectIndexTypeId,
 				name: row.name,
-				slug: row.slug,
-				parserProfileId: row.parserProfileId,
 				sortMode: row.sortMode as IndexEntryGroupSortMode,
 				position: row.position,
 				createdAt: row.createdAt,
@@ -995,6 +963,36 @@ export const mergeGroups = async ({
 				.update(indexEntryGroups)
 				.set({ deletedAt: new Date(), updatedAt: new Date() })
 				.where(eq(indexEntryGroups.id, sourceGroupId));
+		},
+	});
+};
+
+/**
+ * Check if an entry is already in a group.
+ */
+export const hasEntryInGroup = async ({
+	userId,
+	groupId,
+	entryId,
+}: {
+	userId: string;
+	groupId: string;
+	entryId: string;
+}): Promise<boolean> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const [row] = await tx
+				.select({ entryId: indexEntryGroupEntries.entryId })
+				.from(indexEntryGroupEntries)
+				.where(
+					and(
+						eq(indexEntryGroupEntries.groupId, groupId),
+						eq(indexEntryGroupEntries.entryId, entryId),
+					),
+				)
+				.limit(1);
+			return !!row;
 		},
 	});
 };

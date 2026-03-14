@@ -20,7 +20,6 @@ import {
 } from "./bbox-overlap.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import * as detectionRepo from "./detection.repo";
-import { RUN_ALL_MATCHERS_GROUP_ID } from "./detection.repo";
 import type {
 	CreateLlmDetectionRunInput,
 	CreateMatcherDetectionRunInput,
@@ -603,38 +602,11 @@ const processMatcher = async ({
 
 	const runAllMatchers = groupIds.length === 0;
 
-	// Group snapshot and parser profile cache. When runAllMatchers, use sentinel only (alias-only; no parser segments).
-	const groupProfileCache = new Map<string, ParserProfile | null>();
-	if (runAllMatchers) {
-		groupProfileCache.set(RUN_ALL_MATCHERS_GROUP_ID, null);
-	} else {
-		const groupMetas = await indexEntryGroupRepo.listGroupsByIds({
-			userId,
-			projectId: run.projectId,
-			projectIndexTypeId,
-			groupIds,
-		});
-		for (const g of groupMetas) {
-			if (g.parserProfileId != null) {
-				const profile = getParserProfile(g.parserProfileId);
-				if (profile === undefined) {
-					await detectionRepo.updateDetectionRunStatus({
-						userId,
-						input: {
-							runId,
-							status: "failed",
-							finishedAt: new Date(),
-							errorMessage: `Unknown parser profile id: ${g.parserProfileId}`,
-						},
-					});
-					return;
-				}
-				groupProfileCache.set(g.id, profile);
-			} else {
-				groupProfileCache.set(g.id, null);
-			}
-		}
-	}
+	// Parser profile is per index type: scripture uses scripture-biblical, else alias-only.
+	const runProfile: ParserProfile | null =
+		run.indexType === "scripture"
+			? (getParserProfile("scripture-biblical") ?? null)
+			: null;
 
 	const aliases = await detectionRepo.listMatcherAliasesForRun({
 		userId,
@@ -877,7 +849,7 @@ const processMatcher = async ({
 			const withBbox = withBboxes[i];
 			if (!withBbox) continue;
 
-			const profile = groupProfileCache.get(match.groupId) ?? null;
+			const profile = runProfile;
 
 			// Null profile: alias-only; emit one candidate with alias span only (Task 6.2).
 			if (profile === null) {
