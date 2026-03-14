@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import type { DbTransaction } from "../../db/client";
 import { withUserContext } from "../../db/client";
 import {
 	indexEntries,
@@ -110,27 +111,96 @@ export async function findOrCreateEntry({
 	});
 }
 
+/** Slug for the Unknown book entry (refs without clear book context). */
+export const UNKNOWN_ENTRY_SLUG = "unknown";
+
 /**
- * Find or create matcher by normalized text. If a matcher with this text already exists (any entry), return it (reused). Otherwise create under the given entry.
- * Optional seed provenance when creating (audit only; does not gate edits).
+ * Ensure the Unknown entry exists for a scripture index type. Idempotent.
+ * Call within an existing transaction (e.g. when enabling scripture highlight config).
+ * No matchers—Unknown is not matched by text; mentions are assigned via Add Parent tool.
+ */
+export async function ensureUnknownEntryExistsInTx({
+	tx,
+	projectId,
+	projectIndexTypeId,
+}: {
+	tx: DbTransaction;
+	projectId: string;
+	projectIndexTypeId: string;
+}): Promise<{ entryId: string; created: boolean }> {
+	const existing = await tx
+		.select({ id: indexEntries.id })
+		.from(indexEntries)
+		.where(
+			and(
+				eq(indexEntries.projectId, projectId),
+				eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+				eq(indexEntries.slug, UNKNOWN_ENTRY_SLUG),
+				isNull(indexEntries.deletedAt),
+			),
+		)
+		.limit(1);
+
+	if (existing[0]) {
+		return { entryId: existing[0].id, created: false };
+	}
+
+	const [inserted] = await tx
+		.insert(indexEntries)
+		.values({
+			projectId,
+			projectIndexTypeId,
+			slug: UNKNOWN_ENTRY_SLUG,
+			label: "Unknown",
+			status: "active",
+			parentId: null,
+			detectionRunId: null,
+		})
+		.returning({ id: indexEntries.id });
+
+	if (!inserted) {
+		// Race: another tx created it; fetch
+		const [again] = await tx
+			.select({ id: indexEntries.id })
+			.from(indexEntries)
+			.where(
+				and(
+					eq(indexEntries.projectId, projectId),
+					eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+					eq(indexEntries.slug, UNKNOWN_ENTRY_SLUG),
+					isNull(indexEntries.deletedAt),
+				),
+			)
+			.limit(1);
+		if (!again) throw new Error("Failed to ensure Unknown entry exists");
+		return { entryId: again.id, created: false };
+	}
+
+	return { entryId: inserted.id, created: true };
+}
+
+/**
+ * Find or create matcher by text. Stores the original form (e.g. "Revelation") for
+ * case-sensitive matching: uppercase matchers reject lowercase text. Optional
+ * seed provenance when creating (audit only; does not gate edits).
  */
 export async function findOrCreateMatcher({
 	userId,
 	entryId,
 	projectIndexTypeId,
-	normalizedText,
+	text,
 	seedRunId,
 }: {
 	userId: string;
 	entryId: string;
 	projectIndexTypeId: string;
-	normalizedText: string;
+	text: string;
 	seedRunId?: string | null;
 }): Promise<{ matcherId: string; created: boolean }> {
 	const existing = await detectionRepo.getMatcherByTextAndProjectIndexTypeId({
 		userId,
 		projectIndexTypeId,
-		text: normalizedText,
+		text,
 	});
 	if (existing) return { matcherId: existing.id, created: false };
 	const now = new Date();
@@ -138,7 +208,7 @@ export async function findOrCreateMatcher({
 		userId,
 		entryId,
 		projectIndexTypeId,
-		text: normalizedText,
+		text,
 		...(seedRunId && {
 			seedSource: SEED_SOURCE_SCRIPTURE_BOOTSTRAP,
 			seededAt: now,

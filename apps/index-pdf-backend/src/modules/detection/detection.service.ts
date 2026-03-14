@@ -1,7 +1,12 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import type { ParserProfile } from "@pubint/core";
-import { getParserProfile } from "@pubint/core";
+import {
+	findStandaloneRefSpans,
+	getParserProfile,
+	normalize,
+	normalizeWithOffsetMap,
+} from "@pubint/core";
 import { logEvent } from "../../logger";
 import { listRules } from "../canonical-page-rule/canonical-page-rule.repo";
 import * as indexMentionRepo from "../index-mention/index-mention.repo";
@@ -360,22 +365,28 @@ const calculatePagesToProcess = ({
 // ============================================================================
 
 const PRECHECK_WINDOW_CHARS = 24;
-const PARSER_WINDOW_CHARS = 120;
-const PARSER_WINDOW_CAP = 200;
+
+const PARSER_WINDOW_CHARS = 250;
+const PARSER_WINDOW_CAP = 300;
 
 // ============================================================================
 // Background Processing
 // ============================================================================
 
 /**
- * Run parser profile on local window after alias; return all segments for candidate (Task 5.2).
- * Precheck uses first PRECHECK_WINDOW_CHARS; parse uses up to PARSER_WINDOW_CHARS (cap PARSER_WINDOW_CAP).
+ * Find all ref spans in the parse window after an alias (handles intervening text like "12:1 ... 6:1").
+ * Excludes refs that come after a different book alias (e.g. "Deut 32:44; 34:9; Josh 1:1" - 1:1 belongs to Josh).
  */
-function parseLocalWindowForCandidate(
+function findRefSpansInAliasWindow(
 	pageText: string,
 	aliasEndOffset: number,
 	profile: ParserProfile | undefined,
-): MatcherMentionParserSegment[] {
+	otherBookNormalizedAliases: string[],
+): Array<{
+	pageCharStart: number;
+	pageCharEnd: number;
+	segments: MatcherMentionParserSegment[];
+}> {
 	if (!profile) return [];
 	const windowStart = aliasEndOffset;
 	const precheckSlice = pageText.slice(
@@ -388,15 +399,55 @@ function parseLocalWindowForCandidate(
 		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
 	);
 	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
-	const segments = profile.parse(sliceCap);
-	return segments.map((s) => ({
-		refText: s.refText,
-		chapter: s.chapter,
-		chapterEnd: s.chapterEnd,
-		verseStart: s.verseStart,
-		verseEnd: s.verseEnd,
-		verseSuffix: s.verseSuffix,
-	}));
+	const { normalizedText, mapNormalizedSpanToOriginalSpan } =
+		normalizeWithOffsetMap(sliceCap);
+	const standaloneSpans = findStandaloneRefSpans(normalizedText, {
+		includeChapterAndRange: true,
+	});
+	const results: Array<{
+		pageCharStart: number;
+		pageCharEnd: number;
+		segments: MatcherMentionParserSegment[];
+	}> = [];
+	for (const span of standaloneSpans) {
+		const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
+			span.start,
+			span.end,
+		);
+		// Skip refs that come after a different book alias (e.g. "Josh 1:1" when processing Deut)
+		const textBeforeRef = normalizedText.slice(0, span.start);
+		const hasOtherBookBefore =
+			otherBookNormalizedAliases.length > 0 &&
+			otherBookNormalizedAliases.some((alias) => {
+				const re = new RegExp(
+					`(?:^|[^\\p{L}\\p{N}])${escapeRegex(alias)}(?:[^\\p{L}\\p{N}]|$)`,
+					"ui",
+				);
+				return re.test(textBeforeRef);
+			});
+		if (hasOtherBookBefore) continue;
+
+		const segments = profile.parse(span.refText);
+		if (segments.length === 0) continue;
+		if (segments.length === 1 && segments[0].refText === "") continue;
+		results.push({
+			pageCharStart: windowStart + origStart,
+			pageCharEnd: windowStart + origEnd,
+			segments: segments.map((s) => ({
+				refText: s.refText,
+				chapter: s.chapter,
+				chapterEnd: s.chapterEnd,
+				verseStart: s.verseStart,
+				verseEnd: s.verseEnd,
+				verseSuffix: s.verseSuffix,
+			})),
+		});
+	}
+	return results;
+}
+
+function escapeRegex(s: string): string {
+	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** Citation-like: digits, spaces, separators. Verse suffix a-z allowed only when immediately after a digit (Task 4.3). */
@@ -452,7 +503,7 @@ export function shouldEmitFallbackMention(
 		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
 	);
 	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
-	const segments = profile.parse(sliceCap);
+	const segments = profile.parse(normalize(sliceCap));
 	return segments.length === 0;
 }
 
@@ -867,25 +918,61 @@ const processMatcher = async ({
 				continue;
 			}
 
-			const parserSegments = parseLocalWindowForCandidate(
+			const otherBookNormalizedAliases = [
+				...new Set(
+					filteredAliases
+						.filter((a) => a.matcherId !== match.matcherId)
+						.map((a) => normalize(a.alias))
+						.filter((alias) => alias.trim().length > 0),
+				),
+			];
+			const refSpans = findRefSpansInAliasWindow(
 				searchableText,
 				match.originalEnd,
 				profile,
+				otherBookNormalizedAliases,
 			);
 
-			if (parserSegments.length > 0) {
-				allCandidates.push({
-					pageNumber: pageNum,
-					groupId: match.groupId,
-					matcherId: match.matcherId,
-					entryId: match.entryId,
-					indexType: match.indexType,
-					textSpan: withBbox.textSpan,
-					charStart: match.originalStart,
-					charEnd: match.originalEnd,
-					bboxes: withBbox.bboxes,
-					parserSegments,
-				});
+			if (refSpans.length > 0) {
+				for (const ref of refSpans) {
+					const textSpan = searchableText.slice(
+						ref.pageCharStart,
+						ref.pageCharEnd,
+					);
+					const refMentionsWithPositions = [
+						{
+							mention: {
+								entryLabel: "",
+								indexType: match.indexType,
+								pageNumber: pageNum,
+								textSpan,
+							},
+							charStart: ref.pageCharStart,
+							charEnd: ref.pageCharEnd,
+						},
+					];
+					const { mapped: refBboxes } = mapPositionsToBBoxes({
+						mentionsWithPositions: refMentionsWithPositions,
+						textAtoms: indexableAtomsWithCorrectedPositions,
+					});
+					const refWithBbox = refBboxes.find(
+						(m) => m.pageNumber === pageNum && m.textSpan === textSpan,
+					);
+					if (refWithBbox) {
+						allCandidates.push({
+							pageNumber: pageNum,
+							groupId: match.groupId,
+							matcherId: match.matcherId,
+							entryId: match.entryId,
+							indexType: match.indexType,
+							textSpan: refWithBbox.textSpan,
+							charStart: ref.pageCharStart,
+							charEnd: ref.pageCharEnd,
+							bboxes: refWithBbox.bboxes,
+							parserSegments: ref.segments,
+						});
+					}
+				}
 			} else if (
 				shouldEmitFallbackMention(searchableText, match.originalEnd, profile)
 			) {

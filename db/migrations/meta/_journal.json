@@ -85,6 +85,13 @@
 			"when": 1773498797511,
 			"tag": "0011_typical_sunfire",
 			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1773511315260,
+			"tag": "0012_chemical_blazing_skull",
+			"breakpoints": true
 		}
 	]
 }

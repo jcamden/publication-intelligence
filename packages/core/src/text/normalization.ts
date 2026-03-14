@@ -6,7 +6,8 @@
  */
 
 /** Unicode dash characters normalized to ASCII hyphen-minus (U+002D) */
-const DASH_CHARS = /[\u2010-\u2015\u2212\u00AD\uFE58\uFE63\uFF0D]/g;
+const DASH_CHARS =
+	/[\u058A\u1806\u2010-\u2015\u2212\u00AD\u2E3A\u2E3B\uFE58\uFE63\uFF0D]/g;
 
 /** Matches one or more whitespace characters (including Unicode) */
 const WHITESPACE_RUN = /\s+/g;
@@ -64,7 +65,10 @@ export function normalizeWithOffsetMap(
 	const afterDash: string[] = [];
 	for (let j = 0; j < normalized.length; j++) {
 		const char = normalized[j];
-		const isDash = /[\u2010-\u2015\u2212\u00AD\uFE58\uFE63\uFF0D]/.test(char);
+		const isDash =
+			/[\u058A\u1806\u2010-\u2015\u2212\u00AD\u2E3A\u2E3B\uFE58\uFE63\uFF0D]/.test(
+				char,
+			);
 		afterDash.push(isDash ? "-" : char);
 	}
 	normalized = afterDash.join("");

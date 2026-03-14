@@ -33,7 +33,13 @@ export function buildAliasIndex(aliases: AliasInput[]): AliasIndex {
 		const normalized = normalize(alias);
 		if (normalized.trim() === "") continue;
 
-		const meta = { matcherId, entryId, indexType, groupId };
+		const meta = {
+			matcherId,
+			entryId,
+			indexType,
+			groupId,
+			originalAlias: alias,
+		};
 		const existing = normalizedAliasLookup.get(normalized);
 		if (existing) {
 			existing.push(meta);
@@ -142,10 +148,24 @@ function resolveOverlaps(
 // Expand candidates to matcher-anchored matches with original offsets
 // ============================================================================
 
+/** Uppercase matcher rejects lowercase text; lowercase matcher allows any case. */
+function passesCaseCheck(
+	originalAlias: string,
+	rawText: string,
+	originalStart: number,
+): boolean {
+	if (originalAlias.length === 0) return true;
+	const firstAliasChar = originalAlias[0];
+	if (!/\p{Lu}/u.test(firstAliasChar)) return true; // lowercase matcher: allow
+	const firstTextChar = rawText[originalStart];
+	return firstTextChar !== undefined && !/\p{Ll}/u.test(firstTextChar);
+}
+
 export function findAndResolveMatches(
 	normalizedText: string,
 	offsetMap: NormalizeWithOffsetMapResult,
 	aliasIndex: AliasIndex,
+	rawText: string,
 ): ResolvedAliasMatch[] {
 	const { automaton, normalizedAliasLookup } = aliasIndex;
 	const { mapNormalizedSpanToOriginalSpan } = offsetMap;
@@ -164,6 +184,8 @@ export function findAndResolveMatches(
 		);
 		const metas = normalizedAliasLookup.get(c.matchedAlias) ?? [];
 		for (const meta of metas) {
+			if (!passesCaseCheck(meta.originalAlias, rawText, originalStart))
+				continue;
 			result.push({
 				matcherId: meta.matcherId,
 				entryId: meta.entryId,
@@ -207,5 +229,6 @@ export function scanTextWithAliasIndex(
 		normalizedText,
 		{ normalizedText, ...offsetMap },
 		aliasIndex,
+		rawText,
 	);
 }

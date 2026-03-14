@@ -323,13 +323,12 @@ export async function run({
 		}
 		let matcherPosition = 0;
 		for (const raw of aliases) {
-			const text = normalize(raw);
-			if (!text) continue;
+			if (!normalize(raw)) continue;
 			const { matcherId, created: matcherCreated } = await findOrCreateMatcher({
 				userId,
 				entryId,
 				projectIndexTypeId,
-				normalizedText: text,
+				text: raw,
 				seedRunId: runId,
 			});
 			if (matcherCreated) counts.matchersCreated++;
@@ -386,14 +385,13 @@ export async function run({
 			}
 			let matcherPosition = 0;
 			for (const raw of aliases) {
-				const text = normalize(raw);
-				if (!text) continue;
+				if (!normalize(raw)) continue;
 				const { matcherId, created: matcherCreated } =
 					await findOrCreateMatcher({
 						userId,
 						entryId,
 						projectIndexTypeId,
-						normalizedText: text,
+						text: raw,
 						seedRunId: runId,
 					});
 				if (matcherCreated) counts.matchersCreated++;
@@ -553,14 +551,13 @@ export async function run({
 			}
 			let matcherPosition = 0;
 			for (const raw of aliases) {
-				const text = normalize(raw);
-				if (!text) continue;
+				if (!normalize(raw)) continue;
 				const { matcherId, created: matcherCreated } =
 					await findOrCreateMatcher({
 						userId,
 						entryId,
 						projectIndexTypeId,
-						normalizedText: text,
+						text: raw,
 						seedRunId: runId,
 					});
 				if (matcherCreated) counts.matchersCreated++;
@@ -651,13 +648,12 @@ async function seedCorpus(
 		}
 		let matcherPosition = 0;
 		for (const raw of aliases) {
-			const text = normalize(raw);
-			if (!text) continue;
+			if (!normalize(raw)) continue;
 			const { matcherId, created: matcherCreated } = await findOrCreateMatcher({
 				userId,
 				entryId,
 				projectIndexTypeId,
-				normalizedText: text,
+				text: raw,
 				seedRunId: runId,
 			});
 			if (matcherCreated) counts.matchersCreated++;

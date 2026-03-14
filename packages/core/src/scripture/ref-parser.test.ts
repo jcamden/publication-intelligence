@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	findStandaloneRefSpans,
 	getParserProfile,
 	getParserProfileIds,
 	scriptureParserProfile,
@@ -156,6 +157,24 @@ describe("scripture ref parser - profile contract", () => {
 			{ refText: "2:4", chapter: 2, verseStart: 4, verseEnd: 4 },
 		]);
 	});
+
+	it("stops at new book in semicolon list: 32:44-47; 34:9; josh 1:1-9", () => {
+		// Should parse 32:44-47 and 34:9, stop before josh 1:1-9
+		expect(
+			scriptureParserProfile.parse("gen 32:44-47; 34:9; josh 1:1-9"),
+		).toEqual([
+			{ refText: "32:44-47", chapter: 32, verseStart: 44, verseEnd: 47 },
+			{ refText: "34:9", chapter: 34, verseStart: 9, verseEnd: 9 },
+		]);
+	});
+
+	it("parses 'and' before ref in semicolon list: Deut 1:5; 4:44; and 6:1", () => {
+		expect(scriptureParserProfile.parse("deut 1:5; 4:44; and 6:1")).toEqual([
+			{ refText: "1:5", chapter: 1, verseStart: 5, verseEnd: 5 },
+			{ refText: "4:44", chapter: 4, verseStart: 44, verseEnd: 44 },
+			{ refText: "6:1", chapter: 6, verseStart: 1, verseEnd: 1 },
+		]);
+	});
 });
 
 describe("parser profiles registry", () => {
@@ -173,5 +192,76 @@ describe("parser profiles registry", () => {
 
 	it("getParserProfile returns undefined for unknown id", () => {
 		expect(getParserProfile("unknown")).toBeUndefined();
+	});
+});
+
+describe("findStandaloneRefSpans", () => {
+	it("finds ch:v refs like 4:35", () => {
+		const spans = findStandaloneRefSpans(
+			"But what we mean by the original text is less clear. For instance, in 4:35...",
+		);
+		expect(spans).toEqual([{ start: 70, end: 74, refText: "4:35" }]);
+	});
+
+	it("finds ch:v with suffix 1:3a", () => {
+		const spans = findStandaloneRefSpans("as in 1:3a and 2:4");
+		expect(spans).toContainEqual({ start: 6, end: 10, refText: "1:3a" });
+		expect(spans).toContainEqual({ start: 15, end: 18, refText: "2:4" });
+	});
+
+	it("rejects page 1", () => {
+		const spans = findStandaloneRefSpans("see page 1 for details");
+		expect(spans).toEqual([]);
+	});
+
+	it("rejects chapter 2", () => {
+		const spans = findStandaloneRefSpans("as in chapter 2");
+		expect(spans).toEqual([]);
+	});
+
+	it("finds verse range 1:2-4", () => {
+		const spans = findStandaloneRefSpans("verses 1:2-4 show");
+		expect(spans).toEqual([{ start: 7, end: 12, refText: "1:2-4" }]);
+	});
+
+	it("finds ch.v format", () => {
+		const spans = findStandaloneRefSpans("in 1.2 we see");
+		expect(spans).toEqual([{ start: 3, end: 6, refText: "1.2" }]);
+	});
+
+	it("dedupes overlapping matches", () => {
+		const spans = findStandaloneRefSpans("1:20-2:4");
+		expect(spans.length).toBe(1);
+		expect(spans[0].refText).toBe("1:20-2:4");
+	});
+
+	it("finds verse list 27:1-8, 9-14", () => {
+		const spans = findStandaloneRefSpans("(27:1-8, 9-14)");
+		expect(spans.length).toBe(1);
+		expect(spans[0].refText).toBe("27:1-8, 9-14");
+	});
+
+	it("accepts ch 1-2 and vv. 1-3 when includeChapterAndRange", () => {
+		const spans1 = findStandaloneRefSpans("see ch 1-2 for context", {
+			includeChapterAndRange: true,
+		});
+		expect(spans1).toContainEqual({ start: 7, end: 10, refText: "1-2" });
+
+		const spans2 = findStandaloneRefSpans("vv. 1-3; 5", {
+			includeChapterAndRange: true,
+		});
+		expect(spans2).toContainEqual({ start: 4, end: 7, refText: "1-3" });
+	});
+
+	it("rejects page 1 and chapter 2 when includeChapterAndRange", () => {
+		const spans1 = findStandaloneRefSpans("see page 1 for details", {
+			includeChapterAndRange: true,
+		});
+		expect(spans1).toEqual([]);
+
+		const spans2 = findStandaloneRefSpans("as in chapter 2", {
+			includeChapterAndRange: true,
+		});
+		expect(spans2).toEqual([]);
 	});
 });

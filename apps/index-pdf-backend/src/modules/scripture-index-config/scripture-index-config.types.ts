@@ -14,6 +14,7 @@ export const upsertScriptureConfigSchema = z.object({
 	includeClassicalWritings: z.boolean(),
 	includeChristianWritings: z.boolean(),
 	includeDeadSeaScrolls: z.boolean(),
+	alwaysDisplayUnknownEntry: z.boolean().default(false),
 	extraBookKeys: z.array(z.string()).default([]),
 });
 
@@ -31,6 +32,7 @@ export type ScriptureIndexConfig = {
 	includeClassicalWritings: boolean;
 	includeChristianWritings: boolean;
 	includeDeadSeaScrolls: boolean;
+	alwaysDisplayUnknownEntry: boolean;
 	extraBookKeys: string[];
 	createdAt: string;
 	updatedAt: string | null;

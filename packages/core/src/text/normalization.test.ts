@@ -16,6 +16,8 @@ describe("normalize", () => {
 		expect(normalize("Gen\u2013esis")).toBe("gen-esis"); // en dash
 		expect(normalize("Gen\u2014esis")).toBe("gen-esis"); // em dash
 		expect(normalize("Gen\u2212esis")).toBe("gen-esis"); // minus sign
+		expect(normalize("6:5\u058A9")).toBe("6:5-9"); // Armenian hyphen
+		expect(normalize("6:5\u2E3A9")).toBe("6:5-9"); // two-em dash
 	});
 
 	it("collapses whitespace runs to single space", () => {

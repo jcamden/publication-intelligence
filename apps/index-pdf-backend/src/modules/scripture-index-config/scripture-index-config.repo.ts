@@ -19,6 +19,7 @@ function rowToConfig(row: {
 	includeClassicalWritings: boolean;
 	includeChristianWritings: boolean;
 	includeDeadSeaScrolls: boolean;
+	alwaysDisplayUnknownEntry: boolean;
 	extraBookKeys: string[] | null;
 	createdAt: Date;
 	updatedAt: Date | null;
@@ -33,6 +34,7 @@ function rowToConfig(row: {
 		includeClassicalWritings: row.includeClassicalWritings,
 		includeChristianWritings: row.includeChristianWritings,
 		includeDeadSeaScrolls: row.includeDeadSeaScrolls,
+		alwaysDisplayUnknownEntry: row.alwaysDisplayUnknownEntry,
 		extraBookKeys: row.extraBookKeys ?? [],
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
@@ -88,6 +90,7 @@ export async function upsertScriptureConfig({
 				includeClassicalWritings: input.includeClassicalWritings,
 				includeChristianWritings: input.includeChristianWritings,
 				includeDeadSeaScrolls: input.includeDeadSeaScrolls,
+				alwaysDisplayUnknownEntry: input.alwaysDisplayUnknownEntry,
 				extraBookKeys: input.extraBookKeys,
 				updatedAt: now,
 			};

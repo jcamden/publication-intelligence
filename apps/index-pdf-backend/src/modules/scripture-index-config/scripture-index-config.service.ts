@@ -123,6 +123,7 @@ export async function upsertScriptureConfig({
 								includeClassicalWritings: before.includeClassicalWritings,
 								includeChristianWritings: before.includeChristianWritings,
 								includeDeadSeaScrolls: before.includeDeadSeaScrolls,
+								alwaysDisplayUnknownEntry: before.alwaysDisplayUnknownEntry,
 							}
 						: null,
 				after: {
@@ -132,6 +133,7 @@ export async function upsertScriptureConfig({
 					includeClassicalWritings: config.includeClassicalWritings,
 					includeChristianWritings: config.includeChristianWritings,
 					includeDeadSeaScrolls: config.includeDeadSeaScrolls,
+					alwaysDisplayUnknownEntry: config.alwaysDisplayUnknownEntry,
 				},
 			},
 		},
@@ -150,6 +152,7 @@ export async function upsertScriptureConfig({
 			includeClassicalWritings: config.includeClassicalWritings,
 			includeChristianWritings: config.includeChristianWritings,
 			includeDeadSeaScrolls: config.includeDeadSeaScrolls,
+			alwaysDisplayUnknownEntry: config.alwaysDisplayUnknownEntry,
 			updatedAt: config.updatedAt,
 		},
 		requestId,

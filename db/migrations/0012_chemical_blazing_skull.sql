@@ -1,0 +1,1 @@
+ALTER TABLE "scripture_index_configs" ADD COLUMN "always_display_unknown_entry" boolean DEFAULT false NOT NULL;

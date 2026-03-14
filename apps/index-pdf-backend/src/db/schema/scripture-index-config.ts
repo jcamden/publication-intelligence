@@ -41,6 +41,9 @@ export const scriptureIndexConfigs = pgTable(
 		includeDeadSeaScrolls: boolean("include_dead_sea_scrolls")
 			.default(false)
 			.notNull(),
+		alwaysDisplayUnknownEntry: boolean("always_display_unknown_entry")
+			.default(false)
+			.notNull(),
 		extraBookKeys: json("extra_book_keys").$type<string[]>().default([]),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()

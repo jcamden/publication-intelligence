@@ -4,7 +4,27 @@
  * Window is assumed normalized (lowercase, collapsed whitespace, dash normalized).
  */
 
+import { normalize } from "../text/normalization";
 import type { ParsedRefSegment } from "./parser-profile.types";
+
+/** Result of scanning for standalone ref spans (no book prefix). */
+export type StandaloneRefSpan = {
+	start: number;
+	end: number;
+	refText: string;
+};
+
+/**
+ * Ref-like patterns for standalone detection. Only formats that clearly indicate
+ * scripture (ch:v, ch:v-v, cross-chapter, verse lists). Excludes chapter-only and
+ * chapter-range to avoid false positives (e.g. "page 1", "chapter 2").
+ */
+const STANDALONE_REF_PATTERNS = [
+	/\d+:\d+[a-z]?-\d+:\d+[a-z]?/gi, // cross-chapter: 1:20-2:4
+	/\d+[.:]\d+[a-z]?(-\d+[a-z]?)?(\s*,\s*\d+([a-z])?(-\d+[a-z]?)?)+/gi, // verse list: 27:1-8, 9-14
+	/\d+[.:]\d+[a-z]?-\d+[a-z]?/gi, // verse range: 1:2-4
+	/\d+[.:]\d+[a-z]?/g, // ch:v or ch.v: 4:35, 1.2
+];
 
 const SCRIPTURE_PROFILE_ID = "scripture-biblical";
 
@@ -209,6 +229,15 @@ function parseBlock(block: string): ParsedRefSegment[] {
 	return [];
 }
 
+/** True if block starts with a book-like word (new book context); stop parsing there. */
+function blockStartsWithBookName(block: string): boolean {
+	const t = block.trim();
+	if (t.length === 0) return false;
+	// Starts with letters (possibly with dots) before any digit = book name
+	const beforeDigit = t.match(/^\s*([a-z.]+)/i);
+	return Boolean(beforeDigit && beforeDigit[1].length > 1);
+}
+
 function parseLocalWindow(localWindow: string): ParsedRefSegment[] {
 	const trimmed = localWindow.trim();
 	if (trimmed.length === 0) return [];
@@ -220,7 +249,6 @@ function parseLocalWindow(localWindow: string): ParsedRefSegment[] {
 		if (!hasDigit) return [{ refText: "" }]; // book-only
 		return []; // invalid prefix
 	}
-	if (!looksLikeRef(ref)) return [];
 
 	const blocks = ref
 		.split(";")
@@ -228,7 +256,11 @@ function parseLocalWindow(localWindow: string): ParsedRefSegment[] {
 		.filter(Boolean);
 	const segments: ParsedRefSegment[] = [];
 	for (const block of blocks) {
-		segments.push(...parseBlock(block));
+		// Strip leading "and " so "and 6:1" parses as "6:1" (e.g. "Deut 1:5; 4:44; and 6:1")
+		const blockWithoutAnd = block.replace(/^and\s+/i, "").trim();
+		if (blockStartsWithBookName(blockWithoutAnd)) break; // new book, stop
+		if (!looksLikeRef(blockWithoutAnd)) break; // non-ref content, stop
+		segments.push(...parseBlock(blockWithoutAnd));
 	}
 	return segments;
 }
@@ -242,3 +274,114 @@ export const scriptureParserProfile = {
 	contextPrecheck,
 	parse: parseLocalWindow,
 } as const;
+
+/** Scripture-indicating keywords: accept chapter-only/range when preceded by these (e.g. "ch 1-2", "vv. 1-3"). */
+const SCRIPTURE_PRECEDING_WORDS = new Set([
+	"ch",
+	"ch.",
+	"verse",
+	"verses",
+	"v",
+	"v.",
+	"vv",
+	"vv.",
+]);
+
+/** Non-scripture keywords: reject chapter-only/range when preceded by these (e.g. "page 1", "no. 5"). */
+const NON_SCRIPTURE_PRECEDING_WORDS = new Set([
+	"page",
+	"pages",
+	"pp",
+	"pp.",
+	"p",
+	"p.",
+	"no",
+	"number",
+	"num",
+	"n",
+	"n.",
+	"chapter",
+]);
+
+function precedingWord(text: string, position: number): string | null {
+	if (position <= 0) return null;
+	let end = position;
+	while (end > 0 && /\s/.test(text[end - 1])) end--;
+	if (end <= 0) return null;
+	let start = end;
+	while (start > 0 && /[\p{L}\p{N}.]/u.test(text[start - 1])) start--;
+	const word = text.slice(start, end).toLowerCase();
+	return word.length > 0 ? word : null;
+}
+
+export type FindStandaloneRefSpansOptions = {
+	/** Include chapter-only and chapter-range (for alias window; use REJECT_PRECEDING_WORDS to filter) */
+	includeChapterAndRange?: boolean;
+};
+
+/**
+ * Find standalone ref spans in text (refs without a preceding book name).
+ * Used for contextual scripture detection: "Daniel... in 4:35" where "4:35" is implied Daniel 4:35.
+ */
+export function findStandaloneRefSpans(
+	text: string,
+	options: FindStandaloneRefSpansOptions = {},
+): StandaloneRefSpan[] {
+	const results: StandaloneRefSpan[] = [];
+	const seen = new Set<string>();
+	const patterns = options.includeChapterAndRange
+		? [
+				...STANDALONE_REF_PATTERNS,
+				/\d+-\d+/g, // chapter range: 13-14
+				/\b\d+\b/g, // chapter only: 18
+			]
+		: STANDALONE_REF_PATTERNS;
+
+	for (const pattern of patterns) {
+		pattern.lastIndex = 0;
+		let m = pattern.exec(text);
+		while (m !== null) {
+			const start = m.index;
+			const end = start + m[0].length;
+			const key = `${start}-${end}`;
+			m = pattern.exec(text); // advance before continue to avoid infinite loop
+			if (seen.has(key)) continue;
+			seen.add(key);
+
+			const refText = text.slice(start, end);
+			// Chapter-only/range: accept only when preceded by scripture keywords; reject non-scripture or unknown.
+			if (
+				options.includeChapterAndRange &&
+				(/^\d+$/.test(refText.trim()) || /^\d+-\d+$/.test(refText.trim()))
+			) {
+				const word = precedingWord(text, start);
+				if (word) {
+					if (NON_SCRIPTURE_PRECEDING_WORDS.has(word)) continue;
+					if (!SCRIPTURE_PRECEDING_WORDS.has(word)) continue; // unknown word → reject
+				}
+			}
+			const normalized = normalize(refText);
+			const segments = parseLocalWindow(normalized);
+			if (segments.length === 0) continue;
+			// Reject book-only (refText empty)
+			if (segments.length === 1 && segments[0].refText === "") continue;
+
+			results.push({ start, end, refText });
+		}
+	}
+
+	// Sort by start, then by length desc (longer first)
+	results.sort((a, b) => {
+		if (a.start !== b.start) return a.start - b.start;
+		return b.end - b.start - (a.end - a.start);
+	});
+
+	// Dedupe overlapping: keep longer span
+	const deduped: StandaloneRefSpan[] = [];
+	for (const r of results) {
+		const overlaps = deduped.some((d) => r.start < d.end && r.end > d.start);
+		if (!overlaps) deduped.push(r);
+	}
+
+	return deduped;
+}

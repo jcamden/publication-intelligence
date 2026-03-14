@@ -5,6 +5,7 @@
 - Ignore excluded regions during detection runs for both matcher-based and LLM-based pipelines.
 - Determine exclusion by fuzzy bounding-box comparison using the existing bbox utilities.
 - Move matcher detection into a modal triggered by a button.
+- Change ignore region highlight color from red to a more opaque white.
 
 ### Index Page
 
@@ -35,6 +36,9 @@
 
 - Fix the "PDF not found" error when navigating to the Editor too quickly after creating a project.
 - Remove or fix index types in the create/edit project modal.
+- Fix editor showing locally cached data for a deleted project when opening a different project with the same name.
+  - Delete project-specific localStorage when deleting a project.
+  - Consider clearing stale localStorage by project ID when projects load.
 
 ### Mention Geometry
 

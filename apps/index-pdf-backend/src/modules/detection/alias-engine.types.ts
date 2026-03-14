@@ -17,6 +17,8 @@ export type AliasMeta = {
 	entryId: string;
 	indexType: string;
 	groupId: string;
+	/** Original alias text (for case check: uppercase matcher rejects lowercase text) */
+	originalAlias: string;
 };
 
 /** One normalized alias can map to multiple matchers (e.g. same text in different groups). */

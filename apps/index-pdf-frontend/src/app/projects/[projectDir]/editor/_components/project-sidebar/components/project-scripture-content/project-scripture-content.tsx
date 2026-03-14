@@ -88,7 +88,7 @@ export const ProjectScriptureContent = () => {
 	}, [backendEntries, crossReferencesQueries]);
 
 	// Convert backend entries to frontend format (add indexType field and cross references)
-	const entries = backendEntries.map((e) => ({
+	const allEntries = backendEntries.map((e) => ({
 		...e,
 		indexType: "scripture" as const,
 		projectId: projectId || undefined,
@@ -100,6 +100,15 @@ export const ProjectScriptureContent = () => {
 		},
 		crossReferences: allCrossReferences.get(e.id) || [],
 	}));
+
+	// Fetch scripture config (for alwaysDisplayUnknownEntry and entry filtering)
+	const { data: scriptureConfig } = trpc.scriptureIndexConfig.get.useQuery(
+		{
+			projectId: projectId || "",
+			projectIndexTypeId: scriptureProjectIndexTypeId ?? "",
+		},
+		{ enabled: !!projectId && !!scriptureProjectIndexTypeId },
+	);
 
 	// Fetch groups for this index type
 	const { data: groups = [] } = trpc.detection.listIndexEntryGroups.useQuery(
@@ -133,6 +142,19 @@ export const ProjectScriptureContent = () => {
 		type: m.mentionType as "text" | "region",
 		createdAt: new Date(m.createdAt),
 	}));
+
+	// Filter entries for EntryTree: include Unknown only if it has mentions OR alwaysDisplayUnknownEntry
+	const unknownEntry = allEntries.find((e) => e.slug === "unknown");
+	const unknownHasMentions =
+		unknownEntry != null &&
+		allMentions.some((m) => m.entryId === unknownEntry.id);
+	const showUnknown =
+		unknownEntry != null &&
+		(unknownHasMentions ||
+			(scriptureConfig?.alwaysDisplayUnknownEntry ?? false));
+	const entries = showUnknown
+		? allEntries
+		: allEntries.filter((e) => e.slug !== "unknown");
 
 	// Persist color changes to backend
 	usePersistColorChange({
@@ -272,6 +294,8 @@ export const ProjectScriptureContent = () => {
 						open={settingsModalOpen}
 						onClose={() => setSettingsModalOpen(false)}
 						indexType="scripture"
+						projectId={projectId}
+						projectIndexTypeId={scriptureProjectIndexTypeId}
 					/>
 				</div>
 			)}

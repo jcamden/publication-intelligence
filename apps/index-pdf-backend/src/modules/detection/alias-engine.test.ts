@@ -386,7 +386,12 @@ describe("findAndResolveMatches", () => {
 			mapNormalizedSpanToOriginalSpan,
 			mapNormalizedIndexToOriginalIndex,
 		};
-		const matches = findAndResolveMatches(normalizedText, offsetMap, index);
+		const matches = findAndResolveMatches(
+			normalizedText,
+			offsetMap,
+			index,
+			text,
+		);
 		expect(matches).toHaveLength(1);
 		// Normalized " gen-1" (leading spaces collapsed): "gen" at normalized 1..4
 		expect(matches[0].normalizedStart).toBe(1);
@@ -396,5 +401,59 @@ describe("findAndResolveMatches", () => {
 		expect(text.slice(matches[0].originalStart, matches[0].originalEnd)).toBe(
 			"Gen",
 		);
+	});
+
+	it("rejects uppercase matcher when text starts lowercase (revelation vs Revelation)", () => {
+		const input = aliases([
+			{
+				alias: "Revelation",
+				matcherId: "m1",
+				entryId: "e1",
+				indexType: "scripture",
+				groupId: "g1",
+			},
+		]);
+		const index = buildAliasIndex(input);
+		const text = "the book of revelation";
+		const { normalizedText, ...offsetMap } = normalizeWithOffsetMap(text);
+		const matches = findAndResolveMatches(
+			normalizedText,
+			{ normalizedText, ...offsetMap },
+			index,
+			text,
+		);
+		expect(matches).toHaveLength(0);
+	});
+
+	it("accepts uppercase matcher when text starts uppercase", () => {
+		const input = aliases([
+			{
+				alias: "Revelation",
+				matcherId: "m1",
+				entryId: "e1",
+				indexType: "scripture",
+				groupId: "g1",
+			},
+		]);
+		const index = buildAliasIndex(input);
+		const text = "the book of Revelation";
+		const matches = scanTextWithAliasIndex(text, index);
+		expect(matches).toHaveLength(1);
+	});
+
+	it("lowercase matcher accepts any case (m. Aboth)", () => {
+		const input = aliases([
+			{
+				alias: "m. Aboth.",
+				matcherId: "m1",
+				entryId: "e1",
+				indexType: "scripture",
+				groupId: "g1",
+			},
+		]);
+		const index = buildAliasIndex(input);
+		const text = "as in m. aboth.";
+		const matches = scanTextWithAliasIndex(text, index);
+		expect(matches).toHaveLength(1);
 	});
 });

@@ -9,6 +9,7 @@ import {
 	getIndexTypeConfig,
 	type IndexType,
 } from "../../db/schema/index-type-config";
+import { ensureUnknownEntryExistsInTx } from "../scripture-bootstrap/scripture-bootstrap.repo";
 import type {
 	AvailableHighlightType,
 	AvailableIndexType,
@@ -223,6 +224,15 @@ export const enableProjectHighlightConfig = async ({
 
 			if (!config) {
 				throw new Error("Failed to enable project highlight config");
+			}
+
+			// Create Unknown entry when scripture index type is enabled (idempotent)
+			if (input.highlightType === "scripture") {
+				await ensureUnknownEntryExistsInTx({
+					tx,
+					projectId: input.projectId,
+					projectIndexTypeId: config.id,
+				});
 			}
 
 			// Return the full config with metadata
