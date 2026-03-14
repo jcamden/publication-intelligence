@@ -71,6 +71,13 @@
 			"when": 1773441110073,
 			"tag": "0009_real_shiva",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1773497569043,
+			"tag": "0010_spicy_mister_fear",
+			"breakpoints": true
 		}
 	]
 }

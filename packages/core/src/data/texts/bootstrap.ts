@@ -122,10 +122,13 @@ export function getExtraBookKeysOptions(
 	return Object.keys(all)
 		.filter((key) => !canonKeys.has(key))
 		.sort((a, b) => a.localeCompare(b))
-		.map((key) => ({
-			key,
-			label: getBookLabel(key, displayCanonId) || key,
-		}));
+		.map((key) => {
+			const traditionLabel = getBookLabel(key, displayCanonId);
+			// Use tradition-specific label when available; otherwise use first matcher (canonical form)
+			const label =
+				traditionLabel !== key ? traditionLabel : (all[key]?.[0] ?? key);
+			return { key, label };
+		});
 }
 
 /** Matchers for a single book key (HB, NT, deuterocanon, or apocrypha other). Used for extra_book_keys. */

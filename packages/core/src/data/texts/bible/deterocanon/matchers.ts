@@ -200,9 +200,9 @@ export const getDeuterocanonMatchers = ({
 	],
 
 	secondesdras: [
+		"2 Esdras",
 		"2 Esd.",
 		"2 Esd",
-		"2 Esdras",
 		"4 Esdrae",
 		"4 Esdras",
 		"4 Ezra",

@@ -170,6 +170,7 @@ export async function findOrCreateGroup({
 	slug,
 	name,
 	parserProfileId,
+	sortMode,
 	seedRunId,
 	forceRefreshFromSource,
 }: {
@@ -179,6 +180,8 @@ export async function findOrCreateGroup({
 	slug: string;
 	name: string;
 	parserProfileId?: string | null;
+	/** Canon sort mode for scripture groups (e.g. protestant); omit for non-canon groups */
+	sortMode?: "protestant" | "roman_catholic" | "tanakh" | "eastern_orthodox";
 	seedRunId?: string | null;
 	forceRefreshFromSource?: boolean;
 }): Promise<{ groupId: string; created: boolean }> {
@@ -196,6 +199,7 @@ export async function findOrCreateGroup({
 				input: {
 					name,
 					...(parserProfileId !== undefined && { parserProfileId }),
+					...(sortMode !== undefined && { sortMode }),
 				},
 			});
 		}
@@ -209,7 +213,7 @@ export async function findOrCreateGroup({
 			name,
 			slug,
 			parserProfileId: parserProfileId ?? null,
-			sortMode: "canon_book_order",
+			sortMode: sortMode ?? "a_z",
 			...(seedRunId && {
 				seedSource: SEED_SOURCE_SCRIPTURE_BOOTSTRAP,
 				seededAt: new Date(),

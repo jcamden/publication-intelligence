@@ -13,6 +13,16 @@ import type { AliasInput } from "./alias-engine.types";
 // Types
 // ============================================================================
 
+/** Sort mode from DB enum (includes canon-specific values for scripture groups). */
+export type IndexEntryGroupSortMode =
+	| "a_z"
+	| "canon_book_order"
+	| "custom"
+	| "protestant"
+	| "roman_catholic"
+	| "tanakh"
+	| "eastern_orthodox";
+
 export type IndexEntryGroupListItem = {
 	id: string;
 	projectId: string;
@@ -20,7 +30,7 @@ export type IndexEntryGroupListItem = {
 	name: string;
 	slug: string;
 	parserProfileId: string | null;
-	sortMode: "a_z" | "canon_book_order" | "custom";
+	sortMode: IndexEntryGroupSortMode;
 	position: number | null;
 	createdAt: Date;
 	updatedAt: Date | null;
@@ -42,7 +52,7 @@ export type CreateIndexEntryGroupInput = {
 	name: string;
 	slug: string;
 	parserProfileId?: string | null;
-	sortMode?: "a_z" | "canon_book_order" | "custom";
+	sortMode?: IndexEntryGroupSortMode;
 	/** Seed provenance (audit only; does not gate edits) */
 	seedSource?: string | null;
 	seededAt?: Date | null;
@@ -53,7 +63,7 @@ export type UpdateIndexEntryGroupInput = {
 	name?: string;
 	slug?: string;
 	parserProfileId?: string | null;
-	sortMode?: "a_z" | "canon_book_order" | "custom";
+	sortMode?: IndexEntryGroupSortMode;
 };
 
 // ============================================================================
@@ -111,7 +121,7 @@ export const listGroups = async ({
 				name: r.name,
 				slug: r.slug,
 				parserProfileId: r.parserProfileId,
-				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
+				sortMode: r.sortMode as IndexEntryGroupSortMode,
 				position: r.position,
 				createdAt: r.createdAt,
 				updatedAt: r.updatedAt,
@@ -187,7 +197,7 @@ export const listGroupsWithMeta = async ({
 				name: r.name,
 				slug: r.slug,
 				parserProfileId: r.parserProfileId,
-				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
+				sortMode: r.sortMode as IndexEntryGroupSortMode,
 				position: r.position,
 				createdAt: r.createdAt,
 				updatedAt: r.updatedAt,
@@ -236,7 +246,7 @@ export const getGroup = async ({
 				name: row.name,
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
-				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
+				sortMode: row.sortMode as IndexEntryGroupSortMode,
 				position: row.position,
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
@@ -397,7 +407,7 @@ export const getGroupMatcherSnapshot = async ({
 export type IndexEntryGroupRunMeta = {
 	id: string;
 	parserProfileId: string | null;
-	sortMode: "a_z" | "canon_book_order" | "custom";
+	sortMode: IndexEntryGroupSortMode;
 };
 
 /**
@@ -442,7 +452,7 @@ export const listGroupsByIds = async ({
 			return rows.map((r) => ({
 				id: r.id,
 				parserProfileId: r.parserProfileId,
-				sortMode: r.sortMode as "a_z" | "canon_book_order" | "custom",
+				sortMode: r.sortMode as IndexEntryGroupSortMode,
 			}));
 		},
 	});
@@ -699,7 +709,7 @@ export const createGroup = async ({
 				name: row.name,
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
-				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
+				sortMode: row.sortMode as IndexEntryGroupSortMode,
 				position: row.position,
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
@@ -783,7 +793,7 @@ export const updateGroup = async ({
 				name: row.name,
 				slug: row.slug,
 				parserProfileId: row.parserProfileId,
-				sortMode: row.sortMode as "a_z" | "canon_book_order" | "custom",
+				sortMode: row.sortMode as IndexEntryGroupSortMode,
 				position: row.position,
 				createdAt: row.createdAt,
 				updatedAt: row.updatedAt,
@@ -985,6 +995,29 @@ export const mergeGroups = async ({
 				.update(indexEntryGroups)
 				.set({ deletedAt: new Date(), updatedAt: new Date() })
 				.where(eq(indexEntryGroups.id, sourceGroupId));
+		},
+	});
+};
+
+/**
+ * Get entry IDs that belong to a group (root entries in index_entry_group_entries).
+ * Used when deleteEntries=true to know which entries to delete.
+ */
+export const getGroupEntryIds = async ({
+	userId,
+	groupId,
+}: {
+	userId: string;
+	groupId: string;
+}): Promise<string[]> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({ entryId: indexEntryGroupEntries.entryId })
+				.from(indexEntryGroupEntries)
+				.where(eq(indexEntryGroupEntries.groupId, groupId));
+			return rows.map((r) => r.entryId);
 		},
 	});
 };

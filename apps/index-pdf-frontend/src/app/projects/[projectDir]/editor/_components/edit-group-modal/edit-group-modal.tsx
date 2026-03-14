@@ -1,6 +1,6 @@
 "use client";
 
-import { getParserProfileIds } from "@pubint/core";
+import { CANON_LABELS, getParserProfileIds } from "@pubint/core";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -32,11 +32,30 @@ import type { IndexEntry } from "../../_types/index-entry";
 import { getEntryDisplayLabel } from "../../_utils/index-entry-utils";
 import { EntryPicker } from "../entry-picker/entry-picker";
 
-const SORT_MODES = [
+const SORT_MODES_BASE = [
 	{ value: "a_z", label: "A–Z" },
-	{ value: "canon_book_order", label: "Canon (book order)" },
 	{ value: "custom", label: "Custom (drag to reorder)" },
 ] as const;
+
+const SORT_MODES_SCRIPTURE = [
+	{ value: "a_z", label: "A–Z" },
+	{ value: "protestant", label: `${CANON_LABELS.protestant} Canon` },
+	{ value: "roman_catholic", label: `${CANON_LABELS.roman_catholic} Canon` },
+	{ value: "tanakh", label: CANON_LABELS.tanakh },
+	{
+		value: "eastern_orthodox",
+		label: `${CANON_LABELS.eastern_orthodox} Canon`,
+	},
+	{ value: "custom", label: "Custom (drag to reorder)" },
+] as const;
+
+type SortModeValue =
+	| "a_z"
+	| "custom"
+	| "protestant"
+	| "roman_catholic"
+	| "tanakh"
+	| "eastern_orthodox";
 
 const slugFromName = (name: string): string =>
 	name
@@ -52,6 +71,8 @@ export type EditGroupModalProps = {
 	groupId: string | null;
 	projectId: string;
 	projectIndexTypeId: string;
+	/** When "scripture", shows canon-specific sort options (Protestant, Catholic, etc.). */
+	indexType: "subject" | "author" | "scripture";
 	existingEntries: IndexEntry[];
 };
 
@@ -61,6 +82,7 @@ export const EditGroupModal = ({
 	groupId,
 	projectId,
 	projectIndexTypeId,
+	indexType,
 	existingEntries,
 }: EditGroupModalProps) => {
 	const isCreateMode = groupId === null;
@@ -158,11 +180,14 @@ export const EditGroupModal = ({
 		},
 	});
 
+	const sortModes =
+		indexType === "scripture" ? SORT_MODES_SCRIPTURE : SORT_MODES_BASE;
+
 	const form = useForm({
 		defaultValues: {
 			name: "",
 			slug: "",
-			sortMode: "a_z" as "a_z" | "canon_book_order" | "custom",
+			sortMode: "a_z" as SortModeValue,
 			parserProfileId: null as string | null,
 		},
 		onSubmit: async ({ value }) => {
@@ -284,12 +309,18 @@ export const EditGroupModal = ({
 			} else if (group) {
 				form.setFieldValue("name", group.name);
 				form.setFieldValue("slug", group.slug);
-				form.setFieldValue("sortMode", group.sortMode);
+				// Legacy canon_book_order → protestant for display
+				const sortMode =
+					group.sortMode === "canon_book_order" ? "protestant" : group.sortMode;
+				form.setFieldValue(
+					"sortMode",
+					sortModes.some((m) => m.value === sortMode) ? sortMode : "a_z",
+				);
 				form.setFieldValue("parserProfileId", group.parserProfileId ?? null);
 				setLocalMemberEntryIds(group.entries?.map((e) => e.entryId) ?? []);
 			}
 		}
-	}, [open, isCreateMode, group, form]);
+	}, [open, isCreateMode, group, form, sortModes]);
 
 	const handleCancel = useCallback(() => {
 		form.reset();
@@ -410,30 +441,33 @@ export const EditGroupModal = ({
 							</form.Field>
 
 							<form.Field name="sortMode">
-								{(field) => (
-									<Field>
-										<FieldLabel>Sort mode</FieldLabel>
-										<Select
-											value={field.state.value}
-											onValueChange={(v) =>
-												field.handleChange(
-													v as "a_z" | "canon_book_order" | "custom",
-												)
-											}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{SORT_MODES.map((m) => (
-													<SelectItem key={m.value} value={m.value}>
-														{m.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</Field>
-								)}
+								{(field) => {
+									const selectedLabel =
+										sortModes.find((m) => m.value === field.state.value)
+											?.label ?? field.state.value;
+									return (
+										<Field>
+											<FieldLabel>Sort mode</FieldLabel>
+											<Select
+												value={field.state.value}
+												onValueChange={(v) =>
+													field.handleChange(v as SortModeValue)
+												}
+											>
+												<SelectTrigger className="w-full">
+													<SelectValue>{selectedLabel}</SelectValue>
+												</SelectTrigger>
+												<SelectContent>
+													{sortModes.map((m) => (
+														<SelectItem key={m.value} value={m.value}>
+															{m.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</Field>
+									);
+								}}
 							</form.Field>
 
 							<form.Field name="parserProfileId">

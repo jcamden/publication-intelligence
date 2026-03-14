@@ -45,3 +45,14 @@ export function getCanonBookKeys(canonId: CanonId): readonly string[] {
 export function isValidCanonId(value: string): value is CanonId {
 	return CANON_IDS.includes(value as CanonId);
 }
+
+/**
+ * Display name for a canon group when bootstrapping from a canon.
+ * Tanakh is shown as "Tanakh" only; other canons use "{label} Canon".
+ */
+export function getCanonGroupDisplayName(canonId: CanonId): string {
+	if (canonId === "tanakh") {
+		return "Tanakh";
+	}
+	return `${CANON_LABELS[canonId]} Canon`;
+}

@@ -294,6 +294,7 @@ export const ProjectSubjectContent = () => {
 							groupId={groupModalState === "create" ? null : groupModalState}
 							projectId={projectId}
 							projectIndexTypeId={subjectProjectIndexTypeId}
+							indexType="subject"
 							existingEntries={entries}
 						/>
 					)}

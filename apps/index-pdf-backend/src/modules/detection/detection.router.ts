@@ -1,4 +1,6 @@
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../../trpc";
+import * as indexEntryService from "../index-entry/index-entry.service";
 import * as detectionService from "./detection.service";
 import {
 	AddEntryToGroupSchema,
@@ -109,6 +111,34 @@ export const detectionRouter = router({
 	deleteIndexEntryGroup: protectedProcedure
 		.input(DeleteIndexEntryGroupSchema)
 		.mutation(async ({ ctx, input }) => {
+			if (input.deleteEntries) {
+				const group = await indexEntryGroupRepo.getGroup({
+					userId: ctx.user.id,
+					groupId: input.groupId,
+				});
+				if (!group) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Group not found",
+					});
+				}
+				const entryIds = await indexEntryGroupRepo.getGroupEntryIds({
+					userId: ctx.user.id,
+					groupId: input.groupId,
+				});
+				for (const entryId of entryIds) {
+					await indexEntryService.deleteIndexEntry({
+						input: {
+							id: entryId,
+							projectId: group.projectId,
+							projectIndexTypeId: group.projectIndexTypeId,
+							cascadeToChildren: true,
+						},
+						userId: ctx.user.id,
+						requestId: ctx.requestId,
+					});
+				}
+			}
 			return await indexEntryGroupRepo.deleteGroup({
 				userId: ctx.user.id,
 				groupId: input.groupId,

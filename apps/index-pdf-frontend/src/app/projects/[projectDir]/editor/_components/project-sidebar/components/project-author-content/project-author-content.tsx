@@ -292,6 +292,7 @@ export const ProjectAuthorContent = () => {
 							groupId={groupModalState === "create" ? null : groupModalState}
 							projectId={projectId}
 							projectIndexTypeId={authorProjectIndexTypeId}
+							indexType="author"
 							existingEntries={entries}
 						/>
 					)}

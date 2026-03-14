@@ -7,6 +7,7 @@ import {
 	getBootstrapDeadSeaScrollsMatchers,
 	getBootstrapJewishWritingsMatchers,
 	getCanonBookKeys,
+	getCanonGroupDisplayName,
 	getMatchersForExtraBookKey,
 	normalize,
 	slugifyBootstrapKey,
@@ -14,11 +15,18 @@ import {
 import { TRPCError } from "@trpc/server";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
-import * as scriptureIndexConfigRepo from "../scripture-index-config/scripture-index-config.repo";
-import type {
-	CanonId,
-	ScriptureIndexConfig,
-} from "../scripture-index-config/scripture-index-config.types";
+import type { CanonId } from "../scripture-index-config/scripture-index-config.types";
+
+type AddEntriesConfig = {
+	selectedCanon: CanonId | null;
+	includeApocrypha: boolean;
+	includeJewishWritings: boolean;
+	includeClassicalWritings: boolean;
+	includeChristianWritings: boolean;
+	includeDeadSeaScrolls: boolean;
+	extraBookKeys: string[];
+};
+
 import type { BootstrapCounts } from "./scripture-bootstrap.repo";
 import {
 	BOOTSTRAP_GROUP_SLUGS,
@@ -31,7 +39,7 @@ import {
 	updateBootstrapRunCounts,
 } from "./scripture-bootstrap.repo";
 
-function configSnapshotHash(config: ScriptureIndexConfig): string {
+function configSnapshotHash(config: AddEntriesConfig): string {
 	const str = JSON.stringify({
 		selectedCanon: config.selectedCanon,
 		includeApocrypha: config.includeApocrypha,
@@ -52,45 +60,26 @@ function configSnapshotHash(config: ScriptureIndexConfig): string {
 
 /**
  * Run scripture bootstrap: seed entries/matchers/groups from config.
+ * Config is passed from the frontend form; not persisted.
  * Fails fast when selected_canon is missing. Idempotent for same config.
  * Re-bootstrap reuses rows by stable keys and preserves user edits unless forceRefreshFromSource is true.
  */
 export async function run({
 	projectId,
 	projectIndexTypeId,
+	config,
 	userId,
 	requestId,
 	forceRefreshFromSource = false,
 }: {
 	projectId: string;
 	projectIndexTypeId: string;
+	config: AddEntriesConfig;
 	userId: string;
 	requestId: string;
 	/** When true, overwrite labels/group names from source; default false preserves user edits */
 	forceRefreshFromSource?: boolean;
 }): Promise<BootstrapCounts> {
-	const config = await scriptureIndexConfigRepo.getScriptureConfig({
-		projectId,
-		projectIndexTypeId,
-		userId,
-	});
-
-	if (!config) {
-		logEvent({
-			event: "scripture_bootstrap.config_missing",
-			context: {
-				requestId,
-				userId,
-				metadata: { projectId, projectIndexTypeId },
-			},
-		});
-		throw new TRPCError({
-			code: "BAD_REQUEST",
-			message:
-				"Scripture index config not found. Save canon and corpus options first.",
-		});
-	}
-
 	if (!config.selectedCanon) {
 		logEvent({
 			event: "scripture_bootstrap.rejected_no_canon",
@@ -128,14 +117,16 @@ export async function run({
 	// 1) Canon books
 	const canonBookKeys = getCanonBookKeys(canonId);
 	const canonMatchers = getBootstrapCanonMatchers(canonId);
+	const canonGroupName = getCanonGroupDisplayName(canonId);
 	const { groupId: canonGroupId, created: canonGroupCreated } =
 		await findOrCreateGroup({
 			userId,
 			projectId,
 			projectIndexTypeId,
 			slug: BOOTSTRAP_GROUP_SLUGS[0].slug,
-			name: BOOTSTRAP_GROUP_SLUGS[0].name,
+			name: canonGroupName,
 			parserProfileId: "scripture-biblical",
+			sortMode: canonId,
 			seedRunId: runId,
 			forceRefreshFromSource,
 		});
@@ -203,7 +194,9 @@ export async function run({
 		entryPosition = 0;
 		for (const [key, aliases] of Object.entries(apocMatchers)) {
 			const slug = slugifyBootstrapKey(key);
-			const label = getBookLabel(key, canonId);
+			const traditionLabel = getBookLabel(key, canonId);
+			const label =
+				traditionLabel !== key ? traditionLabel : (aliases[0] ?? key);
 			const { entryId, created: entryCreated } = await findOrCreateEntry({
 				userId,
 				projectId,
@@ -364,14 +357,16 @@ export async function run({
 		for (let i = 0; i < extraKeys.length; i++) {
 			const bookKey = extraKeys[i];
 			const slug = slugifyBootstrapKey(bookKey);
-			const label = getBookLabel(bookKey, canonId);
+			const traditionLabel = getBookLabel(bookKey, canonId);
 			const aliases = getMatchersForExtraBookKey(bookKey);
+			const label =
+				traditionLabel !== bookKey ? traditionLabel : (aliases[0] ?? bookKey);
 			const { entryId, created: entryCreated } = await findOrCreateEntry({
 				userId,
 				projectId,
 				projectIndexTypeId,
 				slug,
-				label: label !== bookKey ? label : bookKey,
+				label,
 				seedRunId: runId,
 				forceRefreshFromSource,
 			});
@@ -458,7 +453,7 @@ async function seedCorpus(
 	let entryPosition = 0;
 	for (const [key, aliases] of Object.entries(matchers)) {
 		const slug = slugifyBootstrapKey(key);
-		const label = key;
+		const label = aliases[0] ?? key;
 		const { entryId, created: entryCreated } = await findOrCreateEntry({
 			userId,
 			projectId,

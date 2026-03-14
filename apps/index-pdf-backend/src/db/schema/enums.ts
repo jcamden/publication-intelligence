@@ -138,11 +138,17 @@ export const numeralTypeEnum = pgEnum("numeral_type", [
 ]);
 
 // Index entry group sort mode (UI/render and matcher snapshot ordering)
+// Canon values (protestant, roman_catholic, tanakh, eastern_orthodox) are scripture-specific;
+// canon_book_order is legacy, treated as protestant.
 export const indexEntryGroupSortModeEnum = pgEnum(
 	"index_entry_group_sort_mode",
 	[
 		"a_z", // Alphabetical A–Z
-		"canon_book_order", // Scripture canon order (e.g. Gen, Exod, …)
+		"canon_book_order", // Legacy; treat as protestant
 		"custom", // User-defined order via drag-to-reorder
+		"protestant", // Protestant canon order
+		"roman_catholic", // Roman Catholic canon order
+		"tanakh", // Tanakh order
+		"eastern_orthodox", // Eastern Orthodox canon order
 	],
 );

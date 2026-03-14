@@ -12,6 +12,8 @@ export type CrossReference = {
 export type IndexEntry = {
 	id: string;
 	indexType: "subject" | "author" | "scripture";
+	/** Stable identifier from backend; for scripture, often the book key (e.g. genesis, exodus). */
+	slug?: string;
 	label: string; // "Kant, Immanuel"
 	parentId: string | null; // For hierarchy within same index type
 	/** Group ID when entry is a root member of a group (root entries only). */

@@ -1,10 +1,12 @@
 "use client";
 
 import { StyledButton, StyledTextButton } from "@pubint/yaboujee";
-import { FolderOpen, Plus, ScanSearch, Settings } from "lucide-react";
+import { BookOpen, FolderOpen, Plus, ScanSearch, Settings } from "lucide-react";
 
 export type IndexEntryToolbarProps = {
 	onCreateEntry: () => void;
+	/** When provided, shows "Add Entries From Books" button to the left of Create Entry. */
+	onAddEntriesFromBooks?: () => void;
 	onCreateGroup?: () => void;
 	onMatcherDetection?: () => void;
 	onSettings: () => void;
@@ -18,6 +20,7 @@ export type IndexEntryToolbarProps = {
 
 export const IndexEntryToolbar = ({
 	onCreateEntry,
+	onAddEntriesFromBooks,
 	onCreateGroup,
 	onMatcherDetection,
 	onSettings,
@@ -43,6 +46,16 @@ export const IndexEntryToolbar = ({
 	return (
 		<div className="flex items-center justify-between">
 			<div className="flex items-center gap-2">
+				{onAddEntriesFromBooks && (
+					<StyledButton
+						icon={BookOpen}
+						label="Add Entries From Books"
+						tooltip="Add Entries From Books"
+						isActive={false}
+						onClick={onAddEntriesFromBooks}
+						className="!shadow-none"
+					/>
+				)}
 				<StyledButton
 					icon={Plus}
 					label="Create Entry"

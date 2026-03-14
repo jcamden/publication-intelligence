@@ -1,22 +1,19 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
-import {
-	resetMockScriptureConfig,
-	setMockScriptureConfig,
-	storybookQueryClient,
-} from "@/app/_common/_test-utils/storybook-utils/trpc-decorator";
-import { ScriptureSetupSection } from "../../../scripture-setup-section";
+import { AddEntriesFromBooksModal } from "../../../add-entries-from-books-modal";
 
-const meta: Meta<typeof ScriptureSetupSection> = {
+const meta: Meta<typeof AddEntriesFromBooksModal> = {
 	...defaultInteractionTestMeta,
 	title:
-		"Projects/[ProjectDir]/Editor/ProjectSidebar/ProjectScriptureContent/ScriptureSetupSection/tests/Interaction Tests",
-	component: ScriptureSetupSection,
+		"Projects/[ProjectDir]/Editor/ProjectSidebar/ProjectScriptureContent/AddEntriesFromBooksModal/tests/Interaction Tests",
+	component: AddEntriesFromBooksModal,
 	parameters: {
 		layout: "centered",
 	},
 	args: {
+		open: true,
+		onClose: () => {},
 		projectId: "mock-project-id",
 		projectIndexTypeId: "mock-pit-scripture-id",
 		onBootstrapSuccess: () => {},
@@ -33,28 +30,35 @@ const meta: Meta<typeof ScriptureSetupSection> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** Modal content renders in a portal; query within the dialog. */
+const getModalContent = () => {
+	const dialog = within(document.body).getByRole("dialog", {
+		name: /add entries from books/i,
+	});
+	return within(dialog);
+};
+
 /**
  * Bootstrap button is disabled when no canon selected.
  */
-export const BootstrapButtonDisabledWhenNoCanon: Story = {
-	play: async ({ canvasElement, step }) => {
-		resetMockScriptureConfig();
-		const canvas = within(canvasElement);
-
-		await step("Wait for section to load", async () => {
+export const AddEntriesButtonDisabledWhenNoCanon: Story = {
+	play: async ({ step }) => {
+		await step("Wait for modal to load", async () => {
 			await waitFor(
 				() => {
-					expect(canvas.getByLabelText("Select canon")).toBeInTheDocument();
+					const content = getModalContent();
+					expect(content.getByLabelText("Select canon")).toBeInTheDocument();
 				},
 				{ timeout: 3000 },
 			);
 		});
 
-		await step("Verify bootstrap button is disabled", async () => {
-			const bootstrapButton = canvas.getByRole("button", {
-				name: /bootstrap scripture data/i,
+		await step("Verify Add Entries button is disabled", async () => {
+			const content = getModalContent();
+			const addEntriesButton = content.getByRole("button", {
+				name: /add entries from books/i,
 			});
-			expect(bootstrapButton).toBeDisabled();
+			expect(addEntriesButton).toBeDisabled();
 		});
 	},
 };
@@ -63,21 +67,20 @@ export const BootstrapButtonDisabledWhenNoCanon: Story = {
  * Canon selection enables extra books and changes dirty state.
  */
 export const CanonSelectionEnablesExtraBooks: Story = {
-	play: async ({ canvasElement, step }) => {
-		resetMockScriptureConfig();
-		const canvas = within(canvasElement);
-
-		await step("Wait for section to load", async () => {
+	play: async ({ step }) => {
+		await step("Wait for modal to load", async () => {
 			await waitFor(
 				() => {
-					expect(canvas.getByLabelText("Select canon")).toBeInTheDocument();
+					const content = getModalContent();
+					expect(content.getByLabelText("Select canon")).toBeInTheDocument();
 				},
 				{ timeout: 3000 },
 			);
 		});
 
 		await step("Select Protestant canon", async () => {
-			const canonTrigger = canvas.getByLabelText("Select canon");
+			const content = getModalContent();
+			const canonTrigger = content.getByLabelText("Select canon");
 			await userEvent.click(canonTrigger);
 			const protestantOption = await within(document.body).findByRole(
 				"option",
@@ -88,15 +91,19 @@ export const CanonSelectionEnablesExtraBooks: Story = {
 
 		await step("Verify extra books section is visible", async () => {
 			await waitFor(() => {
-				expect(canvas.getByLabelText("Search extra books")).toBeInTheDocument();
+				const content = getModalContent();
+				expect(
+					content.getByLabelText("Search extra books"),
+				).toBeInTheDocument();
 			});
 		});
 
-		await step("Verify Save config button is enabled (dirty)", async () => {
-			const saveButton = canvas.getByRole("button", {
-				name: /save scripture config/i,
+		await step("Verify Clear button is enabled (dirty)", async () => {
+			const content = getModalContent();
+			const clearButton = content.getByRole("button", {
+				name: /clear form/i,
 			});
-			expect(saveButton).toBeEnabled();
+			expect(clearButton).toBeEnabled();
 		});
 	},
 };
@@ -105,15 +112,13 @@ export const CanonSelectionEnablesExtraBooks: Story = {
  * Corpus toggles change dirty state.
  */
 export const CorpusTogglesChangeDirtyState: Story = {
-	play: async ({ canvasElement, step }) => {
-		resetMockScriptureConfig();
-		const canvas = within(canvasElement);
-
-		await step("Wait for section to load", async () => {
+	play: async ({ step }) => {
+		await step("Wait for modal to load", async () => {
 			await waitFor(
 				() => {
+					const content = getModalContent();
 					expect(
-						canvas.getByLabelText("Include Apocrypha"),
+						content.getByLabelText("Include Apocrypha"),
 					).toBeInTheDocument();
 				},
 				{ timeout: 3000 },
@@ -121,73 +126,63 @@ export const CorpusTogglesChangeDirtyState: Story = {
 		});
 
 		await step("Toggle Apocrypha checkbox", async () => {
-			const apocryphaCheckbox = canvas.getByLabelText("Include Apocrypha");
+			const content = getModalContent();
+			const apocryphaCheckbox = content.getByLabelText("Include Apocrypha");
 			await userEvent.click(apocryphaCheckbox);
 			expect(apocryphaCheckbox).toBeChecked();
 		});
 
-		await step("Verify Save config button is enabled", async () => {
-			const saveButton = canvas.getByRole("button", {
-				name: /save scripture config/i,
+		await step("Verify Clear button is enabled", async () => {
+			const content = getModalContent();
+			const clearButton = content.getByRole("button", {
+				name: /clear form/i,
 			});
-			expect(saveButton).toBeEnabled();
+			expect(clearButton).toBeEnabled();
 		});
 	},
 };
 
-const SAVED_SCRIPTURE_CONFIG = {
-	id: "mock-config-id",
-	projectId: "mock-project-id",
-	projectIndexTypeId: "mock-pit-scripture-id",
-	selectedCanon: "protestant",
-	includeApocrypha: false,
-	includeJewishWritings: false,
-	includeClassicalWritings: false,
-	includeChristianWritings: false,
-	includeDeadSeaScrolls: false,
-	extraBookKeys: [] as string[],
-	createdAt: new Date().toISOString(),
-	updatedAt: new Date().toISOString(),
-};
-
 /**
- * Bootstrap button opens confirmation dialog.
- * Uses decorator to preset mock before component mounts and fetches.
+ * Add Entries button opens confirmation dialog after selecting canon.
  */
-export const BootstrapButtonOpensConfirmationDialog: Story = {
-	decorators: [
-		(Story) => {
-			setMockScriptureConfig(SAVED_SCRIPTURE_CONFIG);
-			storybookQueryClient.clear();
-			return <Story />;
-		},
-	],
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
-
-		await step("Wait for section to load with canon", async () => {
+export const AddEntriesButtonOpensConfirmationDialog: Story = {
+	play: async ({ step }) => {
+		await step("Wait for modal to load", async () => {
 			await waitFor(
 				() => {
-					const bootstrapButton = canvas.getByRole("button", {
-						name: /bootstrap scripture data/i,
-					});
-					expect(bootstrapButton).toBeEnabled();
+					const content = getModalContent();
+					expect(content.getByLabelText("Select canon")).toBeInTheDocument();
 				},
 				{ timeout: 3000 },
 			);
 		});
 
-		await step("Click Bootstrap and verify dialog opens", async () => {
-			const bootstrapButton = canvas.getByRole("button", {
-				name: /bootstrap scripture data/i,
-			});
-			await userEvent.click(bootstrapButton);
-			await waitFor(() => {
-				const dialog = within(document.body).getByRole("dialog", {
-					name: /bootstrap scripture data/i,
-				});
-				expect(dialog).toBeInTheDocument();
-			});
+		await step("Select Protestant canon", async () => {
+			const content = getModalContent();
+			const canonTrigger = content.getByLabelText("Select canon");
+			await userEvent.click(canonTrigger);
+			const protestantOption = await within(document.body).findByRole(
+				"option",
+				{ name: /protestant/i },
+			);
+			await userEvent.click(protestantOption);
 		});
+
+		await step(
+			"Click Add Entries and verify confirmation dialog opens",
+			async () => {
+				const content = getModalContent();
+				const addEntriesButton = content.getByRole("button", {
+					name: /add entries from books/i,
+				});
+				await userEvent.click(addEntriesButton);
+				await waitFor(() => {
+					const dialog = within(document.body).getByRole("dialog", {
+						name: /adding entries from books/i,
+					});
+					expect(dialog).toBeInTheDocument();
+				});
+			},
+		);
 	},
 };

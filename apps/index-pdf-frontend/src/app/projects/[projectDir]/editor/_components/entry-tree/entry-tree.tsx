@@ -1,10 +1,12 @@
 "use client";
 
+import { getCanonBookKeys, isValidCanonId } from "@pubint/core";
 import { ErrorState } from "@pubint/yaboujee";
 import { useEffect, useMemo, useState } from "react";
 import { useUpdateEntryParent } from "@/app/_common/_hooks/use-update-entry-parent";
 import type { IndexEntry } from "../../_types/index-entry";
 import { DeleteEntryDialog } from "../delete-entry-dialog/delete-entry-dialog";
+import { DeleteGroupDialog } from "../delete-group-dialog/delete-group-dialog";
 import type { Mention } from "../editor/editor";
 import { EntryEditModal } from "../entry-edit-modal/entry-edit-modal";
 import { EntryMergeModal } from "../entry-merge-modal/entry-merge-modal";
@@ -18,7 +20,14 @@ import { GroupItem } from "./components/group-item";
 export type EntryTreeGroup = {
 	id: string;
 	name: string;
-	sortMode?: "a_z" | "canon_book_order" | "custom";
+	sortMode?:
+		| "a_z"
+		| "canon_book_order"
+		| "custom"
+		| "protestant"
+		| "roman_catholic"
+		| "tanakh"
+		| "eastern_orthodox";
 };
 
 export type EntryTreeProps = {
@@ -154,6 +163,7 @@ export const EntryTree = ({
 	const [deletingEntry, setDeletingEntry] = useState<IndexEntry | null>(null);
 	const [mergingEntry, setMergingEntry] = useState<IndexEntry | null>(null);
 	const [mergingGroup, setMergingGroup] = useState<EntryTreeGroup | null>(null);
+	const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
 	const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(
 		new Set(),
 	);
@@ -190,15 +200,50 @@ export const EntryTree = ({
 			list.push(entry);
 			byGroup.set(gid, list);
 		}
-		// Sort entries within each group by groupPosition when group has custom sort
+		// Sort entries within each group: custom by position, canon by book order
+		const canonIdFromSortMode = (
+			mode: EntryTreeGroup["sortMode"],
+		):
+			| "protestant"
+			| "roman_catholic"
+			| "tanakh"
+			| "eastern_orthodox"
+			| null => {
+			if (mode === "canon_book_order") return "protestant"; // legacy
+			if (mode && isValidCanonId(mode)) return mode;
+			return null;
+		};
+
 		for (const group of groups) {
 			const list = byGroup.get(group.id) ?? [];
-			if (group.sortMode === "custom" && list.length > 1) {
+			if (list.length <= 1) continue;
+			if (group.sortMode === "custom") {
 				list.sort((a, b) => {
 					const posA = a.groupPosition ?? 999999;
 					const posB = b.groupPosition ?? 999999;
 					return posA - posB;
 				});
+			} else {
+				const canonId = canonIdFromSortMode(group.sortMode);
+				if (canonId) {
+					const canonBookOrder = getCanonBookKeys(canonId);
+					// Slug is book key for root entries (e.g. genesis, 1_samuel, song_of_songs).
+					// For child slugs like "genesis--1_1", take the part before "--".
+					const getBookKey = (e: IndexEntry) =>
+						(e.slug ?? "").split("--")[0]?.trim() ?? "";
+					list.sort((a, b) => {
+						const keyA = getBookKey(a);
+						const keyB = getBookKey(b);
+						const idxA = canonBookOrder.indexOf(keyA);
+						const idxB = canonBookOrder.indexOf(keyB);
+						if (idxA >= 0 && idxB >= 0) return idxA - idxB;
+						if (idxA >= 0) return -1;
+						if (idxB >= 0) return 1;
+						return (a.label ?? "").localeCompare(b.label ?? "", undefined, {
+							sensitivity: "base",
+						});
+					});
+				}
 			}
 		}
 		return byGroup;
@@ -509,7 +554,7 @@ export const EntryTree = ({
 										expanded={!collapsedGroupIds.has(group.id)}
 										onToggleExpand={() => toggleGroupExpanded(group.id)}
 										onEdit={onEditGroup}
-										onDelete={onEditGroup}
+										onDelete={(id) => setDeletingGroupId(id)}
 										onMerge={() => setMergingGroup(group)}
 										onDragStart={handleGroupDragStart}
 										isDragging={draggedGroupId === group.id}
@@ -652,6 +697,25 @@ export const EntryTree = ({
 					open={true}
 					onOpenChange={(open) => {
 						if (!open) setDeletingEntry(null);
+					}}
+				/>
+			)}
+			{deletingGroupId && projectId && projectIndexTypeId && (
+				<DeleteGroupDialog
+					groupId={deletingGroupId}
+					projectId={projectId}
+					projectIndexTypeId={projectIndexTypeId}
+					groups={groups}
+					open={true}
+					onOpenChange={(open) => {
+						if (!open) setDeletingGroupId(null);
+					}}
+					onMergeGroup={(id) => {
+						const group = groups.find((g) => g.id === id);
+						if (group) {
+							setDeletingGroupId(null);
+							setMergingGroup(group);
+						}
 					}}
 				/>
 			)}

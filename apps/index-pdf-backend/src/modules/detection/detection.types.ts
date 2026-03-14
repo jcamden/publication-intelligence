@@ -8,8 +8,12 @@ import { z } from "zod";
 /** Valid sort modes for index entry groups (aligned with DB enum). */
 export const INDEX_ENTRY_GROUP_SORT_MODES = [
 	"a_z",
-	"canon_book_order",
+	"canon_book_order", // Legacy; treat as protestant
 	"custom",
+	"protestant",
+	"roman_catholic",
+	"tanakh",
+	"eastern_orthodox",
 ] as const;
 
 export type IndexEntryGroupSortMode =
@@ -18,6 +22,31 @@ export type IndexEntryGroupSortMode =
 export const indexEntryGroupSortModeSchema = z.enum(
 	INDEX_ENTRY_GROUP_SORT_MODES,
 );
+
+/** Canon IDs that can be used as sort modes (scripture groups only). */
+export const CANON_SORT_MODES = [
+	"protestant",
+	"roman_catholic",
+	"tanakh",
+	"eastern_orthodox",
+] as const;
+
+export type CanonSortMode = (typeof CANON_SORT_MODES)[number];
+
+export function isCanonSortMode(
+	mode: IndexEntryGroupSortMode,
+): mode is CanonSortMode {
+	return CANON_SORT_MODES.includes(mode as CanonSortMode);
+}
+
+/** Resolve sort mode to canon ID for book-order lookup. canon_book_order is legacy → protestant. */
+export function getCanonIdForSortMode(
+	mode: IndexEntryGroupSortMode,
+): CanonSortMode | null {
+	if (isCanonSortMode(mode)) return mode;
+	if (mode === "canon_book_order") return "protestant";
+	return null;
+}
 
 /** Parser profile id must be one of the predefined profiles or null (alias-only group). */
 export const parserProfileIdSchema = z
@@ -169,6 +198,8 @@ export type GetIndexEntryGroupInput = z.infer<typeof GetIndexEntryGroupSchema>;
 
 export const DeleteIndexEntryGroupSchema = z.object({
 	groupId: z.string().uuid("Invalid group ID"),
+	/** When true, soft-deletes all entries in the group (with cascade to children) before deleting the group. */
+	deleteEntries: z.boolean().optional().default(false),
 });
 
 export type DeleteIndexEntryGroupInput = z.infer<

@@ -17,7 +17,7 @@ import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/p
 import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
-import { ScriptureSetupSection } from "./scripture-setup-section";
+import { AddEntriesFromBooksModal } from "./add-entries-from-books-modal";
 
 export const ProjectScriptureContent = () => {
 	const colorConfig = useAtomValue(colorConfigAtom);
@@ -25,6 +25,7 @@ export const ProjectScriptureContent = () => {
 	const { projectId, documentId } = useProjectContext();
 
 	const [modalOpen, setModalOpen] = useState(false);
+	const [addEntriesModalOpen, setAddEntriesModalOpen] = useState(false);
 	const [matcherModalOpen, setMatcherModalOpen] = useState(false);
 	const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 	/** "create" | groupId | null. When "create", show EditGroupModal in create mode. */
@@ -239,13 +240,9 @@ export const ProjectScriptureContent = () => {
 		<>
 			{scriptureProjectIndexTypeId && projectId && (
 				<div className="p-2 pt-0">
-					<ScriptureSetupSection
-						projectId={projectId}
-						projectIndexTypeId={scriptureProjectIndexTypeId}
-						onBootstrapSuccess={handleBootstrapSuccess}
-					/>
 					<IndexEntryToolbar
 						onCreateEntry={() => setModalOpen(true)}
+						onAddEntriesFromBooks={() => setAddEntriesModalOpen(true)}
 						onCreateGroup={() => setGroupModalState("create")}
 						onMatcherDetection={() => setMatcherModalOpen(true)}
 						onSettings={() => setSettingsModalOpen(true)}
@@ -254,6 +251,13 @@ export const ProjectScriptureContent = () => {
 						hasEntriesWithMatchers={entries.some(
 							(e) => (e.metadata?.matchers?.length ?? 0) > 0,
 						)}
+					/>
+					<AddEntriesFromBooksModal
+						open={addEntriesModalOpen}
+						onClose={() => setAddEntriesModalOpen(false)}
+						projectId={projectId}
+						projectIndexTypeId={scriptureProjectIndexTypeId}
+						onBootstrapSuccess={handleBootstrapSuccess}
 					/>
 					<MatcherDetectionModal
 						open={matcherModalOpen}
@@ -310,6 +314,7 @@ export const ProjectScriptureContent = () => {
 							groupId={groupModalState === "create" ? null : groupModalState}
 							projectId={projectId}
 							projectIndexTypeId={scriptureProjectIndexTypeId}
+							indexType="scripture"
 							existingEntries={entries}
 						/>
 					)}

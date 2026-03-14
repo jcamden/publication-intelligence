@@ -23,47 +23,40 @@ declare module "vitest" {
 	}
 }
 
-async function upsertScriptureConfig(
-	request: ReturnType<typeof makeAuthenticatedRequest>,
-	params: {
-		projectId: string;
-		projectIndexTypeId: string;
-		selectedCanon: string | null;
-		includeApocrypha?: boolean;
-		includeJewishWritings?: boolean;
-		includeClassicalWritings?: boolean;
-		includeChristianWritings?: boolean;
-		includeDeadSeaScrolls?: boolean;
-		extraBookKeys?: string[];
-	},
-) {
-	return request.inject({
-		method: "POST",
-		url: "/trpc/scriptureIndexConfig.upsert",
-		payload: {
-			projectId: params.projectId,
-			projectIndexTypeId: params.projectIndexTypeId,
-			selectedCanon: params.selectedCanon,
-			includeApocrypha: params.includeApocrypha ?? false,
-			includeJewishWritings: params.includeJewishWritings ?? false,
-			includeClassicalWritings: params.includeClassicalWritings ?? false,
-			includeChristianWritings: params.includeChristianWritings ?? false,
-			includeDeadSeaScrolls: params.includeDeadSeaScrolls ?? false,
-			extraBookKeys: params.extraBookKeys ?? [],
-		},
-	});
-}
+type BootstrapConfig = {
+	selectedCanon: string | null;
+	includeApocrypha?: boolean;
+	includeJewishWritings?: boolean;
+	includeClassicalWritings?: boolean;
+	includeChristianWritings?: boolean;
+	includeDeadSeaScrolls?: boolean;
+	extraBookKeys?: string[];
+};
 
 async function runBootstrap(
 	request: ReturnType<typeof makeAuthenticatedRequest>,
 	projectId: string,
 	projectIndexTypeId: string,
+	config: BootstrapConfig,
 	forceRefreshFromSource?: boolean,
 ) {
 	return request.inject({
 		method: "POST",
 		url: "/trpc/scriptureBootstrap.run",
-		payload: { projectId, projectIndexTypeId, forceRefreshFromSource },
+		payload: {
+			projectId,
+			projectIndexTypeId,
+			config: {
+				selectedCanon: config.selectedCanon,
+				includeApocrypha: config.includeApocrypha ?? false,
+				includeJewishWritings: config.includeJewishWritings ?? false,
+				includeClassicalWritings: config.includeClassicalWritings ?? false,
+				includeChristianWritings: config.includeChristianWritings ?? false,
+				includeDeadSeaScrolls: config.includeDeadSeaScrolls ?? false,
+				extraBookKeys: config.extraBookKeys ?? [],
+			},
+			forceRefreshFromSource,
+		},
 	});
 }
 
@@ -120,16 +113,11 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		testProjectId,
 		scriptureProjectIndexTypeId,
 	}) => {
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: null,
-		});
-
 		const res = await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			{ selectedCanon: null },
 		);
 		expect(res.statusCode).toBe(400);
 		const body = JSON.parse(res.body);
@@ -139,38 +127,16 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		);
 	});
 
-	it("bootstrap fails when config is missing", async ({
-		authenticatedRequest,
-		testProjectId,
-		scriptureProjectIndexTypeId,
-	}) => {
-		// Do not upsert config
-		const res = await runBootstrap(
-			authenticatedRequest,
-			testProjectId,
-			scriptureProjectIndexTypeId,
-		);
-		expect(res.statusCode).toBe(400);
-		const body = JSON.parse(res.body);
-		expect(body.error?.data?.code).toBe("BAD_REQUEST");
-		expect(body.error?.message).toMatch(/config not found|Save canon/i);
-	});
-
 	it("selected canon seeds expected book entries and aliases", async ({
 		authenticatedRequest,
 		testProjectId,
 		scriptureProjectIndexTypeId,
 	}) => {
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: "protestant",
-		});
-
 		const runRes = await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			{ selectedCanon: "protestant" },
 		);
 		expect(runRes.statusCode).toBe(200);
 		const runBody = JSON.parse(runRes.body);
@@ -201,16 +167,11 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		testProjectId,
 		scriptureProjectIndexTypeId,
 	}) => {
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: "protestant",
-			includeApocrypha: false,
-		});
 		const run1 = await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			{ selectedCanon: "protestant", includeApocrypha: false },
 		);
 		expect(run1.statusCode).toBe(200);
 		const entries1 = JSON.parse(
@@ -225,16 +186,11 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		const slugsNoApoc = entries1.map((e: { slug: string }) => e.slug);
 		expect(slugsNoApoc).not.toContain("tobit");
 
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: "protestant",
-			includeApocrypha: true,
-		});
 		await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			{ selectedCanon: "protestant", includeApocrypha: true },
 		);
 		const entries2 = JSON.parse(
 			(
@@ -254,16 +210,12 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		testProjectId,
 		scriptureProjectIndexTypeId,
 	}) => {
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: "protestant",
-		});
-
+		const config = { selectedCanon: "protestant" as const };
 		const run1 = await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			config,
 		);
 		expect(run1.statusCode).toBe(200);
 		const counts1 = JSON.parse(run1.body).result.data;
@@ -273,6 +225,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			config,
 		);
 		expect(run2.statusCode).toBe(200);
 		const counts2 = JSON.parse(run2.body).result.data;
@@ -296,15 +249,11 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		testProjectId,
 		scriptureProjectIndexTypeId,
 	}) => {
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: "protestant",
-		});
 		await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			{ selectedCanon: "protestant" },
 		);
 		const entriesAfterProtestant = JSON.parse(
 			(
@@ -319,15 +268,11 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			entriesAfterProtestant.map((e: { slug: string }) => e.slug),
 		).toContain("matthew");
 
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: "tanakh",
-		});
 		await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			{ selectedCanon: "tanakh" },
 		);
 		const entriesAfterTanakh = JSON.parse(
 			(
@@ -351,16 +296,12 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		testProjectId,
 		scriptureProjectIndexTypeId,
 	}) => {
-		await upsertScriptureConfig(authenticatedRequest, {
-			projectId: testProjectId,
-			projectIndexTypeId: scriptureProjectIndexTypeId,
-			selectedCanon: "protestant",
-		});
-
+		const config = { selectedCanon: "protestant" as const };
 		const run1 = await runBootstrap(
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			config,
 		);
 		expect(run1.statusCode).toBe(200);
 		const counts1 = JSON.parse(run1.body).result.data;
@@ -371,6 +312,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			authenticatedRequest,
 			testProjectId,
 			scriptureProjectIndexTypeId,
+			config,
 		);
 		expect(run2.statusCode).toBe(200);
 		const counts2 = JSON.parse(run2.body).result.data;
@@ -386,15 +328,11 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			testProjectId,
 			scriptureProjectIndexTypeId,
 		}) => {
-			await upsertScriptureConfig(authenticatedRequest, {
-				projectId: testProjectId,
-				projectIndexTypeId: scriptureProjectIndexTypeId,
-				selectedCanon: "protestant",
-			});
 			await runBootstrap(
 				authenticatedRequest,
 				testProjectId,
 				scriptureProjectIndexTypeId,
+				{ selectedCanon: "protestant" },
 			);
 			const listRes = await listIndexEntries(
 				authenticatedRequest,
@@ -439,15 +377,12 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			testProjectId,
 			scriptureProjectIndexTypeId,
 		}) => {
-			await upsertScriptureConfig(authenticatedRequest, {
-				projectId: testProjectId,
-				projectIndexTypeId: scriptureProjectIndexTypeId,
-				selectedCanon: "protestant",
-			});
+			const config = { selectedCanon: "protestant" as const };
 			await runBootstrap(
 				authenticatedRequest,
 				testProjectId,
 				scriptureProjectIndexTypeId,
+				config,
 			);
 			const listRes = await listIndexEntries(
 				authenticatedRequest,
@@ -473,6 +408,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 				authenticatedRequest,
 				testProjectId,
 				scriptureProjectIndexTypeId,
+				config,
 				false,
 			);
 
@@ -493,15 +429,12 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			testProjectId,
 			scriptureProjectIndexTypeId,
 		}) => {
-			await upsertScriptureConfig(authenticatedRequest, {
-				projectId: testProjectId,
-				projectIndexTypeId: scriptureProjectIndexTypeId,
-				selectedCanon: "protestant",
-			});
+			const config = { selectedCanon: "protestant" as const };
 			await runBootstrap(
 				authenticatedRequest,
 				testProjectId,
 				scriptureProjectIndexTypeId,
+				config,
 			);
 			const listRes = await listIndexEntries(
 				authenticatedRequest,
@@ -527,6 +460,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 				authenticatedRequest,
 				testProjectId,
 				scriptureProjectIndexTypeId,
+				config,
 				true,
 			);
 
@@ -548,15 +482,11 @@ describe("ScriptureBootstrap API (Integration)", () => {
 			testProjectId,
 			scriptureProjectIndexTypeId,
 		}) => {
-			await upsertScriptureConfig(authenticatedRequest, {
-				projectId: testProjectId,
-				projectIndexTypeId: scriptureProjectIndexTypeId,
-				selectedCanon: "protestant",
-			});
 			await runBootstrap(
 				authenticatedRequest,
 				testProjectId,
 				scriptureProjectIndexTypeId,
+				{ selectedCanon: "protestant" },
 			);
 			const listRes = await listIndexEntries(
 				authenticatedRequest,

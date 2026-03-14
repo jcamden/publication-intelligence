@@ -1,17 +1,19 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ScriptureSetupSection } from "../../../scripture-setup-section";
+import { AddEntriesFromBooksModal } from "../../../add-entries-from-books-modal";
 
-const meta: Meta<typeof ScriptureSetupSection> = {
+const meta: Meta<typeof AddEntriesFromBooksModal> = {
 	...defaultVrtMeta,
 	title:
-		"Projects/[ProjectDir]/Editor/ProjectSidebar/ProjectScriptureContent/ScriptureSetupSection/tests/Visual Regression Tests",
-	component: ScriptureSetupSection,
+		"Projects/[ProjectDir]/Editor/ProjectSidebar/ProjectScriptureContent/AddEntriesFromBooksModal/tests/Visual Regression Tests",
+	component: AddEntriesFromBooksModal,
 	parameters: {
 		...defaultVrtMeta.parameters,
 		layout: "centered",
 	},
 	args: {
+		open: true,
+		onClose: () => {},
 		projectId: "mock-project-id",
 		projectIndexTypeId: "mock-pit-scripture-id",
 		onBootstrapSuccess: () => {},

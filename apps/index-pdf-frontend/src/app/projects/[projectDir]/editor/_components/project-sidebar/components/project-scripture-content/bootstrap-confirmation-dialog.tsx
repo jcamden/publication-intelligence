@@ -40,7 +40,7 @@ export const BootstrapConfirmationDialog = ({
 		<Modal
 			open={open}
 			onClose={onClose}
-			title="Bootstrap Scripture Data"
+			title="Adding entries from books"
 			size="md"
 			showCloseButton={true}
 			footer={
@@ -52,10 +52,10 @@ export const BootstrapConfirmationDialog = ({
 						{isPending ? (
 							<>
 								<Loader2 className="mr-2 size-4 animate-spin" />
-								Bootstrapping...
+								Adding entries...
 							</>
 						) : (
-							"Bootstrap"
+							"Add entries"
 						)}
 					</Button>
 				</>
@@ -64,7 +64,8 @@ export const BootstrapConfirmationDialog = ({
 			<div className="space-y-4">
 				<p className="text-sm text-muted-foreground">
 					This will seed index entries and matchers based on your selection.
-					Existing entries and groups will be preserved; bootstrap is additive.
+					Existing entries and groups will be preserved; adding entries from
+					books is additive.
 				</p>
 				<dl className="space-y-2 text-sm">
 					{canonLabel && (

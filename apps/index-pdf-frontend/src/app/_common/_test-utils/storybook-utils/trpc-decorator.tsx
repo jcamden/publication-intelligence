@@ -47,21 +47,6 @@ const mockRouter: AppRouterInstance = {
 	},
 } as AppRouterInstance;
 
-// Stateful mock for scripture config (persists across get/upsert within test run)
-let mockScriptureConfig: Record<string, unknown> | null = null;
-
-/** Reset scripture config mock. Exposed for tests that need null initial state. */
-export function resetMockScriptureConfig(): void {
-	mockScriptureConfig = null;
-}
-
-/** Preset scripture config mock. Use for tests that need a saved config on load. */
-export function setMockScriptureConfig(
-	config: Record<string, unknown> | null,
-): void {
-	mockScriptureConfig = config;
-}
-
 // Create mock tRPC client with optional delay
 const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 	trpc.createClient({
@@ -575,57 +560,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
-					// scriptureIndexConfig.get - for ScriptureSetupSection
-					if (urlString.includes("scriptureIndexConfig.get")) {
-						const data = mockScriptureConfig;
-						return new Response(
-							JSON.stringify({
-								result: { data },
-							}),
-							{
-								headers: { "Content-Type": "application/json" },
-							},
-						);
-					}
-
-					// scriptureIndexConfig.upsert - for ScriptureSetupSection
-					if (urlString.includes("scriptureIndexConfig.upsert")) {
-						const bodyJson = await getBodyJson();
-						let input: Record<string, unknown> = {};
-						if (
-							bodyJson &&
-							typeof bodyJson === "object" &&
-							"json" in bodyJson
-						) {
-							input = (bodyJson as { json: Record<string, unknown> }).json;
-						}
-						const now = new Date().toISOString();
-						mockScriptureConfig = {
-							id: "mock-config-id",
-							projectId: input.projectId ?? "mock-project-id",
-							projectIndexTypeId:
-								input.projectIndexTypeId ?? "mock-pit-scripture-id",
-							selectedCanon: input.selectedCanon ?? null,
-							includeApocrypha: input.includeApocrypha ?? false,
-							includeJewishWritings: input.includeJewishWritings ?? false,
-							includeClassicalWritings: input.includeClassicalWritings ?? false,
-							includeChristianWritings: input.includeChristianWritings ?? false,
-							includeDeadSeaScrolls: input.includeDeadSeaScrolls ?? false,
-							extraBookKeys: input.extraBookKeys ?? [],
-							createdAt: now,
-							updatedAt: now,
-						};
-						return new Response(
-							JSON.stringify({
-								result: { data: mockScriptureConfig },
-							}),
-							{
-								headers: { "Content-Type": "application/json" },
-							},
-						);
-					}
-
-					// scriptureBootstrap.run - for ScriptureSetupSection
+					// scriptureBootstrap.run - for AddEntriesFromBooksModal
 					if (urlString.includes("scriptureBootstrap.run")) {
 						return new Response(
 							JSON.stringify({
