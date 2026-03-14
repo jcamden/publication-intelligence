@@ -31,7 +31,6 @@ export const ExpandCollapseNodes: Story = {
 	args: {
 		entries: mockSubjectEntries,
 		mentions: mockMentions,
-		onCreateEntry: () => console.log("Create entry"),
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
@@ -63,32 +62,12 @@ export const ExpandCollapseNodes: Story = {
 };
 
 /**
- * Test: Click create entry button
+ * Test: Empty state shows message (Create Entry moved to parent toolbar)
  */
-export const CreateEntry: Story = {
-	args: {
-		entries: mockSubjectEntries,
-		mentions: mockMentions,
-		onCreateEntry: () => console.log("Create clicked"),
-	},
-	play: async ({ canvasElement, step }) => {
-		const canvas = within(canvasElement);
-
-		await step("Click create entry button", async () => {
-			const createButton = canvas.getByText("Create Entry");
-			await userEvent.click(createButton);
-		});
-	},
-};
-
-/**
- * Test: Empty state shows create button
- */
-export const EmptyStateShowsButton: Story = {
+export const EmptyStateShowsMessage: Story = {
 	args: {
 		entries: [],
 		mentions: [],
-		onCreateEntry: () => console.log("Create clicked"),
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
@@ -96,16 +75,6 @@ export const EmptyStateShowsButton: Story = {
 		await step("Verify empty message", async () => {
 			const message = canvas.getByText("No entries yet");
 			expect(message).toBeInTheDocument();
-		});
-
-		await step("Verify create button present", async () => {
-			const createButton = canvas.getByText("Create Entry");
-			expect(createButton).toBeInTheDocument();
-		});
-
-		await step("Click create button", async () => {
-			const createButton = canvas.getByText("Create Entry");
-			await userEvent.click(createButton);
 		});
 	},
 };

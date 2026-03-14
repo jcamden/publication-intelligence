@@ -189,7 +189,9 @@ export const ResizableSidebar = ({
 						: "none",
 			}}
 		>
-			{children}
+			<div className={cn("h-full min-w-0", side === "left" ? "pr-2" : "pl-2")}>
+				{children}
+			</div>
 
 			{!isCollapsed && (
 				// biome-ignore lint/a11y/useSemanticElements: div required for absolute positioning and z-index control

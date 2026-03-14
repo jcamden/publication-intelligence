@@ -44,7 +44,6 @@ export const NestedHierarchy: Story = {
 	args: {
 		entries: mockSubjectEntries,
 		mentions: mockMentions,
-		onCreateEntry: () => {},
 	},
 	globals: {
 		...defaultGlobals,

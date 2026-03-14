@@ -66,6 +66,20 @@ export const SidebarAccordionItem = ({
 			})
 		: undefined;
 
+	// CSS variable for scroll area items: uses --color-{type}-100 (light) or -800 (dark) with reduced alpha
+	const indexType = ["subject", "author", "scripture"].find((t) =>
+		value.includes(t),
+	);
+	const baseColor = indexType
+		? `var(--color-${indexType}-${isDarkMode ? "800" : "100"})`
+		: null;
+	const sectionItemBgVar =
+		baseColor && surfaceColorHue !== undefined
+			? {
+					["--section-item-bg" as string]: `color-mix(in oklch, ${baseColor} 10%, transparent)`,
+				}
+			: undefined;
+
 	const PopIcon =
 		side === "right" ? SquareArrowOutUpLeft : SquareArrowOutUpRight;
 
@@ -102,6 +116,7 @@ export const SidebarAccordionItem = ({
 							onClick={(e) => e.stopPropagation()}
 						>
 							<StyledButton
+								className="!shadow-none"
 								icon={PopIcon}
 								label="Pop out to window"
 								isActive={false}
@@ -129,6 +144,7 @@ export const SidebarAccordionItem = ({
 							onClick={(e) => e.stopPropagation()}
 						>
 							<StyledButton
+								className="!shadow-none"
 								icon={ChevronDown}
 								label={isExpanded ? "Collapse" : "Expand"}
 								isActive={isExpanded}
@@ -161,6 +177,7 @@ export const SidebarAccordionItem = ({
 							onClick={(e) => e.stopPropagation()}
 						>
 							<StyledButton
+								className="!shadow-none"
 								icon={PopIcon}
 								label="Pop out to window"
 								isActive={false}
@@ -188,6 +205,7 @@ export const SidebarAccordionItem = ({
 							onClick={(e) => e.stopPropagation()}
 						>
 							<StyledButton
+								className="!shadow-none"
 								icon={ChevronDown}
 								label={isExpanded ? "Collapse" : "Expand"}
 								isActive={isExpanded}
@@ -200,7 +218,10 @@ export const SidebarAccordionItem = ({
 				)}
 			</div>
 			<AccordionContent
-				style={{ backgroundColor: contentBackgroundColor }}
+				style={{
+					backgroundColor: contentBackgroundColor,
+					...sectionItemBgVar,
+				}}
 				className={"p-3"}
 			>
 				{children}

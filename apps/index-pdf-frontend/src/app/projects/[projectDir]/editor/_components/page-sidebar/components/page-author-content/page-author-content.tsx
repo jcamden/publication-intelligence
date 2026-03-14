@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { StyledTextButton } from "@pubint/yaboujee";
+import { ScanSearch } from "lucide-react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/app/_common/_utils/trpc";
-import { PageMatcherRunControls } from "../page-matcher-run-controls";
+import { IndexPanelScrollArea } from "@/app/projects/[projectDir]/editor/_components/index-panel-scroll-area";
+import { MatcherDetectionModal } from "@/app/projects/[projectDir]/editor/_components/matcher-detection-modal";
 import { PageSectionContent } from "../page-section-content/page-section-content";
 
 type MentionData = {
@@ -32,6 +35,7 @@ export const PageAuthorContent = ({
 	documentId,
 	pageNumber,
 }: PageAuthorContentProps) => {
+	const [matcherModalOpen, setMatcherModalOpen] = useState(false);
 	const { data: projectIndexTypes } = trpc.projectIndexType.list.useQuery(
 		{ projectId: projectId || "" },
 		{ enabled: !!projectId },
@@ -50,14 +54,27 @@ export const PageAuthorContent = ({
 				documentId &&
 				pageNumber != null &&
 				pageNumber >= 1 && (
-					<PageMatcherRunControls
-						projectId={projectId}
-						projectIndexTypeId={authorProjectIndexTypeId}
-						indexType="author"
-						documentId={documentId}
-						pageNumber={pageNumber}
-						emptyStateMessage="Create groups and matchers in this index, then run detection."
-					/>
+					<>
+						<StyledTextButton
+							icon={ScanSearch}
+							onClick={() => setMatcherModalOpen(true)}
+							// tooltip="Matcher detection"
+							className="w-full [&>button]:w-full [&>button]:justify-start !shadow-none"
+						>
+							Detect mentions on this page
+						</StyledTextButton>
+						<MatcherDetectionModal
+							open={matcherModalOpen}
+							onClose={() => setMatcherModalOpen(false)}
+							scope="page"
+							projectId={projectId}
+							projectIndexTypeId={authorProjectIndexTypeId}
+							indexType="author"
+							documentId={documentId}
+							pageNumber={pageNumber}
+							emptyStateMessage="Create groups and matchers in this index, then run detection."
+						/>
+					</>
 				)}
 			<PageSectionContent
 				mentions={mentions}
@@ -67,6 +84,9 @@ export const PageAuthorContent = ({
 				projectId={projectId}
 				documentId={documentId}
 				pageNumber={pageNumber}
+				listWrapper={(content) => (
+					<IndexPanelScrollArea>{content}</IndexPanelScrollArea>
+				)}
 			/>
 		</div>
 	);

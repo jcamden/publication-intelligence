@@ -57,11 +57,11 @@ export const MentionButton = ({
 	};
 
 	return (
-		<div className="group flex items-center border-1 line-clamp-2 rounded">
+		<div className="group flex items-center border-1 line-clamp-2 rounded border-[oklch(from_var(--section-item-bg)_calc(l-0.5)_calc(c*1.1)_h)] dark:border-[oklch(from_var(--section-item-bg)_calc(l+0.18)_calc(c*1.8)_h)] bg-[var(--section-item-bg,transparent)] dark:bg-[oklch(from_var(--section-item-bg)_calc(l+0.08)_calc(c*1.8)_h)] transition-colors hover:brightness-115 dark:hover:brightness-75">
 			<button
 				type="button"
 				onClick={() => onClick({ mentionId: mention.id })}
-				className="flex-1 text-left p-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+				className="flex-1 text-left p-2 text-sm"
 			>
 				<span className="font-medium text-neutral-900 dark:text-neutral-100">
 					{mention.entryLabel} -{" "}

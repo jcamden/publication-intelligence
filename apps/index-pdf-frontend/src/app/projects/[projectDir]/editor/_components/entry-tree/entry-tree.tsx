@@ -1,7 +1,6 @@
 "use client";
 
 import { ErrorState } from "@pubint/yaboujee";
-import { FolderOpen } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useUpdateEntryParent } from "@/app/_common/_hooks/use-update-entry-parent";
 import type { IndexEntry } from "../../_types/index-entry";
@@ -10,7 +9,6 @@ import type { Mention } from "../editor/editor";
 import { EntryEditModal } from "../entry-edit-modal/entry-edit-modal";
 import { EntryMergeModal } from "../entry-merge-modal/entry-merge-modal";
 import { MergeGroupModal } from "../merge-group-modal";
-import { CreateEntryButton } from "./components/create-entry-button";
 import { EntryDropZone } from "./components/entry-drop-zone";
 import { EntryItem } from "./components/entry-item";
 import { EntryListSkeleton } from "./components/entry-list-skeleton";
@@ -26,12 +24,11 @@ export type EntryTreeGroup = {
 export type EntryTreeProps = {
 	entries: IndexEntry[]; // All entries for this index type
 	mentions: Mention[]; // For showing counts
-	groups?: EntryTreeGroup[]; // Optional: when provided, render groups as bordered boxes
+	/** When empty, entries are shown as flat A-Z list. When provided, groups are shown as bordered boxes. */
+	groups?: EntryTreeGroup[];
 	projectId?: string; // Optional for hierarchy updates (disabled if not provided)
 	projectIndexTypeId?: string; // For approval cache invalidation
 	onEntryClick?: (entry: IndexEntry) => void; // Optional click handler
-	onCreateEntry: () => void; // Open entry creation modal
-	onCreateGroup?: () => void; // Open create group modal
 	onEditGroup?: (groupId: string) => void; // Open edit group modal
 	onAddEntryToGroup?: (groupId: string, entryId: string) => void; // Add root entry to group (e.g. on drag-drop)
 	onReorderGroups?: (groupIds: string[]) => void; // Reorder groups (drag to reorder)
@@ -133,8 +130,6 @@ export const EntryTree = ({
 	projectId = "",
 	projectIndexTypeId,
 	onEntryClick,
-	onCreateEntry,
-	onCreateGroup,
 	onEditGroup,
 	onAddEntryToGroup,
 	onReorderGroups,
@@ -211,6 +206,15 @@ export const EntryTree = ({
 
 	const ungroupedEntries = entriesByGroup.get(null) ?? [];
 	const hasGroups = groups.length > 0;
+
+	// When no groups: flat A-Z list of all root entries (children stay nested under parents)
+	const flatSortedRootEntries = useMemo(() => {
+		return [...topLevelEntries].sort((a, b) =>
+			(a.label ?? "").localeCompare(b.label ?? "", undefined, {
+				sensitivity: "base",
+			}),
+		);
+	}, [topLevelEntries]);
 
 	const handleDragStart = (entryId: string) => {
 		setDraggedEntryId(entryId);
@@ -408,22 +412,9 @@ export const EntryTree = ({
 	if (entries.length === 0) {
 		return (
 			<div className="p-4 text-center">
-				<p className="text-sm text-gray-500 mb-3 dark:text-gray-400">
+				<p className="text-sm text-gray-500 dark:text-gray-400">
 					No entries yet
 				</p>
-				<div className="flex gap-2 justify-center">
-					<CreateEntryButton onClick={onCreateEntry} />
-					{onCreateGroup && (
-						<button
-							type="button"
-							onClick={onCreateGroup}
-							className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-600"
-						>
-							<FolderOpen className="w-4 h-4" />
-							<span>Create Group</span>
-						</button>
-					)}
-				</div>
 			</div>
 		);
 	}
@@ -451,41 +442,32 @@ export const EntryTree = ({
 	return (
 		<>
 			<div className="space-y-2">
-				{/* biome-ignore lint/a11y/useSemanticElements: Drag-drop zone requires div */}
-				<div
-					role="button"
-					tabIndex={0}
-					className={`p-2 rounded transition-colors ${
-						isRootDropTarget ? "bg-blue-100 dark:bg-blue-900" : ""
-					}`}
-					onDragOver={handleRootDragOver}
-					onDragLeave={handleRootDragLeave}
-					onDrop={handleRootDrop}
-					onKeyDown={(e) => {
-						if (e.key === "Enter" || e.key === " ") {
-							e.preventDefault();
-						}
-					}}
-				>
-					<div className="flex gap-2">
-						<CreateEntryButton onClick={onCreateEntry} />
-						{onCreateGroup && (
-							<button
-								type="button"
-								onClick={onCreateGroup}
-								className="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 dark:border-gray-600"
-							>
-								<FolderOpen className="w-4 h-4" />
-								<span>Create Group</span>
-							</button>
-						)}
-					</div>
-					{isRootDropTarget && (
-						<p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-							Drop here to move to top level
-						</p>
-					)}
-				</div>
+				{draggedEntryId && (
+					<>
+						{/* biome-ignore lint/a11y/useSemanticElements: Drag-drop zone requires div */}
+						<div
+							role="button"
+							tabIndex={0}
+							className={`p-2 rounded transition-colors ${
+								isRootDropTarget ? "bg-blue-100 dark:bg-blue-900" : ""
+							}`}
+							onDragOver={handleRootDragOver}
+							onDragLeave={handleRootDragLeave}
+							onDrop={handleRootDrop}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+								}
+							}}
+						>
+							{isRootDropTarget && (
+								<p className="text-xs text-blue-600 dark:text-blue-400">
+									Drop here to move to top level
+								</p>
+							)}
+						</div>
+					</>
+				)}
 
 				{hasGroups ? (
 					<>
@@ -515,7 +497,7 @@ export const EntryTree = ({
 									className={`border rounded-lg p-2 mb-2 transition-colors ${
 										isEntryDropTarget
 											? "border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/50"
-											: "border-neutral-200 dark:border-neutral-700"
+											: "border-[oklch(from_var(--section-item-bg)_calc(l-0.5)_calc(c*1.1)_h)] dark:border-[oklch(from_var(--section-item-bg)_calc(l+0.18)_calc(c*1.8)_h)] bg-[oklch(from_var(--section-item-bg)_calc(l+0.80)_calc(c*0.5)_h)] dark:bg-[oklch(from_var(--section-item-bg)_calc(l-0.18)_calc(c*0.8)_h)]"
 									}`}
 									onDragOver={(e) => handleSectionDragOver(e, group.id)}
 									onDragLeave={(e) => handleSectionDragLeave(e, group.id)}
@@ -634,7 +616,9 @@ export const EntryTree = ({
 						/>
 					</>
 				) : (
-					<div className="space-y-1">{renderEntryList(topLevelEntries)}</div>
+					<div className="space-y-1">
+						{renderEntryList(flatSortedRootEntries)}
+					</div>
 				)}
 			</div>
 

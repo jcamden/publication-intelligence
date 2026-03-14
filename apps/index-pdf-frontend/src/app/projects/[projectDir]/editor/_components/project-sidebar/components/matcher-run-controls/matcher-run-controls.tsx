@@ -20,6 +20,8 @@ export type MatcherRunControlsProps = {
 	indexType: string;
 	/** Shown when there are no groups; run button is disabled. */
 	emptyStateMessage: string;
+	/** Whether to show the "Matcher detection" heading. Default true. Set false when embedded in a modal. */
+	showHeading?: boolean;
 };
 
 export const MatcherRunControls = ({
@@ -27,6 +29,7 @@ export const MatcherRunControls = ({
 	projectIndexTypeId,
 	indexType,
 	emptyStateMessage: _emptyStateMessage,
+	showHeading = true,
 }: MatcherRunControlsProps) => {
 	const [pageRangeStart, setPageRangeStart] = useState<string>("");
 	const [pageRangeEnd, setPageRangeEnd] = useState<string>("");
@@ -293,7 +296,9 @@ export const MatcherRunControls = ({
 	if (groups.length === 0 && groupsLoaded) {
 		return (
 			<div className="rounded-lg border border-border bg-surface p-4">
-				<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+				{showHeading && (
+					<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+				)}
 				<div className="mt-3 space-y-1">
 					<span className="text-xs font-medium text-neutral-500">
 						Page range (optional)
@@ -350,7 +355,9 @@ export const MatcherRunControls = ({
 
 	return (
 		<div className="rounded-lg border border-border bg-surface p-4">
-			<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+			{showHeading && (
+				<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+			)}
 			<MatcherRunControlsShared
 				groups={groups}
 				runAllGroups={runAllGroups}

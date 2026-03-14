@@ -42,6 +42,8 @@ export type { StyledButtonProps } from "./styled-button";
 export { StyledButton } from "./styled-button";
 export type { StyledIconButtonProps } from "./styled-icon-button";
 export { StyledIconButton } from "./styled-icon-button";
+export type { StyledTextButtonProps } from "./styled-text-button";
+export { StyledTextButton } from "./styled-text-button";
 export type {
 	StyledToggleButton,
 	StyledToggleButtonGroupProps,

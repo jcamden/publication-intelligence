@@ -4,6 +4,8 @@ import {
 	ChevronDown,
 	ChevronRight,
 	Edit2,
+	Folder,
+	FolderOpen,
 	GripVertical,
 	Merge,
 	Trash2,
@@ -98,17 +100,21 @@ export const TreeRow = (props: TreeRowProps) => {
 				}
 			}}
 			className={`group min-h-10 flex flex-col gap-1 px-2 py-1.5 rounded transition-colors ${
-				variant === "entry" ? "border-1 " : ""
+				variant === "entry"
+					? "border-1 border-[oklch(from_var(--section-item-bg)_calc(l-0.5)_calc(c*1.1)_h)] dark:border-[oklch(from_var(--section-item-bg)_calc(l+0.18)_calc(c*1.8)_h)] "
+					: ""
 			}${
 				isDragging
 					? "opacity-50 bg-gray-200 dark:bg-gray-700"
 					: isDropTarget
 						? "bg-blue-100 dark:bg-blue-900"
-						: "hover:bg-gray-100 dark:hover:bg-gray-800"
+						: variant === "group"
+							? "bg-transparent"
+							: "bg-[var(--section-item-bg,transparent)] dark:bg-[oklch(from_var(--section-item-bg)_calc(l+0.08)_calc(c*1.8)_h)] hover:brightness-115 dark:hover:brightness-75"
 			}`}
 			style={{ marginLeft: `${depth * 20}px` }}
 		>
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-0">
 				{/* Drag handle */}
 				{showDragHandle && (
 					<div className="flex-shrink-0 cursor-move opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity">
@@ -117,14 +123,29 @@ export const TreeRow = (props: TreeRowProps) => {
 				)}
 
 				{/* Expand/collapse icon or spacer */}
-				{hasChildren ? (
+				{variant === "group" ? (
 					<button
 						type="button"
 						onClick={(e) => {
 							e.stopPropagation();
 							props.onToggleExpand();
 						}}
-						className="flex-shrink-0 w-4 h-4 flex items-center justify-center hover:bg-gray-200 rounded dark:hover:bg-gray-700"
+						className="flex-shrink-0 min-w-8 min-h-8 flex items-center justify-center hover:bg-gray-200 rounded cursor-pointer dark:hover:bg-gray-700"
+					>
+						{expanded ? (
+							<FolderOpen className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+						) : (
+							<Folder className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+						)}
+					</button>
+				) : hasChildren ? (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							props.onToggleExpand();
+						}}
+						className="flex-shrink-0 min-w-8 min-h-8 flex items-center justify-center hover:bg-gray-200 rounded cursor-pointer dark:hover:bg-gray-700"
 					>
 						{expanded ? (
 							<ChevronDown className="w-3 h-3" />
@@ -133,7 +154,7 @@ export const TreeRow = (props: TreeRowProps) => {
 						)}
 					</button>
 				) : (
-					<div className="flex-shrink-0 w-4 h-4" />
+					<div className="flex-shrink-0 min-w-8 min-h-8" />
 				)}
 
 				{/* Label + badge */}

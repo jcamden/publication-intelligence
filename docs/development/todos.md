@@ -4,6 +4,7 @@
 
 - Ignore excluded regions during detection runs for both matcher-based and LLM-based pipelines.
 - Determine exclusion by fuzzy bounding-box comparison using the existing bbox utilities.
+- Move matcher detection into a modal triggered by a button.
 
 ### Index Page
 
@@ -20,7 +21,10 @@
 
 - Move the create-entry and create-group buttons out of `EntryTree`.
 - Make `EntryTree` scrollable.
+- Fix entry tree scroll area.
+- Fix the numerous drag-and-drop issues in `EntryTree`.
 - Make `EntryTree` filterable/searchable.
+- Add section colors to the window component.
 
 ### Page Sidebar
 

@@ -1,22 +1,31 @@
 "use client";
 
-import { OklchColorPicker } from "@pubint/yaboujee/components/ui/oklch-color-picker/oklch-color-picker";
-import { useAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/app/_common/_utils/trpc";
-import { colorConfigAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
+import {
+	colorConfigAtom,
+	indexEntryGroupsEnabledAtom,
+} from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { EditGroupModal } from "@/app/projects/[projectDir]/editor/_components/edit-group-modal";
+import { IndexEntryToolbar } from "@/app/projects/[projectDir]/editor/_components/index-entry-toolbar";
+import { IndexPanelScrollArea } from "@/app/projects/[projectDir]/editor/_components/index-panel-scroll-area";
+import { IndexSettingsModal } from "@/app/projects/[projectDir]/editor/_components/index-settings-modal";
+import { MatcherDetectionModal } from "@/app/projects/[projectDir]/editor/_components/matcher-detection-modal";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
 import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
 
 export const ProjectAuthorContent = () => {
-	const [colorConfig, setColorConfig] = useAtom(colorConfigAtom);
+	const colorConfig = useAtomValue(colorConfigAtom);
+	const groupsEnabled = useAtomValue(indexEntryGroupsEnabledAtom).author;
 	const { projectId, documentId } = useProjectContext();
 
 	const [modalOpen, setModalOpen] = useState(false);
+	const [matcherModalOpen, setMatcherModalOpen] = useState(false);
+	const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 	/** "create" | groupId | null. When "create", show EditGroupModal in create mode. */
 	const [groupModalState, setGroupModalState] = useState<
 		"create" | string | null
@@ -215,42 +224,58 @@ export const ProjectAuthorContent = () => {
 
 	return (
 		<>
-			<div className="p-3 border-b border-gray-200 dark:border-gray-700">
-				<div className="flex items-center justify-between gap-3">
-					<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-						Author Color
-					</span>
-					<OklchColorPicker
-						value={colorConfig.author}
-						onChange={(color) => {
-							setColorConfig((prev) => ({
-								...prev,
-								author: color,
-							}));
-						}}
-						label="Author color"
+			{authorProjectIndexTypeId && projectId && (
+				<div className="p-2 pt-0">
+					<IndexEntryToolbar
+						onCreateEntry={() => setModalOpen(true)}
+						onCreateGroup={() => setGroupModalState("create")}
+						onMatcherDetection={() => setMatcherModalOpen(true)}
+						onSettings={() => setSettingsModalOpen(true)}
+						groupsEnabled={groupsEnabled}
+						showMatcherDetection={true}
+						hasEntriesWithMatchers={entries.some(
+							(e) => (e.metadata?.matchers?.length ?? 0) > 0,
+						)}
+					/>
+					<MatcherDetectionModal
+						open={matcherModalOpen}
+						onClose={() => setMatcherModalOpen(false)}
+						scope="project"
+						projectId={projectId}
+						projectIndexTypeId={authorProjectIndexTypeId}
+						indexType="author"
+						emptyStateMessage="Create groups and matchers in this index, then run detection."
+					/>
+					<IndexSettingsModal
+						open={settingsModalOpen}
+						onClose={() => setSettingsModalOpen(false)}
+						indexType="author"
 					/>
 				</div>
-			</div>
-			<EntryTree
-				entries={entries}
-				mentions={allMentions}
-				groups={groups.map((g) => ({
-					id: g.id,
-					name: g.name,
-					sortMode: g.sortMode,
-				}))}
-				projectId={projectId}
-				projectIndexTypeId={authorProjectIndexTypeId}
-				onCreateEntry={() => setModalOpen(true)}
-				onCreateGroup={() => setGroupModalState("create")}
-				onEditGroup={(id) => setGroupModalState(id)}
-				onAddEntryToGroup={handleAddEntryToGroup}
-				onReorderGroups={handleReorderGroups}
-				onReorderEntriesInGroup={handleReorderEntriesInGroup}
-				isLoading={isLoading}
-				error={entriesError ? (entriesError as unknown as Error) : null}
-			/>
+			)}
+			<IndexPanelScrollArea>
+				<EntryTree
+					entries={entries}
+					mentions={allMentions}
+					groups={
+						groupsEnabled
+							? groups.map((g) => ({
+									id: g.id,
+									name: g.name,
+									sortMode: g.sortMode,
+								}))
+							: []
+					}
+					projectId={projectId}
+					projectIndexTypeId={authorProjectIndexTypeId}
+					onEditGroup={(id) => setGroupModalState(id)}
+					onAddEntryToGroup={handleAddEntryToGroup}
+					onReorderGroups={handleReorderGroups}
+					onReorderEntriesInGroup={handleReorderEntriesInGroup}
+					isLoading={isLoading}
+					error={entriesError ? (entriesError as unknown as Error) : null}
+				/>
+			</IndexPanelScrollArea>
 			{authorProjectIndexTypeId && projectId && (
 				<>
 					<EntryCreationModal

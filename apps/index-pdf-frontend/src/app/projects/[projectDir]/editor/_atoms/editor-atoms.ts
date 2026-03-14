@@ -429,6 +429,19 @@ export const highlightColorConfigAtom = atomWithStorage<HighlightColorConfig>(
 	},
 );
 
+// Per-index-type: whether to show index entry groups (persisted)
+export type IndexEntryGroupsEnabledConfig = {
+	subject: boolean;
+	author: boolean;
+	scripture: boolean;
+};
+
+export const indexEntryGroupsEnabledAtom =
+	atomWithStorage<IndexEntryGroupsEnabledConfig>(
+		"editor-index-entry-groups-enabled",
+		{ subject: true, author: true, scripture: true },
+	);
+
 // Legacy atoms for backward compatibility (derived from unified atom)
 export const colorConfigAtom = atom(
 	(get) => {

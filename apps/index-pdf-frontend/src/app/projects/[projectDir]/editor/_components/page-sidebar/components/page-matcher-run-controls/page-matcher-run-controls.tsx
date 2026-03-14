@@ -23,6 +23,8 @@ export type PageMatcherRunControlsProps = {
 	pageNumber: number;
 	/** Shown when there are no groups; run button is disabled. */
 	emptyStateMessage: string;
+	/** Whether to show the "Matcher detection" heading. Default true. Set false when embedded in a modal. */
+	showHeading?: boolean;
 };
 
 export const PageMatcherRunControls = ({
@@ -32,6 +34,7 @@ export const PageMatcherRunControls = ({
 	documentId,
 	pageNumber,
 	emptyStateMessage: _emptyStateMessage,
+	showHeading = true,
 }: PageMatcherRunControlsProps) => {
 	const utils = trpc.useUtils();
 
@@ -304,7 +307,9 @@ export const PageMatcherRunControls = ({
 	if (groups.length === 0 && groupsLoaded) {
 		return (
 			<div className="rounded-lg border border-border bg-surface p-4">
-				<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+				{showHeading && (
+					<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+				)}
 				<MatcherRunControlsEmptyState
 					validationError={validationError}
 					runButton={
@@ -330,7 +335,9 @@ export const PageMatcherRunControls = ({
 
 	return (
 		<div className="rounded-lg border border-border bg-surface p-4">
-			<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+			{showHeading && (
+				<h3 className="text-sm font-medium mb-2">Matcher detection</h3>
+			)}
 			<MatcherRunControlsShared
 				groups={groups}
 				runAllGroups={runAllGroups}

@@ -75,6 +75,8 @@ type IndexViewTreeProps = {
 	pageRangesByEntryId: Record<string, string>;
 	parentId: string | null;
 	depth: number;
+	/** When parentId is null, optionally restrict to only these root entry IDs (for group-as-section). */
+	rootEntryIds?: string[] | null;
 };
 
 const IndexViewTree = ({
@@ -83,11 +85,15 @@ const IndexViewTree = ({
 	pageRangesByEntryId,
 	parentId,
 	depth,
+	rootEntryIds,
 }: IndexViewTreeProps) => {
-	const children = useMemo(
-		() => entries.filter((e) => e.parentId === parentId).sort(sortByLabel),
-		[entries, parentId],
-	);
+	const children = useMemo(() => {
+		let filtered = entries.filter((e) => e.parentId === parentId);
+		if (parentId === null && rootEntryIds && rootEntryIds.length > 0) {
+			filtered = filtered.filter((e) => rootEntryIds.includes(e.id));
+		}
+		return filtered.sort(sortByLabel);
+	}, [entries, parentId, rootEntryIds]);
 
 	return (
 		<>
@@ -126,6 +132,11 @@ export const SubjectIndexContent = ({
 		{ enabled: !!projectId && !!projectIndexTypeId },
 	);
 
+	const { data: groups = [] } = trpc.detection.listIndexEntryGroups.useQuery(
+		{ projectId, projectIndexTypeId },
+		{ enabled: !!projectId && !!projectIndexTypeId && !!data },
+	);
+
 	const { data: regions = [] } = trpc.region.list.useQuery(
 		{ projectId },
 		{ enabled: !!projectId },
@@ -153,6 +164,8 @@ export const SubjectIndexContent = ({
 			parentId: e.parentId,
 			indexType: "subject" as const,
 			status: e.status,
+			groupId: e.groupId ?? undefined,
+			groupPosition: e.groupPosition ?? undefined,
 			metadata: {
 				matchers: e.matchers?.map((m) => m.text) ?? [],
 			},
@@ -172,6 +185,51 @@ export const SubjectIndexContent = ({
 		}
 		return out;
 	}, [data?.pageRangesByEntryId, docToCanonical]);
+
+	// Group-as-section: partition root entries by group (must run before early returns)
+	const { ungroupedRootIds, groupIdToRootIds, hasGroups, hasUngrouped } =
+		useMemo(() => {
+			const entries = allEntries;
+			const groupIds = new Set(groups.map((g) => g.id));
+			const roots = entries.filter((e) => e.parentId === null);
+			const ungrouped = roots
+				.filter((e) => !e.groupId || !groupIds.has(e.groupId))
+				.sort(sortByLabel)
+				.map((e) => e.id);
+			const map = new Map<string, string[]>();
+			for (const e of roots) {
+				if (e.groupId && groupIds.has(e.groupId)) {
+					const list = map.get(e.groupId) ?? [];
+					list.push(e.id);
+					map.set(e.groupId, list);
+				}
+			}
+			for (const [gid, ids] of map) {
+				const group = groups.find((g) => g.id === gid);
+				const entriesInGroup = ids
+					.map((id) => entries.find((e) => e.id === id))
+					.filter((e): e is IndexEntry => Boolean(e));
+				if (group?.sortMode === "custom") {
+					entriesInGroup.sort(
+						(a, b) =>
+							(a.groupPosition ?? 999) - (b.groupPosition ?? 999) ||
+							sortByLabel(a, b),
+					);
+				} else {
+					entriesInGroup.sort(sortByLabel);
+				}
+				map.set(
+					gid,
+					entriesInGroup.map((e) => e.id),
+				);
+			}
+			return {
+				ungroupedRootIds: ungrouped,
+				groupIdToRootIds: map,
+				hasGroups: groups.length > 0,
+				hasUngrouped: ungrouped.length > 0,
+			};
+		}, [allEntries, groups]);
 
 	if (isLoading) {
 		return (
@@ -197,15 +255,60 @@ export const SubjectIndexContent = ({
 		);
 	}
 
+	// When no groups exist, render flat tree. Otherwise render group-as-section.
+	if (!hasGroups) {
+		return (
+			<div className="font-merriweather py-4 space-y-0">
+				<IndexViewTree
+					entries={allEntries}
+					allEntries={allEntries}
+					pageRangesByEntryId={canonicalPageRangesByEntryId}
+					parentId={null}
+					depth={0}
+				/>
+			</div>
+		);
+	}
+
 	return (
 		<div className="font-merriweather py-4 space-y-0">
-			<IndexViewTree
-				entries={allEntries}
-				allEntries={allEntries}
-				pageRangesByEntryId={canonicalPageRangesByEntryId}
-				parentId={null}
-				depth={0}
-			/>
+			{/* Ungrouped entries first */}
+			{hasUngrouped && (
+				<div className="space-y-0">
+					<IndexViewTree
+						entries={allEntries}
+						allEntries={allEntries}
+						pageRangesByEntryId={canonicalPageRangesByEntryId}
+						parentId={null}
+						depth={0}
+						rootEntryIds={ungroupedRootIds}
+					/>
+				</div>
+			)}
+			{/* Group sections */}
+			{groups.map((group) => {
+				const rootIds = groupIdToRootIds.get(group.id) ?? [];
+				if (rootIds.length === 0) return null;
+				return (
+					<div
+						key={group.id}
+						className="mt-6 first:mt-0 space-y-0"
+						data-group-id={group.id}
+					>
+						<div className="mb-2 text-base font-semibold text-neutral-700 dark:text-neutral-300">
+							{group.name}
+						</div>
+						<IndexViewTree
+							entries={allEntries}
+							allEntries={allEntries}
+							pageRangesByEntryId={canonicalPageRangesByEntryId}
+							parentId={null}
+							depth={0}
+							rootEntryIds={rootIds}
+						/>
+					</div>
+				);
+			})}
 		</div>
 	);
 };

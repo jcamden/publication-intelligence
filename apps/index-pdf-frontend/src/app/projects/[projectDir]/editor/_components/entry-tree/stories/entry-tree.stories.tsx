@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
 import { mockSubjectEntries } from "../../../_mocks/index-entries";
 import { mockMentions } from "../../../_mocks/mentions";
 import { EntryTree } from "../entry-tree";
@@ -30,7 +29,6 @@ export const Default: Story = {
 	args: {
 		entries: mockSubjectEntries,
 		mentions: mockMentions,
-		onCreateEntry: fn(),
 	},
 };
 
@@ -41,7 +39,6 @@ export const EmptyState: Story = {
 	args: {
 		entries: [],
 		mentions: [],
-		onCreateEntry: fn(),
 	},
 };
 
@@ -52,7 +49,6 @@ export const FlatList: Story = {
 	args: {
 		entries: mockSubjectEntries.filter((e) => e.parentId === null), // Only top-level
 		mentions: mockMentions,
-		onCreateEntry: fn(),
 	},
 };
 
@@ -63,7 +59,6 @@ export const WithClickHandler: Story = {
 	args: {
 		entries: mockSubjectEntries,
 		mentions: mockMentions,
-		onCreateEntry: fn(),
 		onEntryClick: (entry) => console.log("Clicked:", entry),
 	},
 };
