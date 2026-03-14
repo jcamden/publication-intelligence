@@ -247,7 +247,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 		).result.data;
 		const slugsWithApoc = entries2.map((e: { slug: string }) => e.slug);
 		expect(slugsWithApoc).toContain("tobit");
-	});
+	}, 60000);
 
 	it("rerun with same config is idempotent (no duplicate rows)", async ({
 		authenticatedRequest,

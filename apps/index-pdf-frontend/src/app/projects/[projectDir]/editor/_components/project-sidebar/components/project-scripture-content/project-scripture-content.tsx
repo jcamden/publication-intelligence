@@ -17,6 +17,7 @@ import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/p
 import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
+import { ScriptureSetupSection } from "./scripture-setup-section";
 
 export const ProjectScriptureContent = () => {
 	const colorConfig = useAtomValue(colorConfigAtom);
@@ -223,10 +224,26 @@ export const ProjectScriptureContent = () => {
 		isLoadingEntries ||
 		(isLoadingMentions && !!documentId);
 
+	const handleBootstrapSuccess = useCallback(() => {
+		utils.detection.listIndexEntryGroups.invalidate({
+			projectId: projectId || "",
+			projectIndexTypeId: scriptureProjectIndexTypeId ?? "",
+		});
+		utils.indexEntry.list.invalidate({
+			projectId: projectId || "",
+			projectIndexTypeId: scriptureProjectIndexTypeId,
+		});
+	}, [utils, projectId, scriptureProjectIndexTypeId]);
+
 	return (
 		<>
 			{scriptureProjectIndexTypeId && projectId && (
 				<div className="p-2 pt-0">
+					<ScriptureSetupSection
+						projectId={projectId}
+						projectIndexTypeId={scriptureProjectIndexTypeId}
+						onBootstrapSuccess={handleBootstrapSuccess}
+					/>
 					<IndexEntryToolbar
 						onCreateEntry={() => setModalOpen(true)}
 						onCreateGroup={() => setGroupModalState("create")}

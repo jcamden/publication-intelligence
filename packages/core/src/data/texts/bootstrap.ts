@@ -106,6 +106,28 @@ export function getBootstrapDeadSeaScrollsMatchers(): Record<string, string[]> {
 	};
 }
 
+/** Options for extra_book_keys multi-select: HB/NT books outside selected canon. */
+export function getExtraBookKeysOptions(
+	canonId: CanonId | null,
+): { key: string; label: string }[] {
+	const hb = getHebrewBibleMatchers({});
+	const nt = newTestamentMatchers;
+	const deut = getDeuterocanonMatchers({ canon: "catholic" });
+	const other = apocryphaOtherMatchers;
+	const all: Record<string, string[]> = { ...hb, ...nt, ...deut, ...other };
+	const canonKeys = canonId
+		? new Set(getCanonBookKeys(canonId))
+		: new Set<string>();
+	const displayCanonId = canonId ?? "protestant";
+	return Object.keys(all)
+		.filter((key) => !canonKeys.has(key))
+		.sort((a, b) => a.localeCompare(b))
+		.map((key) => ({
+			key,
+			label: getBookLabel(key, displayCanonId) || key,
+		}));
+}
+
 /** Matchers for a single book key (HB, NT, deuterocanon, or apocrypha other). Used for extra_book_keys. */
 export function getMatchersForExtraBookKey(bookKey: string): string[] {
 	const hb = getHebrewBibleMatchers({});

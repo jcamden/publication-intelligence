@@ -19,6 +19,14 @@ export const CANON_IDS = [
 
 export type CanonId = (typeof CANON_IDS)[number];
 
+/** Human-readable labels for canon dropdown display. */
+export const CANON_LABELS: Record<CanonId, string> = {
+	protestant: "Protestant",
+	roman_catholic: "Roman Catholic",
+	tanakh: "Tanakh",
+	eastern_orthodox: "Eastern Orthodox",
+};
+
 const canonBookKeys: Record<CanonId, readonly string[]> = {
 	protestant: protestantCanon,
 	roman_catholic: romanCatholicCanon,

@@ -61,27 +61,22 @@ This should support both:
 24. Multiple mentions may share the same bbox when they have different matchers/segments.
 25. Frontend should group identical-bbox mentions into one highlight with paging UI (`1 of N`).
 
-## New Concept: IndexEntryGroups + Layout Blocks
+## New Concept: IndexEntryGroups (Simplified)
 
 `IndexEntryGroup` replaces "TextGroup" and is shared across scripture + subject indexes.
 
 Two responsibilities:
-- Detection scope: each group defines a matcher set and parser profile for extraction.
-- Index rendering: groups are referenced inside draggable layout blocks for structured presentation.
+- **Detection scope**: each group defines a matcher set and parser profile for extraction.
+- **Index organization**: groups appear as parent-like containers in the EntryTree within each index type section of the project sidebar. No separate layout blocks; the index display format is flexible and users can adjust on export.
 
-Planned layout block model (Index page sidebar):
-- block types: `H1`, `H2`, `H3`, `GroupRef`
-- example:
-  - `H1: Classified Index of the Book of Job`
-  - `H2: A. The Supernatural World`
-  - `H3: God`
-  - `GroupRef: GodEntryGroupName (sort A-Z)`
-  - `H3: Underworld`
-  - `GroupRef: UnderworldEntryGroupName (sort A-Z)`
-- scripture example:
-  - `H1: Scripture and Extrabiblical Index`
-  - `H2: Old Testament`
-  - `GroupRef: HebrewBibleEntryGroupName (sort Protestant Canon)`
+Implemented design (per index_group_layout_sidebar and group_row_and_drag_sort plans):
+- Groups integrate into each index type section (Subject, Author, Scripture) within the project sidebar.
+- Groups render as bordered, collapsible parent nodes in the EntryTree; entries belong to at most one group.
+- One group per entry; group assignment from Entry create/edit modals and Edit Group modal.
+- Custom sort mode: drag-to-reorder entries within a group; groups themselves can be reordered via drag.
+- Shared TreeRow component for entry and group rows (drag handle, expand icon, action buttons on hover).
+- Edit Group modal (like Edit Entry): group metadata, searchable entry add/remove, transfer warning when moving entries between groups.
+- MergeGroupModal: merge source group into target; moves entries and matchers, deletes source.
 
 ## Current Architecture Constraints (Observed)
 
@@ -121,7 +116,7 @@ Planned layout block model (Index page sidebar):
 6. IndexEntryGroup configuration:
 - group CRUD + memberships + parser profile assignment
 - group-aware detection targeting
-- draggable/collapsible layout blocks in Index page sidebar for render order/structure
+- groups as parent-like containers in EntryTree (project sidebar); drag-to-reorder groups and entries within groups
 
 ## Clarified Defaults
 
@@ -855,54 +850,34 @@ Planned layout block model (Index page sidebar):
 - **Shared utilities:** `documentPageId` from `@pubint/core` (cross-platform SHA-256 via @noble/hashes), `useMatcherRunState` hook, `MatcherRunControlsShared` and `MatcherRunControlsEmptyState` components.
 - **Deviations:** LLM page-level runs added (not in original spec); uses `pageRangeStart=pageRangeEnd` rather than a dedicated `scope=page` for LLM.
 
-**Task 8.3: Index page group/layout sidebar**
-- New draggable/collapsible sidebar for:
-  - `IndexEntryGroup` CRUD
-  - group profile/sort settings
-  - layout blocks (`H1`, `H2`, `H3`, `GroupRef`)
-  - drag/drop ordering
-- Implementation details (codebase-aligned):
-  - Add dedicated Index sidebar surface with two coordinated panels:
-    - `Groups` panel for `IndexEntryGroup` management
-    - `Layout` panel for block-based render structure
-  - `IndexEntryGroup` CRUD UX:
-    - create group with `name`, optional `parserProfileId`, and `sortMode`
-    - edit group metadata (rename, profile, sort mode)
-    - soft-delete group with confirmation and impact preview (member counts, layout references)
-    - manage memberships (entries/matchers) with deterministic ordering controls
-  - Layout block model UI:
-    - block types: `H1`, `H2`, `H3`, `GroupRef`
-    - `GroupRef` block must reference an existing active group id
-    - block-level settings include label text (for heading blocks) and sort override when applicable
-  - Drag/drop behavior:
-    - support reordering blocks and moving groups within sections
-    - persist stable `position` values after reorder
-    - provide keyboard reorder fallback for accessibility
-  - Persistence contracts:
-    - add APIs/repo methods to read/write layout block lists and group metadata atomically
-    - prevent saving layout containing dangling `GroupRef` ids
-    - use optimistic concurrency token/version to avoid overwriting concurrent sidebar edits
-  - Rendering integration:
-    - index page renderer consumes layout blocks in saved order
-    - `GroupRef` resolves entries by group membership and configured sort mode (`a_z`, canon order, etc.)
-    - collapsed/expanded state is UI-local and does not alter persisted block order
-  - Detection integration touchpoint:
-    - sidebar group edits immediately affect matcher-run group targeting options (Tasks 8.1/8.2) after refresh/invalidation
-    - parser profile changes on group update should affect subsequent matcher runs only (not in-flight runs)
-  - Validation and safeguards:
-    - enforce unique group names/slugs per project/index type in UI pre-validation + backend validation
-    - prevent deletion of groups currently referenced by layout unless user chooses replace/remove strategy
-    - show non-blocking warnings when group has zero matchers or zero entries
-  - Observability:
-    - telemetry events for group CRUD, layout reorder, and profile/sort changes
-    - audit records for destructive actions (group delete, block delete, reference replacement)
-- Suggested test coverage for Task 8.3:
-  - create/edit/delete group flows persist correctly and update sidebar state
-  - drag/drop reorder persists deterministic block positions
-  - invalid `GroupRef` cannot be saved
-  - layout render uses saved order and group sort settings
-  - group/profile updates are reflected in detection control group lists after refresh
-  - deleting referenced group requires explicit resolution (replace/remove) path
+**Task 8.3: Index entry groups in project sidebar (completed)**
+
+Implemented per the index_group_layout_sidebar and group_row_and_drag_sort plans. **No layout blocks** (H1, H2, H3, GroupRef); groups integrate into the existing project sidebar EntryTree.
+
+- **Backend:**
+  - `custom` sort mode in `index_entry_group_sort_mode` enum; `position` column on `index_entry_groups` for group order
+  - Group CRUD tRPC: create, update, delete, addEntry, removeEntry, getGroup; `addEntryToGroup` removes entry from other groups first (transfer), returns `transferredFrom` when applicable
+  - `reorderGroupEntries` mutation for custom sort within group; `reorderGroups` and `mergeGroups` mutations
+  - `listMatcherAliasesByGroupIds` unions matchers from `index_entry_group_matchers` and entry-based groups
+  - Entry list includes `groupId`; `listGroupsWithEntries` (or equivalent) for tree building
+- **Frontend:**
+  - **Entry modals**: group selector in EntryCreationModal and EntryEditModal (root entries only); transfer warning when changing group
+  - **EditGroupModal**: group metadata, searchable entry add/remove, transfer warning; delete with confirmation
+  - **EntryTree**: groups in bordered boxes; Create Group button; open Edit Group on group row click; edit/merge/delete buttons on hover (via shared TreeRow)
+  - **TreeRow**: shared component for entry and group rows (drag handle, expand icon, label, action buttons)
+  - **GroupItem**: replaces group button; uses TreeRow; draggable for reorder
+  - **Custom sort**: drag entries within group when `sort_mode = 'custom'`; call `reorderGroupEntries` on drop; switching from a_z/canon to custom snapshots current order
+  - **Group drag-to-reorder**: drop zones between groups; `onReorderGroups` wired to `reorderGroups` mutation
+  - **MergeGroupModal**: merge source into target; moves entries and matchers, deletes source
+  - **Collapsible groups**: groups expand/collapse like entries with children
+- **Index page**: optional group-as-section rendering or keep flat tree; format flexible for export
+- **Validation**: unique group name/slug per project/index type; one group per entry; root entries only in groups
+- Suggested test coverage:
+  - create/edit/delete group flows persist correctly
+  - group and entry drag-to-reorder persist positions
+  - transfer warning when moving entry between groups
+  - merge groups moves entries/matchers and deletes source
+  - group/profile updates reflected in detection control group lists
 
 **Task 8.4: Scripture setup controls**
 - Canon selection + corpora toggles + additional-book selection
@@ -945,7 +920,7 @@ Planned layout block model (Index page sidebar):
 
 **Acceptance**
 - User can run matcher detection from project or page context.
-- User can structure rendered index using layout blocks + group refs.
+- User can manage index entry groups in the project sidebar (create, edit, delete, reorder, merge) and assign entries to groups from entry modals.
 
 ### Phase 9: Test Strategy + Performance Gates
 
