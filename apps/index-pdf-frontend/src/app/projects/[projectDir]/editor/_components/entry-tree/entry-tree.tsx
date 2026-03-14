@@ -102,9 +102,9 @@ const EntryTreeNode = ({
 				isDragging={draggedEntryId === entry.id}
 				projectId={projectId}
 				projectIndexTypeId={projectIndexTypeId}
-				onEdit={onEdit}
-				onDelete={onDelete}
-				onMerge={onMerge}
+				onEdit={entry.slug === "unknown" ? undefined : onEdit}
+				onDelete={entry.slug === "unknown" ? undefined : onDelete}
+				onMerge={entry.slug === "unknown" ? undefined : onMerge}
 			/>
 			{hasChildren && expanded && (
 				<div className="flex flex-col gap-1">
@@ -214,11 +214,34 @@ export const EntryTree = ({
 			return null;
 		};
 
+		const unknownFirstCompare = (a: IndexEntry, b: IndexEntry) => {
+			const aUnknown = a.slug === "unknown";
+			const bUnknown = b.slug === "unknown";
+			if (aUnknown && !bUnknown) return -1;
+			if (!aUnknown && bUnknown) return 1;
+			if (aUnknown && bUnknown) return 0;
+			return 0; // fall through to secondary sort
+		};
+
+		// Sort ungrouped entries (Unknown first, then A-Z)
+		const ungroupedList = byGroup.get(null) ?? [];
+		if (ungroupedList.length > 1) {
+			ungroupedList.sort((a, b) => {
+				const cmp = unknownFirstCompare(a, b);
+				if (cmp !== 0) return cmp;
+				return (a.label ?? "").localeCompare(b.label ?? "", undefined, {
+					sensitivity: "base",
+				});
+			});
+		}
+
 		for (const group of groups) {
 			const list = byGroup.get(group.id) ?? [];
 			if (list.length <= 1) continue;
 			if (group.sortMode === "custom") {
 				list.sort((a, b) => {
+					const cmp = unknownFirstCompare(a, b);
+					if (cmp !== 0) return cmp;
 					const posA = a.groupPosition ?? 999999;
 					const posB = b.groupPosition ?? 999999;
 					return posA - posB;
@@ -227,11 +250,11 @@ export const EntryTree = ({
 				const canonId = canonIdFromSortMode(group.sortMode);
 				if (canonId) {
 					const canonBookOrder = getCanonBookKeys(canonId);
-					// Slug is book key for root entries (e.g. genesis, 1_samuel, song_of_songs).
-					// For child slugs like "genesis--1_1", take the part before "--".
 					const getBookKey = (e: IndexEntry) =>
 						(e.slug ?? "").split("--")[0]?.trim() ?? "";
 					list.sort((a, b) => {
+						const cmp = unknownFirstCompare(a, b);
+						if (cmp !== 0) return cmp;
 						const keyA = getBookKey(a);
 						const keyB = getBookKey(b);
 						const idxA = canonBookOrder.indexOf(keyA);
@@ -252,13 +275,18 @@ export const EntryTree = ({
 	const ungroupedEntries = entriesByGroup.get(null) ?? [];
 	const hasGroups = groups.length > 0;
 
-	// When no groups: flat A-Z list of all root entries (children stay nested under parents)
+	// When no groups: flat list with Unknown first, then A-Z
 	const flatSortedRootEntries = useMemo(() => {
-		return [...topLevelEntries].sort((a, b) =>
-			(a.label ?? "").localeCompare(b.label ?? "", undefined, {
+		return [...topLevelEntries].sort((a, b) => {
+			const aUnknown = a.slug === "unknown";
+			const bUnknown = b.slug === "unknown";
+			if (aUnknown && !bUnknown) return -1;
+			if (!aUnknown && bUnknown) return 1;
+			if (aUnknown && bUnknown) return 0;
+			return (a.label ?? "").localeCompare(b.label ?? "", undefined, {
 				sensitivity: "base",
-			}),
-		);
+			});
+		});
 	}, [topLevelEntries]);
 
 	const handleDragStart = (entryId: string) => {

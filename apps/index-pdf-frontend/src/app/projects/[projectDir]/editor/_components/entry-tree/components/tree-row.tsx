@@ -27,6 +27,8 @@ type TreeRowBase = {
 	onMerge?: () => void;
 	depth: number;
 	showDragHandle: boolean;
+	/** When false, row is not draggable (e.g. Unknown entry). Defaults to true. */
+	draggable?: boolean;
 	onClick?: (e: React.KeyboardEvent) => void;
 };
 
@@ -67,6 +69,7 @@ export const TreeRow = (props: TreeRowProps) => {
 		onMerge,
 		depth,
 		showDragHandle,
+		draggable = true,
 		onClick,
 	} = props;
 
@@ -88,7 +91,7 @@ export const TreeRow = (props: TreeRowProps) => {
 		<div
 			role="button"
 			tabIndex={0}
-			draggable
+			draggable={draggable}
 			onDragStart={onDragStart}
 			onDragOver={onDragOver}
 			onDragLeave={onDragLeave}

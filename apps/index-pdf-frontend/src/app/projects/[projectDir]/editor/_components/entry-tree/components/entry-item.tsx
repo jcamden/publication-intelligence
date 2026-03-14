@@ -107,7 +107,8 @@ export const EntryItem = ({
 			onDelete={onDelete ? () => onDelete(entry) : undefined}
 			onMerge={onMerge ? () => onMerge(entry) : undefined}
 			depth={depth}
-			showDragHandle={true}
+			showDragHandle={entry.slug !== "unknown"}
+			draggable={entry.slug !== "unknown"}
 			onClick={() => onClick?.(entry)}
 			hasChildren={hasChildren}
 			expanded={expanded}

@@ -160,6 +160,8 @@ export const createIndexEntry = async ({
 	return entry;
 };
 
+const UNKNOWN_ENTRY_SLUG = "unknown";
+
 export const updateIndexEntry = async ({
 	input,
 	userId,
@@ -169,6 +171,15 @@ export const updateIndexEntry = async ({
 	userId: string;
 	requestId: string;
 }): Promise<IndexEntry> => {
+	const current = await indexEntryRepo.getIndexEntryById({ id: input.id });
+	const existing = requireFound(current);
+	if (existing.slug === UNKNOWN_ENTRY_SLUG) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "Cannot edit the Unknown entry",
+		});
+	}
+
 	const updated = await indexEntryRepo.updateIndexEntry({
 		input,
 		userId,
@@ -268,6 +279,15 @@ export const updateIndexEntryParent = async ({
 	userId: string;
 	requestId: string;
 }): Promise<IndexEntry> => {
+	const current = await indexEntryRepo.getIndexEntryById({ id: input.id });
+	const existingEntry = requireFound(current);
+	if (existingEntry.slug === UNKNOWN_ENTRY_SLUG) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "Cannot move the Unknown entry",
+		});
+	}
+
 	if (input.parentId) {
 		const parentId = input.parentId;
 		await db.transaction(async (tx) => {
@@ -284,7 +304,7 @@ export const updateIndexEntryParent = async ({
 				});
 			}
 
-			const entry = await tx
+			const entryRows = await tx
 				.select({
 					projectIndexTypeId: indexEntries.projectIndexTypeId,
 				})
@@ -292,7 +312,7 @@ export const updateIndexEntryParent = async ({
 				.where(eq(indexEntries.id, input.id))
 				.limit(1);
 
-			if (entry.length === 0) {
+			if (entryRows.length === 0) {
 				throw new TRPCError({
 					code: "NOT_FOUND",
 					message: "Entry not found",
@@ -300,7 +320,7 @@ export const updateIndexEntryParent = async ({
 			}
 
 			const isValidParent = await validateParentIndexType({
-				projectIndexTypeId: entry[0].projectIndexTypeId,
+				projectIndexTypeId: entryRows[0].projectIndexTypeId,
 				parentId,
 				tx,
 			});
@@ -368,6 +388,13 @@ export const deleteIndexEntry = async ({
 }): Promise<IndexEntry> => {
 	const current = await indexEntryRepo.getIndexEntryById({ id: input.id });
 	const entry = requireFound(current);
+
+	if (entry.slug === UNKNOWN_ENTRY_SLUG) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "Cannot delete the Unknown entry",
+		});
+	}
 
 	if (!input.cascadeToChildren) {
 		const children = await indexEntryRepo.listIndexEntries({
@@ -652,15 +679,21 @@ export const transferMentions = async ({
 	userId: string;
 	requestId: string;
 }): Promise<{ count: number }> => {
-	// Validate both entries have same index type
+	// Validate both entries have same index type and neither is Unknown
 	const [fromEntry] = await db
-		.select({ projectIndexTypeId: indexEntries.projectIndexTypeId })
+		.select({
+			projectIndexTypeId: indexEntries.projectIndexTypeId,
+			slug: indexEntries.slug,
+		})
 		.from(indexEntries)
 		.where(eq(indexEntries.id, input.fromEntryId))
 		.limit(1);
 
 	const [toEntry] = await db
-		.select({ projectIndexTypeId: indexEntries.projectIndexTypeId })
+		.select({
+			projectIndexTypeId: indexEntries.projectIndexTypeId,
+			slug: indexEntries.slug,
+		})
 		.from(indexEntries)
 		.where(eq(indexEntries.id, input.toEntryId))
 		.limit(1);
@@ -669,6 +702,16 @@ export const transferMentions = async ({
 		throw new TRPCError({
 			code: "NOT_FOUND",
 			message: "One or both entries not found",
+		});
+	}
+
+	if (
+		fromEntry.slug === UNKNOWN_ENTRY_SLUG ||
+		toEntry.slug === UNKNOWN_ENTRY_SLUG
+	) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "Cannot merge to or from the Unknown entry",
 		});
 	}
 
@@ -710,15 +753,21 @@ export const transferMatchers = async ({
 	userId: string;
 	requestId: string;
 }): Promise<{ count: number }> => {
-	// Validate both entries have same index type
+	// Validate both entries have same index type and neither is Unknown
 	const [fromEntry] = await db
-		.select({ projectIndexTypeId: indexEntries.projectIndexTypeId })
+		.select({
+			projectIndexTypeId: indexEntries.projectIndexTypeId,
+			slug: indexEntries.slug,
+		})
 		.from(indexEntries)
 		.where(eq(indexEntries.id, input.fromEntryId))
 		.limit(1);
 
 	const [toEntry] = await db
-		.select({ projectIndexTypeId: indexEntries.projectIndexTypeId })
+		.select({
+			projectIndexTypeId: indexEntries.projectIndexTypeId,
+			slug: indexEntries.slug,
+		})
 		.from(indexEntries)
 		.where(eq(indexEntries.id, input.toEntryId))
 		.limit(1);
@@ -727,6 +776,16 @@ export const transferMatchers = async ({
 		throw new TRPCError({
 			code: "NOT_FOUND",
 			message: "One or both entries not found",
+		});
+	}
+
+	if (
+		fromEntry.slug === UNKNOWN_ENTRY_SLUG ||
+		toEntry.slug === UNKNOWN_ENTRY_SLUG
+	) {
+		throw new TRPCError({
+			code: "FORBIDDEN",
+			message: "Cannot merge to or from the Unknown entry",
 		});
 	}
 
