@@ -8,6 +8,7 @@ import { normalize } from "../text/normalization";
 import type {
 	CitationParseResult,
 	CitationSegment,
+	CitationStopReason,
 	ParsedRefSegment,
 } from "./parser-profile.types";
 
@@ -241,12 +242,266 @@ function parseBlock(block: string): ParsedRefSegment[] {
 }
 
 /** True if block starts with a book-like word (new book context); stop parsing there. */
-function blockStartsWithBookName(block: string): boolean {
+function _blockStartsWithBookName(block: string): boolean {
 	const t = block.trim();
 	if (t.length === 0) return false;
 	// Starts with letters (possibly with dots) before any digit = book name
 	const beforeDigit = t.match(/^\s*([a-z.]+)/i);
 	return Boolean(beforeDigit && beforeDigit[1].length > 1);
+}
+
+/** Ref-like characters: digits, separators, spaces. Letters and ) end the block. */
+function isRefChar(c: string): boolean {
+	if (c.length !== 1) return false;
+	return /[\d:.,\-\s\u2013\u2014]/.test(c) || c === ";";
+}
+
+/** Read a word (letters and dots) starting at pos. Returns word and end index (exclusive). */
+function readWord(window: string, pos: number): { word: string; end: number } {
+	let end = pos;
+	while (end < window.length && /[\p{L}.]/u.test(window[end])) end++;
+	return { word: window.slice(pos, end).toLowerCase(), end };
+}
+
+/**
+ * Find the end of the current ref block and why we stopped.
+ * From start: optional "and ", then ref content until ; or letter or ) or end.
+ * If we hit a letter, read word: if in otherBookAliases -> new_book else prose.
+ */
+function scanBlockEnd(
+	window: string,
+	start: number,
+	otherBookAliases: string[] | undefined,
+): {
+	blockEnd: number;
+	stopReason: CitationStopReason;
+	afterSemicolon: boolean;
+} {
+	let pos = start;
+	const len = window.length;
+	// Optional "and " at start of block
+	const andMatch = window.slice(pos).match(/^\s*and\s+/i);
+	if (andMatch) pos += andMatch[0].length;
+
+	const blockStart = pos;
+	while (pos < len) {
+		const c = window[pos];
+		if (c === ")") {
+			return {
+				blockEnd: pos,
+				stopReason: "closing_paren",
+				afterSemicolon: false,
+			};
+		}
+		if (c === ";") {
+			return {
+				blockEnd: pos,
+				stopReason: "end_of_input",
+				afterSemicolon: true,
+			};
+		}
+		if (/[\p{L}]/u.test(c)) {
+			// Verse suffix (e.g. 3a, 3b): single letter a-z immediately after a digit
+			if (
+				pos > blockStart &&
+				/\d/.test(window[pos - 1]) &&
+				/^[a-z]$/i.test(c)
+			) {
+				pos++;
+				continue;
+			}
+			const { word, end } = readWord(window, pos);
+			if (word === "and") {
+				pos = end;
+				while (pos < len && /\s/.test(window[pos])) pos++;
+				continue;
+			}
+			const isOtherBook =
+				otherBookAliases?.length &&
+				otherBookAliases.some((alias) => alias.toLowerCase().trim() === word);
+			return {
+				blockEnd: pos,
+				stopReason: isOtherBook ? "new_book" : "prose",
+				afterSemicolon: false,
+			};
+		}
+		if (!isRefChar(c)) {
+			// Invalid ref character
+			return {
+				blockEnd: pos,
+				stopReason: "invalid_syntax",
+				afterSemicolon: false,
+			};
+		}
+		pos++;
+	}
+	return {
+		blockEnd: pos,
+		stopReason: "end_of_input",
+		afterSemicolon: false,
+	};
+}
+
+/** Map parsed segments to CitationSegments with source offsets relative to window. */
+function segmentsWithOffsetsInWindow(
+	segments: ParsedRefSegment[],
+	blockStart: number,
+	blockText: string,
+): CitationSegment[] {
+	const trimmed = blockText.trim();
+	const leadingSpaces = blockText.length - blockText.trimStart().length;
+	const result: CitationSegment[] = [];
+	let searchFrom = 0;
+	for (const seg of segments) {
+		const refText = seg.refText ?? "";
+		if (refText.length === 0) {
+			result.push({
+				...seg,
+				sourceStart: blockStart + leadingSpaces,
+				sourceEnd: blockStart + leadingSpaces,
+			});
+			continue;
+		}
+		const idx = trimmed.indexOf(refText, searchFrom);
+		const startInBlock =
+			idx >= 0 ? leadingSpaces + idx : leadingSpaces + searchFrom;
+		const endInBlock = startInBlock + refText.length;
+		result.push({
+			refText: seg.refText,
+			chapter: seg.chapter,
+			chapterEnd: seg.chapterEnd,
+			verseStart: seg.verseStart,
+			verseEnd: seg.verseEnd,
+			verseSuffix: seg.verseSuffix,
+			sourceStart: blockStart + startInBlock,
+			sourceEnd: blockStart + endInBlock,
+		});
+		searchFrom = idx >= 0 ? idx + refText.length : searchFrom;
+	}
+	return result;
+}
+
+/**
+ * Consume the citation tail after an alias. Uses a consuming parser: advances
+ * through the window, parses ref blocks (semicolon-separated), stops on new book,
+ * prose, invalid syntax, or closing paren. Returns rich result with consumed span
+ * and segment source offsets relative to the window.
+ */
+function parseAfterAliasImpl(args: {
+	normalizedWindow: string;
+	otherBookAliases?: string[];
+}): CitationParseResult {
+	const { normalizedWindow, otherBookAliases } = args;
+	const window = normalizedWindow;
+	const len = window.length;
+
+	// Skip leading whitespace to find where to start scanning
+	let pos = 0;
+	while (pos < len && /\s/.test(window[pos])) pos++;
+
+	const allSegments: CitationSegment[] = [];
+	let stopReason: CitationStopReason = "end_of_input";
+	let consumedStart = pos;
+	let consumedEnd = pos;
+
+	while (pos < len) {
+		// Skip space and optional "and " at start of each block
+		while (pos < len && /\s/.test(window[pos])) pos++;
+		const andMatch = window.slice(pos).match(/^\s*and\s+/i);
+		if (andMatch) pos += andMatch[0].length;
+
+		if (pos >= len) break;
+
+		// Consumed span starts at first ref character (after any per-block leading space)
+		if (allSegments.length === 0) consumedStart = pos;
+
+		const {
+			blockEnd,
+			stopReason: reason,
+			afterSemicolon,
+		} = scanBlockEnd(window, pos, otherBookAliases);
+
+		const blockText = window.slice(pos, blockEnd);
+		const trimmed = blockText.trim();
+
+		if (trimmed.length > 0) {
+			if (!looksLikeRef(trimmed)) {
+				stopReason = "prose";
+				break;
+			}
+			const segments = parseBlock(trimmed);
+			if (segments.length === 0) {
+				stopReason = "invalid_syntax";
+				break;
+			}
+			const withOffsets = segmentsWithOffsetsInWindow(segments, pos, blockText);
+			allSegments.push(...withOffsets);
+		}
+
+		// Consumed span ends at last ref character (exclude trailing space after block)
+		const leadingSpacesInBlock =
+			blockText.length - blockText.trimStart().length;
+		consumedEnd =
+			trimmed.length > 0
+				? pos + leadingSpacesInBlock + trimmed.length
+				: blockEnd;
+
+		if (
+			reason === "new_book" ||
+			reason === "prose" ||
+			reason === "closing_paren" ||
+			reason === "invalid_syntax"
+		) {
+			stopReason = reason;
+			break;
+		}
+
+		if (afterSemicolon) {
+			pos = blockEnd + 1; // past the semicolon
+			consumedEnd = pos;
+			continue;
+		}
+
+		break;
+	}
+
+	const consumedText = window.slice(consumedStart, consumedEnd);
+
+	let status: "match" | "book_only" | "no_match" | "ambiguous" = "no_match";
+	if (allSegments.length === 0) {
+		if (
+			consumedStart >= len ||
+			window.slice(consumedStart).trim().length === 0
+		) {
+			status = "book_only";
+		} else {
+			status = "no_match";
+		}
+	} else if (
+		allSegments.length === 1 &&
+		(allSegments[0].refText ?? "") === ""
+	) {
+		status = "book_only";
+	} else {
+		status = "match";
+	}
+
+	const hasExplicitRefSyntax =
+		allSegments.some(
+			(s) =>
+				(s.refText?.length ?? 0) > 0 &&
+				(s.chapter !== undefined || /\d/.test(s.refText ?? "")),
+		) ?? false;
+
+	return {
+		status,
+		consumedText,
+		consumedStart,
+		consumedEnd,
+		segments: allSegments,
+		stopReason,
+		hasExplicitRefSyntax,
+	};
 }
 
 function parseLocalWindow(localWindow: string): ParsedRefSegment[] {
@@ -261,112 +516,30 @@ function parseLocalWindow(localWindow: string): ParsedRefSegment[] {
 		return []; // invalid prefix
 	}
 
-	const blocks = ref
-		.split(";")
-		.map((b) => b.trim())
-		.filter(Boolean);
-	const segments: ParsedRefSegment[] = [];
-	for (const block of blocks) {
-		// Strip leading "and " so "and 6:1" parses as "6:1" (e.g. "Deut 1:5; 4:44; and 6:1")
-		const blockWithoutAnd = block.replace(/^and\s+/i, "").trim();
-		if (blockStartsWithBookName(blockWithoutAnd)) break; // new book, stop
-		if (!looksLikeRef(blockWithoutAnd)) break; // non-ref content, stop
-		segments.push(...parseBlock(blockWithoutAnd));
-	}
-	return segments;
+	const result = parseAfterAliasImpl({
+		normalizedWindow: ref,
+		otherBookAliases: undefined,
+	});
+	return result.segments.map((s) => ({
+		refText: s.refText,
+		chapter: s.chapter,
+		chapterEnd: s.chapterEnd,
+		verseStart: s.verseStart,
+		verseEnd: s.verseEnd,
+		verseSuffix: s.verseSuffix,
+	}));
 }
 
 function contextPrecheck(localWindow: string): boolean {
 	return localWindow.trim().length > 0;
 }
 
-/**
- * Map parsed segments to CitationSegments with best-effort source offsets
- * by finding each refText in the consumed text sequentially.
- */
-function segmentsWithOffsets(
-	segments: ParsedRefSegment[],
-	consumedText: string,
-): CitationSegment[] {
-	const result: CitationSegment[] = [];
-	let searchFrom = 0;
-	for (const seg of segments) {
-		const refText = seg.refText ?? "";
-		if (refText.length === 0) {
-			result.push({
-				...seg,
-				sourceStart: searchFrom,
-				sourceEnd: searchFrom,
-			});
-			continue;
-		}
-		const idx = consumedText.indexOf(refText, searchFrom);
-		const start = idx >= 0 ? idx : searchFrom;
-		const end = start + refText.length;
-		result.push({
-			refText: seg.refText,
-			chapter: seg.chapter,
-			chapterEnd: seg.chapterEnd,
-			verseStart: seg.verseStart,
-			verseEnd: seg.verseEnd,
-			verseSuffix: seg.verseSuffix,
-			sourceStart: start,
-			sourceEnd: end,
-		});
-		searchFrom = end;
-	}
-	return result;
-}
-
-/**
- * Compatibility shim: derive CitationParseResult from current parse().
- * Preserves behavior; segment offsets and consumed span are best-effort.
- */
+/** parseAfterAlias: consume citation tail after alias; returns rich result. */
 function parseAfterAlias(args: {
 	normalizedWindow: string;
 	otherBookAliases?: string[];
 }): CitationParseResult {
-	const { normalizedWindow } = args;
-	const trimmed = normalizedWindow.trim();
-	const segments = parseLocalWindow(normalizedWindow);
-
-	// Consumed span: whole window (current parser doesn't expose exact consumed length)
-	const consumedStart = 0;
-	const consumedEnd = trimmed.length;
-	const consumedText = trimmed;
-
-	// Status
-	let status: "match" | "book_only" | "no_match" | "ambiguous" = "no_match";
-	if (segments.length === 0) {
-		status = "no_match";
-	} else if (segments.length === 1 && segments[0].refText === "") {
-		status = "book_only";
-	} else {
-		status = "match";
-	}
-
-	// Stop reason: current parser doesn't expose; assume end_of_input for shim
-	const stopReason = "end_of_input" as const;
-
-	// Explicit ref syntax: any segment with non-empty refText and chapter/verse or digit
-	const hasExplicitRefSyntax =
-		segments.some(
-			(s) =>
-				s.refText.length > 0 &&
-				(s.chapter !== undefined || /\d/.test(s.refText)),
-		) ?? false;
-
-	const segmentsWithSource = segmentsWithOffsets(segments, consumedText);
-
-	return {
-		status,
-		consumedText,
-		consumedStart,
-		consumedEnd,
-		segments: segmentsWithSource,
-		stopReason,
-		hasExplicitRefSyntax,
-	};
+	return parseAfterAliasImpl(args);
 }
 
 export const scriptureParserProfile = {

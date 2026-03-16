@@ -1,5 +1,20 @@
 # Scripture Parsing Task 02: Core Alias-Tail Parser
 
+## Status
+
+**Complete.** Verification: `pnpm --filter @pubint/core test:unit -- src/scripture/ref-parser.test.ts` and `pnpm --filter @pubint/core typecheck` pass.
+
+- **Done:**
+  - Real `parseAfterAlias(...)` behavior in `ref-parser.ts` (consuming parser with `parseAfterAliasImpl`, `scanBlockEnd`, verse-suffix and “and” handling).
+  - Returns parse status, consumed span (`consumedStart`/`consumedEnd`), `consumedText`, segment source offsets, stop reason, `hasExplicitRefSyntax`.
+  - Citation forms: chapter only/range, single verse, verse range/lists/lists with ranges, semicolon-separated refs, cross-chapter ranges, verse suffixes, optional leading `and`.
+  - Stop reasons: end of input, new book (`otherBookAliases`), prose, invalid syntax, closing paren.
+  - `parse(...)` preserved as a thin wrapper over the new logic (via `refPortion` + `parseAfterAliasImpl`); existing parser-matrix and compatibility tests pass.
+  - Required tests added: Deut 12:1, Deut 1:5; 4:44; and 6:1, Gen 1:20-2:4, stop at new book, prose stop, parenthetical/non-attached case, consumed span and source-offset assertions (contract-based).
+  - Consumed span semantics: starts at first ref character (after any leading/per-block whitespace; extra e.g. tab not consumed), ends at last ref character (trailing space excluded). Tests lock both.
+- **Out of scope (as specified):**
+  - No backend integration; `detection.service.ts` unchanged.
+
 ## Objective
 
 Implement the new parser-driven alias-tail consumer in `packages/core/src/scripture`.

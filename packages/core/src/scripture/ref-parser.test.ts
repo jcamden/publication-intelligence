@@ -288,3 +288,179 @@ describe("findStandaloneRefSpans", () => {
 		expect(spans2).toEqual([]);
 	});
 });
+
+describe("parseAfterAlias (alias-tail consumer)", () => {
+	it("Deut 12:1 - single chapter:verse", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "12:1",
+		});
+		expect(result.status).toBe("match");
+		expect(result.stopReason).toBe("end_of_input");
+		expect(result.consumedStart).toBe(0);
+		expect(result.consumedEnd).toBe(4);
+		expect(result.consumedText).toBe("12:1");
+		expect(result.segments).toHaveLength(1);
+		expect(result.segments[0]).toMatchObject({
+			refText: "12:1",
+			chapter: 12,
+			verseStart: 1,
+			verseEnd: 1,
+		});
+		expect(result.segments[0].sourceStart).toBe(0);
+		expect(result.segments[0].sourceEnd).toBe(4);
+	});
+
+	it("Deut 1:5; 4:44; and 6:1 - semicolon list with leading and", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "1:5; 4:44; and 6:1",
+		});
+		expect(result.status).toBe("match");
+		expect(result.stopReason).toBe("end_of_input");
+		expect(result.consumedText).toBe("1:5; 4:44; and 6:1");
+		expect(result.segments).toHaveLength(3);
+		expect(result.segments[0]).toMatchObject({
+			refText: "1:5",
+			chapter: 1,
+			verseStart: 5,
+			verseEnd: 5,
+		});
+		expect(result.segments[1]).toMatchObject({
+			refText: "4:44",
+			chapter: 4,
+			verseStart: 44,
+			verseEnd: 44,
+		});
+		expect(result.segments[2]).toMatchObject({
+			refText: "6:1",
+			chapter: 6,
+			verseStart: 1,
+			verseEnd: 1,
+		});
+		expect(result.segments[0].sourceStart).toBe(0);
+		expect(result.segments[0].sourceEnd).toBe(3);
+		expect(result.segments[2].sourceStart).toBe(15); // after "1:5; 4:44; and "
+		expect(result.segments[2].sourceEnd).toBe(18);
+	});
+
+	it("Gen 1:20-2:4 - cross-chapter range", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "1:20-2:4",
+		});
+		expect(result.status).toBe("match");
+		expect(result.segments).toHaveLength(2);
+		expect(result.segments[0]).toMatchObject({
+			refText: "1:20",
+			chapter: 1,
+			verseStart: 20,
+		});
+		expect(result.segments[1]).toMatchObject({
+			refText: "2:1-4",
+			chapter: 2,
+			verseStart: 1,
+			verseEnd: 4,
+		});
+		expect(result.consumedText).toBe("1:20-2:4");
+	});
+
+	it("stops at new book: Deut 32:44-47; 34:9; Josh 1:1-9", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "32:44-47; 34:9; josh 1:1-9",
+			otherBookAliases: ["josh", "joshua"],
+		});
+		expect(result.status).toBe("match");
+		expect(result.stopReason).toBe("new_book");
+		expect(result.consumedText).toBe("32:44-47; 34:9; ");
+		expect(result.segments).toHaveLength(2);
+		expect(result.segments[0]).toMatchObject({
+			refText: "32:44-47",
+			chapter: 32,
+			verseStart: 44,
+			verseEnd: 47,
+		});
+		expect(result.segments[1]).toMatchObject({
+			refText: "34:9",
+			chapter: 34,
+			verseStart: 9,
+			verseEnd: 9,
+		});
+		expect(result.consumedEnd).toBe(16); // position before "josh"
+	});
+
+	it("prose stop: Deuteronomy 1:6-18 appointing judges", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "1:6-18 appointing judges",
+		});
+		expect(result.status).toBe("match");
+		expect(result.stopReason).toBe("prose");
+		expect(result.consumedText).toBe("1:6-18");
+		expect(result.segments).toHaveLength(1);
+		expect(result.segments[0]).toMatchObject({
+			refText: "1:6-18",
+			chapter: 1,
+			verseStart: 6,
+			verseEnd: 18,
+		});
+		expect(result.segments[0].sourceStart).toBe(0);
+		expect(result.segments[0].sourceEnd).toBe(6);
+	});
+
+	it("parenthetical/non-attached: Deuteronomy calls for ... (6:5-9)", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "calls for something (6:5-9)",
+		});
+		expect(result.status).toBe("no_match");
+		expect(result.stopReason).toBe("prose");
+		expect(result.consumedText).toBe("");
+		expect(result.segments).toHaveLength(0);
+		expect(result.consumedStart).toBe(0);
+		expect(result.consumedEnd).toBe(0);
+	});
+
+	/** Consumed span starts at first ref character and ends at last ref character (no leading/trailing whitespace). Segment offsets lie within [consumedStart, consumedEnd]. */
+	it("consumed span and source offsets - segment offsets relative to window", () => {
+		const window = "  1:2-4; 5:1 ";
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: window,
+		});
+		expect(result.status).toBe("match");
+		// Contract: consumedText must equal the slice of the window
+		expect(result.consumedText).toBe(
+			window.slice(result.consumedStart, result.consumedEnd),
+		);
+		// Consumed span = ref content only (no leading/trailing space)
+		expect(result.consumedStart).toBe(2);
+		expect(result.consumedEnd).toBe(12);
+		expect(result.consumedText).toBe("1:2-4; 5:1");
+		// Segments with correct refText and offsets within consumed span
+		expect(result.segments).toHaveLength(2);
+		expect(result.segments[0].refText).toBe("1:2-4");
+		expect(result.segments[0].sourceStart).toBeGreaterThanOrEqual(
+			result.consumedStart,
+		);
+		expect(result.segments[0].sourceEnd).toBeLessThanOrEqual(
+			result.consumedEnd,
+		);
+		expect(result.segments[1].refText).toBe("5:1");
+		expect(result.segments[1].sourceStart).toBeGreaterThanOrEqual(
+			result.consumedStart,
+		);
+		expect(result.segments[1].sourceEnd).toBeLessThanOrEqual(
+			result.consumedEnd,
+		);
+	});
+
+	it("consumed span excludes extra leading whitespace before first ref (e.g. tab)", () => {
+		const window = "  \t1:2-4";
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: window,
+		});
+		expect(result.status).toBe("match");
+		expect(result.consumedText).toBe(
+			window.slice(result.consumedStart, result.consumedEnd),
+		);
+		// Consumed starts at first ref character (index 3), not after initial space skip (2)
+		expect(result.consumedStart).toBe(3);
+		expect(result.consumedText).toBe("1:2-4");
+		expect(result.segments[0].refText).toBe("1:2-4");
+	});
+});
