@@ -214,6 +214,282 @@ It must also preserve existing high-level product behavior:
 - do not assign prose-followed fragments to the current alias
 - allow ambiguous/bookless refs to fall through to `Unknown`
 
+## Additional Grammar Inputs To Apply
+
+The following additions should be incorporated into the new parser design. They are applicable, but some need adaptation to fit this repo's architecture.
+
+### Trigger words for omitted-book references
+
+These trigger words are applicable and should be explicitly supported by the parser-backed bookless scan.
+
+They are also applicable inside alias-attached parsing when they clearly continue a citation tail after a matched book.
+
+#### Chapter triggers
+
+Support all of the following:
+
+- `chapter`
+- `chapters`
+- `chap`
+- `chap.`
+- `ch`
+- `ch.`
+- `chs`
+- `chs.`
+
+Examples that should parse as chapter-oriented references:
+
+- `chapter 3`
+- `chapters 3-5`
+- `ch 3`
+- `ch. 3`
+- `chs 3-5`
+- `chs. 3-5`
+- `chapter 3, 5, 7`
+- `chs 3-5, 8`
+
+#### Verse triggers
+
+Support all of the following:
+
+- `verse`
+- `verses`
+- `v`
+- `v.`
+- `vv`
+- `vv.`
+- `vs`
+- `vs.`
+
+Examples that should parse as verse-oriented references:
+
+- `verse 3`
+- `verses 3-5`
+- `v 3`
+- `v. 3`
+- `vv 3-5`
+- `vv. 3-5`
+- `vs 3-5`
+- `vs. 3-5`
+- `verse 3, 5, 8`
+- `verses 3-5, 8`
+- `vv 3, 5-7`
+
+#### Combined chapter + verse trigger language
+
+These patterns are also applicable:
+
+- `chapter 3 verse 5`
+- `chapter 3 verses 5-7`
+- `ch 3 v 5`
+- `ch 3 vv 5-7`
+- `chapter 3, verse 5`
+- `ch 3:5`
+- `ch 3 v. 5`
+- `ch. 3 vv. 5-7`
+
+Implementation note:
+
+- this should not be implemented as a separate ad hoc preprocessor
+- it should be part of the actual grammar/tokenization layer
+- the parser should understand trigger-led chapter mode, verse mode, and chapter-plus-verse mode
+
+### Expanded core reference patterns
+
+These patterns are applicable and should be part of the parser's supported forms.
+
+#### With explicit book
+
+Support:
+
+- `BOOK`
+- `BOOK CH`
+- `BOOK CH-CH`
+- `BOOK CH:V`
+- `BOOK CH:V-V`
+- `BOOK CH:V,V,V`
+- `BOOK CH:V-V,V`
+- `BOOK CH:V-CH:V`
+- `BOOK CH:V; CH:V`
+- `BOOK CH:V; BOOK CH:V`
+
+Examples:
+
+- `Gen`
+- `Gen 1`
+- `Gen 1-3`
+- `Gen 1:1`
+- `Gen 1:1-3`
+- `Gen 1:1,3,5`
+- `Gen 1:1-3,5`
+- `Gen 1:20-2:4`
+- `Gen 1:1; 2:3`
+- `Gen 1:1; Exod 3:2`
+
+#### With implied book
+
+All of the same passage structures should be supported in bookless mode:
+
+- `CH`
+- `CH-CH`
+- `CH:V`
+- `CH:V-V`
+- `CH:V,V,V`
+- `CH:V-V,V`
+- `CH:V-CH:V`
+- `CH:V; CH:V`
+
+Examples:
+
+- `1`
+- `1-3`
+- `1:1`
+- `1:1-3`
+- `1:1,3,5`
+- `1:1-3,5`
+- `1:20-2:4`
+- `1:1; 2:3`
+
+Implementation note:
+
+- in alias-attached parsing, the explicit book is already known from the matcher hit, so the parser should usually parse the passage tail rather than reparsing the book token itself
+- in bookless scanning, these same passage forms should be reused without requiring a book token
+
+### Number structures and separators
+
+These numeric forms are applicable and should be recognized directly in the parser grammar.
+
+#### Number structures
+
+Support:
+
+- chapter numbers like `1`, `23`, `119`
+- verse numbers like `1`, `23`, `176`
+- ranges like `1-3`
+- lists like `1,3,5` and `1, 3, 5`
+- mixed lists like `1-3,5,7-9`
+- cross-chapter ranges like `1:20-2:4`
+- verse suffixes like `1:3a`, `1:3b`
+
+Strongly consider support for:
+
+- suffix ranges like `1:3a-b`
+- `f` and `ff` notation like `1:3f`, `1:3ff`, `1:3 ff`
+
+Implementation note:
+
+- `f` and `ff` support is desirable, but can be staged if entry-resolution semantics are unclear
+- if implemented, the parse result should preserve that notation explicitly rather than silently normalizing it to a guessed verse range
+
+#### Separators
+
+Support:
+
+- `:` as chapter/verse separator
+- `.` as alternate chapter/verse separator
+- `,` as list separator
+- `;` as reference separator
+- `-`, en dash, and em dash as range separators after normalization
+
+### EBNF-like grammar guidance
+
+The proposed grammar below is useful and should inform the parser design, but it must be adapted to this repo.
+
+Useful baseline:
+
+```ebnf
+ScriptureReference
+  = Reference { ";" Reference } ;
+
+Reference
+  = [Book] Passage ;
+
+Passage
+  = ChapterOnly
+  | ChapterRange
+  | VersePassage ;
+
+ChapterOnly
+  = Chapter ;
+
+ChapterRange
+  = Chapter "-" Chapter ;
+
+VersePassage
+  = Chapter VerseSeparator VerseSpec ;
+
+VerseSpec
+  = Verse
+  | VerseRange
+  | VerseList
+  | VerseRangeList
+  | CrossChapterRange ;
+
+VerseRange
+  = Verse "-" Verse ;
+
+VerseList
+  = Verse { "," Verse } ;
+
+VerseRangeList
+  = VerseRange { "," VerseRange | "," Verse } ;
+
+CrossChapterRange
+  = Chapter ":" Verse "-" Chapter ":" Verse ;
+
+Chapter
+  = Integer ;
+
+Verse
+  = Integer [VerseSuffix] ;
+
+VerseSuffix
+  = "a" | "b" | "c" ;
+
+VerseSeparator
+  = ":" | "." ;
+```
+
+This should be adapted as follows:
+
+- do not make `Book = Word { Word | Integer }` a general parser rule in the matcher backend
+- book recognition in this repo should remain matcher-driven, not free-text-driven
+- for alias-attached parsing, the book has already been resolved externally
+- for bookless scanning, the parser should focus on passage recognition and trigger words, not on inventing new free-text book detection
+
+### Triggered-reference grammar
+
+This proposed grammar is applicable and should be folded into the new parser:
+
+```ebnf
+TriggeredReference
+  = ChapterTrigger ChapterPassage
+  | VerseTrigger VersePassage
+  | ChapterVerseTrigger Chapter VersePassage ;
+
+ChapterTrigger
+  = "chapter" | "chapters"
+  | "chap" | "chap."
+  | "ch" | "ch."
+  | "chs" | "chs." ;
+
+VerseTrigger
+  = "verse" | "verses"
+  | "v" | "v."
+  | "vv" | "vv."
+  | "vs" | "vs." ;
+```
+
+Adaptation notes:
+
+- `ChapterVerseTrigger = ChapterTrigger VerseTrigger` is too narrow if copied literally
+- the implementation should support real surface forms like:
+  - `chapter 3 verse 5`
+  - `chapter 3, verse 5`
+  - `ch 3 v 5`
+  - `ch. 3 vv. 5-7`
+- the parser should treat these as trigger-led passage forms, not as standalone regex exceptions
+
 ## Implementation Shape
 
 The parser should be implemented as a small consuming parser, not as a “find spans with regex, then filter” system.
@@ -221,19 +497,47 @@ The parser should be implemented as a small consuming parser, not as a “find s
 Recommended internal stages:
 
 1. Tokenize the normalized local window.
-2. Consume optional separators immediately after the alias.
-3. Parse one ref atom.
-4. Parse chained refs joined by:
+2. Recognize optional trigger words:
+   - chapter triggers
+   - verse triggers
+   - combined chapter-plus-verse trigger language
+3. Consume optional separators immediately after the alias or trigger.
+4. Parse one ref atom.
+5. Parse chained refs joined by:
    - `,`
    - `;`
    - `and`
-5. Stop when:
+6. Stop when:
    - a new book token begins
    - prose begins
    - unsupported syntax appears
    - a closing delimiter ends citation context
 
 This can be a handwritten parser. It does not need an external parser-combinator library unless the implementation is clearly cleaner.
+
+## Trigger Semantics
+
+Trigger words should influence how bare numbers are interpreted.
+
+Recommended semantics:
+
+- chapter triggers permit bare chapter numbers and chapter ranges
+- verse triggers permit bare verse numbers and verse ranges, but only when a chapter context is already available or when the result is intentionally bookless and unresolved
+- combined chapter-plus-verse trigger language establishes chapter context before verse parsing
+
+Examples:
+
+- `ch 3` -> chapter 3
+- `chs 3-5, 8` -> chapter list/ranges
+- `vv. 5-7` after a known chapter context -> verses 5 through 7
+- `chapter 3 verse 5` -> chapter 3, verse 5
+- `ch 3 vv 5-7` -> chapter 3, verses 5 through 7
+
+Important constraint:
+
+- trigger words should not cause random prose numbers to be treated as scripture if the trigger is absent
+- this means trigger-based parsing is a stricter mode than generic bare-number parsing
+- in practice, bare `1` or `1-3` should usually require either alias context or trigger context
 
 ## File-by-File Plan
 
@@ -279,7 +583,7 @@ export type ParserProfile = {
 };
 ```
 
-It is acceptable to keep the old `parse(...)` temporarily during migration, but the new code path must stop depending on it.
+It is acceptable to keep the existing `parse(...)` temporarily during migration, but the new code path must stop depending on it.
 
 ### `packages/core/src/scripture/ref-parser.ts`
 
@@ -545,9 +849,9 @@ The exact statuses can vary, but the implementation must distinguish these cases
 
 Implement in phases to reduce risk.
 
-### Phase 1: Add new parser API beside existing API
+### Phase 1: Add new parser API beside the current API
 
-- keep old `parse(...)` and `findStandaloneRefSpans(...)` temporarily
+- keep the current `parse(...)` and `findStandaloneRefSpans(...)` temporarily
 - add `parseAfterAlias(...)` and `scanBookless(...)`
 - add full tests for the new API
 
@@ -564,7 +868,7 @@ Implement in phases to reduce risk.
 
 ### Phase 4: Remove compatibility surfaces
 
-- remove or de-emphasize old regex-first surfaces if no longer used
+- remove or de-emphasize current regex-first surfaces if no longer used
 - keep only helpers that are still valuable for tests or compatibility
 
 ## Testing Requirements
