@@ -39,6 +39,11 @@ const STANDALONE_REF_PATTERNS = [
 
 const SCRIPTURE_PROFILE_ID = "scripture-biblical";
 
+/** Common words that are not book names; reject as prefix so "the 1 and 2" does not parse. */
+const NON_BOOK_PREFIX = new Set([
+	"the", "a", "an", "in", "on", "of", "to", "for", "at", "by", "as", "is",
+]);
+
 /**
  * Extract ref portion: skip leading book name (single word: letters/dots) until first digit or end.
  * Prefix before first digit must be empty or one book-like token so we reject "see page 1".
@@ -49,13 +54,16 @@ function refPortion(window: string): string | null {
 	if (match?.index === undefined) return null;
 	const prefix = trimmed.slice(0, match.index).trim();
 	if (prefix.length > 0 && !/^[a-z.]+$/i.test(prefix)) return null; // not a single book-like word
+	if (prefix.length > 0 && NON_BOOK_PREFIX.has(prefix.toLowerCase())) return null;
 	return trimmed.slice(match.index).trim();
 }
 
-/** Ref portion must only contain digits, separators (:.,;-), spaces, and optional verse suffixes (e.g. 3a). Reject "1 and 2", "see page 1" (page is not a suffix). */
+/** Ref portion must only contain digits, separators (:.,;-), spaces, and optional verse suffixes (e.g. 3a, 3a-b). Reject "1 and 2", "see page 1" (page is not a suffix). */
 function looksLikeRef(ref: string): boolean {
 	const tokens = ref.split(/[\s:.,;-]+/).filter(Boolean);
-	return tokens.every((t) => /^\d+[a-z]?$/i.test(t));
+	return tokens.every(
+		(t) => /^\d+[a-z]?$/i.test(t) || /^[a-z]$/i.test(t),
+	);
 }
 
 /** Optional verse suffix (3a, 3b). Return numeric value, ref text, and optional suffix. */
@@ -95,12 +103,12 @@ function parseSingleRef(
 		];
 	}
 
-	// ch:v-v (same chapter): 1:2-4
-	const verseRange = t.match(/^(\d+)[:.](\d+)-(\d+)$/);
+	// ch:v-v (same chapter): 1:2-4, 1:3a-b (digit-digit or suffix-suffix)
+	const verseRange = t.match(/^(\d+)[:.](\d+)([a-z])?-(\d+)([a-z])?$/i);
 	if (verseRange) {
 		const ch = Number.parseInt(verseRange[1], 10);
-		const v1 = parseVerseNum(verseRange[2]);
-		const v2 = parseVerseNum(verseRange[3]);
+		const v1 = parseVerseNum(verseRange[2] + (verseRange[3] ?? ""));
+		const v2 = parseVerseNum(verseRange[4] + (verseRange[5] ?? ""));
 		const seg: ParsedRefSegment = {
 			refText: t,
 			chapter: ch,
@@ -109,6 +117,20 @@ function parseSingleRef(
 		};
 		if (v1.suffix) seg.verseSuffix = v1.suffix;
 		return seg;
+	}
+
+	// ch:v(suffix)-suffix (same verse number, suffix range): 1:3a-b
+	const suffixRange = t.match(/^(\d+)[:.](\d+)([a-z])-([a-z])$/i);
+	if (suffixRange) {
+		const ch = Number.parseInt(suffixRange[1], 10);
+		const v = Number.parseInt(suffixRange[2], 10);
+		return {
+			refText: t,
+			chapter: ch,
+			verseStart: v,
+			verseEnd: v,
+			verseSuffix: suffixRange[3].toLowerCase(),
+		};
 	}
 
 	// ch:v or ch.v (single verse, optional suffix): 1:2, 1.2, 1:3a
@@ -203,6 +225,45 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 	return segments;
 }
 
+/**
+ * Parse a block that is verse-only (no chapter), e.g. after "vv.": "5-7", "5, 7, 9".
+ * Returns segments with verseStart/verseEnd, no chapter. Reuses verse number parsing.
+ */
+function parseVerseOnlyBlock(block: string): ParsedRefSegment[] {
+	const parts = block
+		.split(",")
+		.map((p) => p.trim())
+		.filter(Boolean);
+	if (parts.length === 0) return [];
+
+	const segments: ParsedRefSegment[] = [];
+	for (const p of parts) {
+		const range = p.match(/^(\d+)([a-z])?-(\d+)([a-z])?$/i);
+		if (range) {
+			const v1 = parseVerseNum(range[1] + (range[2] ?? ""));
+			const v2 = parseVerseNum(range[3] + (range[4] ?? ""));
+			segments.push({
+				refText: p,
+				verseStart: v1.num,
+				verseEnd: v2.num,
+				...(v1.suffix && { verseSuffix: v1.suffix }),
+			});
+			continue;
+		}
+		const single = p.match(/^(\d+)([a-z])?$/i);
+		if (single) {
+			const v = parseVerseNum(single[1] + (single[2] ?? ""));
+			segments.push({
+				refText: v.refText,
+				verseStart: v.num,
+				verseEnd: v.num,
+				...(v.suffix && { verseSuffix: v.suffix }),
+			});
+		}
+	}
+	return segments;
+}
+
 /** Verse mode is triggered by : or . (e.g. 1:1, 1:1-8, or 2.1). "1, 2, 3" without :/. is chapters, not verse list. */
 function isVerseList(block: string): boolean {
 	const parts = block
@@ -263,15 +324,26 @@ function readWord(window: string, pos: number): { word: string; end: number } {
 	return { word: window.slice(pos, end).toLowerCase(), end };
 }
 
+/** Chapter trigger words (bookless / combined refs). */
+const CHAPTER_TRIGGERS = new Set([
+	"chapter", "chapters", "chap", "chap.", "ch", "ch.", "chs", "chs.",
+]);
+/** Verse trigger words (bookless / combined refs). */
+const VERSE_TRIGGERS = new Set([
+	"verse", "verses", "v", "v.", "vv", "vv.", "vs", "vs.",
+]);
+
 /**
  * Find the end of the current ref block and why we stopped.
  * From start: optional "and ", then ref content until ; or letter or ) or end.
  * If we hit a letter, read word: if in otherBookAliases -> new_book else prose.
+ * When allowTriggerWords is true, chapter/verse trigger words are not treated as prose (so "3 verse 5" is one block).
  */
 function scanBlockEnd(
 	window: string,
 	start: number,
 	otherBookAliases: string[] | undefined,
+	allowTriggerWords?: boolean,
 ): {
 	blockEnd: number;
 	stopReason: CitationStopReason;
@@ -310,8 +382,38 @@ function scanBlockEnd(
 				pos++;
 				continue;
 			}
+			// Verse suffix range (e.g. 3a-b): single letter after dash when pre-dash is letter
+			if (
+				pos >= 2 &&
+				window[pos - 1] === "-" &&
+				/^[a-z]$/i.test(window[pos - 2]) &&
+				/^[a-z]$/i.test(c)
+			) {
+				pos++;
+				continue;
+			}
 			const { word, end } = readWord(window, pos);
 			if (word === "and") {
+				// Only skip "and" when what follows is ref-like (digit or trigger word)
+				let nextPos = end;
+				while (nextPos < len && /\s/.test(window[nextPos])) nextPos++;
+				const nextIsDigit = nextPos < len && /\d/.test(window[nextPos]);
+				const nextIsTrigger =
+					nextPos < len &&
+					/[\p{L}]/u.test(window[nextPos]) &&
+					(CHAPTER_TRIGGERS.has(readWord(window, nextPos).word) ||
+						VERSE_TRIGGERS.has(readWord(window, nextPos).word));
+				if (nextIsDigit || nextIsTrigger) {
+					pos = nextPos;
+					continue;
+				}
+				return {
+					blockEnd: pos,
+					stopReason: "prose",
+					afterSemicolon: false,
+				};
+			}
+			if (allowTriggerWords && (CHAPTER_TRIGGERS.has(word) || VERSE_TRIGGERS.has(word))) {
 				pos = end;
 				while (pos < len && /\s/.test(window[pos])) pos++;
 				continue;
@@ -425,17 +527,43 @@ function parseAfterAliasImpl(args: {
 		const trimmed = blockText.trim();
 
 		if (trimmed.length > 0) {
-			if (!looksLikeRef(trimmed)) {
-				stopReason = "prose";
-				break;
+			// Block may contain " and " connecting two refs (e.g. "1:3a and 2:4")
+			const andParts = trimmed.split(/\s+and\s+/).map((s) => s.trim()).filter(Boolean);
+			const multiAnd =
+				andParts.length > 1 && andParts.every((p) => looksLikeRef(p));
+			if (multiAnd) {
+				const leadingSpaces = blockText.length - blockText.trimStart().length;
+				let searchFrom = 0;
+				for (const p of andParts) {
+					const idx = trimmed.indexOf(p, searchFrom);
+					if (idx < 0) break;
+					const segs = parseBlock(p);
+					if (segs.length === 0) {
+						stopReason = "invalid_syntax";
+						break;
+					}
+					const startInBlock = leadingSpaces + idx;
+					const withOffsets = segmentsWithOffsetsInWindow(
+						segs,
+						pos + startInBlock,
+						p,
+					);
+					allSegments.push(...withOffsets);
+					searchFrom = idx + p.length;
+				}
+			} else {
+				if (!looksLikeRef(trimmed)) {
+					stopReason = "prose";
+					break;
+				}
+				const segments = parseBlock(trimmed);
+				if (segments.length === 0) {
+					stopReason = "invalid_syntax";
+					break;
+				}
+				const withOffsets = segmentsWithOffsetsInWindow(segments, pos, blockText);
+				allSegments.push(...withOffsets);
 			}
-			const segments = parseBlock(trimmed);
-			if (segments.length === 0) {
-				stopReason = "invalid_syntax";
-				break;
-			}
-			const withOffsets = segmentsWithOffsetsInWindow(segments, pos, blockText);
-			allSegments.push(...withOffsets);
 		}
 
 		// Consumed span ends at last ref character (exclude trailing space after block)
@@ -542,12 +670,255 @@ function parseAfterAlias(args: {
 	return parseAfterAliasImpl(args);
 }
 
+/**
+ * Check if ref content after a chapter trigger contains a verse trigger (e.g. "3 verse 5").
+ * Returns { chapterPart, versePart } if verse trigger found, else null.
+ */
+function splitChapterVerseContent(refContent: string): {
+	chapterPart: string;
+	versePart: string;
+} | null {
+	const trimmed = refContent.trim();
+	if (!trimmed) return null;
+	// Find first verse trigger as a word
+	const verseTriggerRegex = /\b(verse|verses|v\.?|vv\.?|vs\.?)\s+/i;
+	const match = trimmed.match(verseTriggerRegex);
+	if (!match || match.index === undefined) return null;
+	const before = trimmed.slice(0, match.index).trim();
+	const after = trimmed.slice(match.index + match[0].length).trim();
+	if (!before || !after) return null;
+	return { chapterPart: before, versePart: after };
+}
+
+/**
+ * Parse trigger-led ref content: "3", "3-5", "3 verse 5", "3 vv 5-7".
+ * Uses same grammar primitives; supports combined chapter + verse.
+ */
+function parseTriggerLedRefContent(
+	refContent: string,
+	triggerKind: "chapter" | "verse",
+): ParsedRefSegment[] {
+	const trimmed = refContent.trim();
+	if (!trimmed) return [];
+
+	if (triggerKind === "verse") {
+		return parseVerseOnlyBlock(trimmed);
+	}
+
+	// Chapter trigger: check for combined "chapter 3 verse 5"
+	const split = splitChapterVerseContent(trimmed);
+	if (split) {
+		const chSegments = parseBlock(split.chapterPart);
+		const verseSegments = parseVerseOnlyBlock(split.versePart);
+		if (chSegments.length === 0 || verseSegments.length === 0) return [];
+		// Take first chapter as context (chapter only or chapter range -> use first chapter for verse attachment)
+		const chSeg = chSegments[0];
+		const chapter = chSeg.chapter;
+		if (chapter === undefined) return chSegments;
+		const combined: ParsedRefSegment[] = [];
+		for (const vs of verseSegments) {
+			const refText =
+				vs.verseEnd !== undefined && vs.verseEnd !== vs.verseStart
+					? `${chapter}:${vs.verseStart}-${vs.verseEnd}`
+					: `${chapter}:${vs.verseStart}`;
+			combined.push({
+				refText,
+				chapter,
+				verseStart: vs.verseStart,
+				verseEnd: vs.verseEnd ?? vs.verseStart,
+				verseSuffix: vs.verseSuffix,
+			});
+		}
+		return combined;
+	}
+
+	return parseBlock(trimmed);
+}
+
+/** Match start of implied-book ref: digit then : or . then digit (e.g. 1:1, 4:35). */
+const IMPLIED_REF_START = /^\d+[.:]\d+/;
+
+/**
+ * Find the next trigger word (chapter or verse) or implied ref start in window from pos.
+ * Returns { kind: 'chapter'|'verse', wordEnd } or { kind: 'implied', matchStart } or null.
+ */
+function findNextCitationStart(
+	window: string,
+	fromPos: number,
+): { kind: "chapter" | "verse"; wordEnd: number } | { kind: "implied"; matchStart: number } | null {
+	const len = window.length;
+	let pos = fromPos;
+	while (pos < len) {
+		while (pos < len && /\s/.test(window[pos])) pos++;
+		if (pos >= len) return null;
+		// Implied ref: \d+[.:]\d+ at current position
+		if (/\d/.test(window[pos]) && IMPLIED_REF_START.test(window.slice(pos))) {
+			return { kind: "implied", matchStart: pos };
+		}
+		if (/[\p{L}]/u.test(window[pos])) {
+			const { word, end } = readWord(window, pos);
+			if (CHAPTER_TRIGGERS.has(word)) return { kind: "chapter", wordEnd: end };
+			if (VERSE_TRIGGERS.has(word)) return { kind: "verse", wordEnd: end };
+			pos = end;
+			continue;
+		}
+		pos++;
+	}
+	return null;
+}
+
+/**
+ * Scan normalized text for bookless citations (no book alias).
+ * Uses same grammar primitives as alias-tail parsing. Supports trigger words and implied refs.
+ * Returns one CitationParseResult per disjoint citation found; conservative on bare numbers.
+ */
+function scanBooklessImpl(args: {
+	normalizedText: string;
+	occupiedRanges?: Array<{ start: number; end: number }>;
+}): CitationParseResult[] {
+	const { normalizedText, occupiedRanges = [] } = args;
+	const window = normalizedText;
+	const len = window.length;
+	const results: CitationParseResult[] = [];
+	let pos = 0;
+
+	while (pos < len) {
+		// Skip whitespace and non-ref/trigger
+		while (pos < len && /\s/.test(window[pos])) pos++;
+		if (pos >= len) break;
+
+		const start = findNextCitationStart(window, pos);
+		if (!start) break;
+
+		let consumedStart: number;
+		let refContentStart: number;
+		let triggerKind: "chapter" | "verse" | null = null;
+
+		if (start.kind === "implied") {
+			consumedStart = start.matchStart;
+			refContentStart = start.matchStart;
+		} else {
+			triggerKind = start.kind;
+			consumedStart = pos; // include trigger in consumed
+			refContentStart = start.wordEnd;
+		}
+
+		// Skip spaces after trigger to start of ref content
+		let refStart = refContentStart;
+		while (refStart < len && /\s/.test(window[refStart])) refStart++;
+
+		if (start.kind === "implied") {
+			// Use full alias-tail consumer so we get semicolon continuation and stop at prose
+			const slice = window.slice(refStart);
+			const parseResult = parseAfterAliasImpl({
+				normalizedWindow: slice,
+				otherBookAliases: undefined,
+			});
+			if (parseResult.segments.length === 0) {
+				pos = refStart + 1;
+				continue;
+			}
+			const consumedEnd = refStart + parseResult.consumedEnd;
+			const consumedText = window.slice(refStart, consumedEnd);
+			const overlaps = occupiedRanges.some(
+				(r) => consumedEnd > r.start && refStart < r.end,
+			);
+			if (overlaps) {
+				pos = consumedEnd;
+				continue;
+			}
+			const withOffsets = parseResult.segments.map((s) => ({
+				...s,
+				sourceStart: s.sourceStart + refStart,
+				sourceEnd: s.sourceEnd + refStart,
+			}));
+			results.push({
+				status: "match",
+				consumedText,
+				consumedStart: refStart,
+				consumedEnd,
+				segments: withOffsets,
+				stopReason: parseResult.stopReason,
+				hasExplicitRefSyntax: parseResult.hasExplicitRefSyntax,
+			});
+			pos = consumedEnd;
+			continue;
+		}
+
+		const { blockEnd, stopReason } = scanBlockEnd(
+			window,
+			refStart,
+			undefined,
+			true,
+		);
+		const blockText = window.slice(refStart, blockEnd);
+		const trimmed = blockText.trim();
+
+		if (trimmed.length === 0) {
+			pos = refContentStart;
+			continue;
+		}
+
+		const segments = parseTriggerLedRefContent(
+			blockText,
+			triggerKind as "chapter" | "verse",
+		);
+		if (segments.length === 0) {
+			pos = blockEnd;
+			continue;
+		}
+
+		const consumedEnd = blockEnd;
+		const consumedText = window.slice(consumedStart, consumedEnd);
+
+		const overlaps = occupiedRanges.some(
+			(r) => consumedEnd > r.start && consumedStart < r.end,
+		);
+		if (overlaps) {
+			pos = blockEnd;
+			continue;
+		}
+
+		const withOffsets =
+			splitChapterVerseContent(blockText.trim())
+				? segments.map((s) => ({
+						...s,
+						sourceStart: refStart,
+						sourceEnd: blockEnd,
+					}))
+				: segmentsWithOffsetsInWindow(segments, refStart, blockText);
+		const hasExplicitRefSyntax =
+			withOffsets.some(
+				(s) =>
+					(s.refText?.length ?? 0) > 0 &&
+					(s.chapter !== undefined || /\d/.test(s.refText ?? "")),
+			) ?? false;
+
+		results.push({
+			status: "match",
+			consumedText,
+			consumedStart,
+			consumedEnd,
+			segments: withOffsets,
+			stopReason,
+			hasExplicitRefSyntax,
+		});
+
+		pos = blockEnd;
+	}
+
+	return results;
+}
+
 export const scriptureParserProfile = {
 	id: SCRIPTURE_PROFILE_ID,
 	contextPrecheck,
 	parse: parseLocalWindow,
 	parseAfterAlias,
-	// scanBookless omitted; optional on ParserProfile
+	scanBookless: (args: {
+		normalizedText: string;
+		occupiedRanges?: Array<{ start: number; end: number }>;
+	}) => scanBooklessImpl(args),
 } as const;
 
 /** Scripture-indicating keywords: accept chapter-only/range when preceded by these (e.g. "ch 1-2", "vv. 1-3"). */

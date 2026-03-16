@@ -464,3 +464,167 @@ describe("parseAfterAlias (alias-tail consumer)", () => {
 		expect(result.segments[0].refText).toBe("1:2-4");
 	});
 });
+
+describe("scanBookless (bookless citation scan)", () => {
+	const scan = (normalizedText: string, occupiedRanges: Array<{ start: number; end: number }> = []) =>
+		scriptureParserProfile.scanBookless!({ normalizedText, occupiedRanges });
+
+	it("As noted in 4:35 and again in 5:1-3 - finds two implied refs (stop at prose between)", () => {
+		const text = "as noted in 4:35 and again in 5:1-3";
+		const results = scan(text);
+		expect(results).toHaveLength(2);
+		expect(results[0].segments).toHaveLength(1);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "4:35",
+			chapter: 4,
+			verseStart: 35,
+			verseEnd: 35,
+		});
+		expect(results[1].segments).toHaveLength(1);
+		expect(results[1].segments[0]).toMatchObject({
+			refText: "5:1-3",
+			chapter: 5,
+			verseStart: 1,
+			verseEnd: 3,
+		});
+	});
+
+	it("chapter 3 - trigger-led chapter only", () => {
+		const results = scan("chapter 3");
+		expect(results).toHaveLength(1);
+		expect(results[0].status).toBe("match");
+		expect(results[0].segments).toHaveLength(1);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "3",
+			chapter: 3,
+		});
+	});
+
+	it("chapters 3-5 - trigger-led chapter range", () => {
+		const results = scan("chapters 3-5");
+		expect(results).toHaveLength(1);
+		expect(results[0].segments).toHaveLength(1);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "3-5",
+			chapter: 3,
+			chapterEnd: 5,
+		});
+	});
+
+	it("vv. 5-7 - trigger-led verse range", () => {
+		const results = scan("vv. 5-7");
+		expect(results).toHaveLength(1);
+		expect(results[0].segments).toHaveLength(1);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "5-7",
+			verseStart: 5,
+			verseEnd: 7,
+		});
+		expect(results[0].segments[0].chapter).toBeUndefined();
+	});
+
+	it("chapter 3 verse 5 - combined trigger", () => {
+		const results = scan("chapter 3 verse 5");
+		expect(results).toHaveLength(1);
+		expect(results[0].segments).toHaveLength(1);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "3:5",
+			chapter: 3,
+			verseStart: 5,
+			verseEnd: 5,
+		});
+	});
+
+	it("ch 3 vv 5-7 - combined trigger", () => {
+		const results = scan("ch 3 vv 5-7");
+		expect(results).toHaveLength(1);
+		expect(results[0].segments).toHaveLength(1);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "3:5-7",
+			chapter: 3,
+			verseStart: 5,
+			verseEnd: 7,
+		});
+	});
+
+	it("1:1; 2:3 - implied refs semicolon-separated", () => {
+		const results = scan("1:1; 2:3");
+		expect(results).toHaveLength(1);
+		expect(results[0].segments).toHaveLength(2);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "1:1",
+			chapter: 1,
+			verseStart: 1,
+			verseEnd: 1,
+		});
+		expect(results[0].segments[1]).toMatchObject({
+			refText: "2:3",
+			chapter: 2,
+			verseStart: 3,
+			verseEnd: 3,
+		});
+	});
+
+	it("bare numbers without trigger or alias context - no parse (conservative)", () => {
+		const results = scan("the 1 and 2 of the story");
+		expect(results).toHaveLength(0);
+	});
+
+	it("1:3a - verse suffix (implied ref); 1:3a and 2:4 as one run with two segments", () => {
+		const results = scan("see 1:3a and 2:4");
+		expect(results).toHaveLength(1);
+		expect(results[0].segments).toHaveLength(2);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "1:3a",
+			chapter: 1,
+			verseStart: 3,
+			verseEnd: 3,
+			verseSuffix: "a",
+		});
+		expect(results[0].segments[1]).toMatchObject({
+			refText: "2:4",
+			chapter: 2,
+			verseStart: 4,
+			verseEnd: 4,
+		});
+	});
+
+	it("1:3a-b style suffix range - implied ref with suffix", () => {
+		const results = scan("1:3a-b");
+		expect(results).toHaveLength(1);
+		expect(results[0].segments).toHaveLength(1);
+		expect(results[0].segments[0]).toMatchObject({
+			refText: "1:3a-b",
+			chapter: 1,
+			verseStart: 3,
+			verseEnd: 3,
+			verseSuffix: "a",
+		});
+	});
+
+	it("returns richer parse result shape (consumedText, consumedStart/End, segments with source offsets)", () => {
+		const results = scan("chapter 3");
+		expect(results).toHaveLength(1);
+		expect(results[0]).toMatchObject({
+			status: "match",
+			consumedText: "chapter 3",
+			stopReason: "end_of_input",
+			hasExplicitRefSyntax: true,
+		});
+		expect(results[0].consumedStart).toBe(0);
+		expect(results[0].consumedEnd).toBe(9);
+		expect(results[0].segments[0].sourceStart).toBeGreaterThanOrEqual(0);
+		expect(results[0].segments[0].sourceEnd).toBeLessThanOrEqual(9);
+	});
+
+	it("skips citations overlapping occupiedRanges", () => {
+		const text = "4:35 and 5:1-3";
+		const results = scan(text, [{ start: 0, end: 5 }]);
+		// 4:35 overlaps [0,5); 5:1-3 may not
+		expect(results.length).toBeLessThanOrEqual(2);
+		const has4_35 = results.some(
+			(r) => r.segments.some((s) => s.refText === "4:35"),
+		);
+		expect(has4_35).toBe(false);
+	});
+});
