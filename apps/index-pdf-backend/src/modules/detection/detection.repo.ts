@@ -9,6 +9,7 @@ import {
 	projectIndexTypes,
 	suppressedSuggestions,
 } from "../../db/schema";
+import { ensureUnknownEntryExistsInTx } from "../scripture-bootstrap/scripture-bootstrap.repo";
 import type { AliasInput } from "./alias-engine.types";
 import { bboxesHash as computeBboxesHash } from "./bbox-canonical.utils";
 import type {
@@ -658,6 +659,32 @@ export const getMatcherWithEntry = async ({
 				)
 				.limit(1);
 			return row ?? null;
+		},
+	});
+};
+
+/**
+ * Get or create the Unknown book entry for a scripture project. Idempotent.
+ * Used by standalone ref scan to assign refs without clear book context.
+ */
+export const getUnknownBookEntryForProject = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+}): Promise<string> => {
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const { entryId } = await ensureUnknownEntryExistsInTx({
+				tx,
+				projectId,
+				projectIndexTypeId,
+			});
+			return entryId;
 		},
 	});
 };

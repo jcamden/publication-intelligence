@@ -122,8 +122,9 @@ export const DetectionPanel = () => {
 		}
 		if (didComplete) {
 			utils.indexMention.list.invalidate({ projectId });
+			utils.indexEntry.list.invalidate({ projectId });
 		}
-	}, [detectionRuns, projectId, utils.indexMention.list]);
+	}, [detectionRuns, projectId, utils.indexMention.list, utils.indexEntry.list]);
 
 	const hasApiKey =
 		!!settings?.openrouterApiKey ||

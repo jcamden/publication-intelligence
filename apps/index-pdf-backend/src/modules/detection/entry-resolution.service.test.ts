@@ -349,7 +349,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 
 		expect(result.candidatesSeen).toBe(1);
 		expect(result.childrenReused).toBe(1);
-		expect(result.matchersReused).toBe(1);
+		expect(result.matchersReused).toBe(0); // Scripture child entries have no matchers
 		expect(result.mentionsPersisted).toBe(1);
 		expect(result.resolutionMisses).toBe(0);
 		expect(detectionRepo.getMatcherWithEntry).toHaveBeenCalledWith({
@@ -411,7 +411,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 		});
 
 		expect(result.childrenCreated).toBe(1);
-		expect(result.matchersCreated).toBe(1);
+		expect(result.matchersCreated).toBe(0); // Scripture child entries have no matchers
 		expect(result.mentionsPersisted).toBe(1);
 		expect(detectionRepo.createChildEntry).toHaveBeenCalledWith({
 			userId,
@@ -422,12 +422,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			label: "2:4-5",
 			detectionRunId,
 		});
-		expect(detectionRepo.createMatcher).toHaveBeenCalledWith({
-			userId,
-			entryId: "e-child-2-4-5",
-			projectIndexTypeId,
-			text: "2:4-5",
-		});
+		expect(detectionRepo.createMatcher).not.toHaveBeenCalled();
 	});
 
 	it("compound refs emit one mention per segment in stable order", async () => {
@@ -557,7 +552,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 		});
 
 		expect(result.childrenReused).toBe(1);
-		expect(result.matchersReused).toBe(1);
+		expect(result.matchersReused).toBe(0); // Scripture child entries have no matchers
 		expect(result.mentionsPersisted).toBe(0);
 		expect(result.mentionsDeduped).toBe(1);
 		expect(detectionRepo.createChildEntry).not.toHaveBeenCalled();
@@ -597,13 +592,8 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			context: scriptureContext,
 		});
 
-		expect(result.matchersCreated).toBe(1);
-		expect(detectionRepo.createMatcher).toHaveBeenCalledWith({
-			userId,
-			entryId: "e-gen-3-1",
-			projectIndexTypeId,
-			text: "3:1 (2)",
-		});
+		expect(result.matchersCreated).toBe(0); // Scripture child entries have no matchers
+		expect(detectionRepo.createMatcher).not.toHaveBeenCalled();
 	});
 
 	it("drops candidate when parent matcher/entry not found and logs resolution_miss", async () => {

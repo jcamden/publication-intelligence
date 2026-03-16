@@ -243,6 +243,20 @@ function segmentRefToSlug(refText: string): string {
 	);
 }
 
+/**
+ * Build full ref from segment. For verse-list continuations (e.g. "14-15", "23" in
+ * "31:1-8, 14-15, 23"), refText is verse-only; prepend chapter when segment has it.
+ */
+function segmentToFullRef(seg: MatcherMentionParserSegment): string {
+	const refText = (seg.refText ?? "").trim();
+	if (!refText) return refText;
+	// refText already includes chapter (e.g. "31:1-8")
+	if (/^\d+[:.]/.test(refText)) return refText;
+	// Verse-only continuation: prepend chapter (e.g. "14-15" + chapter 31 → "31:14-15")
+	if (seg.chapter != null) return `${seg.chapter}:${refText}`;
+	return refText;
+}
+
 /** Per-candidate scripture resolution: parent lookup, segment expansion, child entry/matcher create-reuse, writes. */
 async function resolveScriptureCandidate(
 	candidate: ResolutionCandidate,
@@ -250,6 +264,80 @@ async function resolveScriptureCandidate(
 ): Promise<ResolutionOutcome> {
 	const { userId, projectId, projectIndexTypeId, detectionRunId } = ctx;
 	try {
+		// Unknown book path: standalone refs without book context → child entries under Unknown (no matchers)
+		if (candidate.isUnknownBook) {
+			const segments: MatcherMentionParserSegment[] =
+				(candidate.parserSegments?.length ?? 0) > 0
+					? (candidate.parserSegments ?? [])
+					: candidate.parserSegment
+						? [candidate.parserSegment]
+						: [];
+			const parentEntryId = candidate.entryId;
+			const writes: ResolvedMentionWrite[] = [];
+			let childrenCreated = 0;
+			let childrenReused = 0;
+
+			for (const seg of segments) {
+				const refText = seg.refText ?? "";
+				const isBookLevel = refText.trim() === "";
+				if (isBookLevel) {
+					writes.push({
+						entryId: parentEntryId,
+						pageNumber: candidate.pageNumber,
+						textSpan: candidate.textSpan,
+						bboxes: candidate.bboxes,
+					});
+					continue;
+				}
+				const fullRef = segmentToFullRef(seg);
+				const segmentSlug = segmentRefToSlug(fullRef);
+				const childSlug = `unknown--${segmentSlug}`;
+				const label = fullRef;
+
+				let childEntryId: string;
+				const existingChild = await detectionRepo.getEntryByProjectTypeAndSlug({
+					userId,
+					projectId,
+					projectIndexTypeId,
+					slug: childSlug,
+				});
+				if (existingChild && existingChild.parentId === parentEntryId) {
+					childEntryId = existingChild.id;
+					childrenReused += 1;
+				} else {
+					childEntryId = await detectionRepo.createChildEntry({
+						userId,
+						projectId,
+						projectIndexTypeId,
+						parentId: parentEntryId,
+						slug: childSlug,
+						label,
+						detectionRunId,
+					});
+					childrenCreated += 1;
+				}
+				// No matchers for scripture child entries (book or Unknown)—avoids "19-20" matching Exodus:19-20
+				writes.push({
+					entryId: childEntryId,
+					pageNumber: candidate.pageNumber,
+					textSpan: candidate.textSpan,
+					bboxes: candidate.bboxes,
+				});
+			}
+			if (writes.length === 0) return { kind: "dropped", reasonCode: "no_segments" };
+			return {
+				kind: "resolved",
+				writes,
+				metrics: {
+					childrenCreated,
+					childrenReused,
+					matchersCreated: 0,
+					matchersReused: 0,
+					resolutionMisses: 0,
+				},
+			};
+		}
+
 		const parent = await detectionRepo.getMatcherWithEntry({
 			userId,
 			matcherId: candidate.matcherId,
@@ -285,8 +373,8 @@ async function resolveScriptureCandidate(
 		const writes: ResolvedMentionWrite[] = [];
 		let childrenCreated = 0;
 		let childrenReused = 0;
-		let matchersCreated = 0;
-		let matchersReused = 0;
+		const matchersCreated = 0; // Scripture child entries have no matchers
+		const matchersReused = 0;
 
 		if (segments.length > 0) {
 			for (const seg of segments) {
@@ -303,9 +391,10 @@ async function resolveScriptureCandidate(
 					continue;
 				}
 
-				const segmentSlug = segmentRefToSlug(refText);
+				const fullRef = segmentToFullRef(seg);
+				const segmentSlug = segmentRefToSlug(fullRef);
 				const childSlug = `${parent.slug}--${segmentSlug}`;
-				const label = refText;
+				const label = fullRef;
 
 				let childEntryId: string;
 				const existingChild = await detectionRepo.getEntryByProjectTypeAndSlug({
@@ -329,35 +418,7 @@ async function resolveScriptureCandidate(
 					});
 					childrenCreated += 1;
 				}
-
-				let matcherText = refText;
-				for (let disambiguate = 0; ; disambiguate++) {
-					const existingMatcher =
-						await detectionRepo.getMatcherByTextAndProjectIndexTypeId({
-							userId,
-							projectIndexTypeId,
-							text: matcherText,
-						});
-					if (!existingMatcher) {
-						await detectionRepo.createMatcher({
-							userId,
-							entryId: childEntryId,
-							projectIndexTypeId,
-							text: matcherText,
-						});
-						matchersCreated += 1;
-						break;
-					}
-					if (existingMatcher.entryId === childEntryId) {
-						matchersReused += 1;
-						break;
-					}
-					matcherText =
-						disambiguate === 0
-							? `${refText} (2)`
-							: `${refText} (${disambiguate + 2})`;
-				}
-
+				// No matchers for scripture child entries—avoids "19-20" matching Exodus:19-20
 				writes.push({
 					entryId: childEntryId,
 					pageNumber: candidate.pageNumber,

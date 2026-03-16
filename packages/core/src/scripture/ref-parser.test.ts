@@ -64,6 +64,14 @@ describe("scripture ref parser - parser matrix", () => {
 		]);
 	});
 
+	it("verse list with ch:v-v first: 31:1-8, 14-15, 23 -> chapter 31 for all", () => {
+		expect(parse("gen 31:1-8, 14-15, 23")).toEqual([
+			{ refText: "31:1-8", chapter: 31, verseStart: 1, verseEnd: 8 },
+			{ refText: "14-15", chapter: 31, verseStart: 14, verseEnd: 15 },
+			{ refText: "23", chapter: 31, verseStart: 23, verseEnd: 23 },
+		]);
+	});
+
 	it("multi refs with semicolon: 1:1-3; 2:4 -> two segments", () => {
 		expect(parse("gen 1:1-3; 2:4")).toEqual([
 			{ refText: "1:1-3", chapter: 1, verseStart: 1, verseEnd: 3 },
@@ -83,6 +91,13 @@ describe("scripture ref parser - parser matrix", () => {
 		expect(parse("gen 1:20-2:4")).toEqual([
 			{ refText: "1:20", chapter: 1, verseStart: 20 },
 			{ refText: "2:1-4", chapter: 2, verseStart: 1, verseEnd: 4 },
+		]);
+	});
+
+	it("cross-chapter 1:6-28:69: parse produces two segments (full range for Unknown should tile as 1:6-28:69)", () => {
+		expect(parse("gen 1:6-28:69")).toEqual([
+			{ refText: "1:6", chapter: 1, verseStart: 6 },
+			{ refText: "28:1-69", chapter: 28, verseStart: 1, verseEnd: 69 },
 		]);
 	});
 
@@ -233,6 +248,14 @@ describe("findStandaloneRefSpans", () => {
 		const spans = findStandaloneRefSpans("1:20-2:4");
 		expect(spans.length).toBe(1);
 		expect(spans[0].refText).toBe("1:20-2:4");
+	});
+
+	it("finds cross-chapter 1:6-28:69 as single span (Unknown should tile as 1:6-28:69, not just 1:6)", () => {
+		const spans = findStandaloneRefSpans("1:6–28:69", {
+			includeChapterAndRange: true,
+		});
+		expect(spans.length).toBe(1);
+		expect(spans[0].refText).toMatch(/1:6.*28:69/);
 	});
 
 	it("finds verse list 27:1-8, 9-14", () => {

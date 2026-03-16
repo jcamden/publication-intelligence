@@ -441,4 +441,6 @@ export type MatcherMentionCandidate = {
 	parserSegments?: MatcherMentionParserSegment[];
 	/** True when candidate was emitted as book-level fallback after parse returned no segments (Task 4.3). */
 	fallbackBookLevel?: boolean;
+	/** True when candidate is from standalone ref scan (no book in alias window); assign to Unknown, book-level only. */
+	isUnknownBook?: boolean;
 };

@@ -192,7 +192,7 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 	return segments;
 }
 
-/** Verse mode is triggered by : or . (e.g. 1:1 or 2.1). "1, 2, 3" without :/. is chapters, not verse list. */
+/** Verse mode is triggered by : or . (e.g. 1:1, 1:1-8, or 2.1). "1, 2, 3" without :/. is chapters, not verse list. */
 function isVerseList(block: string): boolean {
 	const parts = block
 		.split(",")
@@ -200,7 +200,8 @@ function isVerseList(block: string): boolean {
 		.filter(Boolean);
 	if (parts.length < 2) return false;
 	const first = parts[0];
-	return /^\d+[:.]\d+([a-z])?$/i.test(first);
+	// ch:v, ch:v-v, or ch:v (suffix)
+	return /^\d+[:.]\d+([a-z])?(-\d+([a-z])?)?$/i.test(first);
 }
 
 function parseBlock(block: string): ParsedRefSegment[] {

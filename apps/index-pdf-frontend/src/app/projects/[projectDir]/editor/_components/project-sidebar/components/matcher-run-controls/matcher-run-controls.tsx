@@ -102,8 +102,9 @@ export const MatcherRunControls = ({
 		}
 		if (didComplete) {
 			utils.indexMention.list.invalidate({ projectId });
+			utils.indexEntry.list.invalidate({ projectId });
 		}
-	}, [detectionRuns, projectId, indexType, utils.indexMention.list]);
+	}, [detectionRuns, projectId, indexType, utils.indexMention.list, utils.indexEntry.list]);
 
 	const runMatcher = trpc.detection.runMatcher.useMutation({
 		onSuccess: () => {

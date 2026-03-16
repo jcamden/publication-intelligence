@@ -374,10 +374,13 @@ const PARSER_WINDOW_CAP = 300;
 // ============================================================================
 
 /**
- * Find all ref spans in the parse window after an alias (handles intervening text like "12:1 ... 6:1").
- * Excludes refs that come after a different book alias (e.g. "Deut 32:44; 34:9; Josh 1:1" - 1:1 belongs to Josh).
+ * Find ref spans in the parse window after an alias. Only assigns refs when the book
+ * is clearly declared—no context-based prediction. Truncates the window at the next
+ * book alias so refs between books (e.g. "31:6,8" between "rom 10:8" and "Heb 13:5")
+ * are not assigned; they go to Unknown via the standalone scan.
+ * Exported for tests.
  */
-function findRefSpansInAliasWindow(
+export function findRefSpansInAliasWindow(
 	pageText: string,
 	aliasEndOffset: number,
 	profile: ParserProfile | undefined,
@@ -401,24 +404,63 @@ function findRefSpansInAliasWindow(
 	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
 	const { normalizedText, mapNormalizedSpanToOriginalSpan } =
 		normalizeWithOffsetMap(sliceCap);
-	const standaloneSpans = findStandaloneRefSpans(normalizedText, {
+
+	// Truncate at the next book alias so refs after the next book are excluded.
+	// Skip purely numeric aliases (e.g. "1" for 1 John) to avoid matching digits in refs like "1:4".
+	const nonNumericAliases = otherBookNormalizedAliases.filter(
+		(a) => !/^\d+$/.test(a),
+	);
+	let windowEnd = normalizedText.length;
+	let otherBookInWindow = false;
+	if (nonNumericAliases.length > 0) {
+		for (const alias of nonNumericAliases) {
+			const re = new RegExp(
+				`(?:^|[^\\p{L}\\p{N}])${escapeRegex(alias)}(?:[^\\p{L}\\p{N}]|$)`,
+				"ui",
+			);
+			const m = re.exec(normalizedText);
+			if (m && m.index < windowEnd) {
+				windowEnd = m.index;
+				otherBookInWindow = true;
+			}
+		}
+	}
+	const truncatedText = normalizedText.slice(0, windowEnd);
+
+	const standaloneSpans = findStandaloneRefSpans(truncatedText, {
 		includeChapterAndRange: true,
 	});
+
+	// When another book is in the window, only assign refs that are separated by ";"
+	// or "and" from the previous ref (e.g. "Deut 1:4; 4:44; and 6:1" → all Deut;
+	// "rom 10:8 31:6, 8" → only 10:8, since 31:6,8 has no ; or "and" before it)
+	const REF_DELIMITER = /[;]|\band\b/i;
+
+	// Only assign refs that are part of an explicit citation (book + ref in same phrase).
+	// Exclude: parenthetical refs like (6:5–9), table refs like "1:6–18 appointing judges",
+	// and refs that fall in another book's window by chance.
+	// Allow: ; or , or "and" (more refs); empty; trailing punctuation (.,;:).
+	// ) is not part of the reference—ref span is "11" not "11)". When ref is followed by ),
+	// we accept the ref (Num 11 → Numbers:11) and stop; ) breaks the citation chain so 1:19 is excluded.
+	const REF_FOLLOWED_BY_DELIMITER_OR_END =
+		/^(\s*([;,]\s*|\band\b\s*))|^[\s.,;:]*$|^\)\s*/;
+
 	const results: Array<{
 		pageCharStart: number;
 		pageCharEnd: number;
 		segments: MatcherMentionParserSegment[];
 	}> = [];
+	let lastSpanEnd = 0;
 	for (const span of standaloneSpans) {
 		const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
 			span.start,
 			span.end,
 		);
 		// Skip refs that come after a different book alias (e.g. "Josh 1:1" when processing Deut)
-		const textBeforeRef = normalizedText.slice(0, span.start);
+		const textBeforeRef = truncatedText.slice(0, span.start);
 		const hasOtherBookBefore =
-			otherBookNormalizedAliases.length > 0 &&
-			otherBookNormalizedAliases.some((alias) => {
+			nonNumericAliases.length > 0 &&
+			nonNumericAliases.some((alias) => {
 				const re = new RegExp(
 					`(?:^|[^\\p{L}\\p{N}])${escapeRegex(alias)}(?:[^\\p{L}\\p{N}]|$)`,
 					"ui",
@@ -427,9 +469,37 @@ function findRefSpansInAliasWindow(
 			});
 		if (hasOtherBookBefore) continue;
 
+		// When another book is in the window, require ; or "and" between refs
+		if (otherBookInWindow && lastSpanEnd > 0) {
+			const between = truncatedText.slice(lastSpanEnd, span.start);
+			if (!REF_DELIMITER.test(between)) continue;
+		}
+
+		// First ref only: text between alias and ref must be citation-only (no prose, no parens).
+		// E.g. "Deut 1:4" ✓; "Deuteronomy calls for... (6:5–9)" ✗
+		if (lastSpanEnd === 0) {
+			const betweenAliasAndRef = truncatedText.slice(0, span.start);
+			if (
+				!/^[\s:.,;\-]*$/.test(betweenAliasAndRef) ||
+				betweenAliasAndRef.includes("(")
+			) {
+				continue;
+			}
+		}
+
+		// Ref must be followed by ref delimiter (;, ,, and) or end—not prose.
+		// E.g. "Deut 1:4; 4:44" ✓; "1:6–18 appointing judges" ✗
+		const textAfterRef = truncatedText.slice(span.end);
+		if (!REF_FOLLOWED_BY_DELIMITER_OR_END.test(textAfterRef)) {
+			continue;
+		}
+
+		lastSpanEnd = span.end;
+
 		const segments = profile.parse(span.refText);
 		if (segments.length === 0) continue;
 		if (segments.length === 1 && segments[0].refText === "") continue;
+
 		results.push({
 			pageCharStart: windowStart + origStart,
 			pageCharEnd: windowStart + origEnd,
@@ -1017,6 +1087,92 @@ const processMatcher = async ({
 						bboxes: fallbackWithBbox.bboxes,
 						fallbackBookLevel: true,
 					});
+				}
+			}
+		}
+
+		// Standalone ref scan → Unknown: refs without book in alias window (scripture only)
+		// Break into segments (e.g. "31:1-8, 14-15, 23" → three mentions on child entries)
+		if (run.indexType === "scripture" && runProfile) {
+			const unknownEntryId = await detectionRepo.getUnknownBookEntryForProject({
+				userId,
+				projectId: run.projectId,
+				projectIndexTypeId,
+			});
+			const { normalizedText, mapNormalizedSpanToOriginalSpan } =
+				normalizeWithOffsetMap(searchableText);
+			const standaloneSpans = findStandaloneRefSpans(normalizedText, {
+				includeChapterAndRange: true,
+			});
+			const coveredRanges = allCandidates
+				.filter((c) => c.pageNumber === pageNum)
+				.map((c) => ({ start: c.charStart, end: c.charEnd }));
+
+			for (const span of standaloneSpans) {
+				const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
+					span.start,
+					span.end,
+				);
+				const overlapsCovered = coveredRanges.some(
+					(r) => origStart < r.end && r.start < origEnd,
+				);
+				if (overlapsCovered) continue;
+
+				const segments = runProfile.parse(span.refText);
+				if (segments.length === 0) continue;
+				if (segments.length === 1 && segments[0].refText === "") continue;
+
+				const spanSlice = normalizedText.slice(span.start, span.end);
+				let searchFrom = 0;
+
+				for (const seg of segments) {
+					const refText = seg.refText ?? "";
+					if (refText.trim() === "") continue; // book-level stays on Unknown; skip for standalone
+					const segNorm = normalize(refText);
+					const idx = spanSlice.indexOf(segNorm, searchFrom);
+					if (idx === -1) continue;
+					const segNormStart = span.start + idx;
+					const segNormEnd = segNormStart + segNorm.length;
+					searchFrom = idx + segNorm.length;
+
+					const [segOrigStart, segOrigEnd] =
+						mapNormalizedSpanToOriginalSpan(segNormStart, segNormEnd);
+					const segTextSpan = searchableText.slice(segOrigStart, segOrigEnd);
+					const segMentionsWithPositions = [
+						{
+							mention: {
+								entryLabel: "",
+								indexType: run.indexType,
+								pageNumber: pageNum,
+								textSpan: segTextSpan,
+							},
+							charStart: segOrigStart,
+							charEnd: segOrigEnd,
+						},
+					];
+					const { mapped: segBboxes } = mapPositionsToBBoxes({
+						mentionsWithPositions: segMentionsWithPositions,
+						textAtoms: indexableAtomsWithCorrectedPositions,
+					});
+					const segWithBbox = segBboxes.find(
+						(m) =>
+							m.pageNumber === pageNum && m.textSpan === segTextSpan,
+					);
+					if (segWithBbox) {
+						allCandidates.push({
+							pageNumber: pageNum,
+							groupId: "unknown",
+							matcherId: unknownEntryId,
+							entryId: unknownEntryId,
+							indexType: run.indexType,
+							textSpan: segWithBbox.textSpan,
+							charStart: segOrigStart,
+							charEnd: segOrigEnd,
+							bboxes: segWithBbox.bboxes,
+							parserSegments: [{ ...seg, refText }],
+							isUnknownBook: true,
+						});
+					}
 				}
 			}
 		}

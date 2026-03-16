@@ -9,6 +9,7 @@ import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import {
 	computeFallbackSpan,
 	dedupeMatcherCandidates,
+	findRefSpansInAliasWindow,
 	shouldEmitFallbackMention,
 	sortMatcherCandidates,
 } from "./detection.service";
@@ -446,5 +447,73 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 		);
 		expect(deduped.length).toBe(1);
 		expect(deduped[0].parserSegments).toBeDefined();
+	});
+});
+
+// ============================================================================
+// findRefSpansInAliasWindow: explicit citation rules
+// ============================================================================
+
+describe("findRefSpansInAliasWindow (explicit citation)", () => {
+	const profile = getParserProfile("scripture-biblical");
+	const noOtherBooks: string[] = [];
+
+	function refTexts(
+		pageText: string,
+		aliasEndOffset: number,
+		otherBooks: string[] = noOtherBooks,
+	): string[] {
+		const spans = findRefSpansInAliasWindow(
+			pageText,
+			aliasEndOffset,
+			profile,
+			otherBooks,
+		);
+		return spans.flatMap((s) =>
+			s.segments.map((seg) => seg.refText).filter(Boolean),
+		);
+	}
+
+	it("assigns all refs including 6:1 when connected by 'and' (Deut 1:5; 4:44; and 6:1)", () => {
+		const text = "Deut 1:5; 4:44; and 6:1";
+		const aliasEnd = "Deut ".length;
+		expect(refTexts(text, aliasEnd)).toEqual(["1:5", "4:44", "6:1"]);
+	});
+
+	it("assigns 6:1 when citation ends with trailing period (Deut 1:5; 4:44; and 6:1.)", () => {
+		const text = "Deut 1:5; 4:44; and 6:1.";
+		const aliasEnd = "Deut ".length;
+		expect(refTexts(text, aliasEnd)).toEqual(["1:5", "4:44", "6:1"]);
+	});
+
+	it("excludes parenthetical refs (Deuteronomy calls for... (6:5–9))", () => {
+		const text =
+			"Deuteronomy calls for what it models: continual Torah study (6:5–9)";
+		const aliasEnd = "Deuteronomy ".length;
+		expect(refTexts(text, aliasEnd)).toEqual([]);
+	});
+
+	it("includes Num 11 but excludes 1:19–45 when ) breaks citation (Num 11) 1:19–45)", () => {
+		const text = "Num 11) 1:19–45";
+		const aliasEnd = "Num ".length;
+		expect(refTexts(text, aliasEnd)).toEqual(["11"]);
+	});
+
+	it("excludes ref followed by prose (Deuteronomy 1:6–18 appointing judges)", () => {
+		const text = "Deuteronomy 1:6–18 appointing judges";
+		const aliasEnd = "Deuteronomy ".length;
+		expect(refTexts(text, aliasEnd)).toEqual([]);
+	});
+
+	it("assigns Deuteronomy 6:1 to book (explicit citation)", () => {
+		const text = "Deuteronomy 6:1";
+		const aliasEnd = "Deuteronomy ".length;
+		expect(refTexts(text, aliasEnd)).toEqual(["6:1"]);
+	});
+
+	it("assigns Deut 12:1 to book (explicit citation)", () => {
+		const text = "Deut 12:1";
+		const aliasEnd = "Deut ".length;
+		expect(refTexts(text, aliasEnd)).toEqual(["12:1"]);
 	});
 });
