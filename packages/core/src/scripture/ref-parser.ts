@@ -496,6 +496,8 @@ function parseAfterAliasImpl(args: {
 	const { normalizedWindow, otherBookAliases } = args;
 	const window = normalizedWindow;
 	const len = window.length;
+	const stripTrailingPunctuation = (s: string): string =>
+		s.replace(/[.,:]+$/g, "");
 
 	// Skip leading whitespace to find where to start scanning
 	let pos = 0;
@@ -525,17 +527,21 @@ function parseAfterAliasImpl(args: {
 
 		const blockText = window.slice(pos, blockEnd);
 		const trimmed = blockText.trim();
+		const trimmedNoTrail = stripTrailingPunctuation(trimmed);
 
-		if (trimmed.length > 0) {
+		if (trimmedNoTrail.length > 0) {
 			// Block may contain " and " connecting two refs (e.g. "1:3a and 2:4")
-			const andParts = trimmed.split(/\s+and\s+/).map((s) => s.trim()).filter(Boolean);
+			const andParts = trimmedNoTrail
+				.split(/\s+and\s+/)
+				.map((s) => s.trim())
+				.filter(Boolean);
 			const multiAnd =
 				andParts.length > 1 && andParts.every((p) => looksLikeRef(p));
 			if (multiAnd) {
 				const leadingSpaces = blockText.length - blockText.trimStart().length;
 				let searchFrom = 0;
 				for (const p of andParts) {
-					const idx = trimmed.indexOf(p, searchFrom);
+					const idx = trimmedNoTrail.indexOf(p, searchFrom);
 					if (idx < 0) break;
 					const segs = parseBlock(p);
 					if (segs.length === 0) {
@@ -552,11 +558,11 @@ function parseAfterAliasImpl(args: {
 					searchFrom = idx + p.length;
 				}
 			} else {
-				if (!looksLikeRef(trimmed)) {
+				if (!looksLikeRef(trimmedNoTrail)) {
 					stopReason = "prose";
 					break;
 				}
-				const segments = parseBlock(trimmed);
+				const segments = parseBlock(trimmedNoTrail);
 				if (segments.length === 0) {
 					stopReason = "invalid_syntax";
 					break;
@@ -570,8 +576,8 @@ function parseAfterAliasImpl(args: {
 		const leadingSpacesInBlock =
 			blockText.length - blockText.trimStart().length;
 		consumedEnd =
-			trimmed.length > 0
-				? pos + leadingSpacesInBlock + trimmed.length
+			trimmedNoTrail.length > 0
+				? pos + leadingSpacesInBlock + trimmedNoTrail.length
 				: blockEnd;
 
 		if (

@@ -458,18 +458,25 @@ describe("findRefSpansInAliasWindow (explicit citation)", () => {
 	const profile = getParserProfile("scripture-biblical");
 	const noOtherBooks: string[] = [];
 
-	function refTexts(
+	function refSpans(
 		pageText: string,
 		aliasEndOffset: number,
 		otherBooks: string[] = noOtherBooks,
-	): string[] {
-		const spans = findRefSpansInAliasWindow(
+	) {
+		return findRefSpansInAliasWindow(
 			pageText,
 			aliasEndOffset,
 			profile,
 			otherBooks,
 		);
-		return spans.flatMap((s) =>
+	}
+
+	function refTexts(
+		pageText: string,
+		aliasEndOffset: number,
+		otherBooks: string[] = noOtherBooks,
+	): string[] {
+		return refSpans(pageText, aliasEndOffset, otherBooks).flatMap((s) =>
 			s.segments.map((seg) => seg.refText).filter(Boolean),
 		);
 	}
@@ -514,6 +521,11 @@ describe("findRefSpansInAliasWindow (explicit citation)", () => {
 	it("assigns Deut 12:1 to book (explicit citation)", () => {
 		const text = "Deut 12:1";
 		const aliasEnd = "Deut ".length;
+		const spans = refSpans(text, aliasEnd);
 		expect(refTexts(text, aliasEnd)).toEqual(["12:1"]);
+		expect(spans).toHaveLength(1);
+		expect(spans[0].segments).toHaveLength(1);
+		expect(spans[0].pageCharStart).toBe(aliasEnd);
+		expect(spans[0].pageCharEnd).toBe(aliasEnd + "12:1".length);
 	});
 });

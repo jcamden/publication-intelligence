@@ -390,13 +390,14 @@ export function findRefSpansInAliasWindow(
 	pageCharEnd: number;
 	segments: MatcherMentionParserSegment[];
 }> {
-	if (!profile) return [];
+	if (!profile || !profile.parseAfterAlias) return [];
 	const windowStart = aliasEndOffset;
 	const precheckSlice = pageText.slice(
 		windowStart,
 		windowStart + PRECHECK_WINDOW_CHARS,
 	);
 	if (!profile.contextPrecheck(precheckSlice)) return [];
+
 	const parseSlice = pageText.slice(
 		windowStart,
 		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
@@ -405,119 +406,55 @@ export function findRefSpansInAliasWindow(
 	const { normalizedText, mapNormalizedSpanToOriginalSpan } =
 		normalizeWithOffsetMap(sliceCap);
 
-	// Truncate at the next book alias so refs after the next book are excluded.
-	// Skip purely numeric aliases (e.g. "1" for 1 John) to avoid matching digits in refs like "1:4".
-	const nonNumericAliases = otherBookNormalizedAliases.filter(
-		(a) => !/^\d+$/.test(a),
-	);
-	let windowEnd = normalizedText.length;
-	let otherBookInWindow = false;
-	if (nonNumericAliases.length > 0) {
-		for (const alias of nonNumericAliases) {
-			const re = new RegExp(
-				`(?:^|[^\\p{L}\\p{N}])${escapeRegex(alias)}(?:[^\\p{L}\\p{N}]|$)`,
-				"ui",
-			);
-			const m = re.exec(normalizedText);
-			if (m && m.index < windowEnd) {
-				windowEnd = m.index;
-				otherBookInWindow = true;
-			}
-		}
-	}
-	const truncatedText = normalizedText.slice(0, windowEnd);
-
-	const standaloneSpans = findStandaloneRefSpans(truncatedText, {
-		includeChapterAndRange: true,
+	const result = profile.parseAfterAlias({
+		normalizedWindow: normalizedText,
+		otherBookAliases: otherBookNormalizedAliases,
 	});
 
-	// When another book is in the window, only assign refs that are separated by ";"
-	// or "and" from the previous ref (e.g. "Deut 1:4; 4:44; and 6:1" → all Deut;
-	// "rom 10:8 31:6, 8" → only 10:8, since 31:6,8 has no ; or "and" before it)
-	const REF_DELIMITER = /[;]|\band\b/i;
+	// Use parser status to decide whether to emit alias-attached spans
+	if (result.status !== "match" || result.segments.length === 0) {
+		return [];
+	}
+	// Avoid emitting "clean" alias-attached mentions when the parser stops on prose/invalid syntax.
+	// Allow closing_paren so "Num 11) ..." still yields "11" as alias-attached.
+	if (
+		result.stopReason !== "end_of_input" &&
+		result.stopReason !== "new_book" &&
+		result.stopReason !== "closing_paren"
+	) {
+		return [];
+	}
 
-	// Only assign refs that are part of an explicit citation (book + ref in same phrase).
-	// Exclude: parenthetical refs like (6:5–9), table refs like "1:6–18 appointing judges",
-	// and refs that fall in another book's window by chance.
-	// Allow: ; or , or "and" (more refs); empty; trailing punctuation (.,;:).
-	// ) is not part of the reference—ref span is "11" not "11)". When ref is followed by ),
-	// we accept the ref (Num 11 → Numbers:11) and stop; ) breaks the citation chain so 1:19 is excluded.
-	const REF_FOLLOWED_BY_DELIMITER_OR_END =
-		/^(\s*([;,]\s*|\band\b\s*))|^[\s.,;:]*$|^\)\s*/;
-
-	const results: Array<{
+	const out: Array<{
 		pageCharStart: number;
 		pageCharEnd: number;
 		segments: MatcherMentionParserSegment[];
 	}> = [];
-	let lastSpanEnd = 0;
-	for (const span of standaloneSpans) {
+
+	for (const seg of result.segments) {
+		// Map segment source offsets in normalized window back to original page offsets
 		const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
-			span.start,
-			span.end,
+			seg.sourceStart,
+			seg.sourceEnd,
 		);
-		// Skip refs that come after a different book alias (e.g. "Josh 1:1" when processing Deut)
-		const textBeforeRef = truncatedText.slice(0, span.start);
-		const hasOtherBookBefore =
-			nonNumericAliases.length > 0 &&
-			nonNumericAliases.some((alias) => {
-				const re = new RegExp(
-					`(?:^|[^\\p{L}\\p{N}])${escapeRegex(alias)}(?:[^\\p{L}\\p{N}]|$)`,
-					"ui",
-				);
-				return re.test(textBeforeRef);
-			});
-		if (hasOtherBookBefore) continue;
 
-		// When another book is in the window, require ; or "and" between refs
-		if (otherBookInWindow && lastSpanEnd > 0) {
-			const between = truncatedText.slice(lastSpanEnd, span.start);
-			if (!REF_DELIMITER.test(between)) continue;
-		}
-
-		// First ref only: text between alias and ref must be citation-only (no prose, no parens).
-		// E.g. "Deut 1:4" ✓; "Deuteronomy calls for... (6:5–9)" ✗
-		if (lastSpanEnd === 0) {
-			const betweenAliasAndRef = truncatedText.slice(0, span.start);
-			if (
-				!/^[\s:.,;-]*$/.test(betweenAliasAndRef) ||
-				betweenAliasAndRef.includes("(")
-			) {
-				continue;
-			}
-		}
-
-		// Ref must be followed by ref delimiter (;, ,, and) or end—not prose.
-		// E.g. "Deut 1:4; 4:44" ✓; "1:6–18 appointing judges" ✗
-		const textAfterRef = truncatedText.slice(span.end);
-		if (!REF_FOLLOWED_BY_DELIMITER_OR_END.test(textAfterRef)) {
-			continue;
-		}
-
-		lastSpanEnd = span.end;
-
-		const segments = profile.parse(span.refText);
-		if (segments.length === 0) continue;
-		if (segments.length === 1 && segments[0].refText === "") continue;
-
-		results.push({
+		out.push({
 			pageCharStart: windowStart + origStart,
 			pageCharEnd: windowStart + origEnd,
-			segments: segments.map((s) => ({
-				refText: s.refText,
-				chapter: s.chapter,
-				chapterEnd: s.chapterEnd,
-				verseStart: s.verseStart,
-				verseEnd: s.verseEnd,
-				verseSuffix: s.verseSuffix,
-			})),
+			segments: [
+				{
+					refText: seg.refText,
+					chapter: seg.chapter,
+					chapterEnd: seg.chapterEnd,
+					verseStart: seg.verseStart,
+					verseEnd: seg.verseEnd,
+					verseSuffix: seg.verseSuffix,
+				},
+			],
 		});
 	}
-	return results;
-}
 
-function escapeRegex(s: string): string {
-	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return out;
 }
 
 /** Citation-like: digits, spaces, separators. Verse suffix a-z allowed only when immediately after a digit (Task 4.3). */
