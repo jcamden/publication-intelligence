@@ -5,7 +5,11 @@
  */
 
 import { normalize } from "../text/normalization";
-import type { ParsedRefSegment } from "./parser-profile.types";
+import type {
+	CitationParseResult,
+	CitationSegment,
+	ParsedRefSegment,
+} from "./parser-profile.types";
 
 /** Result of scanning for standalone ref spans (no book prefix). */
 export type StandaloneRefSpan = {
@@ -14,15 +18,21 @@ export type StandaloneRefSpan = {
 	refText: string;
 };
 
+/** Hyphen, en-dash, em-dash: match normalized and typographic dashes in refs (e.g. 1:6–28:69). */
+const DASH_CHAR_CLASS = "[-\u2013\u2014]";
+
 /**
  * Ref-like patterns for standalone detection. Only formats that clearly indicate
  * scripture (ch:v, ch:v-v, cross-chapter, verse lists). Excludes chapter-only and
  * chapter-range to avoid false positives (e.g. "page 1", "chapter 2").
  */
 const STANDALONE_REF_PATTERNS = [
-	/\d+:\d+[a-z]?-\d+:\d+[a-z]?/gi, // cross-chapter: 1:20-2:4
-	/\d+[.:]\d+[a-z]?(-\d+[a-z]?)?(\s*,\s*\d+([a-z])?(-\d+[a-z]?)?)+/gi, // verse list: 27:1-8, 9-14
-	/\d+[.:]\d+[a-z]?-\d+[a-z]?/gi, // verse range: 1:2-4
+	new RegExp(`\\d+:\\d+[a-z]?${DASH_CHAR_CLASS}\\d+:\\d+[a-z]?`, "gi"), // cross-chapter: 1:20-2:4, 1:6–28:69
+	new RegExp(
+		`\\d+[.:]\\d+[a-z]?(${DASH_CHAR_CLASS}\\d+[a-z]?)?(\\s*,\\s*\\d+([a-z])?(${DASH_CHAR_CLASS}\\d+[a-z]?)?)+`,
+		"gi",
+	), // verse list: 27:1-8, 9-14
+	new RegExp(`\\d+[.:]\\d+[a-z]?${DASH_CHAR_CLASS}\\d+[a-z]?`, "gi"), // verse range: 1:2-4
 	/\d+[.:]\d+[a-z]?/g, // ch:v or ch.v: 4:35, 1.2
 ];
 
@@ -270,10 +280,101 @@ function contextPrecheck(localWindow: string): boolean {
 	return localWindow.trim().length > 0;
 }
 
+/**
+ * Map parsed segments to CitationSegments with best-effort source offsets
+ * by finding each refText in the consumed text sequentially.
+ */
+function segmentsWithOffsets(
+	segments: ParsedRefSegment[],
+	consumedText: string,
+): CitationSegment[] {
+	const result: CitationSegment[] = [];
+	let searchFrom = 0;
+	for (const seg of segments) {
+		const refText = seg.refText ?? "";
+		if (refText.length === 0) {
+			result.push({
+				...seg,
+				sourceStart: searchFrom,
+				sourceEnd: searchFrom,
+			});
+			continue;
+		}
+		const idx = consumedText.indexOf(refText, searchFrom);
+		const start = idx >= 0 ? idx : searchFrom;
+		const end = start + refText.length;
+		result.push({
+			refText: seg.refText,
+			chapter: seg.chapter,
+			chapterEnd: seg.chapterEnd,
+			verseStart: seg.verseStart,
+			verseEnd: seg.verseEnd,
+			verseSuffix: seg.verseSuffix,
+			sourceStart: start,
+			sourceEnd: end,
+		});
+		searchFrom = end;
+	}
+	return result;
+}
+
+/**
+ * Compatibility shim: derive CitationParseResult from current parse().
+ * Preserves behavior; segment offsets and consumed span are best-effort.
+ */
+function parseAfterAlias(args: {
+	normalizedWindow: string;
+	otherBookAliases?: string[];
+}): CitationParseResult {
+	const { normalizedWindow } = args;
+	const trimmed = normalizedWindow.trim();
+	const segments = parseLocalWindow(normalizedWindow);
+
+	// Consumed span: whole window (current parser doesn't expose exact consumed length)
+	const consumedStart = 0;
+	const consumedEnd = trimmed.length;
+	const consumedText = trimmed;
+
+	// Status
+	let status: "match" | "book_only" | "no_match" | "ambiguous" = "no_match";
+	if (segments.length === 0) {
+		status = "no_match";
+	} else if (segments.length === 1 && segments[0].refText === "") {
+		status = "book_only";
+	} else {
+		status = "match";
+	}
+
+	// Stop reason: current parser doesn't expose; assume end_of_input for shim
+	const stopReason = "end_of_input" as const;
+
+	// Explicit ref syntax: any segment with non-empty refText and chapter/verse or digit
+	const hasExplicitRefSyntax =
+		segments.some(
+			(s) =>
+				s.refText.length > 0 &&
+				(s.chapter !== undefined || /\d/.test(s.refText)),
+		) ?? false;
+
+	const segmentsWithSource = segmentsWithOffsets(segments, consumedText);
+
+	return {
+		status,
+		consumedText,
+		consumedStart,
+		consumedEnd,
+		segments: segmentsWithSource,
+		stopReason,
+		hasExplicitRefSyntax,
+	};
+}
+
 export const scriptureParserProfile = {
 	id: SCRIPTURE_PROFILE_ID,
 	contextPrecheck,
 	parse: parseLocalWindow,
+	parseAfterAlias,
+	// scanBookless omitted; optional on ParserProfile
 } as const;
 
 /** Scripture-indicating keywords: accept chapter-only/range when preceded by these (e.g. "ch 1-2", "vv. 1-3"). */

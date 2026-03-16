@@ -119,7 +119,13 @@ export const PageMatcherRunControls = ({
 			utils.indexMention.list.invalidate({ projectId });
 			utils.indexEntry.list.invalidate({ projectId });
 		}
-	}, [detectionRuns, projectId, indexType, utils.indexMention.list, utils.indexEntry.list]);
+	}, [
+		detectionRuns,
+		projectId,
+		indexType,
+		utils.indexMention.list,
+		utils.indexEntry.list,
+	]);
 
 	const runMatcher = trpc.detection.runMatcher.useMutation({
 		onSuccess: () => {

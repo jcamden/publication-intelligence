@@ -1,4 +1,13 @@
-export type { ParsedRefSegment, ParserProfile } from "./parser-profile.types";
+export type {
+	CitationParseResult,
+	CitationParseStatus,
+	CitationSegment,
+	CitationStopReason,
+	ParseAfterAliasArgs,
+	ParsedRefSegment,
+	ParserProfile,
+	ScanBooklessArgs,
+} from "./parser-profile.types";
 export { getParserProfile, getParserProfileIds } from "./parser-profiles";
 export {
 	type FindStandaloneRefSpansOptions,

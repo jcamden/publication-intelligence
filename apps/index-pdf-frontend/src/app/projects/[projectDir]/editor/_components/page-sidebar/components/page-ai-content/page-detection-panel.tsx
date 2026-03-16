@@ -120,7 +120,12 @@ export const PageDetectionPanel = ({
 			utils.indexMention.list.invalidate({ projectId });
 			utils.indexEntry.list.invalidate({ projectId });
 		}
-	}, [detectionRuns, projectId, utils.indexMention.list, utils.indexEntry.list]);
+	}, [
+		detectionRuns,
+		projectId,
+		utils.indexMention.list,
+		utils.indexEntry.list,
+	]);
 
 	const hasApiKey =
 		!!settings?.openrouterApiKey ||

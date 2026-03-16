@@ -324,7 +324,8 @@ async function resolveScriptureCandidate(
 					bboxes: candidate.bboxes,
 				});
 			}
-			if (writes.length === 0) return { kind: "dropped", reasonCode: "no_segments" };
+			if (writes.length === 0)
+				return { kind: "dropped", reasonCode: "no_segments" };
 			return {
 				kind: "resolved",
 				writes,

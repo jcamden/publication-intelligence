@@ -480,7 +480,7 @@ export function findRefSpansInAliasWindow(
 		if (lastSpanEnd === 0) {
 			const betweenAliasAndRef = truncatedText.slice(0, span.start);
 			if (
-				!/^[\s:.,;\-]*$/.test(betweenAliasAndRef) ||
+				!/^[\s:.,;-]*$/.test(betweenAliasAndRef) ||
 				betweenAliasAndRef.includes("(")
 			) {
 				continue;
@@ -1135,8 +1135,10 @@ const processMatcher = async ({
 					const segNormEnd = segNormStart + segNorm.length;
 					searchFrom = idx + segNorm.length;
 
-					const [segOrigStart, segOrigEnd] =
-						mapNormalizedSpanToOriginalSpan(segNormStart, segNormEnd);
+					const [segOrigStart, segOrigEnd] = mapNormalizedSpanToOriginalSpan(
+						segNormStart,
+						segNormEnd,
+					);
 					const segTextSpan = searchableText.slice(segOrigStart, segOrigEnd);
 					const segMentionsWithPositions = [
 						{
@@ -1155,8 +1157,7 @@ const processMatcher = async ({
 						textAtoms: indexableAtomsWithCorrectedPositions,
 					});
 					const segWithBbox = segBboxes.find(
-						(m) =>
-							m.pageNumber === pageNum && m.textSpan === segTextSpan,
+						(m) => m.pageNumber === pageNum && m.textSpan === segTextSpan,
 					);
 					if (segWithBbox) {
 						allCandidates.push({
