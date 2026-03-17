@@ -444,3 +444,33 @@ export type MatcherMentionCandidate = {
 	/** True when candidate is from standalone ref scan (no book in alias window); assign to Unknown, book-level only. */
 	isUnknownBook?: boolean;
 };
+
+// ============================================================================
+// Scripture detection page result (testable two-pass output)
+// ============================================================================
+
+/** One span attached to an alias (matcher pass): ref segments or alias-only or fallback. */
+export type ScripturePageAliasAttachedSpan = {
+	pageCharStart: number;
+	pageCharEnd: number;
+	segments: MatcherMentionParserSegment[];
+	groupId: string;
+	matcherId: string;
+	entryId: string;
+	indexType: string;
+	/** True when emitted as book-level fallback after parse returned no segments. */
+	fallbackBookLevel?: boolean;
+};
+
+/** One span from the bookless scan (Unknown pass). */
+export type ScripturePageUnknownSpan = {
+	pageCharStart: number;
+	pageCharEnd: number;
+	segments: MatcherMentionParserSegment[];
+};
+
+/** Result of running both scripture detection passes on a page (matcher + bookless). For testing. */
+export type ScriptureDetectionPageResult = {
+	aliasAttached: ScripturePageAliasAttachedSpan[];
+	unknownSpans: ScripturePageUnknownSpan[];
+};

@@ -1,11 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import type { ParserProfile } from "@pubint/core";
-import {
-	getParserProfile,
-	normalize,
-	normalizeWithOffsetMap,
-} from "@pubint/core";
+import { getParserProfile } from "@pubint/core";
 import { logEvent } from "../../logger";
 import { listRules } from "../canonical-page-rule/canonical-page-rule.repo";
 import * as indexMentionRepo from "../index-mention/index-mention.repo";
@@ -16,6 +12,7 @@ import {
 import { getUserSettings } from "../user-settings/user-settings.repo";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { ResolvedAliasMatch } from "./alias-engine.types";
+import { runScriptureDetectionOnPage } from "./scripture-detection-on-page";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import {
 	DEFAULT_OVERLAP_THRESHOLD,
@@ -359,160 +356,6 @@ const calculatePagesToProcess = ({
 	return { pagesToProcess, contextPagesNeeded };
 };
 
-// ============================================================================
-// Matcher detection constants (Phase 4)
-// ============================================================================
-
-const PRECHECK_WINDOW_CHARS = 24;
-
-const PARSER_WINDOW_CHARS = 250;
-const PARSER_WINDOW_CAP = 300;
-
-// ============================================================================
-// Background Processing
-// ============================================================================
-
-/**
- * Find ref spans in the parse window after an alias. Only assigns refs when the book
- * is clearly declared—no context-based prediction. Truncates the window at the next
- * book alias so refs between books (e.g. "31:6,8" between "rom 10:8" and "Heb 13:5")
- * are not assigned; they go to Unknown via the standalone scan.
- * Exported for tests.
- */
-export function findRefSpansInAliasWindow(
-	pageText: string,
-	aliasEndOffset: number,
-	profile: ParserProfile | undefined,
-	otherBookNormalizedAliases: string[],
-): Array<{
-	pageCharStart: number;
-	pageCharEnd: number;
-	segments: MatcherMentionParserSegment[];
-}> {
-	if (!profile || !profile.parseAfterAlias) return [];
-	const windowStart = aliasEndOffset;
-	const precheckSlice = pageText.slice(
-		windowStart,
-		windowStart + PRECHECK_WINDOW_CHARS,
-	);
-	if (!profile.contextPrecheck(precheckSlice)) return [];
-
-	const parseSlice = pageText.slice(
-		windowStart,
-		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
-	);
-	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
-	const { normalizedText, mapNormalizedSpanToOriginalSpan } =
-		normalizeWithOffsetMap(sliceCap);
-
-	const result = profile.parseAfterAlias({
-		normalizedWindow: normalizedText,
-		otherBookAliases: otherBookNormalizedAliases,
-	});
-
-	// Use parser status to decide whether to emit alias-attached spans
-	if (result.status !== "match" || result.segments.length === 0) {
-		return [];
-	}
-	// Avoid emitting "clean" alias-attached mentions when the parser stops on prose/invalid syntax.
-	// Allow closing_paren so "Num 11) ..." still yields "11" as alias-attached.
-	if (
-		result.stopReason !== "end_of_input" &&
-		result.stopReason !== "new_book" &&
-		result.stopReason !== "closing_paren"
-	) {
-		return [];
-	}
-
-	const out: Array<{
-		pageCharStart: number;
-		pageCharEnd: number;
-		segments: MatcherMentionParserSegment[];
-	}> = [];
-
-	for (const seg of result.segments) {
-		// Map segment source offsets in normalized window back to original page offsets
-		const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
-			seg.sourceStart,
-			seg.sourceEnd,
-		);
-
-		out.push({
-			pageCharStart: windowStart + origStart,
-			pageCharEnd: windowStart + origEnd,
-			segments: [
-				{
-					refText: seg.refText,
-					chapter: seg.chapter,
-					chapterEnd: seg.chapterEnd,
-					verseStart: seg.verseStart,
-					verseEnd: seg.verseEnd,
-					verseSuffix: seg.verseSuffix,
-				},
-			],
-		});
-	}
-
-	return out;
-}
-
-/** Citation-like: digits, spaces, separators. Verse suffix a-z allowed only when immediately after a digit (Task 4.3). */
-function isCitationLikeTailChar(pageText: string, index: number): boolean {
-	const c = pageText[index];
-	if (/[\d\s:.,;\-()]/.test(c)) return true;
-	// Optional verse suffix letter (e.g. 3a) only when preceded by a digit
-	if (/[a-z]/i.test(c) && index > 0 && /\d/.test(pageText[index - 1]))
-		return true;
-	return false;
-}
-
-/**
- * Compute fallback mention span: alias span + right-extension with citation-like chars only.
- * Stops at first non-citation-like char. Exported for tests.
- */
-export function computeFallbackSpan(
-	pageText: string,
-	originalStart: number,
-	originalEnd: number,
-): { charStart: number; charEnd: number } {
-	const windowEnd = Math.min(
-		originalEnd + PARSER_WINDOW_CHARS,
-		pageText.length,
-	);
-	const capEnd = Math.min(originalEnd + PARSER_WINDOW_CAP, pageText.length);
-	const limit = Math.min(windowEnd, capEnd);
-	let end = originalEnd;
-	while (end < limit && isCitationLikeTailChar(pageText, end)) {
-		end += 1;
-	}
-	return { charStart: originalStart, charEnd: end };
-}
-
-/**
- * Returns true when context precheck passes but parse returns zero segments (parse-fail-after-context-pass).
- * Used to decide whether to emit a fallback book-level mention (Task 4.3). Exported for tests.
- */
-export function shouldEmitFallbackMention(
-	pageText: string,
-	aliasEndOffset: number,
-	profile: ParserProfile | undefined,
-): boolean {
-	if (!profile) return false;
-	const windowStart = aliasEndOffset;
-	const precheckSlice = pageText.slice(
-		windowStart,
-		windowStart + PRECHECK_WINDOW_CHARS,
-	);
-	if (!profile.contextPrecheck(precheckSlice)) return false;
-	const parseSlice = pageText.slice(
-		windowStart,
-		Math.min(windowStart + PARSER_WINDOW_CHARS, pageText.length),
-	);
-	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
-	const segments = profile.parse(normalize(sliceCap));
-	return segments.length === 0;
-}
-
 /**
  * Deterministic order: pageNumber asc, charStart asc, longer span first (charEnd - charStart desc), stable groupId tiebreaker (Task 6.2).
  * Exported for tests (determinism and ordering).
@@ -560,72 +403,6 @@ export function dedupeMatcherCandidates(
 	const out = Array.from(candidateByKey.values());
 	sortMatcherCandidates(out);
 	return out;
-}
-
-/**
- * Page-wide bookless scan used to emit `Unknown` scripture candidates.
- * Uses the parser's bookless scan surface and maps parser-emitted offsets back to page offsets.
- * Exported for tests.
- */
-export function findBooklessUnknownRefSpansOnPage(args: {
-	pageText: string;
-	profile: ParserProfile | undefined;
-	coveredRanges: Array<{ start: number; end: number }>;
-}): Array<{
-	pageCharStart: number;
-	pageCharEnd: number;
-	segments: MatcherMentionParserSegment[];
-}> {
-	const { pageText, profile, coveredRanges } = args;
-	if (!profile?.scanBookless) return [];
-
-	const { normalizedText, mapNormalizedSpanToOriginalSpan } =
-		normalizeWithOffsetMap(pageText);
-
-	const results = profile.scanBookless({ normalizedText, occupiedRanges: [] });
-	if (results.length === 0) return [];
-
-	const spans: Array<{
-		pageCharStart: number;
-		pageCharEnd: number;
-		segments: MatcherMentionParserSegment[];
-	}> = [];
-
-	for (const r of results) {
-		if (r.status !== "match") continue;
-		for (const seg of r.segments ?? []) {
-			const refText = seg.refText ?? "";
-			if (refText.trim().length === 0) continue; // book-only should not emit unknown ref spans
-
-			const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
-				seg.sourceStart,
-				seg.sourceEnd,
-			);
-			if (origEnd <= origStart) continue;
-
-			const overlapsCovered = coveredRanges.some(
-				(c) => origStart < c.end && c.start < origEnd,
-			);
-			if (overlapsCovered) continue;
-
-			spans.push({
-				pageCharStart: origStart,
-				pageCharEnd: origEnd,
-				segments: [
-					{
-						refText,
-						chapter: seg.chapter,
-						chapterEnd: seg.chapterEnd,
-						verseStart: seg.verseStart,
-						verseEnd: seg.verseEnd,
-						verseSuffix: seg.verseSuffix,
-					},
-				],
-			});
-		}
-	}
-
-	return spans;
 }
 
 const processMatcher = async ({
@@ -949,148 +726,49 @@ const processMatcher = async ({
 			pageAliasIndex,
 		);
 
-		const mentionsWithPositions = matches.map((m) => ({
-			mention: {
-				entryLabel: "",
-				indexType: m.indexType,
-				pageNumber: pageNum,
-				textSpan: searchableText.slice(m.originalStart, m.originalEnd),
-			},
-			charStart: m.originalStart,
-			charEnd: m.originalEnd,
-		}));
+		const detectionResult = runScriptureDetectionOnPage(
+			searchableText,
+			matches,
+			runProfile,
+		);
 
-		const { mapped: withBboxes } = mapPositionsToBBoxes({
-			mentionsWithPositions,
+		// Map alias-attached spans to candidates (with bboxes)
+		const aliasMentionsWithPositions = detectionResult.aliasAttached.map(
+			(span) => ({
+				mention: {
+					entryLabel: "",
+					indexType: span.indexType,
+					pageNumber: pageNum,
+					textSpan: searchableText.slice(
+						span.pageCharStart,
+						span.pageCharEnd,
+					),
+				},
+				charStart: span.pageCharStart,
+				charEnd: span.pageCharEnd,
+			}),
+		);
+		const { mapped: aliasMapped } = mapPositionsToBBoxes({
+			mentionsWithPositions: aliasMentionsWithPositions,
 			textAtoms: indexableAtomsWithCorrectedPositions,
 		});
-
-		// Pair by index: withBboxes[i] is the bbox for matches[i] (same order as mentionsWithPositions).
-		// Do not match by textSpan—multiple occurrences (e.g. 11× "Qumran") would all get the first withBbox.
-		for (let i = 0; i < matches.length; i++) {
-			const match = matches[i];
-			const withBbox = withBboxes[i];
+		for (let i = 0; i < detectionResult.aliasAttached.length; i++) {
+			const span = detectionResult.aliasAttached[i];
+			const withBbox = aliasMapped[i];
 			if (!withBbox) continue;
-
-			const profile = runProfile;
-
-			// Null profile: alias-only; emit one candidate with alias span only (Task 6.2).
-			if (profile === null) {
-				allCandidates.push({
-					pageNumber: pageNum,
-					groupId: match.groupId,
-					matcherId: match.matcherId,
-					entryId: match.entryId,
-					indexType: match.indexType,
-					textSpan: withBbox.textSpan,
-					charStart: match.originalStart,
-					charEnd: match.originalEnd,
-					bboxes: withBbox.bboxes,
-				});
-				continue;
-			}
-
-			const otherBookNormalizedAliases = [
-				...new Set(
-					filteredAliases
-						.filter((a) => a.matcherId !== match.matcherId)
-						.map((a) => normalize(a.alias))
-						.filter((alias) => alias.trim().length > 0),
-				),
-			];
-			const refSpans = findRefSpansInAliasWindow(
-				searchableText,
-				match.originalEnd,
-				profile,
-				otherBookNormalizedAliases,
-			);
-
-			if (refSpans.length > 0) {
-				for (const ref of refSpans) {
-					const textSpan = searchableText.slice(
-						ref.pageCharStart,
-						ref.pageCharEnd,
-					);
-					const refMentionsWithPositions = [
-						{
-							mention: {
-								entryLabel: "",
-								indexType: match.indexType,
-								pageNumber: pageNum,
-								textSpan,
-							},
-							charStart: ref.pageCharStart,
-							charEnd: ref.pageCharEnd,
-						},
-					];
-					const { mapped: refBboxes } = mapPositionsToBBoxes({
-						mentionsWithPositions: refMentionsWithPositions,
-						textAtoms: indexableAtomsWithCorrectedPositions,
-					});
-					const refWithBbox = refBboxes.find(
-						(m) => m.pageNumber === pageNum && m.textSpan === textSpan,
-					);
-					if (refWithBbox) {
-						allCandidates.push({
-							pageNumber: pageNum,
-							groupId: match.groupId,
-							matcherId: match.matcherId,
-							entryId: match.entryId,
-							indexType: match.indexType,
-							textSpan: refWithBbox.textSpan,
-							charStart: ref.pageCharStart,
-							charEnd: ref.pageCharEnd,
-							bboxes: refWithBbox.bboxes,
-							parserSegments: ref.segments,
-						});
-					}
-				}
-			} else if (
-				shouldEmitFallbackMention(searchableText, match.originalEnd, profile)
-			) {
-				const fallbackSpan = computeFallbackSpan(
-					searchableText,
-					match.originalStart,
-					match.originalEnd,
-				);
-				const fallbackTextSpan = searchableText.slice(
-					fallbackSpan.charStart,
-					fallbackSpan.charEnd,
-				);
-				const fallbackMentionsWithPositions = [
-					{
-						mention: {
-							entryLabel: "",
-							indexType: match.indexType,
-							pageNumber: pageNum,
-							textSpan: fallbackTextSpan,
-						},
-						charStart: fallbackSpan.charStart,
-						charEnd: fallbackSpan.charEnd,
-					},
-				];
-				const { mapped: fallbackWithBboxes } = mapPositionsToBBoxes({
-					mentionsWithPositions: fallbackMentionsWithPositions,
-					textAtoms: indexableAtomsWithCorrectedPositions,
-				});
-				const fallbackWithBbox = fallbackWithBboxes.find(
-					(m) => m.pageNumber === pageNum && m.textSpan === fallbackTextSpan,
-				);
-				if (fallbackWithBbox) {
-					allCandidates.push({
-						pageNumber: pageNum,
-						groupId: match.groupId,
-						matcherId: match.matcherId,
-						entryId: match.entryId,
-						indexType: match.indexType,
-						textSpan: fallbackWithBbox.textSpan,
-						charStart: fallbackSpan.charStart,
-						charEnd: fallbackSpan.charEnd,
-						bboxes: fallbackWithBbox.bboxes,
-						fallbackBookLevel: true,
-					});
-				}
-			}
+			allCandidates.push({
+				pageNumber: pageNum,
+				groupId: span.groupId,
+				matcherId: span.matcherId,
+				entryId: span.entryId,
+				indexType: span.indexType,
+				textSpan: withBbox.textSpan,
+				charStart: span.pageCharStart,
+				charEnd: span.pageCharEnd,
+				bboxes: withBbox.bboxes,
+				...(span.segments.length > 0 && { parserSegments: span.segments }),
+				...(span.fallbackBookLevel && { fallbackBookLevel: true }),
+			});
 		}
 
 		// Standalone ref scan → Unknown: refs without book in alias window (scripture only)
@@ -1101,17 +779,8 @@ const processMatcher = async ({
 				projectId: run.projectId,
 				projectIndexTypeId,
 			});
-			const coveredRanges = allCandidates
-				.filter((c) => c.pageNumber === pageNum)
-				.map((c) => ({ start: c.charStart, end: c.charEnd }));
 
-			const unknownRefSpans = findBooklessUnknownRefSpansOnPage({
-				pageText: searchableText,
-				profile: runProfile,
-				coveredRanges,
-			});
-
-			for (const ref of unknownRefSpans) {
+			for (const ref of detectionResult.unknownSpans) {
 				const segTextSpan = searchableText.slice(
 					ref.pageCharStart,
 					ref.pageCharEnd,

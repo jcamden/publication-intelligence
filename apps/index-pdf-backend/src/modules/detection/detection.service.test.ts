@@ -7,13 +7,15 @@ import type { AliasInput } from "./alias-engine.types";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import {
-	computeFallbackSpan,
 	dedupeMatcherCandidates,
+	sortMatcherCandidates,
+} from "./detection.service";
+import {
+	computeFallbackSpan,
 	findBooklessUnknownRefSpansOnPage,
 	findRefSpansInAliasWindow,
 	shouldEmitFallbackMention,
-	sortMatcherCandidates,
-} from "./detection.service";
+} from "./scripture-detection-on-page";
 import type { MatcherMentionCandidate } from "./detection.types";
 import {
 	buildSearchablePageText,

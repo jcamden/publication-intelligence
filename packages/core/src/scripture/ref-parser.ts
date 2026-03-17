@@ -143,6 +143,19 @@ function parseSingleRef(
 		};
 	}
 
+	// ch:vff or ch:vf (and following): 6:1ff, 6:1f — do not set verseSuffix
+	const ffMatch = t.match(/^(\d+)[:.](\d+)(f{1,2})\.?$/i);
+	if (ffMatch) {
+		const ch = Number.parseInt(ffMatch[1], 10);
+		const v = Number.parseInt(ffMatch[2], 10);
+		const tail = ffMatch[3].toLowerCase();
+		return {
+			refText: `${ffMatch[1]}:${ffMatch[2]}${tail}`,
+			chapter: ch,
+			verseStart: v,
+		};
+	}
+
 	// ch:v or ch.v (single verse, optional suffix): 1:2, 1.2, 1:3a
 	const singleVerse = t.match(/^(\d+)[:.](\d+)([a-z])?$/i);
 	if (singleVerse) {
@@ -884,14 +897,16 @@ function scanBooklessImpl(args: {
 		);
 		const blockText = window.slice(refStart, blockEnd);
 		const trimmed = blockText.trim();
+		// Strip trailing punctuation so "2-4." parses as "2-4"
+		const trimmedForParse = trimmed.replace(/[.,;:]+$/, "");
 
-		if (trimmed.length === 0) {
+		if (trimmedForParse.length === 0) {
 			pos = refContentStart;
 			continue;
 		}
 
 		const segments = parseTriggerLedRefContent(
-			blockText,
+			trimmedForParse,
 			triggerKind as "chapter" | "verse",
 		);
 		if (segments.length === 0) {
@@ -899,7 +914,9 @@ function scanBooklessImpl(args: {
 			continue;
 		}
 
-		const consumedEnd = blockEnd;
+		// Consumed span: trigger + ref content only (exclude trailing punctuation)
+		const contentEnd = refStart + trimmedForParse.length;
+		const consumedEnd = contentEnd;
 		const consumedText = window.slice(consumedStart, consumedEnd);
 
 		const overlaps = occupiedRanges.some(
@@ -910,13 +927,20 @@ function scanBooklessImpl(args: {
 			continue;
 		}
 
-		const withOffsets = splitChapterVerseContent(blockText.trim())
+		const withOffsets = splitChapterVerseContent(trimmedForParse)
 			? segments.map((s) => ({
 					...s,
-					sourceStart: refStart,
-					sourceEnd: blockEnd,
+					refText: consumedText,
+					sourceStart: consumedStart,
+					sourceEnd: consumedEnd,
 				}))
-			: segmentsWithOffsetsInWindow(segments, refStart, blockText);
+			: segmentsWithOffsetsInWindow(segments, refStart, trimmedForParse);
+		// For trigger-led refs, use full consumed text (e.g. "verses 2-4", "chapter 3 verse 2") as refText and full span
+		for (const s of withOffsets) {
+			s.refText = consumedText;
+			s.sourceStart = consumedStart;
+			s.sourceEnd = consumedEnd;
+		}
 		const hasExplicitRefSyntax =
 			withOffsets.some(
 				(s) =>
