@@ -293,9 +293,12 @@ export function runScriptureDetectionOnPage(
 		);
 
 		if (refSpans.length > 0) {
-			for (const ref of refSpans) {
+			refSpans.forEach((ref, i) => {
+				// First segment only: span from alias start so highlight covers "Gen 1:1-3". Later segments (e.g. "4-5", "2:6-7") must not include the book in their bbox.
+				const pageCharStart =
+					i === 0 ? match.originalStart : ref.pageCharStart;
 				aliasAttached.push({
-					pageCharStart: ref.pageCharStart,
+					pageCharStart,
 					pageCharEnd: ref.pageCharEnd,
 					segments: ref.segments,
 					groupId: match.groupId,
@@ -303,7 +306,7 @@ export function runScriptureDetectionOnPage(
 					entryId: match.entryId,
 					indexType: match.indexType,
 				});
-			}
+			});
 		} else if (
 			shouldEmitFallbackMention(pageText, match.originalEnd, profile)
 		) {

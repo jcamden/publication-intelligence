@@ -273,22 +273,22 @@ const scriptureDetectionCases: Array<{
 			],
 		},
 	},
-	// {
-	// 	name: "chapter range",
-	// 	pageText: "Many summaries treat Gen 1-3 as a single primeval unit.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
-	// 				segments: [{ refText: "1-3", chapter: 1, chapterEnd: 3 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
+	{
+		name: "chapter range",
+		pageText: "Many summaries treat Gen 1-3 as a single primeval unit.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [{ refText: "1-3", chapter: 1, chapterEnd: 3 }],
+				},
+			],
+		},
+	},
 	// {
 	// 	name: "single verse",
 	// 	pageText: "The opening line, Gen 1:1, is unusually compact.",
