@@ -23,9 +23,9 @@ export type StandaloneRefSpan = {
 const DASH_CHAR_CLASS = "[-\u2013\u2014]";
 
 /**
- * Ref-like patterns for standalone detection. Only formats that clearly indicate
- * scripture (ch:v, ch:v-v, cross-chapter, verse lists). Excludes chapter-only and
- * chapter-range to avoid false positives (e.g. "page 1", "chapter 2").
+ * Ref-like patterns for findStandaloneRefSpans (compatibility helper only).
+ * Only formats that clearly indicate scripture (ch:v, ch:v-v, cross-chapter, verse lists).
+ * Excludes chapter-only and chapter-range to avoid false positives (e.g. "page 1", "chapter 2").
  */
 const STANDALONE_REF_PATTERNS = [
 	new RegExp(`\\d+:\\d+[a-z]?${DASH_CHAR_CLASS}\\d+:\\d+[a-z]?`, "gi"), // cross-chapter: 1:20-2:4, 1:6–28:69
@@ -41,7 +41,18 @@ const SCRIPTURE_PROFILE_ID = "scripture-biblical";
 
 /** Common words that are not book names; reject as prefix so "the 1 and 2" does not parse. */
 const NON_BOOK_PREFIX = new Set([
-	"the", "a", "an", "in", "on", "of", "to", "for", "at", "by", "as", "is",
+	"the",
+	"a",
+	"an",
+	"in",
+	"on",
+	"of",
+	"to",
+	"for",
+	"at",
+	"by",
+	"as",
+	"is",
 ]);
 
 /**
@@ -54,16 +65,15 @@ function refPortion(window: string): string | null {
 	if (match?.index === undefined) return null;
 	const prefix = trimmed.slice(0, match.index).trim();
 	if (prefix.length > 0 && !/^[a-z.]+$/i.test(prefix)) return null; // not a single book-like word
-	if (prefix.length > 0 && NON_BOOK_PREFIX.has(prefix.toLowerCase())) return null;
+	if (prefix.length > 0 && NON_BOOK_PREFIX.has(prefix.toLowerCase()))
+		return null;
 	return trimmed.slice(match.index).trim();
 }
 
 /** Ref portion must only contain digits, separators (:.,;-), spaces, and optional verse suffixes (e.g. 3a, 3a-b). Reject "1 and 2", "see page 1" (page is not a suffix). */
 function looksLikeRef(ref: string): boolean {
 	const tokens = ref.split(/[\s:.,;-]+/).filter(Boolean);
-	return tokens.every(
-		(t) => /^\d+[a-z]?$/i.test(t) || /^[a-z]$/i.test(t),
-	);
+	return tokens.every((t) => /^\d+[a-z]?$/i.test(t) || /^[a-z]$/i.test(t));
 }
 
 /** Optional verse suffix (3a, 3b). Return numeric value, ref text, and optional suffix. */
@@ -302,15 +312,6 @@ function parseBlock(block: string): ParsedRefSegment[] {
 	return [];
 }
 
-/** True if block starts with a book-like word (new book context); stop parsing there. */
-function _blockStartsWithBookName(block: string): boolean {
-	const t = block.trim();
-	if (t.length === 0) return false;
-	// Starts with letters (possibly with dots) before any digit = book name
-	const beforeDigit = t.match(/^\s*([a-z.]+)/i);
-	return Boolean(beforeDigit && beforeDigit[1].length > 1);
-}
-
 /** Ref-like characters: digits, separators, spaces. Letters and ) end the block. */
 function isRefChar(c: string): boolean {
 	if (c.length !== 1) return false;
@@ -326,11 +327,25 @@ function readWord(window: string, pos: number): { word: string; end: number } {
 
 /** Chapter trigger words (bookless / combined refs). */
 const CHAPTER_TRIGGERS = new Set([
-	"chapter", "chapters", "chap", "chap.", "ch", "ch.", "chs", "chs.",
+	"chapter",
+	"chapters",
+	"chap",
+	"chap.",
+	"ch",
+	"ch.",
+	"chs",
+	"chs.",
 ]);
 /** Verse trigger words (bookless / combined refs). */
 const VERSE_TRIGGERS = new Set([
-	"verse", "verses", "v", "v.", "vv", "vv.", "vs", "vs.",
+	"verse",
+	"verses",
+	"v",
+	"v.",
+	"vv",
+	"vv.",
+	"vs",
+	"vs.",
 ]);
 
 /**
@@ -413,7 +428,10 @@ function scanBlockEnd(
 					afterSemicolon: false,
 				};
 			}
-			if (allowTriggerWords && (CHAPTER_TRIGGERS.has(word) || VERSE_TRIGGERS.has(word))) {
+			if (
+				allowTriggerWords &&
+				(CHAPTER_TRIGGERS.has(word) || VERSE_TRIGGERS.has(word))
+			) {
 				pos = end;
 				while (pos < len && /\s/.test(window[pos])) pos++;
 				continue;
@@ -567,7 +585,11 @@ function parseAfterAliasImpl(args: {
 					stopReason = "invalid_syntax";
 					break;
 				}
-				const withOffsets = segmentsWithOffsetsInWindow(segments, pos, blockText);
+				const withOffsets = segmentsWithOffsetsInWindow(
+					segments,
+					pos,
+					blockText,
+				);
 				allSegments.push(...withOffsets);
 			}
 		}
@@ -751,7 +773,10 @@ const IMPLIED_REF_START = /^\d+[.:]\d+/;
 function findNextCitationStart(
 	window: string,
 	fromPos: number,
-): { kind: "chapter" | "verse"; wordEnd: number } | { kind: "implied"; matchStart: number } | null {
+):
+	| { kind: "chapter" | "verse"; wordEnd: number }
+	| { kind: "implied"; matchStart: number }
+	| null {
 	const len = window.length;
 	let pos = fromPos;
 	while (pos < len) {
@@ -885,14 +910,13 @@ function scanBooklessImpl(args: {
 			continue;
 		}
 
-		const withOffsets =
-			splitChapterVerseContent(blockText.trim())
-				? segments.map((s) => ({
-						...s,
-						sourceStart: refStart,
-						sourceEnd: blockEnd,
-					}))
-				: segmentsWithOffsetsInWindow(segments, refStart, blockText);
+		const withOffsets = splitChapterVerseContent(blockText.trim())
+			? segments.map((s) => ({
+					...s,
+					sourceStart: refStart,
+					sourceEnd: blockEnd,
+				}))
+			: segmentsWithOffsetsInWindow(segments, refStart, blockText);
 		const hasExplicitRefSyntax =
 			withOffsets.some(
 				(s) =>
@@ -973,7 +997,11 @@ export type FindStandaloneRefSpansOptions = {
 
 /**
  * Find standalone ref spans in text (refs without a preceding book name).
- * Used for contextual scripture detection: "Daniel... in 4:35" where "4:35" is implied Daniel 4:35.
+ *
+ * **Compatibility helper only.** The primary scripture detection flow does not use this:
+ * alias-attached refs use parseAfterAlias; page-wide Unknown refs use scanBookless.
+ * This regex-first helper remains for tests and any legacy callers that need span discovery
+ * without the consuming parser. Prefer parseAfterAlias / scanBookless for new code.
  */
 export function findStandaloneRefSpans(
 	text: string,

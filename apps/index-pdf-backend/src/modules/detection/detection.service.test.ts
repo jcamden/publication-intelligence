@@ -452,7 +452,7 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 });
 
 // ============================================================================
-// findRefSpansInAliasWindow: explicit citation rules
+// findRefSpansInAliasWindow: explicit citation (parser-driven; no findStandaloneRefSpans)
 // ============================================================================
 
 describe("findRefSpansInAliasWindow (explicit citation)", () => {
@@ -511,6 +511,14 @@ describe("findRefSpansInAliasWindow (explicit citation)", () => {
 		const text = "Deuteronomy 1:6–18 appointing judges";
 		const aliasEnd = "Deuteronomy ".length;
 		expect(refTexts(text, aliasEnd)).toEqual([]);
+	});
+
+	it("parser stopReason prose prevents alias-attached spans (service uses parser as source of truth)", () => {
+		// When parser stops on prose, findRefSpansInAliasWindow returns no spans.
+		const text = "Deut 1:6-18 appointing judges";
+		const aliasEnd = "Deut ".length;
+		const spans = refSpans(text, aliasEnd);
+		expect(spans).toHaveLength(0);
 	});
 
 	it("assigns Deuteronomy 6:1 to book (explicit citation)", () => {

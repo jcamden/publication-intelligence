@@ -463,11 +463,51 @@ describe("parseAfterAlias (alias-tail consumer)", () => {
 		expect(result.consumedText).toBe("1:2-4");
 		expect(result.segments[0].refText).toBe("1:2-4");
 	});
+
+	it("stopReason closing_paren: consumed span ends at paren, refs before belong to alias", () => {
+		const window = "32:44-47; 34:9; ) 1:19-45";
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: window,
+			otherBookAliases: [],
+		});
+		expect(result.status).toBe("match");
+		expect(result.stopReason).toBe("closing_paren");
+		expect(result.consumedText).toBe(
+			window.slice(result.consumedStart, result.consumedEnd),
+		);
+		expect(result.consumedText).toContain("32:44-47");
+		expect(result.consumedText).toContain("34:9");
+		expect(result.segments).toHaveLength(2);
+	});
+
+	it("stopReason invalid_syntax: ref-like block that does not parse", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "1:2:3",
+		});
+		expect(result.status).toBe("no_match");
+		expect(result.stopReason).toBe("invalid_syntax");
+		expect(result.segments).toHaveLength(0);
+	});
+
+	it("segment source offsets lie within consumed span", () => {
+		const result = scriptureParserProfile.parseAfterAlias({
+			normalizedWindow: "1:5; 4:44; and 6:1",
+		});
+		expect(result.status).toBe("match");
+		for (const seg of result.segments) {
+			expect(seg.sourceStart).toBeGreaterThanOrEqual(result.consumedStart);
+			expect(seg.sourceEnd).toBeLessThanOrEqual(result.consumedEnd);
+			expect(seg.sourceStart).toBeLessThan(seg.sourceEnd);
+		}
+	});
 });
 
 describe("scanBookless (bookless citation scan)", () => {
-	const scan = (normalizedText: string, occupiedRanges: Array<{ start: number; end: number }> = []) =>
-		scriptureParserProfile.scanBookless!({ normalizedText, occupiedRanges });
+	const scan = (
+		normalizedText: string,
+		occupiedRanges: Array<{ start: number; end: number }> = [],
+	) =>
+		scriptureParserProfile.scanBookless?.({ normalizedText, occupiedRanges });
 
 	it("As noted in 4:35 and again in 5:1-3 - finds two implied refs (stop at prose between)", () => {
 		const text = "as noted in 4:35 and again in 5:1-3";
@@ -622,9 +662,24 @@ describe("scanBookless (bookless citation scan)", () => {
 		const results = scan(text, [{ start: 0, end: 5 }]);
 		// 4:35 overlaps [0,5); 5:1-3 may not
 		expect(results.length).toBeLessThanOrEqual(2);
-		const has4_35 = results.some(
-			(r) => r.segments.some((s) => s.refText === "4:35"),
+		const has4_35 = results.some((r) =>
+			r.segments.some((s) => s.refText === "4:35"),
 		);
 		expect(has4_35).toBe(false);
+	});
+
+	it("each result has stopReason and segment source offsets within consumed span", () => {
+		// "4:35 and 5:1-3" is one implied ref block (and connects refs) → one result, two segments
+		const results = scan("4:35 and 5:1-3");
+		expect(results.length).toBeGreaterThanOrEqual(1);
+		for (const r of results) {
+			expect(["end_of_input", "prose", "new_book", "closing_paren"]).toContain(
+				r.stopReason,
+			);
+			for (const seg of r.segments) {
+				expect(seg.sourceStart).toBeGreaterThanOrEqual(r.consumedStart);
+				expect(seg.sourceEnd).toBeLessThanOrEqual(r.consumedEnd);
+			}
+		}
 	});
 });
