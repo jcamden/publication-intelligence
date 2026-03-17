@@ -9,6 +9,7 @@ import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
 import {
 	computeFallbackSpan,
 	dedupeMatcherCandidates,
+	findBooklessUnknownRefSpansOnPage,
 	findRefSpansInAliasWindow,
 	shouldEmitFallbackMention,
 	sortMatcherCandidates,
@@ -527,5 +528,80 @@ describe("findRefSpansInAliasWindow (explicit citation)", () => {
 		expect(spans[0].segments).toHaveLength(1);
 		expect(spans[0].pageCharStart).toBe(aliasEnd);
 		expect(spans[0].pageCharEnd).toBe(aliasEnd + "12:1".length);
+	});
+});
+
+// ============================================================================
+// Task 05: Unknown scan integration (page-wide bookless scan)
+// ============================================================================
+
+describe("findBooklessUnknownRefSpansOnPage (Unknown scan)", () => {
+	const profile = getParserProfile("scripture-biblical");
+
+	it("finds bookless refs like 'As noted in 4:35 and again in 5:1-3'", () => {
+		const pageText = "As noted in 4:35 and again in 5:1-3";
+		const spans = findBooklessUnknownRefSpansOnPage({
+			pageText,
+			profile,
+			coveredRanges: [],
+		});
+
+		expect(spans.map((s) => s.segments[0]?.refText)).toEqual(["4:35", "5:1-3"]);
+		expect(pageText.slice(spans[0].pageCharStart, spans[0].pageCharEnd)).toBe(
+			"4:35",
+		);
+		expect(pageText.slice(spans[1].pageCharStart, spans[1].pageCharEnd)).toBe(
+			"5:1-3",
+		);
+	});
+
+	it("finds trigger-led bookless refs like 'chapter 3 verse 5'", () => {
+		const pageText = "chapter 3 verse 5";
+		const spans = findBooklessUnknownRefSpansOnPage({
+			pageText,
+			profile,
+			coveredRanges: [],
+		});
+		expect(spans).toHaveLength(1);
+		expect(spans[0].segments[0]).toMatchObject({
+			refText: "3:5",
+			chapter: 3,
+			verseStart: 5,
+			verseEnd: 5,
+		});
+		// Source span covers the ref content after triggers (parser emits whole block for combined chapter+verse)
+		expect(pageText.slice(spans[0].pageCharStart, spans[0].pageCharEnd)).toBe(
+			"3 verse 5",
+		);
+	});
+
+	it("excludes overlaps with coveredRanges (alias-attached should suppress Unknown duplicates)", () => {
+		const pageText = "as noted in 4:35 and again in 5:1-3";
+		// Cover just "4:35"
+		const coveredRanges = [{ start: 12, end: 16 }];
+		const spans = findBooklessUnknownRefSpansOnPage({
+			pageText,
+			profile,
+			coveredRanges,
+		});
+		expect(spans.map((s) => s.segments[0]?.refText)).toEqual(["5:1-3"]);
+	});
+
+	it("ambiguous mixed-book: leftover bookless refs route to Unknown while alias-attached are covered", () => {
+		// Page has bookless "4:35" then "Gen 1:1"; Gen 1:1 is alias-attached (covered). Only 4:35 should be Unknown.
+		const pageText = "See 4:35 and Gen 1:1";
+		const genRefStart = pageText.indexOf("1:1");
+		const genRefEnd = genRefStart + "1:1".length;
+		const coveredRanges = [{ start: genRefStart, end: genRefEnd }];
+		const spans = findBooklessUnknownRefSpansOnPage({
+			pageText,
+			profile,
+			coveredRanges,
+		});
+		expect(spans).toHaveLength(1);
+		expect(spans[0].segments[0]?.refText).toBe("4:35");
+		expect(pageText.slice(spans[0].pageCharStart, spans[0].pageCharEnd)).toBe(
+			"4:35",
+		);
 	});
 });

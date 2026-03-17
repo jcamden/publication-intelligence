@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import path from "node:path";
 import type { ParserProfile } from "@pubint/core";
 import {
-	findStandaloneRefSpans,
 	getParserProfile,
 	normalize,
 	normalizeWithOffsetMap,
@@ -563,6 +562,72 @@ export function dedupeMatcherCandidates(
 	return out;
 }
 
+/**
+ * Page-wide bookless scan used to emit `Unknown` scripture candidates.
+ * Uses the parser's bookless scan surface and maps parser-emitted offsets back to page offsets.
+ * Exported for tests.
+ */
+export function findBooklessUnknownRefSpansOnPage(args: {
+	pageText: string;
+	profile: ParserProfile | undefined;
+	coveredRanges: Array<{ start: number; end: number }>;
+}): Array<{
+	pageCharStart: number;
+	pageCharEnd: number;
+	segments: MatcherMentionParserSegment[];
+}> {
+	const { pageText, profile, coveredRanges } = args;
+	if (!profile?.scanBookless) return [];
+
+	const { normalizedText, mapNormalizedSpanToOriginalSpan } =
+		normalizeWithOffsetMap(pageText);
+
+	const results = profile.scanBookless({ normalizedText, occupiedRanges: [] });
+	if (results.length === 0) return [];
+
+	const spans: Array<{
+		pageCharStart: number;
+		pageCharEnd: number;
+		segments: MatcherMentionParserSegment[];
+	}> = [];
+
+	for (const r of results) {
+		if (r.status !== "match") continue;
+		for (const seg of r.segments ?? []) {
+			const refText = seg.refText ?? "";
+			if (refText.trim().length === 0) continue; // book-only should not emit unknown ref spans
+
+			const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
+				seg.sourceStart,
+				seg.sourceEnd,
+			);
+			if (origEnd <= origStart) continue;
+
+			const overlapsCovered = coveredRanges.some(
+				(c) => origStart < c.end && c.start < origEnd,
+			);
+			if (overlapsCovered) continue;
+
+			spans.push({
+				pageCharStart: origStart,
+				pageCharEnd: origEnd,
+				segments: [
+					{
+						refText,
+						chapter: seg.chapter,
+						chapterEnd: seg.chapterEnd,
+						verseStart: seg.verseStart,
+						verseEnd: seg.verseEnd,
+						verseSuffix: seg.verseSuffix,
+					},
+				],
+			});
+		}
+	}
+
+	return spans;
+}
+
 const processMatcher = async ({
 	userId,
 	runId,
@@ -1036,81 +1101,54 @@ const processMatcher = async ({
 				projectId: run.projectId,
 				projectIndexTypeId,
 			});
-			const { normalizedText, mapNormalizedSpanToOriginalSpan } =
-				normalizeWithOffsetMap(searchableText);
-			const standaloneSpans = findStandaloneRefSpans(normalizedText, {
-				includeChapterAndRange: true,
-			});
 			const coveredRanges = allCandidates
 				.filter((c) => c.pageNumber === pageNum)
 				.map((c) => ({ start: c.charStart, end: c.charEnd }));
 
-			for (const span of standaloneSpans) {
-				const [origStart, origEnd] = mapNormalizedSpanToOriginalSpan(
-					span.start,
-					span.end,
+			const unknownRefSpans = findBooklessUnknownRefSpansOnPage({
+				pageText: searchableText,
+				profile: runProfile,
+				coveredRanges,
+			});
+
+			for (const ref of unknownRefSpans) {
+				const segTextSpan = searchableText.slice(
+					ref.pageCharStart,
+					ref.pageCharEnd,
 				);
-				const overlapsCovered = coveredRanges.some(
-					(r) => origStart < r.end && r.start < origEnd,
-				);
-				if (overlapsCovered) continue;
-
-				const segments = runProfile.parse(span.refText);
-				if (segments.length === 0) continue;
-				if (segments.length === 1 && segments[0].refText === "") continue;
-
-				const spanSlice = normalizedText.slice(span.start, span.end);
-				let searchFrom = 0;
-
-				for (const seg of segments) {
-					const refText = seg.refText ?? "";
-					if (refText.trim() === "") continue; // book-level stays on Unknown; skip for standalone
-					const segNorm = normalize(refText);
-					const idx = spanSlice.indexOf(segNorm, searchFrom);
-					if (idx === -1) continue;
-					const segNormStart = span.start + idx;
-					const segNormEnd = segNormStart + segNorm.length;
-					searchFrom = idx + segNorm.length;
-
-					const [segOrigStart, segOrigEnd] = mapNormalizedSpanToOriginalSpan(
-						segNormStart,
-						segNormEnd,
-					);
-					const segTextSpan = searchableText.slice(segOrigStart, segOrigEnd);
-					const segMentionsWithPositions = [
-						{
-							mention: {
-								entryLabel: "",
-								indexType: run.indexType,
-								pageNumber: pageNum,
-								textSpan: segTextSpan,
-							},
-							charStart: segOrigStart,
-							charEnd: segOrigEnd,
-						},
-					];
-					const { mapped: segBboxes } = mapPositionsToBBoxes({
-						mentionsWithPositions: segMentionsWithPositions,
-						textAtoms: indexableAtomsWithCorrectedPositions,
-					});
-					const segWithBbox = segBboxes.find(
-						(m) => m.pageNumber === pageNum && m.textSpan === segTextSpan,
-					);
-					if (segWithBbox) {
-						allCandidates.push({
-							pageNumber: pageNum,
-							groupId: "unknown",
-							matcherId: unknownEntryId,
-							entryId: unknownEntryId,
+				const segMentionsWithPositions = [
+					{
+						mention: {
+							entryLabel: "",
 							indexType: run.indexType,
-							textSpan: segWithBbox.textSpan,
-							charStart: segOrigStart,
-							charEnd: segOrigEnd,
-							bboxes: segWithBbox.bboxes,
-							parserSegments: [{ ...seg, refText }],
-							isUnknownBook: true,
-						});
-					}
+							pageNumber: pageNum,
+							textSpan: segTextSpan,
+						},
+						charStart: ref.pageCharStart,
+						charEnd: ref.pageCharEnd,
+					},
+				];
+				const { mapped: segBboxes } = mapPositionsToBBoxes({
+					mentionsWithPositions: segMentionsWithPositions,
+					textAtoms: indexableAtomsWithCorrectedPositions,
+				});
+				const segWithBbox = segBboxes.find(
+					(m) => m.pageNumber === pageNum && m.textSpan === segTextSpan,
+				);
+				if (segWithBbox) {
+					allCandidates.push({
+						pageNumber: pageNum,
+						groupId: "unknown",
+						matcherId: unknownEntryId,
+						entryId: unknownEntryId,
+						indexType: run.indexType,
+						textSpan: segWithBbox.textSpan,
+						charStart: ref.pageCharStart,
+						charEnd: ref.pageCharEnd,
+						bboxes: segWithBbox.bboxes,
+						parserSegments: ref.segments,
+						isUnknownBook: true,
+					});
 				}
 			}
 		}
