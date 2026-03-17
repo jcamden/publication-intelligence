@@ -6,6 +6,7 @@ import {
 	projectIndexTypes,
 	sourceDocuments,
 } from "../../db/schema";
+import { mergeBboxesOnSameLine } from "./bbox-merge.utils";
 import type {
 	BoundingBox,
 	CreateIndexMentionInput,
@@ -350,6 +351,9 @@ export const createIndexMention = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			const mergedBboxes = mergeBboxesOnSameLine(
+				input.bboxesPdf as BoundingBox[],
+			) as unknown as typeof indexMentions.$inferInsert.bboxes;
 			const [mention] = await tx
 				.insert(indexMentions)
 				.values({
@@ -358,8 +362,7 @@ export const createIndexMention = async ({
 					documentId: input.documentId,
 					pageNumber: input.pageNumber,
 					textSpan: input.textSpan,
-					bboxes:
-						input.bboxesPdf as unknown as typeof indexMentions.$inferInsert.bboxes,
+					bboxes: mergedBboxes,
 					rangeType: "single_page",
 					mentionType: input.mentionType,
 					revision: 1,
@@ -575,30 +578,31 @@ export const bulkCreateIndexMentions = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
+			const mergedMentions = mentions.map((m) => {
+				const projectIndexTypeId = entryTypeMap.get(m.entryId);
+				if (!projectIndexTypeId) {
+					throw new Error(
+						`No projectIndexTypeId found for entry ${m.entryId}`,
+					);
+				}
+				const mergedBboxes = mergeBboxesOnSameLine(
+					m.bboxesPdf as BoundingBox[],
+				) as unknown as typeof indexMentions.$inferInsert.bboxes;
+				return {
+					entryId: m.entryId,
+					projectIndexTypeId,
+					documentId: m.documentId,
+					pageNumber: m.pageNumber,
+					textSpan: m.textSpan,
+					bboxes: mergedBboxes,
+					rangeType: "single_page" as const,
+					mentionType: m.mentionType,
+					revision: 1,
+				};
+			});
 			const createdMentions = await tx
 				.insert(indexMentions)
-				.values(
-					mentions.map((m) => {
-						const projectIndexTypeId = entryTypeMap.get(m.entryId);
-						if (!projectIndexTypeId) {
-							throw new Error(
-								`No projectIndexTypeId found for entry ${m.entryId}`,
-							);
-						}
-						return {
-							entryId: m.entryId,
-							projectIndexTypeId,
-							documentId: m.documentId,
-							pageNumber: m.pageNumber,
-							textSpan: m.textSpan,
-							bboxes:
-								m.bboxesPdf as unknown as typeof indexMentions.$inferInsert.bboxes,
-							rangeType: "single_page" as const,
-							mentionType: m.mentionType,
-							revision: 1,
-						};
-					}),
-				)
+				.values(mergedMentions)
 				.returning();
 
 			const entryIds = [...new Set(mentions.map((m) => m.entryId))];

@@ -9,6 +9,7 @@ import {
 	projectIndexTypes,
 	suppressedSuggestions,
 } from "../../db/schema";
+import { mergeBboxesOnSameLine } from "../index-mention/bbox-merge.utils";
 import { ensureUnknownEntryExistsInTx } from "../scripture-bootstrap/scripture-bootstrap.repo";
 import type { AliasInput } from "./alias-engine.types";
 import { bboxesHash as computeBboxesHash } from "./bbox-canonical.utils";
@@ -453,7 +454,9 @@ export const createSuggestedMention = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
-			const bboxesHash = computeBboxesHash(bboxes);
+			const mergedBboxes = mergeBboxesOnSameLine(bboxes);
+			const bboxesToStore = mergedBboxes ?? bboxes;
+			const bboxesHash = computeBboxesHash(bboxesToStore);
 			const inserted = await tx
 				.insert(indexMentions)
 				.values({
@@ -463,7 +466,7 @@ export const createSuggestedMention = async ({
 					detectionRunId,
 					pageNumber,
 					textSpan,
-					bboxes: bboxes as never,
+					bboxes: bboxesToStore as never,
 					bboxesHash,
 					rangeType: "single_page",
 					mentionType: "text",
@@ -511,18 +514,22 @@ export const insertMatcherMentionsBatch = async ({
 	return await withUserContext({
 		userId,
 		fn: async (tx) => {
-			const values = candidates.map((c) => ({
-				entryId: c.entryId,
-				projectIndexTypeId,
-				documentId,
-				detectionRunId,
-				pageNumber: c.pageNumber,
-				textSpan: c.textSpan,
-				bboxes: c.bboxes as never,
-				bboxesHash: computeBboxesHash(c.bboxes),
-				rangeType: "single_page" as const,
-				mentionType: "text" as const,
-			}));
+			const values = candidates.map((c) => {
+				const mergedBboxes = mergeBboxesOnSameLine(c.bboxes);
+				const bboxesToStore = mergedBboxes ?? c.bboxes;
+				return {
+					entryId: c.entryId,
+					projectIndexTypeId,
+					documentId,
+					detectionRunId,
+					pageNumber: c.pageNumber,
+					textSpan: c.textSpan,
+					bboxes: bboxesToStore as never,
+					bboxesHash: computeBboxesHash(bboxesToStore),
+					rangeType: "single_page" as const,
+					mentionType: "text" as const,
+				};
+			});
 			const inserted = await tx
 				.insert(indexMentions)
 				.values(values)
