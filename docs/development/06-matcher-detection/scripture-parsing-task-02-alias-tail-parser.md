@@ -126,7 +126,7 @@ Add or update tests for:
 - `Deut 1:5; 4:44; and 6:1`
 - `Gen 1:20-2:4`
 - stopping at a new book in `Deut 32:44-47; 34:9; Josh 1:1-9`
-- prose stop in `Deuteronomy 1:6-18 appointing judges`
+- prose stop in `Deuteronomy 1:6-18 appointing judges` (consumed `1:6-18`, `stopReason: prose`; alias-window still attaches to the book)
 - parenthetical/non-attached case in `Deuteronomy calls for ... (6:5-9)`
 - consumed span and source-offset assertions, not just segment arrays
 

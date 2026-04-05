@@ -751,7 +751,7 @@ Expected:
 - alias-tail parse result is either `book_only` or `no_match`, depending on chosen fallback rules
 - if the bookless scanner later treats `6:5-9` as a standalone citation, it should route to `Unknown`, not to Deuteronomy
 
-### Example 4: prose after ref should stop assignment
+### Example 4: prose after ref (running sentence)
 
 Input:
 
@@ -761,8 +761,8 @@ Deuteronomy 1:6-18 appointing judges
 
 Expected:
 
-- parser should not attach `1:6-18` to Deuteronomy as a clean citation mention
-- stop reason should reflect prose or invalid citation continuation
+- parser consumes `1:6-18` with `stopReason: prose` at the following word (`appointing`)
+- alias-attached mention includes `1:6-18` on Deuteronomy; text after the citation is normal English, not a reason to drop attachment
 
 ### Example 5: next book stops parsing
 

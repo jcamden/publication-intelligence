@@ -79,8 +79,9 @@ export function findRefSpansInAliasWindow(
 		return [];
 	}
 	// Avoid emitting when the parser stopped on invalid_syntax (garbage after alias).
-	// Allow end_of_input, new_book, closing_paren, and prose when we have segments
-	// (e.g. "Gen 1 with..." → we parsed "1", then hit "with"; the ref is valid).
+	// Allow end_of_input, new_book, closing_paren, and prose when we have segments.
+	// Prose means the citation ended and normal words follow (e.g. "Deut 1:6-18 appointing judges");
+	// the parsed ref still attaches to the book.
 	if (
 		result.stopReason !== "end_of_input" &&
 		result.stopReason !== "new_book" &&
@@ -109,7 +110,7 @@ export function findRefSpansInAliasWindow(
 			segments: [
 				{
 					refText: seg.refText,
-					chapter: seg.chapter,
+					chapterStart: seg.chapterStart,
 					chapterEnd: seg.chapterEnd,
 					verseStart: seg.verseStart,
 					verseEnd: seg.verseEnd,
@@ -167,9 +168,7 @@ export function shouldEmitFallbackMention(
 	const sliceCap = parseSlice.slice(0, PARSER_WINDOW_CAP);
 	const segments = profile.parse(normalize(sliceCap));
 	// Emit fallback when there are no ref segments, or only book-only segments (refText empty)
-	const hasRealRef = segments.some(
-		(s) => (s.refText ?? "").trim().length > 0,
-	);
+	const hasRealRef = segments.some((s) => (s.refText ?? "").trim().length > 0);
 	return !hasRealRef;
 }
 
@@ -229,7 +228,7 @@ export function findBooklessUnknownRefSpansOnPage(args: {
 				segments: [
 					{
 						refText,
-						chapter: seg.chapter,
+						chapterStart: seg.chapterStart,
 						chapterEnd: seg.chapterEnd,
 						verseStart: seg.verseStart,
 						verseEnd: seg.verseEnd,
@@ -295,8 +294,7 @@ export function runScriptureDetectionOnPage(
 		if (refSpans.length > 0) {
 			refSpans.forEach((ref, i) => {
 				// First segment only: span from alias start so highlight covers "Gen 1:1-3". Later segments (e.g. "4-5", "2:6-7") must not include the book in their bbox.
-				const pageCharStart =
-					i === 0 ? match.originalStart : ref.pageCharStart;
+				const pageCharStart = i === 0 ? match.originalStart : ref.pageCharStart;
 				aliasAttached.push({
 					pageCharStart,
 					pageCharEnd: ref.pageCharEnd,

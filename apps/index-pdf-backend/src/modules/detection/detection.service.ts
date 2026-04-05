@@ -12,7 +12,6 @@ import {
 import { getUserSettings } from "../user-settings/user-settings.repo";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { ResolvedAliasMatch } from "./alias-engine.types";
-import { runScriptureDetectionOnPage } from "./scripture-detection-on-page";
 import { buildDedupeKey } from "./bbox-canonical.utils";
 import {
 	DEFAULT_OVERLAP_THRESHOLD,
@@ -27,7 +26,6 @@ import type {
 	DetectionRun,
 	DetectionRunListItem,
 	MatcherMentionCandidate,
-	MatcherMentionParserSegment,
 	RunLlmInput,
 	RunMatcherInput,
 } from "./detection.types";
@@ -36,6 +34,7 @@ import * as indexEntryGroupRepo from "./index-entry-group.repo";
 import { callLLMForDetection } from "./openrouter.client";
 import { resolvePageIdToDocumentPageNumber } from "./page-id.utils";
 import { buildDetectionPrompt } from "./prompt.utils";
+import { runScriptureDetectionOnPage } from "./scripture-detection-on-page";
 import {
 	buildPromptText,
 	buildSearchablePageText,
@@ -739,10 +738,7 @@ const processMatcher = async ({
 					entryLabel: "",
 					indexType: span.indexType,
 					pageNumber: pageNum,
-					textSpan: searchableText.slice(
-						span.pageCharStart,
-						span.pageCharEnd,
-					),
+					textSpan: searchableText.slice(span.pageCharStart, span.pageCharEnd),
 				},
 				charStart: span.pageCharStart,
 				charEnd: span.pageCharEnd,

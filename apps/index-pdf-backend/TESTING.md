@@ -141,7 +141,7 @@ Data is automatically cleaned between tests (`afterEach`) and the PGLite instanc
 
 Install PGLite:
 ```bash
-nvm use 23
+nvm use 25
 pnpm add -D @electric-sql/pglite
 ```
 

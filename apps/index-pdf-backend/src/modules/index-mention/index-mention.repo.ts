@@ -581,9 +581,7 @@ export const bulkCreateIndexMentions = async ({
 			const mergedMentions = mentions.map((m) => {
 				const projectIndexTypeId = entryTypeMap.get(m.entryId);
 				if (!projectIndexTypeId) {
-					throw new Error(
-						`No projectIndexTypeId found for entry ${m.entryId}`,
-					);
+					throw new Error(`No projectIndexTypeId found for entry ${m.entryId}`);
 				}
 				const mergedBboxes = mergeBboxesOnSameLine(
 					m.bboxesPdf as BoundingBox[],

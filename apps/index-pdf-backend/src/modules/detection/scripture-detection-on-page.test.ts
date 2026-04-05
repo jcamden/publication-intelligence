@@ -1,3 +1,4 @@
+// biome-ignore-all lint/correctness/noUnusedVariables: large test file with intentional unused bindings and destructuring placeholders
 import "../../test/setup";
 import { getParserProfile } from "@pubint/core";
 import { describe, expect, it } from "vitest";
@@ -268,7 +269,7 @@ const scriptureDetectionCases: Array<{
 					matcherId: "gen",
 					entryId: "genesis",
 					indexType: "bible",
-					segments: [{ refText: "1", chapter: 1 }],
+					segments: [{ refText: "1", chapterStart: 1 }],
 				},
 			],
 		},
@@ -284,43 +285,43 @@ const scriptureDetectionCases: Array<{
 					matcherId: "gen",
 					entryId: "genesis",
 					indexType: "bible",
-					segments: [{ refText: "1-3", chapter: 1, chapterEnd: 3 }],
+					segments: [{ refText: "1-3", chapterStart: 1, chapterEnd: 3 }],
 				},
 			],
 		},
 	},
-	// {
-	// 	name: "single verse",
-	// 	pageText: "The opening line, Gen 1:1, is unusually compact.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
-	// {
-	// 	name: "single verse with dotted style",
-	// 	pageText: "Some European notes prefer Gen 1.1 in this context.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
-	// 				segments: [{ refText: "1.1", chapter: 1, verseStart: 1 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
+	{
+		name: "single verse",
+		pageText: "The opening line, Gen 1:1, is unusually compact.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
+				},
+			],
+		},
+	},
+	{
+		name: "single verse with dotted style",
+		pageText: "Some European notes prefer Gen 1.1 in this context.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [{ refText: "1.1", chapterStart: 1, verseStart: 1 }],
+				},
+			],
+		},
+	},
 	// {
 	// 	name: "single verse with comma style",
 	// 	pageText: "Older material may cite Gen 1,1 instead of using a colon.",
@@ -332,43 +333,47 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1,1", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1,1", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
 	// },
-	// {
-	// 	name: "verse range",
-	// 	pageText: "A commentator may focus especially on Gen 1:1-3.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1-3", chapter: 1, verseStart: 1, verseEnd: 3 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
-	// {
-	// 	name: "verse range with dotted style",
-	// 	pageText: "Another edition writes the same unit as Gen 1.1-3.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
-	// 				segments: [{ refText: "1.1-3", chapter: 1, verseStart: 1, verseEnd: 3 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
+	{
+		name: "verse range",
+		pageText: "A commentator may focus especially on Gen 1:1-3.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [
+						{ refText: "1:1-3", chapterStart: 1, verseStart: 1, verseEnd: 3 },
+					],
+				},
+			],
+		},
+	},
+	{
+		name: "verse range with dotted style",
+		pageText: "Another edition writes the same unit as Gen 1.1-3.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [
+						{ refText: "1.1-3", chapterStart: 1, verseStart: 1, verseEnd: 3 },
+					],
+				},
+			],
+		},
+	},
 	// {
 	// 	name: "verse range with comma style",
 	// 	pageText: "An older citation style may render this as Gen 1,1-3.",
@@ -380,67 +385,112 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1,1-3", chapter: 1, verseStart: 1, verseEnd: 3 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
-	// {
-	// 	name: "verse list",
-	// 	pageText: "The author highlights Gen 1:1, 2, 3 as a tightly linked opening.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1, 2, 3", chapter: 1, verseStart: 1 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
-	// {
-	// 	name: "verse list with ranges",
-	// 	pageText: "The discussion tracks Gen 31:1-8, 14-15, 23 quite closely.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
-	// 				segments: [{ refText: "31:1-8, 14-15, 23", chapter: 31, verseStart: 1 }],
-	// 			},
-	// 		],
-	// 	},
-	// },
-	// {
-	// 	name: "cross chapter range",
-	// 	pageText: "The structure runs from Gen 1:20-2:4 without a break.",
-	// 	aliases: [GEN],
-	// 	expected: {
-	// 		aliasAttached: [
-	// 			{
-	// 				groupId: GRP_OT,
-	// 				matcherId: "gen",
-	// 				entryId: "genesis",
-	// 				indexType: "bible",
 	// 				segments: [
-	// 					{
-	// 						refText: "1:20-2:4",
-	// 						chapter: 1,
-	// 						verseStart: 20,
-	// 						chapterEnd: 2,
-	// 						verseEnd: 4,
-	// 					},
+	// 					{ refText: "1,1-3", chapterStart: 1, verseStart: 1, verseEnd: 3 },
 	// 				],
 	// 			},
 	// 		],
 	// 	},
 	// },
+	{
+		name: "verse list",
+		pageText:
+			"The author highlights Gen 1:1, 3, 5 as a tightly linked opening.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
+				},
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [{ refText: "3", chapterStart: 1, verseStart: 3 }],
+				},
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [{ refText: "5", chapterStart: 1, verseStart: 5 }],
+				},
+			],
+		},
+	},
+	{
+		name: "verse list with ranges",
+		pageText: "The discussion tracks Gen 31:1-8, 14-15, 23 quite closely.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [
+						{
+							refText: "14-15",
+							chapterStart: 31,
+							verseStart: 14,
+							verseEnd: 15,
+						},
+					],
+				},
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [{ refText: "23", chapterStart: 31, verseStart: 23 }],
+				},
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [
+						{
+							refText: "31:1-8",
+							chapterStart: 31,
+							verseStart: 1,
+							verseEnd: 8,
+						},
+					],
+				},
+			],
+		},
+	},
+	{
+		name: "cross chapter range",
+		pageText: "The structure runs from Gen 1:20-2:4 without a break.",
+		aliases: [GEN],
+		expected: {
+			aliasAttached: [
+				{
+					groupId: GRP_OT,
+					matcherId: "gen",
+					entryId: "genesis",
+					indexType: "bible",
+					segments: [
+						{
+							refText: "1:20-2:4",
+							chapterStart: 1,
+							chapterEnd: 2,
+							verseStart: 20,
+							verseEnd: 4,
+						},
+					],
+				},
+			],
+		},
+	},
 	// {
 	// 	name: "chapter only cluster after explicit book",
 	// 	pageText: "The study moves through Gen 13; 15; 17 in sequence.",
@@ -453,9 +503,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "13", chapter: 13 },
-	// 					{ refText: "15", chapter: 15 },
-	// 					{ refText: "17", chapter: 17 },
+	// 					{ refText: "13", chapterStart: 13 },
+	// 					{ refText: "15", chapterStart: 15 },
+	// 					{ refText: "17", chapterStart: 17 },
 	// 				],
 	// 			},
 	// 		],
@@ -472,7 +522,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "13-17", chapter: 13, chapterEnd: 17 }],
+	// 				segments: [{ refText: "13-17", chapterStart: 13, chapterEnd: 17 }],
 	// 			},
 	// 		],
 	// 	},
@@ -489,9 +539,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "15:1", chapter: 15, verseStart: 1 },
-	// 					{ refText: "17:1", chapter: 17, verseStart: 1 },
-	// 					{ refText: "22:2", chapter: 22, verseStart: 2 },
+	// 					{ refText: "15:1", chapterStart: 15, verseStart: 1 },
+	// 					{ refText: "17:1", chapterStart: 17, verseStart: 1 },
+	// 					{ refText: "22:2", chapterStart: 22, verseStart: 2 },
 	// 				],
 	// 			},
 	// 		],
@@ -509,9 +559,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "15:6", chapter: 15, verseStart: 6 },
-	// 					{ refText: "17:5", chapter: 17, verseStart: 5 },
-	// 					{ refText: "22:17", chapter: 22, verseStart: 17 },
+	// 					{ refText: "15:6", chapterStart: 15, verseStart: 6 },
+	// 					{ refText: "17:5", chapterStart: 17, verseStart: 5 },
+	// 					{ refText: "22:17", chapterStart: 22, verseStart: 17 },
 	// 				],
 	// 			},
 	// 		],
@@ -528,7 +578,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "12:1-3", chapter: 12, verseStart: 1, verseEnd: 3 }],
+	// 				segments: [{ refText: "12:1-3", chapterStart: 12, verseStart: 1, verseEnd: 3 }],
 	// 			},
 	// 		],
 	// 	},
@@ -544,7 +594,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "17:1", chapter: 17, verseStart: 1 }],
+	// 				segments: [{ refText: "17:1", chapterStart: 17, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -560,7 +610,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "12:1-3", chapter: 12, verseStart: 1, verseEnd: 3 }],
+	// 				segments: [{ refText: "12:1-3", chapterStart: 12, verseStart: 1, verseEnd: 3 }],
 	// 			},
 	// 		],
 	// 	},
@@ -579,13 +629,13 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "1:20-2:4",
-	// 						chapter: 1,
+	// 						chapterStart: 1,
 	// 						verseStart: 20,
 	// 						chapterEnd: 2,
 	// 						verseEnd: 4,
 	// 					},
-	// 					{ refText: "2:5-7", chapter: 2, verseStart: 5, verseEnd: 7 },
-	// 					{ refText: "3:1-6", chapter: 3, verseStart: 1, verseEnd: 6 },
+	// 					{ refText: "2:5-7", chapterStart: 2, verseStart: 5, verseEnd: 7 },
+	// 					{ refText: "3:1-6", chapterStart: 3, verseStart: 1, verseEnd: 6 },
 	// 				],
 	// 			},
 	// 		],
@@ -603,9 +653,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "3:15", chapter: 3, verseStart: 15 },
-	// 					{ refText: "3:15b", chapter: 3, verseStart: 15, verseSuffix: "b" },
-	// 					{ refText: "3:15a-b", chapter: 3, verseStart: 15 },
+	// 					{ refText: "3:15", chapterStart: 3, verseStart: 15 },
+	// 					{ refText: "3:15b", chapterStart: 3, verseStart: 15, verseSuffix: "b" },
+	// 					{ refText: "3:15a-b", chapterStart: 3, verseStart: 15 },
 	// 				],
 	// 			},
 	// 		],
@@ -622,7 +672,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1ff", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1ff", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -638,7 +688,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1 ff", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1 ff", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -654,7 +704,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1f", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1f", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -670,7 +720,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "john",
 	// 				entryId: "john",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -686,14 +736,14 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "exod",
 	// 				entryId: "exodus",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "3:2", chapter: 3, verseStart: 2 }],
+	// 				segments: [{ refText: "3:2", chapterStart: 3, verseStart: 2 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_OT,
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -709,21 +759,21 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "exod",
 	// 				entryId: "exodus",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "3:2", chapter: 3, verseStart: 2 }],
+	// 				segments: [{ refText: "3:2", chapterStart: 3, verseStart: 2 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_OT,
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_NT,
 	// 				matcherId: "john",
 	// 				entryId: "john",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -740,10 +790,10 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "exodus",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "3:2-6, 8-10", chapter: 3, verseStart: 2 },
+	// 					{ refText: "3:2-6, 8-10", chapterStart: 3, verseStart: 2 },
 	// 					{
 	// 						refText: "3:2-4:3",
-	// 						chapter: 3,
+	// 						chapterStart: 3,
 	// 						verseStart: 2,
 	// 						chapterEnd: 4,
 	// 						verseEnd: 3,
@@ -764,7 +814,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "ps",
 	// 				entryId: "psalms",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "23", chapter: 23 }],
+	// 				segments: [{ refText: "23", chapterStart: 23 }],
 	// 			},
 	// 		],
 	// 	},
@@ -780,7 +830,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "ps",
 	// 				entryId: "psalms",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "23:1, 4, 6", chapter: 23, verseStart: 1 }],
+	// 				segments: [{ refText: "23:1, 4, 6", chapterStart: 23, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -796,7 +846,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "ps",
 	// 				entryId: "psalms",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "3", chapter: 3 }],
+	// 				segments: [{ refText: "3", chapterStart: 3 }],
 	// 			},
 	// 		],
 	// 	},
@@ -812,7 +862,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "ps",
 	// 				entryId: "psalms",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "3", chapter: 3 }],
+	// 				segments: [{ refText: "3", chapterStart: 3 }],
 	// 			},
 	// 		],
 	// 	},
@@ -828,7 +878,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "1_sam",
 	// 				entryId: "1_samuel",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "3:1", chapter: 3, verseStart: 1 }],
+	// 				segments: [{ refText: "3:1", chapterStart: 3, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -844,7 +894,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "1_john",
 	// 				entryId: "1_john",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -860,7 +910,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "song",
 	// 				entryId: "song_of_songs",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 		],
 	// 	},
@@ -876,7 +926,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "mark",
 	// 				entryId: "mark",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "14:41a", chapter: 14, verseStart: 41, verseSuffix: "a" }],
+	// 				segments: [{ refText: "14:41a", chapterStart: 14, verseStart: 41, verseSuffix: "a" }],
 	// 			},
 	// 		],
 	// 	},
@@ -892,7 +942,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "mark",
 	// 				entryId: "mark",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "14:41b", chapter: 14, verseStart: 41, verseSuffix: "b" }],
+	// 				segments: [{ refText: "14:41b", chapterStart: 14, verseStart: 41, verseSuffix: "b" }],
 	// 			},
 	// 		],
 	// 	},
@@ -908,7 +958,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "mark",
 	// 				entryId: "mark",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "14:41a-b", chapter: 14, verseStart: 41 }],
+	// 				segments: [{ refText: "14:41a-b", chapterStart: 14, verseStart: 41 }],
 	// 			},
 	// 		],
 	// 	},
@@ -925,15 +975,15 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "mark",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "14:41a", chapter: 14, verseStart: 41, verseSuffix: "a" },
-	// 					{ refText: "14:41b", chapter: 14, verseStart: 41, verseSuffix: "b" },
-	// 					{ refText: "14:41a-b", chapter: 14, verseStart: 41 },
+	// 					{ refText: "14:41a", chapterStart: 14, verseStart: 41, verseSuffix: "a" },
+	// 					{ refText: "14:41b", chapterStart: 14, verseStart: 41, verseSuffix: "b" },
+	// 					{ refText: "14:41a-b", chapterStart: 14, verseStart: 41 },
 	// 				],
 	// 			},
 	// 		],
 	// 		unknownSpans: [
 	// 			{
-	// 				segments: [{ refText: "14:41b-42", chapter: 14, verseStart: 41, verseEnd: 42 }],
+	// 				segments: [{ refText: "14:41b-42", chapterStart: 14, verseStart: 41, verseEnd: 42 }],
 	// 			},
 	// 		],
 	// 	},
@@ -944,7 +994,7 @@ const scriptureDetectionCases: Array<{
 	// 	aliases: [],
 	// 	expected: {
 	// 		aliasAttached: [],
-	// 		unknownSpans: [{ segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }] }],
+	// 		unknownSpans: [{ segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }] }],
 	// 	},
 	// },
 	// {
@@ -954,9 +1004,9 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "1:1", chapter: 1, verseStart: 1 }] },
-	// 			{ segments: [{ refText: "2:4", chapter: 2, verseStart: 4 }] },
-	// 			{ segments: [{ refText: "3:1-6", chapter: 3, verseStart: 1, verseEnd: 6 }] },
+	// 			{ segments: [{ refText: "1:1", chapterStart: 1, verseStart: 1 }] },
+	// 			{ segments: [{ refText: "2:4", chapterStart: 2, verseStart: 4 }] },
+	// 			{ segments: [{ refText: "3:1-6", chapterStart: 3, verseStart: 1, verseEnd: 6 }] },
 	// 		],
 	// 	},
 	// },
@@ -971,7 +1021,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "1:20-2:4",
-	// 						chapter: 1,
+	// 						chapterStart: 1,
 	// 						verseStart: 20,
 	// 						chapterEnd: 2,
 	// 						verseEnd: 4,
@@ -990,7 +1040,7 @@ const scriptureDetectionCases: Array<{
 	// 		unknownSpans: [
 	// 			{
 	// 				segments: [
-	// 					{ refText: "3:15b", chapter: 3, verseStart: 15, verseSuffix: "b" },
+	// 					{ refText: "3:15b", chapterStart: 3, verseStart: 15, verseSuffix: "b" },
 	// 				],
 	// 			},
 	// 		],
@@ -1003,7 +1053,7 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "3:15a-b", chapter: 3, verseStart: 15 }] },
+	// 			{ segments: [{ refText: "3:15a-b", chapterStart: 3, verseStart: 15 }] },
 	// 		],
 	// 	},
 	// },
@@ -1013,7 +1063,7 @@ const scriptureDetectionCases: Array<{
 	// 	aliases: [],
 	// 	expected: {
 	// 		aliasAttached: [],
-	// 		unknownSpans: [{ segments: [{ refText: "6:1ff", chapter: 6, verseStart: 1 }] }],
+	// 		unknownSpans: [{ segments: [{ refText: "6:1ff", chapterStart: 6, verseStart: 1 }] }],
 	// 	},
 	// },
 	// {
@@ -1022,7 +1072,7 @@ const scriptureDetectionCases: Array<{
 	// 	aliases: [],
 	// 	expected: {
 	// 		aliasAttached: [],
-	// 		unknownSpans: [{ segments: [{ refText: "chapter 3", chapter: 3 }] }],
+	// 		unknownSpans: [{ segments: [{ refText: "chapter 3", chapterStart: 3 }] }],
 	// 	},
 	// },
 	// {
@@ -1032,7 +1082,7 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "chapters 3-5", chapter: 3, chapterEnd: 5 }] },
+	// 			{ segments: [{ refText: "chapters 3-5", chapterStart: 3, chapterEnd: 5 }] },
 	// 		],
 	// 	},
 	// },
@@ -1042,7 +1092,7 @@ const scriptureDetectionCases: Array<{
 	// 	aliases: [],
 	// 	expected: {
 	// 		aliasAttached: [],
-	// 		unknownSpans: [{ segments: [{ refText: "ch 3", chapter: 3 }] }],
+	// 		unknownSpans: [{ segments: [{ refText: "ch 3", chapterStart: 3 }] }],
 	// 	},
 	// },
 	// {
@@ -1051,7 +1101,7 @@ const scriptureDetectionCases: Array<{
 	// 	aliases: [],
 	// 	expected: {
 	// 		aliasAttached: [],
-	// 		unknownSpans: [{ segments: [{ refText: "ch. 3", chapter: 3 }] }],
+	// 		unknownSpans: [{ segments: [{ refText: "ch. 3", chapterStart: 3 }] }],
 	// 	},
 	// },
 	// {
@@ -1060,7 +1110,7 @@ const scriptureDetectionCases: Array<{
 	// 	aliases: [],
 	// 	expected: {
 	// 		aliasAttached: [],
-	// 		unknownSpans: [{ segments: [{ refText: "chap 3", chapter: 3 }] }],
+	// 		unknownSpans: [{ segments: [{ refText: "chap 3", chapterStart: 3 }] }],
 	// 	},
 	// },
 	// {
@@ -1069,7 +1119,7 @@ const scriptureDetectionCases: Array<{
 	// 	aliases: [],
 	// 	expected: {
 	// 		aliasAttached: [],
-	// 		unknownSpans: [{ segments: [{ refText: "chap. 3", chapter: 3 }] }],
+	// 		unknownSpans: [{ segments: [{ refText: "chap. 3", chapterStart: 3 }] }],
 	// 	},
 	// },
 	// {
@@ -1079,7 +1129,7 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "chs 3-5", chapter: 3, chapterEnd: 5 }] },
+	// 			{ segments: [{ refText: "chs 3-5", chapterStart: 3, chapterEnd: 5 }] },
 	// 		],
 	// 	},
 	// },
@@ -1090,7 +1140,7 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "chs. 3-5, 7", chapter: 3, chapterEnd: 5 }] },
+	// 			{ segments: [{ refText: "chs. 3-5, 7", chapterStart: 3, chapterEnd: 5 }] },
 	// 		],
 	// 	},
 	// },
@@ -1187,7 +1237,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "chapter 3 verse 2",
-	// 						chapter: 3,
+	// 						chapterStart: 3,
 	// 						verseStart: 2,
 	// 					},
 	// 				],
@@ -1206,7 +1256,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "chapter 3 verses 2-4",
-	// 						chapter: 3,
+	// 						chapterStart: 3,
 	// 						verseStart: 2,
 	// 						verseEnd: 4,
 	// 					},
@@ -1223,7 +1273,7 @@ const scriptureDetectionCases: Array<{
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
 	// 			{
-	// 				segments: [{ refText: "ch 3 v 2", chapter: 3, verseStart: 2 }],
+	// 				segments: [{ refText: "ch 3 v 2", chapterStart: 3, verseStart: 2 }],
 	// 			},
 	// 		],
 	// 	},
@@ -1236,7 +1286,7 @@ const scriptureDetectionCases: Array<{
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
 	// 			{
-	// 				segments: [{ refText: "ch. 3 v. 2", chapter: 3, verseStart: 2 }],
+	// 				segments: [{ refText: "ch. 3 v. 2", chapterStart: 3, verseStart: 2 }],
 	// 			},
 	// 		],
 	// 	},
@@ -1252,7 +1302,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "ch 3 vv 2-4",
-	// 						chapter: 3,
+	// 						chapterStart: 3,
 	// 						verseStart: 2,
 	// 						verseEnd: 4,
 	// 					},
@@ -1272,7 +1322,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "ch. 3 vv. 2-4",
-	// 						chapter: 3,
+	// 						chapterStart: 3,
 	// 						verseStart: 2,
 	// 						verseEnd: 4,
 	// 					},
@@ -1292,7 +1342,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "ch 3:2-4",
-	// 						chapter: 3,
+	// 						chapterStart: 3,
 	// 						verseStart: 2,
 	// 						verseEnd: 4,
 	// 					},
@@ -1313,9 +1363,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "1:1-3, 5, 7-9", chapter: 1, verseStart: 1 },
-	// 					{ refText: "2:4-7", chapter: 2, verseStart: 4, verseEnd: 7 },
-	// 					{ refText: "3:1, 4, 8-10", chapter: 3, verseStart: 1 },
+	// 					{ refText: "1:1-3, 5, 7-9", chapterStart: 1, verseStart: 1 },
+	// 					{ refText: "2:4-7", chapterStart: 2, verseStart: 4, verseEnd: 7 },
+	// 					{ refText: "3:1, 4, 8-10", chapterStart: 3, verseStart: 1 },
 	// 				],
 	// 			},
 	// 		],
@@ -1333,9 +1383,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "1:5", chapter: 1, verseStart: 5 },
-	// 					{ refText: "4:4", chapter: 4, verseStart: 4 },
-	// 					{ refText: "6:1", chapter: 6, verseStart: 1 },
+	// 					{ refText: "1:5", chapterStart: 1, verseStart: 5 },
+	// 					{ refText: "4:4", chapterStart: 4, verseStart: 4 },
+	// 					{ refText: "6:1", chapterStart: 6, verseStart: 1 },
 	// 				],
 	// 			},
 	// 		],
@@ -1348,9 +1398,9 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "1:5", chapter: 1, verseStart: 5 }] },
-	// 			{ segments: [{ refText: "4:4", chapter: 4, verseStart: 4 }] },
-	// 			{ segments: [{ refText: "6:1", chapter: 6, verseStart: 1 }] },
+	// 			{ segments: [{ refText: "1:5", chapterStart: 1, verseStart: 5 }] },
+	// 			{ segments: [{ refText: "4:4", chapterStart: 4, verseStart: 4 }] },
+	// 			{ segments: [{ refText: "6:1", chapterStart: 6, verseStart: 1 }] },
 	// 		],
 	// 	},
 	// },
@@ -1361,9 +1411,9 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "2:1-4", chapter: 2, verseStart: 1, verseEnd: 4 }] },
-	// 			{ segments: [{ refText: "4:1-8", chapter: 4, verseStart: 1, verseEnd: 8 }] },
-	// 			{ segments: [{ refText: "5:1", chapter: 5, verseStart: 1 }] },
+	// 			{ segments: [{ refText: "2:1-4", chapterStart: 2, verseStart: 1, verseEnd: 4 }] },
+	// 			{ segments: [{ refText: "4:1-8", chapterStart: 4, verseStart: 1, verseEnd: 8 }] },
+	// 			{ segments: [{ refText: "5:1", chapterStart: 5, verseStart: 1 }] },
 	// 		],
 	// 	},
 	// },
@@ -1379,9 +1429,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "romans",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "5:1-5, 8, 10-11", chapter: 5, verseStart: 1 },
-	// 					{ refText: "6:1-4", chapter: 6, verseStart: 1, verseEnd: 4 },
-	// 					{ refText: "8:1, 14-17, 28-30", chapter: 8, verseStart: 1 },
+	// 					{ refText: "5:1-5, 8, 10-11", chapterStart: 5, verseStart: 1 },
+	// 					{ refText: "6:1-4", chapterStart: 6, verseStart: 1, verseEnd: 4 },
+	// 					{ refText: "8:1, 14-17, 28-30", chapterStart: 8, verseStart: 1 },
 	// 				],
 	// 			},
 	// 		],
@@ -1398,7 +1448,7 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "luke",
 	// 				entryId: "luke",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "6", chapter: 6 }],
+	// 				segments: [{ refText: "6", chapterStart: 6 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_NT,
@@ -1406,8 +1456,8 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "matthew",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "5", chapter: 5 },
-	// 					{ refText: "7", chapter: 7 },
+	// 					{ refText: "5", chapterStart: 5 },
+	// 					{ refText: "7", chapterStart: 7 },
 	// 				],
 	// 			},
 	// 		],
@@ -1425,9 +1475,9 @@ const scriptureDetectionCases: Array<{
 	// 				entryId: "matthew",
 	// 				indexType: "bible",
 	// 				segments: [
-	// 					{ refText: "5:3-12", chapter: 5, verseStart: 3, verseEnd: 12 },
-	// 					{ refText: "6:9-13", chapter: 6, verseStart: 9, verseEnd: 13 },
-	// 					{ refText: "7:1-5", chapter: 7, verseStart: 1, verseEnd: 5 },
+	// 					{ refText: "5:3-12", chapterStart: 5, verseStart: 3, verseEnd: 12 },
+	// 					{ refText: "6:9-13", chapterStart: 6, verseStart: 9, verseEnd: 13 },
+	// 					{ refText: "7:1-5", chapterStart: 7, verseStart: 1, verseEnd: 5 },
 	// 				],
 	// 			},
 	// 		],
@@ -1447,7 +1497,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "52:13-53:12",
-	// 						chapter: 52,
+	// 						chapterStart: 52,
 	// 						verseStart: 13,
 	// 						chapterEnd: 53,
 	// 						verseEnd: 12,
@@ -1471,7 +1521,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "52:13-53:12",
-	// 						chapter: 52,
+	// 						chapterStart: 52,
 	// 						verseStart: 13,
 	// 						chapterEnd: 53,
 	// 						verseEnd: 12,
@@ -1484,7 +1534,7 @@ const scriptureDetectionCases: Array<{
 	// 				segments: [
 	// 					{
 	// 						refText: "53:4b",
-	// 						chapter: 53,
+	// 						chapterStart: 53,
 	// 						verseStart: 4,
 	// 						verseSuffix: "b",
 	// 					},
@@ -1508,8 +1558,8 @@ const scriptureDetectionCases: Array<{
 	// 			},
 	// 		],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "chapter 8", chapter: 8 }] },
-	// 			{ segments: [{ refText: "chapter 7", chapter: 7 }] },
+	// 			{ segments: [{ refText: "chapter 8", chapterStart: 8 }] },
+	// 			{ segments: [{ refText: "chapter 7", chapterStart: 7 }] },
 	// 		],
 	// 	},
 	// },
@@ -1538,42 +1588,42 @@ const scriptureDetectionCases: Array<{
 	// 				matcherId: "exod",
 	// 				entryId: "exodus",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "3:2-6", chapter: 3, verseStart: 2, verseEnd: 6 }],
+	// 				segments: [{ refText: "3:2-6", chapterStart: 3, verseStart: 2, verseEnd: 6 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_OT,
 	// 				matcherId: "gen",
 	// 				entryId: "genesis",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1-3, 5, 7-9", chapter: 1, verseStart: 1 }],
+	// 				segments: [{ refText: "1:1-3, 5, 7-9", chapterStart: 1, verseStart: 1 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_NT,
 	// 				matcherId: "john",
 	// 				entryId: "john",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "1:1-5", chapter: 1, verseStart: 1, verseEnd: 5 }],
+	// 				segments: [{ refText: "1:1-5", chapterStart: 1, verseStart: 1, verseEnd: 5 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_OT,
 	// 				matcherId: "ps",
 	// 				entryId: "psalms",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "8:4-6", chapter: 8, verseStart: 4, verseEnd: 6 }],
+	// 				segments: [{ refText: "8:4-6", chapterStart: 8, verseStart: 4, verseEnd: 6 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_NT,
 	// 				matcherId: "rev",
 	// 				entryId: "revelation",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "21:1-4", chapter: 21, verseStart: 1, verseEnd: 4 }],
+	// 				segments: [{ refText: "21:1-4", chapterStart: 21, verseStart: 1, verseEnd: 4 }],
 	// 			},
 	// 			{
 	// 				groupId: GRP_NT,
 	// 				matcherId: "rom",
 	// 				entryId: "romans",
 	// 				indexType: "bible",
-	// 				segments: [{ refText: "8:28-30", chapter: 8, verseStart: 28, verseEnd: 30 }],
+	// 				segments: [{ refText: "8:28-30", chapterStart: 8, verseStart: 28, verseEnd: 30 }],
 	// 			},
 	// 		],
 	// 	},
@@ -1585,11 +1635,11 @@ const scriptureDetectionCases: Array<{
 	// 	expected: {
 	// 		aliasAttached: [],
 	// 		unknownSpans: [
-	// 			{ segments: [{ refText: "1:1-3, 5", chapter: 1, verseStart: 1 }] },
-	// 			{ segments: [{ refText: "2:4", chapter: 2, verseStart: 4 }] },
-	// 			{ segments: [{ refText: "3:1-6", chapter: 3, verseStart: 1, verseEnd: 6 }] },
-	// 			{ segments: [{ refText: "3:15a-b", chapter: 3, verseStart: 15 }] },
-	// 			{ segments: [{ refText: "6:1ff", chapter: 6, verseStart: 1 }] },
+	// 			{ segments: [{ refText: "1:1-3, 5", chapterStart: 1, verseStart: 1 }] },
+	// 			{ segments: [{ refText: "2:4", chapterStart: 2, verseStart: 4 }] },
+	// 			{ segments: [{ refText: "3:1-6", chapterStart: 3, verseStart: 1, verseEnd: 6 }] },
+	// 			{ segments: [{ refText: "3:15a-b", chapterStart: 3, verseStart: 15 }] },
+	// 			{ segments: [{ refText: "6:1ff", chapterStart: 6, verseStart: 1 }] },
 	// 		],
 	// 	},
 	// },

@@ -10,13 +10,13 @@ import {
 	dedupeMatcherCandidates,
 	sortMatcherCandidates,
 } from "./detection.service";
+import type { MatcherMentionCandidate } from "./detection.types";
 import {
 	computeFallbackSpan,
 	findBooklessUnknownRefSpansOnPage,
 	findRefSpansInAliasWindow,
 	shouldEmitFallbackMention,
 } from "./scripture-detection-on-page";
-import type { MatcherMentionCandidate } from "./detection.types";
 import {
 	buildSearchablePageText,
 	recalculateCharPositionsForIndexable,
@@ -402,7 +402,7 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 			charEnd: 8,
 			bboxes: [bbox],
 			parserSegments: [
-				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+				{ refText: "1:1", chapterStart: 1, verseStart: 1, verseEnd: 1 },
 			],
 		};
 		const fallback: MatcherMentionCandidate = {
@@ -434,7 +434,7 @@ describe("dedupeMatcherCandidates precedence (Task 4.3)", () => {
 			charEnd: 8,
 			bboxes: [bbox],
 			parserSegments: [
-				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+				{ refText: "1:1", chapterStart: 1, verseStart: 1, verseEnd: 1 },
 			],
 		};
 		const fallback: MatcherMentionCandidate = {
@@ -509,18 +509,18 @@ describe("findRefSpansInAliasWindow (explicit citation)", () => {
 		expect(refTexts(text, aliasEnd)).toEqual(["11"]);
 	});
 
-	it("excludes ref followed by prose (Deuteronomy 1:6–18 appointing judges)", () => {
+	it("attaches ref followed by running prose (Deuteronomy 1:6–18 appointing judges)", () => {
 		const text = "Deuteronomy 1:6–18 appointing judges";
 		const aliasEnd = "Deuteronomy ".length;
-		expect(refTexts(text, aliasEnd)).toEqual([]);
+		expect(refTexts(text, aliasEnd)).toEqual(["1:6-18"]);
 	});
 
-	it("parser stopReason prose prevents alias-attached spans (service uses parser as source of truth)", () => {
-		// When parser stops on prose, findRefSpansInAliasWindow returns no spans.
+	it("attaches ref when parser stopReason is prose (Deut 1:6-18 appointing judges)", () => {
 		const text = "Deut 1:6-18 appointing judges";
 		const aliasEnd = "Deut ".length;
 		const spans = refSpans(text, aliasEnd);
-		expect(spans).toHaveLength(0);
+		expect(spans).toHaveLength(1);
+		expect(refTexts(text, aliasEnd)).toEqual(["1:6-18"]);
 	});
 
 	it("assigns Deuteronomy 6:1 to book (explicit citation)", () => {
@@ -574,14 +574,14 @@ describe("findBooklessUnknownRefSpansOnPage (Unknown scan)", () => {
 		});
 		expect(spans).toHaveLength(1);
 		expect(spans[0].segments[0]).toMatchObject({
-			refText: "3:5",
-			chapter: 3,
+			refText: "chapter 3 verse 5",
+			chapterStart: 3,
 			verseStart: 5,
 			verseEnd: 5,
 		});
 		// Source span covers the ref content after triggers (parser emits whole block for combined chapter+verse)
 		expect(pageText.slice(spans[0].pageCharStart, spans[0].pageCharEnd)).toBe(
-			"3 verse 5",
+			"chapter 3 verse 5",
 		);
 	});
 

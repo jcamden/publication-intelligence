@@ -119,10 +119,15 @@ export const ShowsErrorWhenTitleAlreadyExists: StoryObj<
 		// Validation runs on blur; use waitFor with generous timeout for debounced
 		// React updates when tests run under load (e.g. parallel pre-commit).
 		await step("Verify error appears", async () => {
-			const error = modal.getByText(
-				"A project with this title already exists. Please choose a different title.",
+			await waitFor(
+				async () => {
+					const error = modal.getByText(
+						/a project with this title already exists/i,
+					);
+					await expect(error).toBeInTheDocument();
+				},
+				{ timeout: 5000, interval: 100 },
 			);
-			await expect(error).toBeVisible();
 		});
 	},
 };

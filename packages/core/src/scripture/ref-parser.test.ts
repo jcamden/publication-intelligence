@@ -15,89 +15,99 @@ describe("scripture ref parser - parser matrix", () => {
 	}
 
 	it("chapter only: gen 1, gen 2", () => {
-		expect(parse("gen 1")).toEqual([{ refText: "1", chapter: 1 }]);
-		expect(parse("gen 2")).toEqual([{ refText: "2", chapter: 2 }]);
+		expect(parse("gen 1")).toEqual([{ refText: "1", chapterStart: 1 }]);
+		expect(parse("gen 2")).toEqual([{ refText: "2", chapterStart: 2 }]);
 	});
 
 	it("chapter range: 1-3 (chapters, not verses)", () => {
 		expect(parse("gen 1-3")).toEqual([
-			{ refText: "1-3", chapter: 1, chapterEnd: 3 },
+			{ refText: "1-3", chapterStart: 1, chapterEnd: 3 },
 		]);
 	});
 
 	it("chapters only list: 1, 2, 3 (no verse mode -> three chapter segments)", () => {
 		expect(parse("gen 1, 2, 3")).toEqual([
-			{ refText: "1", chapter: 1 },
-			{ refText: "2", chapter: 2 },
-			{ refText: "3", chapter: 3 },
+			{ refText: "1", chapterStart: 1 },
+			{ refText: "2", chapterStart: 2 },
+			{ refText: "3", chapterStart: 3 },
 		]);
 	});
 
 	it("ch:v and ch.v single verse", () => {
 		expect(parse("gen 1:2")).toEqual([
-			{ refText: "1:2", chapter: 1, verseStart: 2, verseEnd: 2 },
+			{ refText: "1:2", chapterStart: 1, verseStart: 2, verseEnd: 2 },
 		]);
 		expect(parse("gen 1.2")).toEqual([
-			{ refText: "1.2", chapter: 1, verseStart: 2, verseEnd: 2 },
+			{ refText: "1.2", chapterStart: 1, verseStart: 2, verseEnd: 2 },
 		]);
 	});
 
 	it("ch:v-v verse range same chapter", () => {
 		expect(parse("gen 1:2-4")).toEqual([
-			{ refText: "1:2-4", chapter: 1, verseStart: 2, verseEnd: 4 },
+			{ refText: "1:2-4", chapterStart: 1, verseStart: 2, verseEnd: 4 },
 		]);
 	});
 
 	it("verse lists: 1:1, 2, 3 -> three segments", () => {
 		expect(parse("gen 1:1, 2, 3")).toEqual([
-			{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
-			{ refText: "2", chapter: 1, verseStart: 2, verseEnd: 2 },
-			{ refText: "3", chapter: 1, verseStart: 3, verseEnd: 3 },
+			{ refText: "1:1", chapterStart: 1, verseStart: 1, verseEnd: 1 },
+			{ refText: "2", chapterStart: 1, verseStart: 2, verseEnd: 2 },
+			{ refText: "3", chapterStart: 1, verseStart: 3, verseEnd: 3 },
 		]);
 	});
 
 	it("verse lists with ranges: 1:1, 3-5, 7 -> three segments", () => {
 		expect(parse("gen 1:1, 3-5, 7")).toEqual([
-			{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
-			{ refText: "3-5", chapter: 1, verseStart: 3, verseEnd: 5 },
-			{ refText: "7", chapter: 1, verseStart: 7, verseEnd: 7 },
+			{ refText: "1:1", chapterStart: 1, verseStart: 1, verseEnd: 1 },
+			{ refText: "3-5", chapterStart: 1, verseStart: 3, verseEnd: 5 },
+			{ refText: "7", chapterStart: 1, verseStart: 7, verseEnd: 7 },
 		]);
 	});
 
 	it("verse list with ch:v-v first: 31:1-8, 14-15, 23 -> chapter 31 for all", () => {
 		expect(parse("gen 31:1-8, 14-15, 23")).toEqual([
-			{ refText: "31:1-8", chapter: 31, verseStart: 1, verseEnd: 8 },
-			{ refText: "14-15", chapter: 31, verseStart: 14, verseEnd: 15 },
-			{ refText: "23", chapter: 31, verseStart: 23, verseEnd: 23 },
+			{ refText: "31:1-8", chapterStart: 31, verseStart: 1, verseEnd: 8 },
+			{ refText: "14-15", chapterStart: 31, verseStart: 14, verseEnd: 15 },
+			{ refText: "23", chapterStart: 31, verseStart: 23, verseEnd: 23 },
 		]);
 	});
 
 	it("multi refs with semicolon: 1:1-3; 2:4 -> two segments", () => {
 		expect(parse("gen 1:1-3; 2:4")).toEqual([
-			{ refText: "1:1-3", chapter: 1, verseStart: 1, verseEnd: 3 },
-			{ refText: "2:4", chapter: 2, verseStart: 4, verseEnd: 4 },
+			{ refText: "1:1-3", chapterStart: 1, verseStart: 1, verseEnd: 3 },
+			{ refText: "2:4", chapterStart: 2, verseStart: 4, verseEnd: 4 },
 		]);
 	});
 
 	it("multi refs with comma (different chapters): 1:1-3, 2:4-5", () => {
 		// "1:1-3, 2:4-5" - comma separates refs (not verse list: second part is ch:v-v)
 		expect(parse("gen 1:1-3, 2:4-5")).toEqual([
-			{ refText: "1:1-3", chapter: 1, verseStart: 1, verseEnd: 3 },
-			{ refText: "2:4-5", chapter: 2, verseStart: 4, verseEnd: 5 },
+			{ refText: "1:1-3", chapterStart: 1, verseStart: 1, verseEnd: 3 },
+			{ refText: "2:4-5", chapterStart: 2, verseStart: 4, verseEnd: 5 },
 		]);
 	});
 
-	it("cross-chapter: 1:20-2:4 -> two segments", () => {
+	it("cross-chapter: 1:20-2:4 -> one segment with chapterStart/chapterEnd", () => {
 		expect(parse("gen 1:20-2:4")).toEqual([
-			{ refText: "1:20", chapter: 1, verseStart: 20 },
-			{ refText: "2:1-4", chapter: 2, verseStart: 1, verseEnd: 4 },
+			{
+				refText: "1:20-2:4",
+				chapterStart: 1,
+				chapterEnd: 2,
+				verseStart: 20,
+				verseEnd: 4,
+			},
 		]);
 	});
 
-	it("cross-chapter 1:6-28:69: parse produces two segments (full range for Unknown should tile as 1:6-28:69)", () => {
+	it("cross-chapter 1:6-28:69: parse produces one segment spanning full range", () => {
 		expect(parse("gen 1:6-28:69")).toEqual([
-			{ refText: "1:6", chapter: 1, verseStart: 6 },
-			{ refText: "28:1-69", chapter: 28, verseStart: 1, verseEnd: 69 },
+			{
+				refText: "1:6-28:69",
+				chapterStart: 1,
+				chapterEnd: 28,
+				verseStart: 6,
+				verseEnd: 69,
+			},
 		]);
 	});
 
@@ -105,7 +115,7 @@ describe("scripture ref parser - parser matrix", () => {
 		expect(parse("gen 1:3a")).toEqual([
 			{
 				refText: "1:3a",
-				chapter: 1,
+				chapterStart: 1,
 				verseStart: 3,
 				verseEnd: 3,
 				verseSuffix: "a",
@@ -114,7 +124,7 @@ describe("scripture ref parser - parser matrix", () => {
 		expect(parse("gen 1:3b")).toEqual([
 			{
 				refText: "1:3b",
-				chapter: 1,
+				chapterStart: 1,
 				verseStart: 3,
 				verseEnd: 3,
 				verseSuffix: "b",
@@ -168,8 +178,8 @@ describe("scripture ref parser - profile contract", () => {
 
 	it("parse Gen 1:1-3, 2:4 returns two segments", () => {
 		expect(scriptureParserProfile.parse("gen 1:1-3, 2:4")).toEqual([
-			{ refText: "1:1-3", chapter: 1, verseStart: 1, verseEnd: 3 },
-			{ refText: "2:4", chapter: 2, verseStart: 4, verseEnd: 4 },
+			{ refText: "1:1-3", chapterStart: 1, verseStart: 1, verseEnd: 3 },
+			{ refText: "2:4", chapterStart: 2, verseStart: 4, verseEnd: 4 },
 		]);
 	});
 
@@ -178,16 +188,16 @@ describe("scripture ref parser - profile contract", () => {
 		expect(
 			scriptureParserProfile.parse("gen 32:44-47; 34:9; josh 1:1-9"),
 		).toEqual([
-			{ refText: "32:44-47", chapter: 32, verseStart: 44, verseEnd: 47 },
-			{ refText: "34:9", chapter: 34, verseStart: 9, verseEnd: 9 },
+			{ refText: "32:44-47", chapterStart: 32, verseStart: 44, verseEnd: 47 },
+			{ refText: "34:9", chapterStart: 34, verseStart: 9, verseEnd: 9 },
 		]);
 	});
 
 	it("parses 'and' before ref in semicolon list: Deut 1:5; 4:44; and 6:1", () => {
 		expect(scriptureParserProfile.parse("deut 1:5; 4:44; and 6:1")).toEqual([
-			{ refText: "1:5", chapter: 1, verseStart: 5, verseEnd: 5 },
-			{ refText: "4:44", chapter: 4, verseStart: 44, verseEnd: 44 },
-			{ refText: "6:1", chapter: 6, verseStart: 1, verseEnd: 1 },
+			{ refText: "1:5", chapterStart: 1, verseStart: 5, verseEnd: 5 },
+			{ refText: "4:44", chapterStart: 4, verseStart: 44, verseEnd: 44 },
+			{ refText: "6:1", chapterStart: 6, verseStart: 1, verseEnd: 1 },
 		]);
 	});
 });
@@ -202,7 +212,9 @@ describe("parser profiles registry", () => {
 		const profile = getParserProfile("scripture-biblical");
 		expect(profile).toBeDefined();
 		expect(profile?.id).toBe("scripture-biblical");
-		expect(profile?.parse("gen 1")).toEqual([{ refText: "1", chapter: 1 }]);
+		expect(profile?.parse("gen 1")).toEqual([
+			{ refText: "1", chapterStart: 1 },
+		]);
 	});
 
 	it("getParserProfile returns undefined for unknown id", () => {
@@ -302,7 +314,7 @@ describe("parseAfterAlias (alias-tail consumer)", () => {
 		expect(result.segments).toHaveLength(1);
 		expect(result.segments[0]).toMatchObject({
 			refText: "12:1",
-			chapter: 12,
+			chapterStart: 12,
 			verseStart: 1,
 			verseEnd: 1,
 		});
@@ -320,19 +332,19 @@ describe("parseAfterAlias (alias-tail consumer)", () => {
 		expect(result.segments).toHaveLength(3);
 		expect(result.segments[0]).toMatchObject({
 			refText: "1:5",
-			chapter: 1,
+			chapterStart: 1,
 			verseStart: 5,
 			verseEnd: 5,
 		});
 		expect(result.segments[1]).toMatchObject({
 			refText: "4:44",
-			chapter: 4,
+			chapterStart: 4,
 			verseStart: 44,
 			verseEnd: 44,
 		});
 		expect(result.segments[2]).toMatchObject({
 			refText: "6:1",
-			chapter: 6,
+			chapterStart: 6,
 			verseStart: 1,
 			verseEnd: 1,
 		});
@@ -347,16 +359,12 @@ describe("parseAfterAlias (alias-tail consumer)", () => {
 			normalizedWindow: "1:20-2:4",
 		});
 		expect(result.status).toBe("match");
-		expect(result.segments).toHaveLength(2);
+		expect(result.segments).toHaveLength(1);
 		expect(result.segments[0]).toMatchObject({
-			refText: "1:20",
-			chapter: 1,
+			refText: "1:20-2:4",
+			chapterStart: 1,
+			chapterEnd: 2,
 			verseStart: 20,
-		});
-		expect(result.segments[1]).toMatchObject({
-			refText: "2:1-4",
-			chapter: 2,
-			verseStart: 1,
 			verseEnd: 4,
 		});
 		expect(result.consumedText).toBe("1:20-2:4");
@@ -373,20 +381,21 @@ describe("parseAfterAlias (alias-tail consumer)", () => {
 		expect(result.segments).toHaveLength(2);
 		expect(result.segments[0]).toMatchObject({
 			refText: "32:44-47",
-			chapter: 32,
+			chapterStart: 32,
 			verseStart: 44,
 			verseEnd: 47,
 		});
 		expect(result.segments[1]).toMatchObject({
 			refText: "34:9",
-			chapter: 34,
+			chapterStart: 34,
 			verseStart: 9,
 			verseEnd: 9,
 		});
 		expect(result.consumedEnd).toBe(16); // position before "josh"
 	});
 
-	it("prose stop: Deuteronomy 1:6-18 appointing judges", () => {
+	it("parseAfterAlias: prose stop after valid range (1:6-18 appointing judges)", () => {
+		// Citation consumed; next token is ordinary prose. Alias-window integration attaches this ref to the book.
 		const result = scriptureParserProfile.parseAfterAlias({
 			normalizedWindow: "1:6-18 appointing judges",
 		});
@@ -396,7 +405,7 @@ describe("parseAfterAlias (alias-tail consumer)", () => {
 		expect(result.segments).toHaveLength(1);
 		expect(result.segments[0]).toMatchObject({
 			refText: "1:6-18",
-			chapter: 1,
+			chapterStart: 1,
 			verseStart: 6,
 			verseEnd: 18,
 		});
@@ -516,14 +525,14 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results[0].segments).toHaveLength(1);
 		expect(results[0].segments[0]).toMatchObject({
 			refText: "4:35",
-			chapter: 4,
+			chapterStart: 4,
 			verseStart: 35,
 			verseEnd: 35,
 		});
 		expect(results[1].segments).toHaveLength(1);
 		expect(results[1].segments[0]).toMatchObject({
 			refText: "5:1-3",
-			chapter: 5,
+			chapterStart: 5,
 			verseStart: 1,
 			verseEnd: 3,
 		});
@@ -535,8 +544,8 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results[0].status).toBe("match");
 		expect(results[0].segments).toHaveLength(1);
 		expect(results[0].segments[0]).toMatchObject({
-			refText: "3",
-			chapter: 3,
+			refText: "chapter 3",
+			chapterStart: 3,
 		});
 	});
 
@@ -545,8 +554,8 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results).toHaveLength(1);
 		expect(results[0].segments).toHaveLength(1);
 		expect(results[0].segments[0]).toMatchObject({
-			refText: "3-5",
-			chapter: 3,
+			refText: "chapters 3-5",
+			chapterStart: 3,
 			chapterEnd: 5,
 		});
 	});
@@ -556,11 +565,11 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results).toHaveLength(1);
 		expect(results[0].segments).toHaveLength(1);
 		expect(results[0].segments[0]).toMatchObject({
-			refText: "5-7",
+			refText: "vv. 5-7",
 			verseStart: 5,
 			verseEnd: 7,
 		});
-		expect(results[0].segments[0].chapter).toBeUndefined();
+		expect(results[0].segments[0].chapterStart).toBeUndefined();
 	});
 
 	it("chapter 3 verse 5 - combined trigger", () => {
@@ -568,8 +577,8 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results).toHaveLength(1);
 		expect(results[0].segments).toHaveLength(1);
 		expect(results[0].segments[0]).toMatchObject({
-			refText: "3:5",
-			chapter: 3,
+			refText: "chapter 3 verse 5",
+			chapterStart: 3,
 			verseStart: 5,
 			verseEnd: 5,
 		});
@@ -580,8 +589,8 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results).toHaveLength(1);
 		expect(results[0].segments).toHaveLength(1);
 		expect(results[0].segments[0]).toMatchObject({
-			refText: "3:5-7",
-			chapter: 3,
+			refText: "ch 3 vv 5-7",
+			chapterStart: 3,
 			verseStart: 5,
 			verseEnd: 7,
 		});
@@ -593,13 +602,13 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results[0].segments).toHaveLength(2);
 		expect(results[0].segments[0]).toMatchObject({
 			refText: "1:1",
-			chapter: 1,
+			chapterStart: 1,
 			verseStart: 1,
 			verseEnd: 1,
 		});
 		expect(results[0].segments[1]).toMatchObject({
 			refText: "2:3",
-			chapter: 2,
+			chapterStart: 2,
 			verseStart: 3,
 			verseEnd: 3,
 		});
@@ -616,14 +625,14 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results[0].segments).toHaveLength(2);
 		expect(results[0].segments[0]).toMatchObject({
 			refText: "1:3a",
-			chapter: 1,
+			chapterStart: 1,
 			verseStart: 3,
 			verseEnd: 3,
 			verseSuffix: "a",
 		});
 		expect(results[0].segments[1]).toMatchObject({
 			refText: "2:4",
-			chapter: 2,
+			chapterStart: 2,
 			verseStart: 4,
 			verseEnd: 4,
 		});
@@ -635,7 +644,7 @@ describe("scanBookless (bookless citation scan)", () => {
 		expect(results[0].segments).toHaveLength(1);
 		expect(results[0].segments[0]).toMatchObject({
 			refText: "1:3a-b",
-			chapter: 1,
+			chapterStart: 1,
 			verseStart: 3,
 			verseEnd: 3,
 			verseSuffix: "a",

@@ -12,8 +12,11 @@ export type ParsedRefSegment = {
 	/** Citation fragment (e.g. "1:1-3", "2", "" for book-only) for matcher label */
 	refText: string;
 	/** Omitted for book-only refs (e.g. "Romans" with no chapter/verse). */
-	chapter?: number;
-	/** Present for chapter ranges (e.g. "gen 1-3" = chapters 1–3). Verse mode uses : or . */
+	chapterStart?: number;
+	/**
+	 * End chapter when applicable: chapter-only range (e.g. "gen 1-3"), or the
+	 * closing chapter in a cross-chapter verse ref (e.g. "1:20-2:4" → chapterStart 1, chapterEnd 2).
+	 */
 	chapterEnd?: number;
 	verseStart?: number;
 	verseEnd?: number;
@@ -42,7 +45,7 @@ export type CitationParseStatus =
  */
 export type CitationSegment = {
 	refText: string;
-	chapter?: number;
+	chapterStart?: number;
 	chapterEnd?: number;
 	verseStart?: number;
 	verseEnd?: number;

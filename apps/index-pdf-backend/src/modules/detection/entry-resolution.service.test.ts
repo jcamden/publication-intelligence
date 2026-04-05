@@ -320,7 +320,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			entryId: "e-gen",
 			textSpan: "Gen 1:1",
 			parserSegments: [
-				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+				{ refText: "1:1", chapterStart: 1, verseStart: 1, verseEnd: 1 },
 			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({
@@ -383,7 +383,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			entryId: "e-gen",
 			textSpan: "Gen 2:4-5",
 			parserSegments: [
-				{ refText: "2:4-5", chapter: 2, verseStart: 4, verseEnd: 5 },
+				{ refText: "2:4-5", chapterStart: 2, verseStart: 4, verseEnd: 5 },
 			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({
@@ -431,9 +431,9 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			entryId: "e-gen",
 			textSpan: "Gen 1:1-3, 2:4-5, 27",
 			parserSegments: [
-				{ refText: "1:1-3", chapter: 1, verseStart: 1, verseEnd: 3 },
-				{ refText: "2:4-5", chapter: 2, verseStart: 4, verseEnd: 5 },
-				{ refText: "27", chapter: 2, verseStart: 27, verseEnd: 27 },
+				{ refText: "1:1-3", chapterStart: 1, verseStart: 1, verseEnd: 3 },
+				{ refText: "2:4-5", chapterStart: 2, verseStart: 4, verseEnd: 5 },
+				{ refText: "27", chapterStart: 2, verseStart: 27, verseEnd: 27 },
 			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({
@@ -522,7 +522,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			entryId: "e-gen",
 			textSpan: "Gen 1:1",
 			parserSegments: [
-				{ refText: "1:1", chapter: 1, verseStart: 1, verseEnd: 1 },
+				{ refText: "1:1", chapterStart: 1, verseStart: 1, verseEnd: 1 },
 			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({
@@ -565,7 +565,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 			entryId: "e-gen",
 			textSpan: "Gen 3:1",
 			parserSegments: [
-				{ refText: "3:1", chapter: 3, verseStart: 1, verseEnd: 1 },
+				{ refText: "3:1", chapterStart: 3, verseStart: 1, verseEnd: 1 },
 			],
 		});
 		vi.spyOn(detectionRepo, "getMatcherWithEntry").mockResolvedValue({

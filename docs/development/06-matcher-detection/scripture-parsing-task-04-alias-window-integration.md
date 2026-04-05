@@ -107,7 +107,7 @@ Update or add service tests for:
 - `Deut 1:5; 4:44; and 6:1`
 - `Deut 32:44-47; 34:9; Josh 1:1-9`
 - parenthetical/prose case such as `Deuteronomy calls for ... (6:5-9)`
-- prose stop such as `Deuteronomy 1:6-18 appointing judges`
+- running prose after ref such as `Deuteronomy 1:6-18 appointing judges` (parser `stopReason: prose`; alias window still attaches `1:6-18`)
 - exact page offset mapping from parser source spans
 
 ## Verification

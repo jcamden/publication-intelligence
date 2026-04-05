@@ -93,24 +93,25 @@ function parseVerseNum(s: string): {
 	return { num: Number.isNaN(n) ? 0 : n, refText: s };
 }
 
-/** Parse a single ref token (no commas): ch, ch-ch, ch:v, ch.v, ch:v-v, cross-chapter. Returns one segment, or two for cross-chapter. */
-function parseSingleRef(
-	block: string,
-): ParsedRefSegment | ParsedRefSegment[] | null {
+/** Parse a single ref token (no commas): ch, ch-ch, ch:v, ch.v, ch:v-v, cross-chapter. */
+function parseSingleRef(block: string): ParsedRefSegment | null {
 	const t = block.trim();
 	if (t.length === 0) return null;
 
-	// Cross-chapter: 1:20-2:4 → two segments (1:20 to end of ch1, 2:1-4)
+	// Cross-chapter: 1:20-2:4 → one segment (chapterStart/chapterEnd + verse range)
 	const cross = t.match(/^(\d+)[:.](\d+)-(\d+)[:.](\d+)$/);
 	if (cross) {
 		const c1 = Number.parseInt(cross[1], 10);
 		const v1 = Number.parseInt(cross[2], 10);
 		const c2 = Number.parseInt(cross[3], 10);
 		const v2 = Number.parseInt(cross[4], 10);
-		return [
-			{ refText: `${c1}:${v1}`, chapter: c1, verseStart: v1 },
-			{ refText: `${c2}:1-${v2}`, chapter: c2, verseStart: 1, verseEnd: v2 },
-		];
+		return {
+			refText: t,
+			chapterStart: c1,
+			chapterEnd: c2,
+			verseStart: v1,
+			verseEnd: v2,
+		};
 	}
 
 	// ch:v-v (same chapter): 1:2-4, 1:3a-b (digit-digit or suffix-suffix)
@@ -121,7 +122,7 @@ function parseSingleRef(
 		const v2 = parseVerseNum(verseRange[4] + (verseRange[5] ?? ""));
 		const seg: ParsedRefSegment = {
 			refText: t,
-			chapter: ch,
+			chapterStart: ch,
 			verseStart: v1.num,
 			verseEnd: v2.num,
 		};
@@ -136,7 +137,7 @@ function parseSingleRef(
 		const v = Number.parseInt(suffixRange[2], 10);
 		return {
 			refText: t,
-			chapter: ch,
+			chapterStart: ch,
 			verseStart: v,
 			verseEnd: v,
 			verseSuffix: suffixRange[3].toLowerCase(),
@@ -151,7 +152,7 @@ function parseSingleRef(
 		const tail = ffMatch[3].toLowerCase();
 		return {
 			refText: `${ffMatch[1]}:${ffMatch[2]}${tail}`,
-			chapter: ch,
+			chapterStart: ch,
 			verseStart: v,
 		};
 	}
@@ -163,7 +164,7 @@ function parseSingleRef(
 		const v = parseVerseNum(singleVerse[2] + (singleVerse[3] ?? ""));
 		const seg: ParsedRefSegment = {
 			refText: singleVerse[3] ? `${singleVerse[1]}:${v.refText}` : t,
-			chapter: ch,
+			chapterStart: ch,
 			verseStart: v.num,
 			verseEnd: v.num,
 		};
@@ -176,14 +177,14 @@ function parseSingleRef(
 	if (chRange) {
 		const c1 = Number.parseInt(chRange[1], 10);
 		const c2 = Number.parseInt(chRange[2], 10);
-		return { refText: t, chapter: c1, chapterEnd: c2 };
+		return { refText: t, chapterStart: c1, chapterEnd: c2 };
 	}
 
 	// Chapter only: 1, 2
 	const chOnly = t.match(/^(\d+)$/);
 	if (chOnly) {
 		const ch = Number.parseInt(chOnly[1], 10);
-		return { refText: t, chapter: ch };
+		return { refText: t, chapterStart: ch };
 	}
 
 	return null;
@@ -197,14 +198,11 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 		.filter(Boolean);
 	if (parts.length === 0) return [];
 
-	const firstResult = parseSingleRef(parts[0]);
-	const first = Array.isArray(firstResult) ? firstResult[0] : firstResult;
-	if (!first || first.chapter === undefined) return [];
+	const first = parseSingleRef(parts[0]);
+	if (!first || first.chapterStart === undefined) return [];
 
-	const chapter = first.chapter;
-	const segments: ParsedRefSegment[] = [
-		...(Array.isArray(firstResult) ? firstResult : [first]),
-	];
+	const chapterStart = first.chapterStart;
+	const segments: ParsedRefSegment[] = [first];
 
 	for (let i = 1; i < parts.length; i++) {
 		const p = parts[i];
@@ -215,7 +213,7 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 			const v2 = parseVerseNum(range[3] + (range[4] ?? ""));
 			const seg: ParsedRefSegment = {
 				refText: p,
-				chapter,
+				chapterStart,
 				verseStart: v1.num,
 				verseEnd: v2.num,
 			};
@@ -229,7 +227,7 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 			const v = parseVerseNum(single[1] + (single[2] ?? ""));
 			const seg: ParsedRefSegment = {
 				refText: v.refText,
-				chapter,
+				chapterStart,
 				verseStart: v.num,
 				verseEnd: v.num,
 			};
@@ -239,10 +237,7 @@ function parseVerseList(block: string): ParsedRefSegment[] {
 		}
 		// Not a verse form; treat as single ref and push if valid
 		const one = parseSingleRef(p);
-		if (one) {
-			if (Array.isArray(one)) segments.push(...one);
-			else segments.push(one);
-		}
+		if (one) segments.push(one);
 	}
 
 	return segments;
@@ -305,7 +300,7 @@ function parseBlock(block: string): ParsedRefSegment[] {
 
 	if (isVerseList(t)) return parseVerseList(t);
 	const single = parseSingleRef(t);
-	if (single) return Array.isArray(single) ? single : [single];
+	if (single) return [single];
 	// Comma-separated refs (e.g. 1:1-3, 2:4-5; or 1, 2, 3 = chapters)
 	const parts = t
 		.split(",")
@@ -315,10 +310,7 @@ function parseBlock(block: string): ParsedRefSegment[] {
 		const segments: ParsedRefSegment[] = [];
 		for (const p of parts) {
 			const one = parseSingleRef(p);
-			if (one) {
-				if (Array.isArray(one)) segments.push(...one);
-				else segments.push(one);
-			}
+			if (one) segments.push(one);
 		}
 		return segments;
 	}
@@ -501,7 +493,7 @@ function segmentsWithOffsetsInWindow(
 		const endInBlock = startInBlock + refText.length;
 		result.push({
 			refText: seg.refText,
-			chapter: seg.chapter,
+			chapterStart: seg.chapterStart,
 			chapterEnd: seg.chapterEnd,
 			verseStart: seg.verseStart,
 			verseEnd: seg.verseEnd,
@@ -659,7 +651,7 @@ function parseAfterAliasImpl(args: {
 		allSegments.some(
 			(s) =>
 				(s.refText?.length ?? 0) > 0 &&
-				(s.chapter !== undefined || /\d/.test(s.refText ?? "")),
+				(s.chapterStart !== undefined || /\d/.test(s.refText ?? "")),
 		) ?? false;
 
 	return {
@@ -691,7 +683,7 @@ function parseLocalWindow(localWindow: string): ParsedRefSegment[] {
 	});
 	return result.segments.map((s) => ({
 		refText: s.refText,
-		chapter: s.chapter,
+		chapterStart: s.chapterStart,
 		chapterEnd: s.chapterEnd,
 		verseStart: s.verseStart,
 		verseEnd: s.verseEnd,
@@ -754,17 +746,17 @@ function parseTriggerLedRefContent(
 		if (chSegments.length === 0 || verseSegments.length === 0) return [];
 		// Take first chapter as context (chapter only or chapter range -> use first chapter for verse attachment)
 		const chSeg = chSegments[0];
-		const chapter = chSeg.chapter;
-		if (chapter === undefined) return chSegments;
+		const chapterStart = chSeg.chapterStart;
+		if (chapterStart === undefined) return chSegments;
 		const combined: ParsedRefSegment[] = [];
 		for (const vs of verseSegments) {
 			const refText =
 				vs.verseEnd !== undefined && vs.verseEnd !== vs.verseStart
-					? `${chapter}:${vs.verseStart}-${vs.verseEnd}`
-					: `${chapter}:${vs.verseStart}`;
+					? `${chapterStart}:${vs.verseStart}-${vs.verseEnd}`
+					: `${chapterStart}:${vs.verseStart}`;
 			combined.push({
 				refText,
-				chapter,
+				chapterStart,
 				verseStart: vs.verseStart,
 				verseEnd: vs.verseEnd ?? vs.verseStart,
 				verseSuffix: vs.verseSuffix,
@@ -945,7 +937,7 @@ function scanBooklessImpl(args: {
 			withOffsets.some(
 				(s) =>
 					(s.refText?.length ?? 0) > 0 &&
-					(s.chapter !== undefined || /\d/.test(s.refText ?? "")),
+					(s.chapterStart !== undefined || /\d/.test(s.refText ?? "")),
 			) ?? false;
 
 		results.push({

@@ -22,7 +22,7 @@ describe("mergeBboxesOnSameLine", () => {
 		];
 		const result = mergeBboxesOnSameLine(bboxes);
 		expect(result).toHaveLength(1);
-		expect(result![0]).toEqual({
+		expect(result?.[0]).toEqual({
 			x: 10,
 			y: 100,
 			width: 80, // 50 + 40 - 10 = 80 (right 90 - left 10)
@@ -37,8 +37,8 @@ describe("mergeBboxesOnSameLine", () => {
 		];
 		const result = mergeBboxesOnSameLine(bboxes);
 		expect(result).toHaveLength(2);
-		expect(result![0]).toEqual(bboxes[0]);
-		expect(result![1]).toEqual(bboxes[1]);
+		expect(result?.[0]).toEqual(bboxes[0]);
+		expect(result?.[1]).toEqual(bboxes[1]);
 	});
 
 	it("merges three on one line, keeps one on another", () => {
@@ -50,13 +50,13 @@ describe("mergeBboxesOnSameLine", () => {
 		];
 		const result = mergeBboxesOnSameLine(bboxes);
 		expect(result).toHaveLength(2);
-		expect(result![0]).toEqual({
+		expect(result?.[0]).toEqual({
 			x: 0,
 			y: 50,
 			width: 70,
 			height: 10,
 		});
-		expect(result![1]).toEqual(bboxes[3]);
+		expect(result?.[1]).toEqual(bboxes[3]);
 	});
 
 	it("treats bboxes within y tolerance as same line", () => {
@@ -66,7 +66,7 @@ describe("mergeBboxesOnSameLine", () => {
 		];
 		const result = mergeBboxesOnSameLine(bboxes);
 		expect(result).toHaveLength(1);
-		expect(result![0].x).toBe(10);
-		expect(result![0].width).toBe(50);
+		expect(result?.[0].x).toBe(10);
+		expect(result?.[0].width).toBe(50);
 	});
 });

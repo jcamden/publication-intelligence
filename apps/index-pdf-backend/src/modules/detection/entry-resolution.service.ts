@@ -253,7 +253,7 @@ function segmentToFullRef(seg: MatcherMentionParserSegment): string {
 	// refText already includes chapter (e.g. "31:1-8")
 	if (/^\d+[:.]/.test(refText)) return refText;
 	// Verse-only continuation: prepend chapter (e.g. "14-15" + chapter 31 → "31:14-15")
-	if (seg.chapter != null) return `${seg.chapter}:${refText}`;
+	if (seg.chapterStart != null) return `${seg.chapterStart}:${refText}`;
 	return refText;
 }
 

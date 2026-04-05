@@ -9,7 +9,7 @@ alwaysApply: true
 
 To run interaction tests, the AI agent needs:
 
-1. **Node 23**: Activate with `nvm use 23`
+1. **Node 23**: Activate with `nvm use 25`
 2. **System Playwright browsers**: Set `PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright`
 3. **Unrestricted permissions**: Use `required_permissions: ["all"]` in Shell tool
 
@@ -17,17 +17,17 @@ To run interaction tests, the AI agent needs:
 
 **Frontend tests:**
 ```bash
-nvm use 23 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction:frontend
+nvm use 25 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction:frontend
 ```
 
 **Yaboujee (component library) tests:**
 ```bash
-nvm use 23 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction:yaboujee
+nvm use 25 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction:yaboujee
 ```
 
 **Both:**
 ```bash
-nvm use 23 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction
+nvm use 25 && PLAYWRIGHT_BROWSERS_PATH=~/Library/Caches/ms-playwright pnpm test:interaction
 ```
 
 ## Checking Results

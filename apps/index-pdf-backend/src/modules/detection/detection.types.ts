@@ -417,7 +417,7 @@ export type CreateSuppressionInput = {
 /** Optional parser output per segment (e.g. scripture ref). */
 export type MatcherMentionParserSegment = {
 	refText: string;
-	chapter?: number;
+	chapterStart?: number;
 	chapterEnd?: number;
 	verseStart?: number;
 	verseEnd?: number;

@@ -52,7 +52,7 @@ src/
 
 ```bash
 # Install dependencies
-nvm use 23
+nvm use 25
 pnpm install
 
 # Setup database

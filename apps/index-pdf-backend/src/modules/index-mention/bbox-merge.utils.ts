@@ -18,9 +18,7 @@ export function mergeBboxesOnSameLine(
 	if (!bboxes || bboxes.length <= 1) return bboxes;
 
 	// Sort by y then x for stable grouping
-	const sorted = [...bboxes].sort(
-		(a, b) => a.y - b.y || a.x - b.x,
-	);
+	const sorted = [...bboxes].sort((a, b) => a.y - b.y || a.x - b.x);
 
 	// Group by same line (y within tolerance)
 	const groups: BoundingBox[][] = [];
