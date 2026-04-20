@@ -89,14 +89,34 @@ const extractSnapshotNames = ({
 	return snapshotNames;
 };
 
+const listVisualSpecFiles = (testsDir: string): string[] => {
+	try {
+		return readdirSync(testsDir).filter((f) => f.endsWith(".visual.spec.ts"));
+	} catch {
+		return [];
+	}
+};
+
 const findOrphanedSnapshots = ({
 	snapshotsDir,
 	testsDir,
 }: {
 	snapshotsDir: string;
 	testsDir: string;
-}): OrphanedItem[] => {
+}): { orphaned: OrphanedItem[]; skippedNoGeneratedTests: boolean } => {
 	const orphaned: OrphanedItem[] = [];
+
+	// Generated tests live under suites/*/tests/ and are gitignored. Without them,
+	// every snapshot folder looks "orphaned" (no matching *.spec.ts on disk).
+	if (listVisualSpecFiles(testsDir).length === 0) {
+		console.log(
+			`⏭️  Skipping orphan cleanup: no *.visual.spec.ts in ${relative(process.cwd(), testsDir)}`,
+		);
+		console.log(
+			"   (Generated tests are gitignored; run pnpm generate:yaboujee / generate:frontend before cleaning.)\n",
+		);
+		return { orphaned: [], skippedNoGeneratedTests: true };
+	}
 
 	try {
 		const snapshotDirs = readdirSync(snapshotsDir);
@@ -149,12 +169,12 @@ const findOrphanedSnapshots = ({
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "ENOENT") {
 			console.log("⚠️  No __snapshots__ directory found - nothing to clean");
-			return [];
+			return { orphaned: [], skippedNoGeneratedTests: false };
 		}
 		throw error;
 	}
 
-	return orphaned;
+	return { orphaned, skippedNoGeneratedTests: false };
 };
 
 const main = async () => {
@@ -169,10 +189,15 @@ const main = async () => {
 		console.log("🔬 DRY RUN MODE - No files will be deleted\n");
 	}
 
-	const orphaned = findOrphanedSnapshots({ snapshotsDir, testsDir });
+	const { orphaned, skippedNoGeneratedTests } = findOrphanedSnapshots({
+		snapshotsDir,
+		testsDir,
+	});
 
 	if (orphaned.length === 0) {
-		console.log("✅ No orphaned snapshots found - everything is clean!");
+		if (!skippedNoGeneratedTests) {
+			console.log("✅ No orphaned snapshots found - everything is clean!");
+		}
 		return;
 	}
 
