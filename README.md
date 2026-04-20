@@ -32,11 +32,53 @@ This is a pnpm monorepo with the following structure:
 
 - Node.js 23+
 - pnpm 10+
+- Python 3.11+ (for `apps/index-pdf-extractor`; on Ubuntu/WSL you may need `python3.12-venv` or the matching `python3.x-venv` package)
 
 ## Getting Started
 
+## 🛠 System Prerequisites
+
+This project uses native modules (like Rust via Neon) that require system-level build tools.
+
+## 1. Install Build Tools
+
 ```bash
-# Install dependencies
+sudo apt update && sudo apt install build-essential -y
+```
+
+## 2. Install Rust
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://rustup.rs | sh
+```
+
+Choose Option 1 (default) when prompted.
+
+## 3. Update Path
+
+After installation, refresh your shell to make `cargo` available:
+
+```bash
+source $HOME/.cargo/env
+```
+
+## 4. Python virtual environment (`apps/index-pdf-extractor`)
+
+On Ubuntu/WSL, Python may be present without the `venv` stdlib package. Install it, then create a venv and install the extractor in editable mode:
+
+```bash
+sudo apt install python3.12-venv
+cd apps/index-pdf-extractor
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+```
+
+The `-e` flag needs a project path: use `pip install -e .` from `apps/index-pdf-extractor`, not `pip install -e` alone. More detail: [apps/index-pdf-extractor/README.md](./apps/index-pdf-extractor/README.md).
+
+## 5. Install Dependencies (Node)
+
+```bash
 pnpm install
 
 # Start development servers (backend + frontend)
