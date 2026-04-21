@@ -10,7 +10,7 @@ import { Input } from "@pubint/yabasic/components/ui/input";
 import { useAtomValue } from "jotai";
 import { Edit, EyeOff, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import {
 	currentPageAtom,
 	pdfUrlAtom,

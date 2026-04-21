@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 /**
  * Custom hook for enabling a ProjectIndexType with optimistic updates.

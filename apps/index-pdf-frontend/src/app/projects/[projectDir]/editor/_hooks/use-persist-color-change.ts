@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 type HighlightType =
 	| "subject"

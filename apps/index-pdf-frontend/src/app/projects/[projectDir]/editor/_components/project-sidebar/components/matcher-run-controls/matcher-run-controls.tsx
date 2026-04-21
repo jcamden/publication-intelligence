@@ -3,16 +3,16 @@
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { logEvent } from "@/app/_common/_lib/logger";
-import { trpc } from "@/app/_common/_utils/trpc";
-import { formatTrpcErrorMessage } from "@/app/_common/_utils/trpc-error";
+import { trpc } from "@/app/_common/_trpc/client";
+import { formatTrpcErrorMessage } from "@/app/_common/_trpc/error";
 import {
 	MatcherRunControlsEmptyState,
 	MatcherRunControlsShared,
-} from "./matcher-run-controls-shared";
+} from "../../../sidebar/matcher-run-controls-shared";
 import {
 	savePersistedSelection,
 	useMatcherRunState,
-} from "./use-matcher-run-state";
+} from "../../../sidebar/use-matcher-run-state";
 
 export type MatcherRunControlsProps = {
 	projectId: string;

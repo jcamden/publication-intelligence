@@ -8,7 +8,7 @@ import { Modal } from "@pubint/yaboujee";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useDeleteEntry } from "@/app/_common/_hooks/use-delete-entry";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import type { IndexEntry } from "../../_types/index-entry";
 import { EntryPicker } from "../entry-picker/entry-picker";
 

@@ -3,7 +3,7 @@
 import { StyledTextButton } from "@pubint/yaboujee";
 import { ScanSearch } from "lucide-react";
 import { useMemo, useState } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import { IndexPanelScrollArea } from "@/app/projects/[projectDir]/editor/_components/index-panel-scroll-area";
 import { MatcherDetectionModal } from "@/app/projects/[projectDir]/editor/_components/matcher-detection-modal";
 import { PageSectionContent } from "../page-section-content/page-section-content";

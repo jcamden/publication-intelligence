@@ -11,8 +11,8 @@ import { SmartSelect } from "@pubint/yabasic/components/ui/smart-select";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
-import type { CrossReference } from "@/app/_common/_utils/trpc-types";
+import { trpc } from "@/app/_common/_trpc/client";
+import type { CrossReference } from "@/app/_common/_trpc/types";
 import type { IndexEntry } from "../../../_types/index-entry";
 import {
 	formatSingleCrossReferenceLabel,

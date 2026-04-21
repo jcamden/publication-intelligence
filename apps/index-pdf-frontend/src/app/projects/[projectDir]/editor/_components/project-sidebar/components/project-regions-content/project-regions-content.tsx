@@ -10,7 +10,7 @@ import { OklchColorPicker } from "@pubint/yaboujee/components/ui/oklch-color-pic
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Edit, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useMemo } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import {
 	currentPageAtom,
 	pdfUrlAtom,

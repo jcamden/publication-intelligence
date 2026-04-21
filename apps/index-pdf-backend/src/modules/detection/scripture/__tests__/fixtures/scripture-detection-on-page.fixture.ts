@@ -1,3 +1,5 @@
+// biome-ignore-all lint/correctness/noUnusedVariables: <reason>
+
 import type { AliasInput } from "../../../alias/alias-engine.types";
 import type {
 	MatcherMentionParserSegment,

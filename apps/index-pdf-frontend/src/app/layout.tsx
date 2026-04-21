@@ -11,7 +11,7 @@ import "./globals.css";
 import { Toaster } from "@pubint/yabasic/components/ui/sonner";
 import { ThemeScript } from "./_common/_lib/theme-script";
 import { ThemeProvider } from "./_common/_providers/theme-provider";
-import { TrpcProvider } from "./_common/_providers/trpc-provider";
+import { TrpcProvider } from "./_common/_trpc/provider";
 
 const exo2 = Exo_2({
 	subsets: ["latin"],

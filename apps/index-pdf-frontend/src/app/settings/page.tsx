@@ -29,7 +29,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { useTheme } from "@/app/_common/_providers/theme-provider";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import { ProjectNavbar } from "@/app/projects/_components/project-navbar";
 import { mentionCreationShowPageSublocationAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { DeleteAccountDialog } from "./_components/delete-account-dialog";

@@ -9,7 +9,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import { ProjectNavbar } from "../../_components/project-navbar";
 import { SubjectIndexContent } from "./_components/subject-index-content";
 

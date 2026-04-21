@@ -1,5 +1,5 @@
 import type { PdfHighlight } from "@pubint/yaboujee";
-import type { IndexMentionListItem } from "@/app/_common/_utils/trpc-types";
+import type { IndexMentionListItem } from "@/app/_common/_trpc/types";
 
 export const mentionToPdfHighlight = ({
 	mention,

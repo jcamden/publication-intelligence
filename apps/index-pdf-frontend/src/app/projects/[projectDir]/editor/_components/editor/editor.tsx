@@ -6,7 +6,7 @@ import { formatOklchColor } from "@pubint/yaboujee/utils/index-type-colors";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCreateMention } from "@/app/_common/_hooks/use-create-mention";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import {
 	colorConfigAtom,
 	currentPageAtom,

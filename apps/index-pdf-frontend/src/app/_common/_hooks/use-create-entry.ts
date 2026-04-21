@@ -1,6 +1,6 @@
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
-import type { IndexEntryListItem } from "@/app/_common/_utils/trpc-types";
+import { trpc } from "@/app/_common/_trpc/client";
+import type { IndexEntryListItem } from "@/app/_common/_trpc/types";
 
 export const useCreateEntry = () => {
 	const utils = trpc.useUtils();

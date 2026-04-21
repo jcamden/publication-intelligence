@@ -5,7 +5,7 @@ import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared
 import type { ReactNode } from "react";
 import React from "react";
 import { API_URL } from "../../_config/api";
-import { trpc } from "../../_utils/trpc";
+import { trpc } from "../../_trpc/client";
 
 type TrpcDecoratorConfig = {
 	delayMs?: number;

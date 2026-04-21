@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 export const useDeleteEntry = () => {
 	const utils = trpc.useUtils();

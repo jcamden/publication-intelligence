@@ -1,4 +1,4 @@
-import type { CreateIndexMentionInput } from "@/app/_common/_utils/trpc-types";
+import type { CreateIndexMentionInput } from "@/app/_common/_trpc/types";
 import type { MentionDraft } from "@/app/projects/[projectDir]/editor/_components/mention-creation-popover/mention-creation-popover";
 
 export const draftToMentionInput = ({

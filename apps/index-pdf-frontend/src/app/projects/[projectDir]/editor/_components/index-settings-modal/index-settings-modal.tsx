@@ -5,7 +5,7 @@ import { Field, FieldLabel } from "@pubint/yabasic/components/ui/field";
 import { Modal } from "@pubint/yaboujee";
 import { OklchColorPicker } from "@pubint/yaboujee/components/ui/oklch-color-picker/oklch-color-picker";
 import { useAtom } from "jotai";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import {
 	colorConfigAtom,
 	type IndexEntryGroupsEnabledConfig,

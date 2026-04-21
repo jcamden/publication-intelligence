@@ -14,7 +14,7 @@ import { Spinner } from "@pubint/yabasic/components/ui/spinner";
 import { Modal } from "@pubint/yaboujee";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 export type MergeGroupModalProps = {
 	open: boolean;

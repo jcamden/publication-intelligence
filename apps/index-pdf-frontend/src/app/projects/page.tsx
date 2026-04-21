@@ -4,7 +4,7 @@ import { Button } from "@pubint/yabasic/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import { CreateProjectModal } from "./_components/create-project-modal";
 import { EditProjectModal } from "./_components/edit-project-modal";
 import { ProjectList } from "./_components/project-list";

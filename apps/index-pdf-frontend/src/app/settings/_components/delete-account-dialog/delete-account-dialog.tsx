@@ -13,7 +13,7 @@ import {
 import { Input } from "@pubint/yabasic/components/ui/input";
 import { Label } from "@pubint/yabasic/components/ui/label";
 import { useState } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 export type DeleteAccountDialogProps = {
 	open: boolean;

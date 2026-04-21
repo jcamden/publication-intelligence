@@ -3,7 +3,7 @@
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { Modal } from "@pubint/yaboujee";
 import { useState } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import { DeleteProjectDialog } from "../delete-project-dialog";
 import { ProjectForm } from "../project-form";
 

@@ -21,7 +21,7 @@ import { useForm } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useUpdateEntry } from "@/app/_common/_hooks/use-update-entry";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import type { IndexEntry } from "../../_types/index-entry";
 import {
 	getAvailableParents,

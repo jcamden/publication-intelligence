@@ -85,7 +85,7 @@ import { LoginForm } from '@/app/login/_components/login-form';
 
 // Importing app-wide shared infrastructure from _common
 import { useAuthToken } from '@/app/_common/_hooks/use-auth';
-import { trpc } from '@/app/_common/_utils/trpc';
+import { trpc } from '@/app/_common/_trpc/client';
 import { ThemeProvider } from '@/app/_common/_providers/theme-provider';
 import { logEvent } from '@/app/_common/_lib/logger';
 
@@ -138,9 +138,10 @@ All code shared across **unrelated routes** or **app-wide infrastructure** lives
 ### What Goes in `_common`
 
 **Application Infrastructure:**
-- `_utils/` - Core infrastructure (e.g., `trpc.ts` for API client setup)
+- `_trpc/` - tRPC client, types re-exports, error helpers, and `TrpcProvider`
+- `_utils/` - Other shared utilities (non-tRPC)
 - `_lib/` - Shared utilities (e.g., `logger.ts`, `theme-script.tsx`)
-- `_providers/` - App-wide providers (e.g., `theme-provider.tsx`, `trpc-provider.tsx`)
+- `_providers/` - App-wide providers (e.g., `theme-provider.tsx`)
 - `_hooks/` - Cross-route hooks (e.g., `use-auth.ts`, `use-theme.ts`)
 - `_types/` - Shared TypeScript types used across multiple routes
 
@@ -167,7 +168,8 @@ All code shared across **unrelated routes** or **app-wide infrastructure** lives
 ```typescript
 // ✅ GOOD: App-wide infrastructure in _common
 app/_common/_hooks/use-auth.ts              // Used by login, signup, settings, projects
-app/_common/_utils/trpc.ts                  // API client used everywhere
+app/_common/_trpc/client.ts                 // API client used everywhere
+app/_common/_trpc/provider.tsx              // TrpcProvider + React Query
 app/_common/_providers/theme-provider.tsx   // Theme system used app-wide
 app/_common/_lib/logger.ts                  // Logging used everywhere
 

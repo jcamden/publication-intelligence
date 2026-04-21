@@ -4,7 +4,7 @@ import { Book, Lightbulb, Loader2, Settings, User, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { logError } from "@/app/_common/_lib/logger";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
 
 type IndexType = "subject" | "author" | "scripture";

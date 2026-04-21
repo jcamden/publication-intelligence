@@ -31,7 +31,7 @@ import { Modal } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { AlertTriangle, Info } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 export type CanonicalPageRuleModalProps = {
 	open: boolean;

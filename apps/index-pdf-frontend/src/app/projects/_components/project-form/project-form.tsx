@@ -24,7 +24,7 @@ import { z } from "zod";
 import { API_URL } from "@/app/_common/_config/api";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth";
 import { useDebouncedValue } from "@/app/_common/_hooks/use-debounced-value";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import { useAuthenticatedPdf } from "@/app/projects/_hooks/use-authenticated-pdf";
 
 // All index types (for MVP)

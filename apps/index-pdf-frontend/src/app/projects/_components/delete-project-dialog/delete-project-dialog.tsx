@@ -13,7 +13,7 @@ import {
 import { Input } from "@pubint/yabasic/components/ui/input";
 import { useEffect, useState } from "react";
 import { useDebouncedValue } from "@/app/_common/_hooks/use-debounced-value";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 export type DeleteProjectDialogProps = {
 	projectId: string | null;

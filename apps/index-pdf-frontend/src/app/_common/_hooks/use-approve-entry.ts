@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 type UseApproveEntryInput = {
 	projectId: string;

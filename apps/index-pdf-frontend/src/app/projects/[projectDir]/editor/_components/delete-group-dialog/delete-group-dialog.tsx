@@ -16,7 +16,7 @@ import { Modal } from "@pubint/yaboujee";
 import { Merge, Trash2, Ungroup } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 export type DeleteGroupOption =
 	| "remove_entries" // Remove entries from group, delete group (default)

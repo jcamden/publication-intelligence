@@ -27,7 +27,7 @@ import { skipToken } from "@tanstack/react-query";
 import { Minus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import type { IndexEntry } from "../../_types/index-entry";
 import { getEntryDisplayLabel } from "../../_utils/index-entry-utils";
 import { EntryPicker } from "../entry-picker/entry-picker";

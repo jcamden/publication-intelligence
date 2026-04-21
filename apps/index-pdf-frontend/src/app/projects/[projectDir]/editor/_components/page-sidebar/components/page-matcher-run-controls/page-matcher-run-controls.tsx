@@ -4,16 +4,16 @@ import { documentPageId } from "@pubint/core";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { logEvent } from "@/app/_common/_lib/logger";
-import { trpc } from "@/app/_common/_utils/trpc";
-import { formatTrpcErrorMessage } from "@/app/_common/_utils/trpc-error";
+import { trpc } from "@/app/_common/_trpc/client";
+import { formatTrpcErrorMessage } from "@/app/_common/_trpc/error";
 import {
 	MatcherRunControlsEmptyState,
 	MatcherRunControlsShared,
-} from "@/app/projects/[projectDir]/editor/_components/project-sidebar/components/matcher-run-controls/matcher-run-controls-shared";
+} from "../../../sidebar/matcher-run-controls-shared";
 import {
 	savePersistedSelection,
 	useMatcherRunState,
-} from "@/app/projects/[projectDir]/editor/_components/project-sidebar/components/matcher-run-controls/use-matcher-run-state";
+} from "../../../sidebar/use-matcher-run-state";
 
 export type PageMatcherRunControlsProps = {
 	projectId: string;

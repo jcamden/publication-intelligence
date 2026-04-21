@@ -4,7 +4,7 @@ import { getPageConfigSummary } from "@pubint/core";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { useAtomValue } from "jotai";
 import { AlertTriangle, Eye, EyeOff, X } from "lucide-react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import {
 	pdfUrlAtom,
 	totalPagesAtom,

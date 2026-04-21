@@ -22,8 +22,8 @@ import { Loader2, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { logEvent } from "@/app/_common/_lib/logger";
-import { trpc } from "@/app/_common/_utils/trpc";
-import { formatTrpcErrorMessage } from "@/app/_common/_utils/trpc-error";
+import { trpc } from "@/app/_common/_trpc/client";
+import { formatTrpcErrorMessage } from "@/app/_common/_trpc/error";
 import { BootstrapConfirmationDialog } from "./bootstrap-confirmation-dialog";
 
 const DEFAULT_CONFIG = {

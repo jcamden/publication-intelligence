@@ -9,7 +9,7 @@ import { Button } from "@pubint/yabasic/components/ui/button";
 import { useAtom, useAtomValue } from "jotai";
 import { Edit, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 import {
 	currentPageAtom,
 	pdfUrlAtom,

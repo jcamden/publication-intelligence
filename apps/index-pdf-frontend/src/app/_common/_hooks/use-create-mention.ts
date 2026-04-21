@@ -1,6 +1,6 @@
 import { toast } from "sonner";
-import { trpc } from "@/app/_common/_utils/trpc";
-import type { IndexMentionListItem } from "@/app/_common/_utils/trpc-types";
+import { trpc } from "@/app/_common/_trpc/client";
+import type { IndexMentionListItem } from "@/app/_common/_trpc/types";
 
 /**
  * Custom hook for creating IndexMentions with optimistic updates.

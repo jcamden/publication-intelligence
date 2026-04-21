@@ -17,7 +17,7 @@ import { Spinner } from "@pubint/yabasic/components/ui/spinner";
 import { Modal } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useCallback } from "react";
-import { trpc } from "@/app/_common/_utils/trpc";
+import { trpc } from "@/app/_common/_trpc/client";
 
 type BoundingBox = {
 	x: number;
