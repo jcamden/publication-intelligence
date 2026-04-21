@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import type { BBox, TextAtom } from "@pubint/core";
+import type { PyMuPDFResult, PyMuPDFWord } from "@pubint/pdf";
 
 const execPromise = promisify(exec);
 
@@ -27,27 +28,7 @@ export type PageMemory = {
 	pages: Map<number, TextAtom[]>;
 };
 
-export type PyMuPDFWord = {
-	text: string;
-	bbox: BBox;
-	block_no: number;
-	line_no: number;
-	word_no: number;
-};
-
-export type PyMuPDFPage = {
-	page_number: number;
-	text: string;
-	words: PyMuPDFWord[];
-	dimensions: {
-		width: number;
-		height: number;
-	};
-};
-
-export type PyMuPDFResult = {
-	pages: PyMuPDFPage[];
-};
+export type { PyMuPDFPage, PyMuPDFResult, PyMuPDFWord } from "@pubint/pdf";
 
 // ============================================================================
 // PyMuPDF Extraction

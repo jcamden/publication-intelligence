@@ -31,7 +31,7 @@ import type {
 } from "./detection.types";
 import { resolveAndPersistCandidates } from "./entry-resolution.service";
 import * as indexEntryGroupRepo from "./index-entry-group.repo";
-import { callLLMForDetection } from "./openrouter.client";
+import { callLLMForDetection } from "./llm-detection.client";
 import { resolvePageIdToDocumentPageNumber } from "./page-id.utils";
 import { buildDetectionPrompt } from "./prompt.utils";
 import { runScriptureDetectionOnPage } from "./scripture-detection-on-page";

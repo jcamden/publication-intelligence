@@ -1,13 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-	transpilePackages: [
-		"@pubint/core",
-		"@pubint/pdf",
-		"@pubint/llm",
-		"@pubint/yabasic",
-		"@pubint/yaboujee",
-	],
+	transpilePackages: ["@pubint/core", "@pubint/yabasic", "@pubint/yaboujee"],
 	webpack: (config) => {
 		// Fix for PDF.js worker issues with Next.js
 		config.resolve.alias = {

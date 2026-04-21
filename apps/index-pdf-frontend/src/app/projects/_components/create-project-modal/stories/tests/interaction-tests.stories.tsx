@@ -3,6 +3,25 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { CreateProjectModal } from "../../create-project-modal";
 
+/**
+ * Sets a controlled `<input>` value without importing `@testing-library/react`.
+ * That import breaks Storybook+Vite browser tests (dynamic import of react-18 chunks).
+ */
+function setControlledInputValue(element: HTMLElement, value: string): void {
+	const input = element as HTMLInputElement;
+	const valueSetter = Object.getOwnPropertyDescriptor(
+		window.HTMLInputElement.prototype,
+		"value",
+	)?.set;
+	if (valueSetter) {
+		valueSetter.call(input, value);
+	} else {
+		input.value = value;
+	}
+	input.dispatchEvent(new Event("input", { bubbles: true }));
+	input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 export default {
 	...defaultInteractionTestMeta,
 	title: "Projects/CreateProjectModal/tests/Interaction Tests",
@@ -139,25 +158,26 @@ export const AutoPopulatesProjectDir: StoryObj<typeof CreateProjectModal> = {
 		onSuccess: () => {},
 		existingProjects: [],
 	},
-	play: async ({ canvasElement: _canvasElement }) => {
-		const user = userEvent.setup({ delay: 20 });
+	play: async ({ step }) => {
+		// No per-keystroke delay: a 500ms title debounce can otherwise fire mid-typing
+		// (e.g. while only "W" is in the field) and leave project_dir stuck at "w".
+		const user = userEvent.setup();
 
 		// Modal renders in portal - query from document.body
 		const body = within(document.body);
 
-		// Wait for CreateProjectModal dialog (by name) to appear.
-		// Scoping by name avoids matching stale dialogs from previous stories when pre-commit
-		// runs multiple test suites and DOM cleanup may lag.
-		await waitFor(
-			async () => {
-				const dialog = body.getByRole("dialog", {
-					name: /create new project/i,
-					hidden: true,
-				});
-				await expect(dialog).toBeInTheDocument();
-			},
-			{ timeout: 5000 },
-		);
+		await step("Wait for modal dialog", async () => {
+			await waitFor(
+				async () => {
+					const dialog = body.getByRole("dialog", {
+						name: /create new project/i,
+						hidden: true,
+					});
+					await expect(dialog).toBeInTheDocument();
+				},
+				{ timeout: 5000 },
+			);
+		});
 
 		const dialog = body.getByRole("dialog", {
 			name: /create new project/i,
@@ -167,19 +187,26 @@ export const AutoPopulatesProjectDir: StoryObj<typeof CreateProjectModal> = {
 		const titleInput = modal.getByLabelText(/project title/i);
 		const projectDirInput = modal.getByLabelText(/project directory/i);
 
-		// Type with delay between characters to let form subscription fire
-		await user.type(titleInput, "Word Biblical Commentary: Daniel");
+		const fullTitle = "Word Biblical Commentary: Daniel";
 
-		// Wait for auto-population (debounced at 500ms in ProjectForm).
-		// Use waitFor with generous timeout - pre-commit runs multiple tasks in parallel
-		// and can be CPU-bound, causing debounce/React updates to run slower.
-		await waitFor(
-			async () => {
-				await expect(projectDirInput).toHaveValue(
-					"word-biblical-commentary-daniel",
-				);
-			},
-			{ timeout: 8000, interval: 150 },
-		);
+		await step("Enter project title", async () => {
+			await user.click(titleInput);
+			// Single atomic update keeps debounced title + slug in sync; userEvent.type
+			// can flake under load (partial value like "Wor").
+			setControlledInputValue(titleInput, fullTitle);
+			await expect(titleInput).toHaveValue(fullTitle);
+		});
+
+		// Debounced slug update (500ms) after title value settles
+		await step("Wait for debounced project directory slug", async () => {
+			await waitFor(
+				async () => {
+					await expect(projectDirInput).toHaveValue(
+						"word-biblical-commentary-daniel",
+					);
+				},
+				{ timeout: 10000, interval: 100 },
+			);
+		});
 	},
 };

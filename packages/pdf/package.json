@@ -21,8 +21,7 @@
 		"test:coverage": "vitest run --coverage"
 	},
 	"dependencies": {
-		"@pubint/core": "workspace:*",
-		"pdfjs-dist": "^4.10.38"
+		"@pubint/core": "workspace:*"
 	},
 	"devDependencies": {
 		"@pubint/vitest-config": "workspace:*",

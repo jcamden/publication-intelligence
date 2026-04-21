@@ -1,9 +1,9 @@
+import { computeFileHash, validatePdfFile } from "@pubint/pdf";
 import type { StorageService } from "../../infrastructure/storage";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
 import { getProjectById } from "../project/project.repo";
-import { computeFileHash, validatePdfFile } from "./pdf-utils";
 import * as sourceDocumentRepo from "./sourceDocument.repo";
 import type {
 	SourceDocument,

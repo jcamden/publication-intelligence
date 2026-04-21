@@ -11,7 +11,7 @@ HTTP Route (upload.routes.ts)
     ↓
 Service Layer (sourceDocument.service.ts)
     ├─→ Project validation
-    ├─→ PDF validation (pdf-utils.ts)
+    ├─→ PDF validation (@pubint/pdf)
     ├─→ File hash computation
     ├─→ Storage Service (local-file-storage.ts)
     └─→ Repository Layer (sourceDocument.repo.ts)
