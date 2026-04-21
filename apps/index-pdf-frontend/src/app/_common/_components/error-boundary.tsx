@@ -3,10 +3,13 @@
 import { Button } from "@pubint/yabasic/components/ui/button";
 import type { ReactNode } from "react";
 import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
+import { logError } from "../_lib/logger";
 
 type Props = {
 	children: ReactNode;
 	fallback?: (error: Error, reset: () => void) => ReactNode;
+	/** Identifies which boundary caught the error (e.g. `root`) for logs. */
+	boundaryId?: string;
 };
 
 const toError = (value: unknown): Error =>
@@ -22,7 +25,7 @@ const DefaultFallback = ({ error }: { error: Error }) => (
 	</div>
 );
 
-export const ErrorBoundary = ({ children, fallback }: Props) => (
+export const ErrorBoundary = ({ children, fallback, boundaryId }: Props) => (
 	<ReactErrorBoundary
 		fallbackRender={(props) => {
 			const error = toError(props.error);
@@ -33,7 +36,16 @@ export const ErrorBoundary = ({ children, fallback }: Props) => (
 			);
 		}}
 		onError={(error, info) => {
-			console.error("Error boundary caught:", toError(error), info);
+			logError({
+				event: "ui.error_boundary.caught",
+				error: toError(error),
+				context: {
+					metadata: {
+						componentStack: info.componentStack,
+						...(boundaryId !== undefined ? { boundaryId } : {}),
+					},
+				},
+			});
 		}}
 	>
 		{children}

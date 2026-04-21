@@ -2,6 +2,7 @@
 
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { useEffect } from "react";
+import { logError } from "@/app/_common/_lib/logger";
 
 export default function EditorError({
 	error,
@@ -11,7 +12,15 @@ export default function EditorError({
 	reset: () => void;
 }) {
 	useEffect(() => {
-		console.error("Editor error:", error);
+		logError({
+			event: "ui.next_error_boundary.editor",
+			error,
+			context: {
+				metadata: {
+					...(error.digest !== undefined ? { digest: error.digest } : {}),
+				},
+			},
+		});
 	}, [error]);
 
 	return (

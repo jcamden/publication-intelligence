@@ -1,12 +1,13 @@
 ---
-description: Use logEvent/logger — no console.log
+description: Structured logging — backend Pino; frontend logEvent/logError
 alwaysApply: true
 ---
 
 # Logging
 
-Use `logEvent` / `logger` from shared logger — **not** `console.log`. Full detail: `apps/index-pdf-backend/LOGGING.md`.
+**Backend:** use the shared Pino-based logger (see existing backend modules). **Frontend:** use `logEvent` and `logError` from `@/app/_common/_lib/logger` — **not** `console.log` or `console.error` in app code (Storybook/tests may use console where practical).
 
-- `event`: `domain.action`; include `requestId` (and `userId` when relevant).
+- `event`: dot-separated name. Backend: `domain.action` (e.g. request-scoped). Frontend client observability: `ui.*` (e.g. `ui.error_boundary.caught`, `ui.next_error_boundary.editor`).
+- Include `requestId` and `userId` when relevant; pass extra detail in `context.metadata`.
 - Structured `metadata`, not string interpolation.
 - No secrets, tokens, full PDFs, or huge prompts (logger redacts common fields).

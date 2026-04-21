@@ -9,6 +9,7 @@ import {
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@pubint/yabasic/components/ui/sonner";
+import { ErrorBoundary } from "./_common/_components/error-boundary";
 import { ThemeScript } from "./_common/_lib/theme-script";
 import { ThemeProvider } from "./_common/_providers/theme-provider";
 import { TrpcProvider } from "./_common/_trpc/provider";
@@ -71,7 +72,9 @@ export default function RootLayout({
 			</head>
 			<body className={merriweatherSans.className}>
 				<ThemeProvider>
-					<TrpcProvider>{children}</TrpcProvider>
+					<ErrorBoundary boundaryId="root">
+						<TrpcProvider>{children}</TrpcProvider>
+					</ErrorBoundary>
 				</ThemeProvider>
 				<Toaster />
 			</body>

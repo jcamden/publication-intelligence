@@ -15,6 +15,8 @@ User lifecycle, documents (upload/delete/reprocess/extract), concepts, index ent
 
 GETs, helpers, raw queries, UI-only state, noisy transient errors.
 
+**React error boundaries and Next.js `error.tsx`:** not domain events. Use frontend `logError` (`@/app/_common/_lib/logger`) with a `ui.*` event; do not call the backend domain `emit` helper for these.
+
 ## Naming & shape
 
 `domain.entity.action` (e.g. `auth.user_logged_in`, `document.uploaded`). After successful DB work; **backend only**; shared `emit` helper; one event per meaningful change.
