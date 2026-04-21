@@ -1,36 +1,10 @@
 ---
-description: Prevents automatic generation of summary documentation files
+description: Do not add unsolicited markdown docs
 alwaysApply: true
 ---
 
-# Documentation Policy
+# Documentation
 
-## Never create documentation files proactively
+Do not create new `.md` (or similar) docs unless the user asked. OK: edits to existing docs for a requested change; brief inline comments for non-obvious code.
 
-Do NOT create markdown files (.md) or other documentation files unless the user explicitly requests them.
-
-```
-❌ BAD - Creating docs without being asked:
-- summary.md
-- CHANGES.md
-- IMPLEMENTATION_NOTES.md
-- ARCHITECTURE.md
-- any-other-summary.md
-
-✅ GOOD - Only create docs when explicitly requested:
-User: "Create a summary of what we just built"
-User: "Write a README for this feature"
-User: "Document the API endpoints in a markdown file"
-```
-
-## Why this matters
-
-- Generating unrequested documentation wastes tokens
-- Users prefer clean commits without extra files
-- Documentation should be intentional, not automatic
-
-## When documentation IS appropriate
-
-- User explicitly asks: "Create a README" or "Document this"
-- Updating existing docs as part of a feature change
-- Adding inline code comments for complex logic (not file summaries)
+Unsolicited summaries/CHANGES/ARCHITECTURE files waste tokens and clutter commits.

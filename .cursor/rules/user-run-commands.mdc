@@ -1,0 +1,48 @@
+---
+description: User runs pnpm/tests/db/installs; agent never executes those shell commands
+alwaysApply: true
+---
+
+# Commands: user runs, agent does not
+
+The agent **does not** run shell commands for installs, package managers, tests, DB migrations, Playwright, or dev servers. Give **exact commands** (with `nvm use 25` before any `pnpm`); the user runs them and **pastes output or status** (pass/fail, errors).
+
+## Never run via agent
+
+- `pnpm` / `npm` / `yarn` / `npx` (including `install`, `add`, `dlx`, scripts)
+- Tests: `pnpm test`, `vitest`, `pnpm test:interaction`, `pnpm test:e2e`, `pnpm vrt*`, coverage
+- DB: `pnpm db:*`, `drizzle-kit`, migration apply/generate from shell
+- Playwright / browser installs
+
+## When something is needed
+
+1. State what to verify.
+2. Give the full command(s).
+3. Ask the user to run and report results before assuming green.
+
+## Node
+
+Project expects Node per `package.json` engines. When instructing `pnpm`, prefix with: `nvm use 25 && …`
+
+## Dependencies
+
+Identify packages; user runs `nvm use 25 && pnpm add …` (or workspace filter). Wait for confirmation after install.
+
+## Database (policy)
+
+- Source of truth: Drizzle schema in repo. Edit schema → user runs generate/push/reset **locally** as your workflow prescribes.
+- Do not hand-write SQL migration files; do not edit generated migrations except rare generator fixes.
+- Local dev: reset is OK; staging/prod: migrate only.
+
+## Interaction tests (reference for the user)
+
+If the user runs interaction tests, summaries may appear at:
+
+- `apps/index-pdf-frontend/test-results/interaction-summary.md`
+- `packages/yaboujee/test-results/interaction-summary.md`
+
+(Agent does not run these; user may paste relevant excerpts.)
+
+## Why
+
+Avoids lockfile churn, sandbox/browser issues, and cost from repeated full test runs; keeps the user in control of expensive or environment-specific work.

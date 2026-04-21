@@ -1,56 +1,12 @@
 ---
-description: Structured logging - use logEvent, include requestId + event, no console.log
+description: Use logEvent/logger — no console.log
 alwaysApply: true
 ---
 
-# Logging Standards
+# Logging
 
-See `apps/index-pdf-backend/LOGGING.md` for full documentation.
+Use `logEvent` / `logger` from shared logger — **not** `console.log`. Full detail: `apps/index-pdf-backend/LOGGING.md`.
 
-## Never use console.log
-
-Always use `logEvent` or `logger` from the shared logger.
-
-```typescript
-// ❌ BAD
-console.log('User logged in');
-
-// ✅ GOOD
-logEvent({
-  event: 'auth.user_logged_in',
-  context: { requestId, userId }
-});
-```
-
-## Always include requestId + event
-
-Use `domain.action` naming (e.g., `auth.user_created`, `pdf.indexing_failed`).
-
-```typescript
-// ❌ BAD
-logger.info('Token verified');
-
-// ✅ GOOD
-logEvent({
-  event: 'auth.token_verified',
-  context: { requestId, userId, metadata: { ... } }
-});
-```
-
-## Structured data, not strings
-
-```typescript
-// ❌ BAD
-logger.info(`User ${userId} uploaded ${filename}`);
-
-// ✅ GOOD
-logEvent({
-  event: 'file.uploaded',
-  context: { requestId, userId, metadata: { filename, size } }
-});
-```
-
-## Don't log secrets or large payloads
-
-Avoid: passwords, tokens, full PDF contents, complete LLM prompts.  
-The logger auto-redacts common fields, but be mindful.
+- `event`: `domain.action`; include `requestId` (and `userId` when relevant).
+- Structured `metadata`, not string interpolation.
+- No secrets, tokens, full PDFs, or huge prompts (logger redacts common fields).

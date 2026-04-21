@@ -1,0 +1,1 @@
+Share a one-line conventional commit message for the current changes versus main.

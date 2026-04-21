@@ -1,20 +1,12 @@
-# Documentation
+# Docs index
 
-## Structure
+Use **this file** first. Pull **specific paths** into context; avoid attaching the whole tree unless you need breadth.
 
-### [architecture/](./architecture/)
-- [Technical Architecture](./architecture/technical-architecture.md) - System overview, tech stack, data flow
-- [Component Architecture](./architecture/component-architecture.md) - Frontend file organization
-- [Logging Standards](./architecture/logging-standards.md) - pino logging patterns
-- [Dark Mode](./architecture/dark-mode.md) - Theme implementation
+| Path | Purpose |
+|------|---------|
+| [architecture/](./architecture/) | Stack, layout, logging, security |
+| [testing/](./testing/) | How tests are organized; commands are **user-run** (see `.cursor/rules/user-run-commands.mdc`) |
+| [development/](./development/) | Feature specs and task notes (`todos.md`, matcher epic) |
+| [business/](./business/) | Long-form product/strategy — prefer [table-of-contents](./business/table-of-contents.md) and pick **one** file |
 
-### [testing/](./testing/)
-- [Backend Tests](./testing/backend-integration-tests.md) - Test database setup, factories
-- [Frontend Tests](./testing/frontend-component-testing.md) - Storybook/VRT/E2E organization
-- [Testing Policies](./testing/testing-policies.md) - What can/cannot run automatically
-
-### [development/](./development/)
-Task specifications for planned features
-
-### [business/](./business/)
-Product vision and strategy
+**Monorepo app docs:** `apps/index-pdf-backend/README.md`, `TESTING.md`; package READMEs under `packages/*/`.

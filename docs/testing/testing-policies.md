@@ -1,17 +1,7 @@
-# Testing Policies
+# Testing policies
 
-## ❌ Never Run Automatically
+Agents should **not** execute `pnpm` test/install scripts or DB CLI. Give exact commands; the developer runs them and shares results.
 
-- `pnpm test:interaction` - Requires Playwright binaries
-- `pnpm vrt:yaboujee` - Requires Playwright + generates large snapshot images
-- `pnpm test:e2e` - Requires Playwright
+**Typically user-driven:** interaction tests, VRT, E2E (Playwright, browsers, snapshots).
 
-## ✅ Can Run Automatically
-
-- `pnpm test` - Unit/integration tests
-- `pnpm typecheck` - Type checking
-- `pnpm check` / `pnpm format` - Linting/formatting
-
-## When Tests Are Needed
-
-Tell the user which command to run and what it verifies. Wait for results.
+**Same rule for:** `pnpm test`, `pnpm typecheck`, etc. — instruct the user; do not assume outputs without a run report.
