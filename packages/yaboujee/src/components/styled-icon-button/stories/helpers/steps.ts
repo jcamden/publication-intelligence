@@ -1,12 +1,12 @@
-import type { StoryContext } from "@pubint/yaboujee/_stories";
+import type {
+	StorybookCanvas,
+	StoryContext,
+	StoryUser,
+} from "@pubint/yaboujee/_stories";
 import { pressTab } from "@pubint/yaboujee/_stories";
 import { expect } from "@storybook/test";
 import { styledIconButtonSelectors } from "./selectors";
 
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
-type StoryUser = ReturnType<
-	typeof import("@storybook/test")["userEvent"]["setup"]
->;
 type StoryFn = ReturnType<typeof import("@storybook/test")["fn"]>;
 
 export const clickFirstIconButtonInWrapper = async ({

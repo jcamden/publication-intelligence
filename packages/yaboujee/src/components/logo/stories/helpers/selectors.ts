@@ -1,4 +1,4 @@
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
+import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 
 export const logoSelectors = {
 	container: (canvas: StorybookCanvas) =>

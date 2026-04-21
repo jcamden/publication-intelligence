@@ -1,8 +1,10 @@
-import type { StoryContext } from "@pubint/yaboujee/_stories";
+import type {
+	StorybookCanvas,
+	StoryContext,
+	StoryUser,
+} from "@pubint/yaboujee/_stories";
 import { expect } from "@storybook/test";
 import { errorStateSelectors } from "./selectors";
-
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
 
 export const clickRetryButton = async ({
 	canvas,
@@ -10,7 +12,7 @@ export const clickRetryButton = async ({
 	step,
 }: {
 	canvas: StorybookCanvas;
-	user: ReturnType<typeof import("@storybook/test")["userEvent"]["setup"]>;
+	user: StoryUser;
 	step: StoryContext["step"];
 }) => {
 	await step("Click Try Again button", async () => {

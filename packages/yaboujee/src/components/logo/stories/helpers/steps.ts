@@ -1,8 +1,6 @@
-import type { StoryContext } from "@pubint/yaboujee/_stories";
+import type { StorybookCanvas, StoryContext } from "@pubint/yaboujee/_stories";
 import { expect } from "@storybook/test";
 import { logoSelectors } from "./selectors";
-
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
 
 export const logoLinkHasHref = async ({
 	canvas,

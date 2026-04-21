@@ -1,26 +1,11 @@
 import type { StoryContext, StoryUser } from "@pubint/yaboujee/_stories";
-import { pressTab, storyWaitForDefaults } from "@pubint/yaboujee/_stories";
+import {
+	pressTab,
+	setControlledInputValue,
+	storyWaitForDefaults,
+} from "@pubint/yaboujee/_stories";
 import { expect, waitFor } from "@storybook/test";
 import { editProjectModalSelectors } from "./selectors";
-
-/**
- * Sets a controlled `<input>` value without importing `@testing-library/react`.
- * That import breaks Storybook+Vite browser tests (dynamic import of react-18 chunks).
- */
-const setControlledInputValue = (element: HTMLElement, value: string): void => {
-	const input = element as HTMLInputElement;
-	const valueSetter = Object.getOwnPropertyDescriptor(
-		window.HTMLInputElement.prototype,
-		"value",
-	)?.set;
-	if (valueSetter) {
-		valueSetter.call(input, value);
-	} else {
-		input.value = value;
-	}
-	input.dispatchEvent(new Event("input", { bubbles: true }));
-	input.dispatchEvent(new Event("change", { bubbles: true }));
-};
 
 /** TanStack Form commits controlled updates after the current stack; blur (e.g. Tab) in the same turn can run onBlur validators against stale state. */
 const yieldForFormStateCommit = async (): Promise<void> => {

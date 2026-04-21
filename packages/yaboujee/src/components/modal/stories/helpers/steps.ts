@@ -1,8 +1,10 @@
-import type { StoryContext, StoryUser } from "@pubint/yaboujee/_stories";
+import type {
+	StorybookCanvas,
+	StoryContext,
+	StoryUser,
+} from "@pubint/yaboujee/_stories";
 import { expect, waitFor } from "@storybook/test";
 import { modalSelectors } from "./selectors";
-
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
 
 export const openModalByClickingOpenButton = async ({
 	canvas,

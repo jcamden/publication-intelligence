@@ -1,6 +1,5 @@
+import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 import { within } from "@storybook/test";
-
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
 
 export const createProjectModalSelectors = {
 	root: (body: StorybookCanvas) =>

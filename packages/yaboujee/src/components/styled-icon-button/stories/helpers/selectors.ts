@@ -1,7 +1,6 @@
+import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 import { within } from "@storybook/test";
 import { STYLED_ICON_BUTTON_TEST_IDS } from "../shared";
-
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
 
 export const styledIconButtonSelectors = {
 	wrapper: (canvas: StorybookCanvas) =>

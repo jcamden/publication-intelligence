@@ -1,5 +1,5 @@
+import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 import { within } from "@storybook/test";
-import type { StorybookCanvas } from "@/_stories/types";
 
 export const windowTopBarSelectors = {
 	maximizeButton: (canvas: StorybookCanvas) =>

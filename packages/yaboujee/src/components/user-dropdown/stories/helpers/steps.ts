@@ -1,9 +1,11 @@
-import type { StoryContext } from "@pubint/yaboujee/_stories";
+import type {
+	StorybookCanvas,
+	StoryContext,
+	StoryUser,
+} from "@pubint/yaboujee/_stories";
 import { storyWaitForDefaults } from "@pubint/yaboujee/_stories";
 import { expect, waitFor } from "@storybook/test";
 import { userDropdownSelectors } from "./selectors";
-
-type StorybookCanvas = ReturnType<typeof import("@storybook/test")["within"]>;
 
 export const clickUserDropdownTrigger = async ({
 	canvas,
@@ -11,7 +13,7 @@ export const clickUserDropdownTrigger = async ({
 	step,
 }: {
 	canvas: StorybookCanvas;
-	user: ReturnType<typeof import("@storybook/test")["userEvent"]["setup"]>;
+	user: StoryUser;
 	step: StoryContext["step"];
 }) => {
 	await step("Click user menu trigger", async () => {
