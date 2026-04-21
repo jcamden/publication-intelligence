@@ -11,7 +11,7 @@ import {
 } from "@pubint/yabasic/components/ui/select";
 import { Modal } from "@pubint/yaboujee";
 import { useState } from "react";
-import { useBulkUpdateIndexTypes } from "@/app/_common/_hooks/use-bulk-update-index-types";
+import { useBulkUpdateIndexTypes } from "./_hooks/use-bulk-update-index-types";
 
 export type BulkIndexAsModalProps = {
 	open: boolean;

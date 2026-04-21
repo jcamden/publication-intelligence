@@ -10,7 +10,7 @@ import {
 	Merge,
 	Trash2,
 } from "lucide-react";
-import { ApproveSuggestionButton } from "@/app/_common/_components/approve-suggestion-button";
+import { ApproveSuggestionButton } from "@/app/projects/[projectDir]/editor/_components/approve-suggestion-button";
 
 type CrossReferenceSegment = { text: string; italic: boolean };
 

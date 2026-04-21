@@ -4,12 +4,11 @@ import { LandingNavbar } from "@pubint/yabasic/components/ui/landing-navbar";
 import { Logo } from "@pubint/yaboujee";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { useAuthToken } from "@/app/_common/_hooks/use-auth";
+import { type ReactNode, useEffect } from "react";
+import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { useTheme } from "@/app/_common/_providers/theme-provider";
-import { LoginForm } from "./_components/login-form";
 
-export default function Login() {
+export default function AuthLayout({ children }: { children: ReactNode }) {
 	const { isAuthenticated, isLoading } = useAuthToken();
 	const { resolvedTheme, setTheme } = useTheme();
 	const router = useRouter();
@@ -62,7 +61,7 @@ export default function Login() {
 				}
 			/>
 			<main className="flex items-center justify-center flex-1">
-				<LoginForm />
+				{children}
 			</main>
 		</div>
 	);

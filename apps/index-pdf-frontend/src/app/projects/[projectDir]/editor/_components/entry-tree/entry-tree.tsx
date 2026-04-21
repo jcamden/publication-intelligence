@@ -3,7 +3,6 @@
 import { getCanonBookKeys, isValidCanonId } from "@pubint/core";
 import { ErrorState } from "@pubint/yaboujee";
 import { useEffect, useMemo, useState } from "react";
-import { useUpdateEntryParent } from "@/app/_common/_hooks/use-update-entry-parent";
 import type { IndexEntry } from "../../_types/index-entry";
 import { DeleteEntryDialog } from "../delete-entry-dialog/delete-entry-dialog";
 import { DeleteGroupDialog } from "../delete-group-dialog/delete-group-dialog";
@@ -11,6 +10,7 @@ import type { Mention } from "../editor/editor";
 import { EntryEditModal } from "../entry-edit-modal/entry-edit-modal";
 import { EntryMergeModal } from "../entry-merge-modal/entry-merge-modal";
 import { MergeGroupModal } from "../merge-group-modal";
+import { useUpdateEntryParent } from "./_hooks/use-update-entry-parent";
 import { EntryDropZone } from "./components/entry-drop-zone";
 import { EntryItem } from "./components/entry-item";
 import { EntryListSkeleton } from "./components/entry-list-skeleton";

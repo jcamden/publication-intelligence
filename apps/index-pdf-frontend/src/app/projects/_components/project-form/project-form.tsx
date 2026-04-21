@@ -22,10 +22,10 @@ import { FileIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { API_URL } from "@/app/_common/_config/api";
-import { useAuthToken } from "@/app/_common/_hooks/use-auth";
-import { useDebouncedValue } from "@/app/_common/_hooks/use-debounced-value";
+import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { trpc } from "@/app/_common/_trpc/client";
 import { useAuthenticatedPdf } from "@/app/projects/_hooks/use-authenticated-pdf";
+import { useDebouncedValue } from "@/app/projects/_hooks/use-debounced-value";
 
 // All index types (for MVP)
 const ALL_INDEX_TYPES = [

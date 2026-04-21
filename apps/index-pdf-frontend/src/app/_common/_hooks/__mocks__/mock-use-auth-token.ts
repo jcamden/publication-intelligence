@@ -1,4 +1,4 @@
-export const useAuthToken = () => ({
+export const mockUseAuthToken = () => ({
 	authToken: null,
 	saveToken: (token: string) => {
 		console.log("[Mock Auth] saveToken:", token);

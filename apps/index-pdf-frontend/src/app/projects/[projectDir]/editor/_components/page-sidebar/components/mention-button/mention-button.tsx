@@ -2,8 +2,8 @@
 
 import { clsx } from "clsx";
 import { Edit2, Trash2 } from "lucide-react";
-import { ApproveSuggestionButton } from "@/app/_common/_components/approve-suggestion-button";
-import { useApproveMention } from "@/app/_common/_hooks/use-approve-mention";
+import { ApproveSuggestionButton } from "@/app/projects/[projectDir]/editor/_components/approve-suggestion-button";
+import { useApproveMention } from "./_hooks/use-approve-mention";
 
 type MentionButtonProps = {
 	mention: {

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { useApproveEntry } from "@/app/_common/_hooks/use-approve-entry";
-import type { IndexEntry } from "../../../_types/index-entry";
-import { formatCrossReferencesAsSegments } from "../../../_utils/cross-reference-utils";
-import type { Mention } from "../../editor/editor";
-import { TreeRow } from "./tree-row";
+import type { IndexEntry } from "../../../../_types/index-entry";
+import { formatCrossReferencesAsSegments } from "../../../../_utils/cross-reference-utils";
+import type { Mention } from "../../../editor/editor";
+import { TreeRow } from "../tree-row";
+import { useApproveEntry } from "./_hooks/use-approve-entry";
 
 export type EntryItemProps = {
 	entry: IndexEntry;

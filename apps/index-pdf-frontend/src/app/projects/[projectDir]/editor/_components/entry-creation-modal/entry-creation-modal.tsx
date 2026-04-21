@@ -20,13 +20,13 @@ import { FormInput, Modal } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useCreateEntry } from "@/app/_common/_hooks/use-create-entry";
 import { trpc } from "@/app/_common/_trpc/client";
 import type { CreateCrossReferenceInput } from "@/app/_common/_trpc/types";
 import type { IndexEntry } from "../../_types/index-entry";
 import { getAvailableParents } from "../../_utils/index-entry-utils";
 import { MatcherListEditor } from "../entry-edit-modal/components/matcher-list-editor";
 import { EntryPicker } from "../entry-picker/entry-picker";
+import { useCreateEntry } from "./_hooks/use-create-entry";
 import { CrossReferenceCreator } from "./components/cross-reference-creator";
 
 export type EntryCreationModalProps = {

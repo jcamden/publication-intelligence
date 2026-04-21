@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuthToken } from "../../_common/_hooks/use-auth";
+import { useAuthToken } from "../../_common/_hooks/use-auth-token";
 
 export const useAuthenticatedPdf = ({ url }: { url: string | null }) => {
 	const { authToken } = useAuthToken();

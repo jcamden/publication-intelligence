@@ -10,9 +10,26 @@ alwaysApply: false
 
 1. Co-locate with App Router routes under `app/`.
 2. `_components/`, `_hooks/`, `_types/`, `_atoms/`, `_utils/` = private, non-route segments.
-3. Shared code → nearest common route ancestor.
-4. **Unrelated routes + app-wide infra** → `app/_common/` (no `page.tsx` there).
+3. Shared code → **nearest common route ancestor** (the leafiest directory that contains every importer). Push hooks and helpers down as far as you can; avoid `_common` when all call sites live under one subtree (e.g. editor-only hooks → `app/projects/[projectDir]/editor/_hooks/`, not `app/_common/_hooks/`).
+4. **Unrelated routes + app-wide infra** → `app/_common/` (no `page.tsx` there). Reserve `_common/_hooks` for hooks whose importers span unrelated areas (e.g. auth used by login, settings, and projects).
 5. Nest feature components under parent; shared siblings → parent `_components/`.
+
+## Route groups (e.g. `(auth)`)
+
+Parentheses make a **layout segment without a URL prefix**. Use them to share a layout and private folders (`_components/`, `_hooks/`) across sibling routes while keeping familiar paths (e.g. `/login`, `/signup` live under `app/(auth)/login` and `app/(auth)/signup`).
+
+- Put **auth-flow-only** UI next to those routes: e.g. `app/(auth)/_components/` for shells used only by login/signup.
+- Keep **cross-cutting** auth/token logic in `_common` when settings, projects, or other areas import it too (e.g. `useAuthToken`).
+
+## File hierarchy (colocation)
+
+When a “parent” module gains submodules (child components, hooks only used there, helpers, etc.), give the parent its **own directory** instead of scattering `parent.tsx`, `parent-helper.ts`, and `use-parent-thing.ts` as loose siblings.
+
+- **Directory per parent:** `feature-name/feature-name.tsx` (implementation). When there is **one** clear public surface (typically the component plus types that belong to it), add `feature-name/index.ts` that re-exports only that surface. Import the feature via `.../feature-name` (the folder), not deep paths into the implementation file when avoidable.
+- **Subs live under the parent dir:** e.g. hooks only used by `entry-item` → `entry-item/_hooks/use-approve-entry.ts`; small child components → `entry-item/components/...` or sibling files under `entry-item/` as appropriate.
+- **Barrels (`index.ts`):** Use them only for that single export story—e.g. one component and its props/types—not as a folder-wide re-export of many unrelated modules. Prefer direct imports of specific files for multi-export folders. Keep implementation details reachable only via relative paths inside the folder unless intentionally shared upward.
+
+Prefer **one** `_hooks/` folder at the leafiest shared ancestor (per‑component `_hooks/` when only that component uses the hook). Use `_common/_hooks/` only when there is no single feature subtree that covers all importers—not as the default location.
 
 ## Imports
 
@@ -20,16 +37,16 @@ From `app/`: `@/app/...` (see existing files for `@/` usage).
 
 ## Story titles
 
-Match URL hierarchy, including dynamic segments: e.g. `Projects/[projectDir]/Editor/ComponentName`, plus `/tests/Interaction Tests` or `/tests/Visual Regression Tests` for test files.
+Match URL hierarchy, including dynamic segments: e.g. `Projects/[projectDir]/Editor/ComponentName`, plus `/tests/Interaction Tests` or `/tests/Visual Regression Tests` for test files. Route groups are omitted from the URL (e.g. story titles still use `Login/...` or `Signup/...`, not `(auth)/...`).
 
 ## `_common` vs route folders
 
 | Put in route | Put in `_common` |
 |--------------|------------------|
-| One route + children | Auth, tRPC client, theme, logger, cross-cutting hooks |
-| Shared by related routes under one ancestor | Rare cross-route UI |
+| One route + children | Put shared pieces under that route’s `_hooks/` / `_utils/` / `_components/`, as low as importers allow |
+| Auth, tRPC client, theme, logger, hooks used across login + settings + projects + editor | `app/_common/` |
 
-**Rule of thumb:** If only projects + editor share it → `app/projects/_components/`. If login + settings + projects share it → `app/_common/`.
+**Rule of thumb:** If every importer sits under `projects/[projectDir]/editor/`, the hook belongs in `editor/_hooks/` (or a deeper colocated `_hooks/`), not `_common`. If every importer sits under `projects/` but not only under editor, use `app/projects/_hooks/`. If login + settings + projects share it → `app/_common/`.
 
 ## Test helpers
 

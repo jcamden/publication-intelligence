@@ -11,54 +11,58 @@ import { FormFooter } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { AuthFormShell } from "@/app/_common/_components/auth-form/auth-form-shell";
-import { useAuthToken } from "@/app/_common/_hooks/use-auth";
+import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { trpc } from "@/app/_common/_trpc/client";
+import { AuthFormShell } from "@/app/(auth)/_components/auth-form-shell";
 
-const signInSchema = z.object({
+const signUpSchema = z.object({
+	name: z.string().optional(),
 	email: emailValidator,
 	password: passwordValidator,
 });
 
-export const LoginForm = () => {
+type SignUpFormData = z.infer<typeof signUpSchema>;
+
+export const SignupForm = () => {
 	const { saveToken } = useAuthToken();
 	const router = useRouter();
 
-	const signInMutation = trpc.auth.signIn.useMutation({
+	const signUpMutation = trpc.auth.signUp.useMutation({
 		onSuccess: (data) => {
 			saveToken(data.token);
 			form.reset();
 			router.push("/projects");
 		},
 		onError: (error: { message: string }) => {
-			console.error("Sign in failed:", error.message);
+			console.error("Sign up failed:", error.message);
 		},
 	});
 
 	const form = useForm({
 		defaultValues: {
+			name: "",
 			email: "",
 			password: "",
 		},
 		onSubmit: async ({ value }) => {
-			signInMutation.mutate(value);
+			signUpMutation.mutate(value as SignUpFormData);
 		},
 	});
 
-	const isLoading = signInMutation.isPending;
-	const apiError = signInMutation.error;
+	const isLoading = signUpMutation.isPending;
+	const apiError = signUpMutation.error;
 
 	return (
 		<AuthFormShell
-			title="Sign In"
+			title="Create Account"
 			apiError={apiError}
 			isLoading={isLoading}
-			submitLabel="Sign In"
+			submitLabel="Create Account"
 			footer={
 				<FormFooter
-					text="Don't have an account?"
-					linkText="Sign up"
-					linkHref="/signup"
+					text="Already have an account?"
+					linkText="Sign in"
+					linkHref="/login"
 				/>
 			}
 			onFormSubmit={(e) => {
@@ -67,11 +71,27 @@ export const LoginForm = () => {
 				form.handleSubmit();
 			}}
 		>
+			<form.Field name="name">
+				{(field) => (
+					<Field>
+						<FieldLabel htmlFor="name">Name (optional)</FieldLabel>
+						<Input
+							id="name"
+							type="text"
+							placeholder="Enter your name"
+							value={field.state.value}
+							onChange={(e) => field.handleChange(e.target.value)}
+							onBlur={field.handleBlur}
+						/>
+					</Field>
+				)}
+			</form.Field>
+
 			<form.Field
 				name="email"
 				validators={{
 					onBlur: ({ value }) => {
-						const result = signInSchema.shape.email.safeParse(value);
+						const result = signUpSchema.shape.email.safeParse(value);
 						return result.success ? undefined : result.error.issues[0]?.message;
 					},
 				}}
@@ -101,7 +121,7 @@ export const LoginForm = () => {
 				name="password"
 				validators={{
 					onBlur: ({ value }) => {
-						const result = signInSchema.shape.password.safeParse(value);
+						const result = signUpSchema.shape.password.safeParse(value);
 						return result.success ? undefined : result.error.issues[0]?.message;
 					},
 				}}

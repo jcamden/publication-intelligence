@@ -11,7 +11,7 @@ import {
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useDeleteEntry } from "@/app/_common/_hooks/use-delete-entry";
+import { useDeleteEntry } from "@/app/projects/[projectDir]/editor/_hooks/use-delete-entry";
 import type { IndexEntry } from "../../_types/index-entry";
 import {
 	EntryRelationshipInfoModal,

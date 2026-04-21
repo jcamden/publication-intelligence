@@ -12,8 +12,8 @@ import {
 } from "@pubint/yabasic/components/ui/alert-dialog";
 import { Input } from "@pubint/yabasic/components/ui/input";
 import { useEffect, useState } from "react";
-import { useDebouncedValue } from "@/app/_common/_hooks/use-debounced-value";
 import { trpc } from "@/app/_common/_trpc/client";
+import { useDebouncedValue } from "@/app/projects/_hooks/use-debounced-value";
 
 export type DeleteProjectDialogProps = {
 	projectId: string | null;

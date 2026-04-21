@@ -5,7 +5,6 @@ import { PdfAnnotationPopover, PdfViewer } from "@pubint/yaboujee";
 import { formatOklchColor } from "@pubint/yaboujee/utils/index-type-colors";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useCreateMention } from "@/app/_common/_hooks/use-create-mention";
 import { trpc } from "@/app/_common/_trpc/client";
 import {
 	colorConfigAtom,
@@ -49,6 +48,7 @@ import { ProjectSidebar } from "../project-sidebar";
 import { RegionCreationModal } from "../region-creation-modal";
 import { ResizableSidebar } from "../resizable-sidebar";
 import { WindowManager } from "../window-manager";
+import { useCreateMention } from "./_hooks/use-create-mention";
 
 /**
  * PDF Editor - Three-section layout for PDF indexing

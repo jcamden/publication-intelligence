@@ -27,7 +27,7 @@ import { useAtom } from "jotai";
 import { CheckIcon, Loader2, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAuthToken } from "@/app/_common/_hooks/use-auth";
+import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { useTheme } from "@/app/_common/_providers/theme-provider";
 import { trpc } from "@/app/_common/_trpc/client";
 import { ProjectNavbar } from "@/app/projects/_components/project-navbar";
