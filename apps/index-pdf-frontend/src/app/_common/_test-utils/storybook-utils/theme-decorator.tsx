@@ -1,17 +1,11 @@
-import { ThemeContext } from "@/app/_common/_providers/theme-provider";
+"use client";
 
-type Theme = "light" | "dark" | "system";
-
-type ThemeContextType = {
-	theme: Theme;
-	resolvedTheme: "light" | "dark";
-	setTheme: ({ theme }: { theme: Theme }) => void;
-};
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { appThemeProviderProps } from "@/app/_common/_config/theme-config";
 
 /**
- * Mock ThemeProvider for Storybook stories
- * Uses the same ThemeContext as the real ThemeProvider so useTheme() works correctly
- * Provides the theme context without localStorage or system theme detection
+ * Mock ThemeProvider for Storybook stories — same attributes/storage as the app,
+ * with a forced light/dark theme (no system / localStorage coupling).
  */
 export const MockThemeProvider = ({
 	children,
@@ -19,18 +13,13 @@ export const MockThemeProvider = ({
 }: {
 	children: React.ReactNode;
 	theme: "light" | "dark";
-}) => {
-	const contextValue: ThemeContextType = {
-		theme,
-		resolvedTheme: theme,
-		setTheme: () => {
-			// Mock implementation - does nothing in Storybook
-		},
-	};
-
-	return (
-		<ThemeContext.Provider value={contextValue}>
-			{children}
-		</ThemeContext.Provider>
-	);
-};
+}) => (
+	<NextThemesProvider
+		{...appThemeProviderProps}
+		defaultTheme={theme}
+		enableSystem={false}
+		forcedTheme={theme}
+	>
+		{children}
+	</NextThemesProvider>
+);

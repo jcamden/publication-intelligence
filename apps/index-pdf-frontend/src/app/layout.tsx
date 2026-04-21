@@ -9,11 +9,11 @@ import {
 import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@pubint/yabasic/components/ui/sonner";
+import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "./_common/_components/error-boundary";
 import { OfflineBanner } from "./_common/_components/offline-banner";
-import { ThemeScript } from "./_common/_lib/theme-script";
+import { appThemeProviderProps } from "./_common/_config/theme-config";
 import { NetworkStatusProvider } from "./_common/_providers/network-status-provider";
-import { ThemeProvider } from "./_common/_providers/theme-provider";
 import { TrpcProvider } from "./_common/_trpc/provider";
 
 const exo2 = Exo_2({
@@ -69,11 +69,8 @@ export default function RootLayout({
 			className={`${exo2.variable} ${audiowide.variable} ${ubuntu.variable} ${merriweather.variable} ${merriweatherSans.variable} ${anurati.variable}`}
 			suppressHydrationWarning
 		>
-			<head>
-				<ThemeScript />
-			</head>
 			<body className={merriweatherSans.className}>
-				<ThemeProvider>
+				<ThemeProvider {...appThemeProviderProps}>
 					<ErrorBoundary boundaryId="root">
 						<TrpcProvider>
 							<NetworkStatusProvider>

@@ -2,29 +2,31 @@
 
 ## Implementation
 
-- Attribute-based: `data-theme="light|dark"` on `<html>`
+- Attribute-based: `data-theme="light|dark"` on `<html>`, plus `class="dark"` for Tailwind
 - CSS variables in `@theme` (light defaults) + `[data-theme="dark"]` overrides
-- System preference + localStorage
-- Inline script prevents FOUC
+- System preference + localStorage via [next-themes](https://github.com/pacocoursey/next-themes)
+- `next-themes` injects a short inline script to prevent FOUC
 
 ## Locations
 
 - `packages/yaboujee/.storybook/preview.tsx` - Theme decorator
 - `apps/index-pdf-frontend/.storybook/preview.ts` - Same decorator
-- `apps/index-pdf-frontend/src/_common/_providers/theme-provider.tsx` - React context
-- `apps/index-pdf-frontend/src/_common/_lib/theme-script.tsx` - FOUC prevention
+- `apps/index-pdf-frontend/src/app/_common/_config/theme-config.ts` - Shared `ThemeProvider` props (layout + Storybook)
+- `apps/index-pdf-frontend/src/app/layout.tsx` - Root `ThemeProvider` from `next-themes`
 
 ## Usage
 
 ### Hook
+
 ```tsx
-import { useTheme } from "@/app/_common/_providers/theme-provider";
+import { useTheme } from "next-themes";
 
 const { theme, resolvedTheme, setTheme } = useTheme();
-setTheme({ theme: theme === "dark" ? "light" : "dark" });
+setTheme(resolvedTheme === "dark" ? "light" : "dark");
 ```
 
 ### Adding Styles
+
 ```css
 /* packages/yaboujee/src/index.css */
 @layer tokens {

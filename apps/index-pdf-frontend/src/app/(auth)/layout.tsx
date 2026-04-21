@@ -4,13 +4,14 @@ import { LandingNavbar } from "@pubint/yabasic/components/ui/landing-navbar";
 import { Logo } from "@pubint/yaboujee";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { type ReactNode, useEffect } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
-import { useTheme } from "@/app/_common/_providers/theme-provider";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
 	const { isAuthenticated, isLoading } = useAuthToken();
 	const { resolvedTheme, setTheme } = useTheme();
+	const navTheme = resolvedTheme === "dark" ? "dark" : "light";
 	const router = useRouter();
 
 	useEffect(() => {
@@ -34,12 +35,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 	return (
 		<div className="h-screen bg-background flex flex-col">
 			<LandingNavbar
-				theme={resolvedTheme}
-				onThemeToggle={() =>
-					setTheme({
-						theme: resolvedTheme === "dark" ? "light" : "dark",
-					})
-				}
+				theme={navTheme}
+				onThemeToggle={() => setTheme(navTheme === "dark" ? "light" : "dark")}
 				logo={<Logo variant="gradient" size="sm" className="sm:text-4xl" />}
 				homeLink={
 					<Link href="/">

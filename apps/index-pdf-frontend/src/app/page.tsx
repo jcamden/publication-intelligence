@@ -14,20 +14,17 @@ import { Separator } from "@pubint/yabasic/components/ui/separator";
 import { Logo } from "@pubint/yaboujee";
 import Image from "next/image";
 import Link from "next/link";
-import { useTheme } from "./_common/_providers/theme-provider";
+import { useTheme } from "next-themes";
 
 export default function Home() {
 	const { resolvedTheme, setTheme } = useTheme();
+	const navTheme = resolvedTheme === "dark" ? "dark" : "light";
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
 			<LandingNavbar
-				theme={resolvedTheme}
-				onThemeToggle={() =>
-					setTheme({
-						theme: resolvedTheme === "dark" ? "light" : "dark",
-					})
-				}
+				theme={navTheme}
+				onThemeToggle={() => setTheme(navTheme === "dark" ? "light" : "dark")}
 				logo={<Logo variant="gradient" size="sm" className="sm:text-4xl" />}
 				homeLink={
 					<Link href="/">

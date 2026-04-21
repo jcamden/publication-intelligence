@@ -26,9 +26,9 @@ import {
 import { useAtom } from "jotai";
 import { CheckIcon, Loader2, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
-import { useTheme } from "@/app/_common/_providers/theme-provider";
 import { trpc } from "@/app/_common/_trpc/client";
 import { ProjectNavbar } from "@/app/projects/_components/project-navbar";
 import { mentionCreationShowPageSublocationAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
@@ -489,9 +489,9 @@ export default function SettingsPage() {
 								Choose your preferred color theme
 							</FieldDescription>
 							<Select
-								value={theme}
+								value={theme ?? "system"}
 								onValueChange={(value) =>
-									setTheme({ theme: value as "light" | "dark" | "system" })
+									setTheme(value as "light" | "dark" | "system")
 								}
 							>
 								<SelectTrigger className="w-[200px]">
