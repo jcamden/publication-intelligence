@@ -1,14 +1,8 @@
-// biome-ignore-all lint/correctness/noUnusedVariables: large test file with intentional unused bindings and destructuring placeholders
-import "../../test/setup";
-import { getParserProfile } from "@pubint/core";
-import { describe, expect, it } from "vitest";
-import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
-import type { AliasInput } from "./alias-engine.types";
+import type { AliasInput } from "../../../alias/alias-engine.types";
 import type {
 	MatcherMentionParserSegment,
 	ScriptureDetectionPageResult,
-} from "./detection.types";
-import { runScriptureDetectionOnPage } from "./scripture-detection-on-page";
+} from "../../../detection.types";
 
 /** Remove keys whose value is undefined (for stable comparison). */
 function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
@@ -20,7 +14,7 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
 }
 
 /** Normalize segment for comparison: strip undefined; drop verseEnd when same as verseStart (single verse); drop verseSuffix for a-b range refs. */
-function normalizeSegmentForComparison(
+export function normalizeSegmentForComparison(
 	seg: MatcherMentionParserSegment,
 ): MatcherMentionParserSegment {
 	let out: MatcherMentionParserSegment = stripUndefined({
@@ -44,7 +38,7 @@ function normalizeSegmentForComparison(
 }
 
 /** Normalize for comparison: drop positions and fallbackBookLevel; keep each span so we assert parser segment separation; sort segments by refText; sort unknownSpans by joined refText; strip undefined. */
-function normalizedForComparison(result: ScriptureDetectionPageResult) {
+export function normalizedForComparison(result: ScriptureDetectionPageResult) {
 	const aliasAttached = result.aliasAttached
 		.map((span) => ({
 			groupId: span.groupId,
@@ -210,7 +204,7 @@ const ROMANS: AliasInput = {
 // Scenario test cases (table-driven)
 // ============================================================================
 
-const scriptureDetectionCases: Array<{
+export const scriptureDetectionCases: Array<{
 	name: string;
 	pageText: string;
 	aliases: AliasInput[];
@@ -1644,77 +1638,3 @@ const scriptureDetectionCases: Array<{
 	// 	},
 	// },
 ];
-
-describe("runScriptureDetectionOnPage", () => {
-	const profile = getParserProfile("scripture-biblical");
-
-	it("returns aliasAttached and unknownSpans for a short page", () => {
-		const pageText = "Gen 1:1 and Exod 3:2.";
-		const aliases: AliasInput[] = [
-			{
-				alias: "Gen",
-				matcherId: "gen",
-				entryId: "genesis",
-				indexType: "bible",
-				groupId: GRP_OT,
-			},
-			{
-				alias: "Exod",
-				matcherId: "exod",
-				entryId: "exodus",
-				indexType: "bible",
-				groupId: GRP_OT,
-			},
-		];
-		const aliasIndex = buildAliasIndex(aliases);
-		const matches = scanTextWithAliasIndex(pageText, aliasIndex);
-
-		const result = runScriptureDetectionOnPage(
-			pageText,
-			matches,
-			profile ?? null,
-		);
-
-		expect(result).toHaveProperty("aliasAttached");
-		expect(result).toHaveProperty("unknownSpans");
-		expect(Array.isArray(result.aliasAttached)).toBe(true);
-		expect(Array.isArray(result.unknownSpans)).toBe(true);
-	});
-
-	it.each(scriptureDetectionCases)("$name", ({
-		pageText,
-		aliases,
-		expected,
-	}) => {
-		const matches =
-			aliases.length === 0
-				? []
-				: scanTextWithAliasIndex(pageText, buildAliasIndex(aliases));
-		const profileOrNull = profile ?? null;
-		const actual = runScriptureDetectionOnPage(
-			pageText,
-			matches,
-			profileOrNull,
-		);
-		const normalized = normalizedForComparison(actual);
-		const expectedNormalized = {
-			aliasAttached: (expected.aliasAttached ?? []).map((a) => ({
-				...a,
-				segments: a.segments.map(normalizeSegmentForComparison),
-			})),
-			unknownSpans: (expected.unknownSpans ?? []).map((s) => ({
-				segments: s.segments.map(normalizeSegmentForComparison),
-			})),
-		};
-		// Sort expected aliasAttached by groupId for stable comparison
-		expectedNormalized.aliasAttached.sort((a, b) =>
-			a.groupId.localeCompare(b.groupId),
-		);
-		expectedNormalized.unknownSpans.sort((a, b) => {
-			const join = (segs: MatcherMentionParserSegment[]) =>
-				segs.map((x) => x.refText ?? "").join(";");
-			return join(a.segments).localeCompare(join(b.segments));
-		});
-		expect(normalized).toEqual(expectedNormalized);
-	});
-});

@@ -19,7 +19,7 @@ import {
 	RunMatcherSchema,
 	UpdateIndexEntryGroupSchema,
 } from "./detection.types";
-import * as indexEntryGroupRepo from "./index-entry-group.repo";
+import * as indexEntryGroupRepo from "./matcher/index-entry-group.repo";
 
 // ============================================================================
 // tRPC Router - HTTP/API layer

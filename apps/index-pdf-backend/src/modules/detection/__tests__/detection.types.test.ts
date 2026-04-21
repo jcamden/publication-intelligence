@@ -7,7 +7,7 @@ import {
 	RunLlmSchema,
 	RunMatcherSchema,
 	UpdateIndexEntryGroupSchema,
-} from "./detection.types";
+} from "../detection.types";
 
 // Valid RFC 4122 UUIDs for Zod 4 uuid() validation
 const PROJECT_ID = "f47ac10b-58cc-4372-a567-0e02b2c3d479";

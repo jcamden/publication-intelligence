@@ -1,5 +1,5 @@
 import type { BBox, TextAtom } from "@pubint/core";
-import type { LLMMention } from "./detection.types";
+import type { LLMMention } from "../detection.types";
 
 // ============================================================================
 // Types

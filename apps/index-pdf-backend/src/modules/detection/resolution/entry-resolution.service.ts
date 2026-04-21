@@ -1,15 +1,15 @@
-import { logEvent } from "../../logger";
-import * as indexMentionRepo from "../index-mention/index-mention.repo";
+import { logEvent } from "../../../logger";
+import * as indexMentionRepo from "../../index-mention/index-mention.repo";
+import * as detectionRepo from "../detection.repo";
+import type {
+	MatcherMentionCandidate,
+	MatcherMentionParserSegment,
+} from "../detection.types";
 import {
 	DEFAULT_OVERLAP_THRESHOLD,
 	type FuzzyExistingMention,
 	filterFuzzyDuplicateCandidates,
-} from "./bbox-overlap.utils";
-import * as detectionRepo from "./detection.repo";
-import type {
-	MatcherMentionCandidate,
-	MatcherMentionParserSegment,
-} from "./detection.types";
+} from "../layout/bbox-overlap.utils";
 
 // ============================================================================
 // Types (Task 5.1 / 5.2 / 5.3)

@@ -1,12 +1,12 @@
-import "../../test/setup";
+import "../../../../test/setup";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as indexMentionRepo from "../index-mention/index-mention.repo";
-import * as detectionRepo from "./detection.repo";
+import * as indexMentionRepo from "../../../index-mention/index-mention.repo";
+import * as detectionRepo from "../../detection.repo";
 import {
 	type ResolutionCandidate,
 	resolveAndPersistScriptureCandidates,
 	resolveAndPersistSubjectCandidates,
-} from "./entry-resolution.service";
+} from "../entry-resolution.service";
 
 // ============================================================================
 // Task 5.1: Subject resolution tests

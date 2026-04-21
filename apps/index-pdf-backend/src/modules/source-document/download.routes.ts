@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { localFileStorage } from "../../infrastructure/storage";
+import { parseBearerToken } from "../../lib/bearer-token";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { verifyToken } from "../auth/auth.service";
@@ -33,10 +34,7 @@ export const registerDownloadRoutes = async (
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
-				const authHeader = request.headers.authorization;
-				const authToken = authHeader?.startsWith("Bearer ")
-					? authHeader.slice(7)
-					: undefined;
+				const authToken = parseBearerToken(request.headers.authorization);
 
 				if (!authToken) {
 					return reply.code(401).send({ error: "Unauthorized" });

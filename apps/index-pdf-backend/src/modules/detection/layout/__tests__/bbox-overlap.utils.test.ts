@@ -1,13 +1,13 @@
-import "../../test/setup";
+import "../../../../test/setup";
 import { describe, expect, it } from "vitest";
-import type { BboxAtom } from "./bbox-canonical.utils";
+import type { BboxAtom } from "../bbox-canonical.utils";
 import {
 	aabbFromBboxes,
 	bboxOverlapRatio,
 	DEFAULT_OVERLAP_THRESHOLD,
 	filterFuzzyDuplicateCandidates,
 	iouPdfJs,
-} from "./bbox-overlap.utils";
+} from "../bbox-overlap.utils";
 
 describe("aabbFromBboxes", () => {
 	it("returns null for empty array", () => {

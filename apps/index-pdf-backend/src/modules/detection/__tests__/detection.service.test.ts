@@ -1,26 +1,26 @@
-import "../../test/setup";
+import "../../../test/setup";
 import type { TextAtom } from "@pubint/core";
 import { getParserProfile } from "@pubint/core";
 import { describe, expect, it } from "vitest";
-import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
-import type { AliasInput } from "./alias-engine.types";
-import { buildDedupeKey } from "./bbox-canonical.utils";
-import { mapPositionsToBBoxes } from "./charAt-mapping.utils";
+import { buildAliasIndex, scanTextWithAliasIndex } from "../alias/alias-engine";
+import type { AliasInput } from "../alias/alias-engine.types";
 import {
 	dedupeMatcherCandidates,
 	sortMatcherCandidates,
-} from "./detection.service";
-import type { MatcherMentionCandidate } from "./detection.types";
+} from "../detection.service";
+import type { MatcherMentionCandidate } from "../detection.types";
+import { buildDedupeKey } from "../layout/bbox-canonical.utils";
+import { mapPositionsToBBoxes } from "../layout/charAt-mapping.utils";
+import {
+	buildSearchablePageText,
+	recalculateCharPositionsForIndexable,
+} from "../layout/text-extraction.utils";
 import {
 	computeFallbackSpan,
 	findBooklessUnknownRefSpansOnPage,
 	findRefSpansInAliasWindow,
 	shouldEmitFallbackMention,
-} from "./scripture-detection-on-page";
-import {
-	buildSearchablePageText,
-	recalculateCharPositionsForIndexable,
-} from "./text-extraction.utils";
+} from "../scripture/scripture-detection-on-page";
 
 // ============================================================================
 // sortMatcherCandidates: ordering and determinism (Task 4.1)

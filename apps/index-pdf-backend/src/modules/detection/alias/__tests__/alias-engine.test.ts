@@ -1,11 +1,12 @@
+import "../../../../test/setup";
 import { normalizeWithOffsetMap } from "@pubint/core";
 import { describe, expect, it } from "vitest";
 import {
 	buildAliasIndex,
 	findAndResolveMatches,
 	scanTextWithAliasIndex,
-} from "./alias-engine";
-import type { AliasInput } from "./alias-engine.types";
+} from "../alias-engine";
+import type { AliasInput } from "../alias-engine.types";
 
 // ============================================================================
 // Fixtures

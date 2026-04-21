@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	documentPageId,
 	resolvePageIdToDocumentPageNumber,
-} from "./page-id.utils";
+} from "../page-id.utils";
 
 describe("documentPageId", () => {
 	it("returns deterministic UUID for document and page number", () => {

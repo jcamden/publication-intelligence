@@ -1,17 +1,17 @@
-import "../../test/setup";
+import "../../../../test/setup";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { getTestDb } from "../../db/client";
-import { indexMatchers } from "../../db/schema";
+import { getTestDb } from "../../../../db/client";
+import { indexMatchers } from "../../../../db/schema";
 import {
 	createTestIndexEntry,
 	createTestProject,
 	createTestProjectIndexType,
 	createTestUser,
-} from "../../test/factories";
-import * as detectionRepo from "./detection.repo";
-import { RUN_ALL_MATCHERS_GROUP_ID } from "./detection.repo";
-import * as indexEntryGroupRepo from "./index-entry-group.repo";
+} from "../../../../test/factories";
+import * as detectionRepo from "../../detection.repo";
+import { RUN_ALL_MATCHERS_GROUP_ID } from "../../detection.repo";
+import * as indexEntryGroupRepo from "../index-entry-group.repo";
 
 describe("index-entry-group.repo (Task 6.1)", () => {
 	describe("listGroups", () => {

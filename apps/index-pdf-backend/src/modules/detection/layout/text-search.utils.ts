@@ -1,4 +1,4 @@
-import type { LLMMention } from "./detection.types";
+import type { LLMMention } from "../detection.types";
 
 // ============================================================================
 // Types

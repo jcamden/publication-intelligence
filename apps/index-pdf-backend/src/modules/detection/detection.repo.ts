@@ -11,8 +11,7 @@ import {
 } from "../../db/schema";
 import { mergeBboxesOnSameLine } from "../index-mention/bbox-merge.utils";
 import { ensureUnknownEntryExistsInTx } from "../scripture-bootstrap/scripture-bootstrap.repo";
-import type { AliasInput } from "./alias-engine.types";
-import { bboxesHash as computeBboxesHash } from "./bbox-canonical.utils";
+import type { AliasInput } from "./alias/alias-engine.types";
 import type {
 	CreateDetectionRunInput,
 	CreateSuppressionInput,
@@ -23,7 +22,8 @@ import type {
 	UpdateDetectionRunStatusInput,
 } from "./detection.types";
 import { isLlmRunInput } from "./detection.types";
-import * as indexEntryGroupRepo from "./index-entry-group.repo";
+import { bboxesHash as computeBboxesHash } from "./layout/bbox-canonical.utils";
+import * as indexEntryGroupRepo from "./matcher/index-entry-group.repo";
 
 // ============================================================================
 // Repository Layer - Drizzle ORM queries

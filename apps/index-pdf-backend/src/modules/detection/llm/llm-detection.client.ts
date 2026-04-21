@@ -1,6 +1,6 @@
 import { callOpenRouter } from "@pubint/llm";
-import { logEvent } from "../../logger";
-import type { LLMDetectionResponse } from "./detection.types";
+import { logEvent } from "../../../logger";
+import type { LLMDetectionResponse } from "../detection.types";
 
 // ============================================================================
 // LLM Detection Call (domain-specific JSON shape)

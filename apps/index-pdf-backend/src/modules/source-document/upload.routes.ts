@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { localFileStorage } from "../../infrastructure/storage";
+import { parseBearerToken } from "../../lib/bearer-token";
 import { verifyToken } from "../auth/auth.service";
 import * as sourceDocumentService from "./source-document.service";
 import { UploadSourceDocumentSchema } from "./source-document.types";
@@ -32,10 +33,7 @@ export const registerUploadRoutes = async (
 		},
 		async (request: FastifyRequest, reply: FastifyReply) => {
 			try {
-				const authHeader = request.headers.authorization;
-				const authToken = authHeader?.startsWith("Bearer ")
-					? authHeader.slice(7)
-					: undefined;
+				const authToken = parseBearerToken(request.headers.authorization);
 
 				if (!authToken) {
 					return reply.code(401).send({ error: "Unauthorized" });

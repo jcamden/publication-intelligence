@@ -1,4 +1,4 @@
-import "../../test/setup";
+import "../../../../test/setup";
 import { describe, expect, it } from "vitest";
 import {
 	type BboxAtom,
@@ -6,7 +6,7 @@ import {
 	buildDedupeKey,
 	canonicalBboxJson,
 	canonicalizeBboxes,
-} from "./bbox-canonical.utils";
+} from "../bbox-canonical.utils";
 
 // ============================================================================
 // Canonical bbox ordering and dedupe key (Task 4.2)

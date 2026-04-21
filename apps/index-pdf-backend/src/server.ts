@@ -3,6 +3,7 @@ import multipart from "@fastify/multipart";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { env } from "./env";
+import { parseBearerToken } from "./lib/bearer-token";
 import { logger } from "./logger";
 import { registerRequestId } from "./middleware/request-id";
 import { verifyToken } from "./modules/auth/auth.service";
@@ -41,10 +42,7 @@ export const registerPlugins = async (server: FastifyInstance) => {
 		trpcOptions: {
 			router: appRouter,
 			createContext: async ({ req }: { req: FastifyRequest }) => {
-				const authHeader = req.headers.authorization;
-				const authToken = authHeader?.startsWith("Bearer ")
-					? authHeader.slice(7)
-					: undefined;
+				const authToken = parseBearerToken(req.headers.authorization);
 
 				if (authToken) {
 					try {

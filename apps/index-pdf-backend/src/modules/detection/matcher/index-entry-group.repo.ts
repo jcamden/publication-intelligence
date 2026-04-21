@@ -1,13 +1,13 @@
 import { and, asc, count, eq, inArray, isNull, ne, sql } from "drizzle-orm";
-import { withUserContext } from "../../db/client";
+import { withUserContext } from "../../../db/client";
 import {
 	indexEntries,
 	indexEntryGroupEntries,
 	indexEntryGroupMatchers,
 	indexEntryGroups,
 	indexMatchers,
-} from "../../db/schema";
-import type { AliasInput } from "./alias-engine.types";
+} from "../../../db/schema";
+import type { AliasInput } from "../alias/alias-engine.types";
 
 // ============================================================================
 // Types

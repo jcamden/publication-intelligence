@@ -4,11 +4,11 @@
  */
 import type { ParserProfile } from "@pubint/core";
 import { normalize, normalizeWithOffsetMap } from "@pubint/core";
-import type { ResolvedAliasMatch } from "./alias-engine.types";
+import type { ResolvedAliasMatch } from "../alias/alias-engine.types";
 import type {
 	MatcherMentionParserSegment,
 	ScriptureDetectionPageResult,
-} from "./detection.types";
+} from "../detection.types";
 
 // ============================================================================
 // Constants

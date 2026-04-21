@@ -1,17 +1,17 @@
-import "../../test/setup";
+import "../../../test/setup";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	createTestProject,
 	createTestUser,
 	grantIndexTypeAddon,
-} from "../../test/factories";
+} from "../../../test/factories";
 import {
 	closeTestServer,
 	createTestServer,
 	makeAuthenticatedRequest,
-} from "../../test/server-harness";
-import * as indexEntryGroupRepo from "../detection/index-entry-group.repo";
+} from "../../../test/server-harness";
+import * as indexEntryGroupRepo from "../../detection/matcher/index-entry-group.repo";
 
 declare module "vitest" {
 	export interface TestContext {

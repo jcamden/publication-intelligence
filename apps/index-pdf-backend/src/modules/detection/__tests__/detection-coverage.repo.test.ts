@@ -1,16 +1,19 @@
-import "../../test/setup";
+import "../../../test/setup";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { getTestDb } from "../../db/client";
-import { detectionMatcherPageCoverage, indexMatchers } from "../../db/schema";
+import { getTestDb } from "../../../db/client";
+import {
+	detectionMatcherPageCoverage,
+	indexMatchers,
+} from "../../../db/schema";
 import {
 	createTestIndexEntry,
 	createTestProject,
 	createTestProjectIndexType,
 	createTestSourceDocument,
 	createTestUser,
-} from "../../test/factories";
-import * as detectionRepo from "./detection.repo";
+} from "../../../test/factories";
+import * as detectionRepo from "../detection.repo";
 
 describe("detection coverage (Task 6.3)", () => {
 	describe("getCoveredMatcherIdsForPage", () => {
