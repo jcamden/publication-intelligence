@@ -1,7 +1,11 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import { within } from "@storybook/test";
 import { ProjectForm } from "../../project-form";
+import {
+	vrtFillTitleDescriptionAndWaitForDirectorySlug,
+	vrtShowDuplicateTitleAndProjectDirectoryErrors,
+} from "../helpers/steps";
 
 export default {
 	...defaultVrtMeta,
@@ -52,18 +56,9 @@ export const WithValidationErrorsLight: StoryObj<typeof ProjectForm> = {
 		...defaultGlobals,
 		theme: "light",
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const user = userEvent.setup();
-
-		const titleInput = canvas.getByLabelText(/project title/i);
-		const projectDirInput = canvas.getByLabelText(/project directory/i);
-
-		// Trigger validation errors
-		await user.type(titleInput, "Existing Project");
-		await user.tab();
-		await user.type(projectDirInput, "existing-project");
-		await user.tab();
+		await vrtShowDuplicateTitleAndProjectDirectoryErrors({ canvas, step });
 	},
 };
 
@@ -82,18 +77,9 @@ export const WithValidationErrorsDark: StoryObj<typeof ProjectForm> = {
 		...defaultGlobals,
 		theme: "dark",
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const user = userEvent.setup();
-
-		const titleInput = canvas.getByLabelText(/project title/i);
-		const projectDirInput = canvas.getByLabelText(/project directory/i);
-
-		// Trigger validation errors
-		await user.type(titleInput, "Existing Project");
-		await user.tab();
-		await user.type(projectDirInput, "existing-project");
-		await user.tab();
+		await vrtShowDuplicateTitleAndProjectDirectoryErrors({ canvas, step });
 	},
 };
 
@@ -107,20 +93,8 @@ export const FilledFormLight: StoryObj<typeof ProjectForm> = {
 		...defaultGlobals,
 		theme: "light",
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const user = userEvent.setup();
-
-		const titleInput = canvas.getByLabelText(/project title/i);
-		const descriptionInput = canvas.getByLabelText(/description/i);
-
-		await user.type(titleInput, "Word Biblical Commentary: Daniel");
-		await user.type(
-			descriptionInput,
-			"A comprehensive theological and exegetical analysis",
-		);
-
-		// Wait for auto-population
-		await new Promise((resolve) => setTimeout(resolve, 200));
+		await vrtFillTitleDescriptionAndWaitForDirectorySlug({ canvas, step });
 	},
 };

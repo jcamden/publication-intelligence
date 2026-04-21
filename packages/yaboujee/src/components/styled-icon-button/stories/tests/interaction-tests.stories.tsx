@@ -1,9 +1,30 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import { Eye, Plus } from "lucide-react";
 import { useState } from "react";
 import { StyledIconButton } from "../../styled-icon-button";
+import {
+	activeStateShowsActive,
+	activeStateShowsInactive,
+	clickFirstIconButtonInWrapper,
+	clickFirstIconButtonOnCanvas,
+	disabledOuterButtonHasTabIndexMinusOne,
+	firstButtonInContainer1HasFocus,
+	firstButtonInContainer2HasFocus,
+	firstIconButtonHasRoleButton,
+	firstIconButtonInWrapperIsVisible,
+	focusFirstButtonInContainer1,
+	focusFirstIconButtonInWrapper,
+	innerIconButtonIsDisabled,
+	innerTooltipButtonHasAccessibleNameAndTitle,
+	onClickCallbackIsCalledOnce,
+	onClickCallbackIsCalledOnceAfterKeyboard,
+	onClickCallbackIsNotCalled,
+	pressEnterKey,
+	pressSpaceKey,
+	tabTwiceToSecondGroupOuterButton,
+} from "../helpers/steps";
 import {
 	defaultStyledIconButtonArgs,
 	STYLED_ICON_BUTTON_TEST_IDS,
@@ -25,26 +46,30 @@ type Story = StoryObj<typeof meta>;
  * Test click handler fires
  */
 export const ClickHandler: Story = {
-	render: () => {
-		const handleClick = fn();
+	args: {
+		onClick: fn(),
+	},
+	render: (args) => {
+		const { onClick, ...rest } = args;
 		return (
 			<div data-testid={STYLED_ICON_BUTTON_TEST_IDS.wrapper}>
 				<StyledIconButton
 					{...defaultStyledIconButtonArgs}
+					{...rest}
 					icon={Eye}
-					onClick={handleClick}
+					onClick={onClick}
 				/>
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step, args }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
-
-		const button = within(wrapper).getAllByRole("button")[0];
-		await userEvent.click(button);
-
-		await expect(button).toBeVisible();
+		const onClick = args.onClick as ReturnType<typeof fn>;
+		onClick.mockClear();
+		await clickFirstIconButtonInWrapper({ canvas, user, step });
+		await firstIconButtonInWrapperIsVisible({ canvas, step });
+		await onClickCallbackIsCalledOnce({ onClick, step });
 	},
 };
 
@@ -52,27 +77,31 @@ export const ClickHandler: Story = {
  * Test keyboard navigation with Enter key
  */
 export const KeyboardEnter: Story = {
-	render: () => {
-		const handleClick = fn();
+	args: {
+		onClick: fn(),
+	},
+	render: (args) => {
+		const { onClick, ...rest } = args;
 		return (
 			<div data-testid={STYLED_ICON_BUTTON_TEST_IDS.wrapper}>
 				<StyledIconButton
 					{...defaultStyledIconButtonArgs}
+					{...rest}
 					icon={Eye}
-					onClick={handleClick}
+					onClick={onClick}
 				/>
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step, args }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
-
-		const button = within(wrapper).getAllByRole("button")[0];
-		button.focus();
-		await userEvent.keyboard("{Enter}");
-
-		await expect(button).toHaveAttribute("role", "button");
+		const onClick = args.onClick as ReturnType<typeof fn>;
+		onClick.mockClear();
+		await focusFirstIconButtonInWrapper({ canvas, step });
+		await pressEnterKey({ user, step });
+		await firstIconButtonHasRoleButton({ canvas, step });
+		await onClickCallbackIsCalledOnceAfterKeyboard({ onClick, step });
 	},
 };
 
@@ -80,27 +109,31 @@ export const KeyboardEnter: Story = {
  * Test keyboard navigation with Space key
  */
 export const KeyboardSpace: Story = {
-	render: () => {
-		const handleClick = fn();
+	args: {
+		onClick: fn(),
+	},
+	render: (args) => {
+		const { onClick, ...rest } = args;
 		return (
 			<div data-testid={STYLED_ICON_BUTTON_TEST_IDS.wrapper}>
 				<StyledIconButton
 					{...defaultStyledIconButtonArgs}
+					{...rest}
 					icon={Eye}
-					onClick={handleClick}
+					onClick={onClick}
 				/>
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step, args }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
-
-		const button = within(wrapper).getAllByRole("button")[0];
-		button.focus();
-		await userEvent.keyboard(" ");
-
-		await expect(button).toHaveAttribute("role", "button");
+		const onClick = args.onClick as ReturnType<typeof fn>;
+		onClick.mockClear();
+		await focusFirstIconButtonInWrapper({ canvas, step });
+		await pressSpaceKey({ user, step });
+		await firstIconButtonHasRoleButton({ canvas, step });
+		await onClickCallbackIsCalledOnceAfterKeyboard({ onClick, step });
 	},
 };
 
@@ -108,28 +141,31 @@ export const KeyboardSpace: Story = {
  * Test disabled button prevents clicks
  */
 export const DisabledClickPrevention: Story = {
-	render: () => {
-		const handleClick = fn();
+	args: {
+		onClick: fn(),
+		disabled: true,
+	},
+	render: (args) => {
+		const { onClick, ...rest } = args;
 		return (
 			<div data-testid={STYLED_ICON_BUTTON_TEST_IDS.wrapper}>
 				<StyledIconButton
 					{...defaultStyledIconButtonArgs}
+					{...rest}
 					icon={Eye}
-					onClick={handleClick}
-					disabled
+					onClick={onClick}
 				/>
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step, args }) => {
 		const canvas = within(canvasElement);
-		const wrapper = canvas.getByTestId(STYLED_ICON_BUTTON_TEST_IDS.wrapper);
-
-		const outerButton = within(wrapper).getAllByRole("button")[0];
-		await expect(outerButton).toHaveAttribute("tabIndex", "-1");
-
-		const innerButton = within(wrapper).getAllByRole("button")[1];
-		await expect(innerButton).toBeDisabled();
+		const onClick = args.onClick as ReturnType<typeof fn>;
+		onClick.mockClear();
+		await onClickCallbackIsNotCalled({ onClick, step });
+		await disabledOuterButtonHasTabIndexMinusOne({ canvas, step });
+		await innerIconButtonIsDisabled({ canvas, step });
+		await onClickCallbackIsNotCalled({ onClick, step });
 	},
 };
 
@@ -152,20 +188,14 @@ export const ActiveStateToggle: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const activeState = canvas.getByTestId("active-state");
-
-		await expect(activeState).toHaveTextContent("inactive");
-
-		const button = canvas.getAllByRole("button")[0];
-		await userEvent.click(button);
-
-		await expect(activeState).toHaveTextContent("active");
-
-		await userEvent.click(button);
-
-		await expect(activeState).toHaveTextContent("inactive");
+		await activeStateShowsInactive({ canvas, step });
+		await clickFirstIconButtonOnCanvas({ canvas, user, step });
+		await activeStateShowsActive({ canvas, step });
+		await clickFirstIconButtonOnCanvas({ canvas, user, step });
+		await activeStateShowsInactive({ canvas, step });
 	},
 };
 
@@ -193,21 +223,13 @@ export const FocusBehavior: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const button1Container = canvas.getByTestId("button-1");
-		const button2Container = canvas.getByTestId("button-2");
-
-		const button1 = within(button1Container).getAllByRole("button")[0];
-		const button2 = within(button2Container).getAllByRole("button")[0];
-
-		button1.focus();
-		await expect(button1).toHaveFocus();
-
-		// Tab twice: first tab goes to button1's inner button, second tab goes to button2's wrapper
-		await userEvent.tab();
-		await userEvent.tab();
-		await expect(button2).toHaveFocus();
+		await focusFirstButtonInContainer1({ canvas, step });
+		await firstButtonInContainer1HasFocus({ canvas, step });
+		await tabTwiceToSecondGroupOuterButton({ user, step });
+		await firstButtonInContainer2HasFocus({ canvas, step });
 	},
 };
 
@@ -224,12 +246,12 @@ export const TooltipAccessibility: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-		const innerButton = buttons[1]; // The actual <Button> element with aria-label
-
-		await expect(innerButton).toHaveAccessibleName("Toggle visibility");
-		await expect(innerButton).toHaveAttribute("title", "Toggle visibility");
+		await innerTooltipButtonHasAccessibleNameAndTitle({
+			canvas,
+			expected: "Toggle visibility",
+			step,
+		});
 	},
 };

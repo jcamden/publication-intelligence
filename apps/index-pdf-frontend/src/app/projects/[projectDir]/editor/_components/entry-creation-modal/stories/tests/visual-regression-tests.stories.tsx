@@ -1,8 +1,8 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, waitFor, within } from "@storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import { EntryCreationModal } from "../../entry-creation-modal";
+import { vrtFillLabelAndSelectPhilosophyParent } from "../helpers/steps";
 
 const meta: Meta<typeof EntryCreationModal> = {
 	...defaultVrtMeta,
@@ -28,28 +28,8 @@ export const WithParentSelected: Story = {
 		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
 	},
-	play: async () => {
-		const body = within(document.body);
-
-		const labelInput = body.getByLabelText("Label");
-		await userEvent.type(labelInput, "New Entry");
-
-		const parentTrigger = body.getByRole("combobox", {
-			name: /parent entry/i,
-		});
-		await userEvent.click(parentTrigger);
-
-		await waitFor(async () => {
-			// Get all options and find the exact "Philosophy" (not "Philosophy → X")
-			const options = body.getAllByRole("option");
-			const philosophyOption = options.find(
-				(opt) => opt.textContent === "Philosophy",
-			);
-			if (!philosophyOption) {
-				throw new Error("Philosophy option not found");
-			}
-			await userEvent.click(philosophyOption);
-		});
+	play: async ({ step }) => {
+		await vrtFillLabelAndSelectPhilosophyParent({ step });
 	},
 	globals: {
 		...defaultGlobals,

@@ -1,6 +1,7 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { ProjectCard } from "../../project-card";
+import { vrtPauseBeforePseudoHoverSnapshot } from "../helpers/steps";
 
 export default {
 	...defaultVrtMeta,
@@ -73,8 +74,8 @@ export const HoverStateLight: StoryObj<typeof ProjectCard> = {
 			hover: true,
 		},
 	},
-	play: async () => {
-		await new Promise((resolve) => setTimeout(resolve, 300));
+	play: async ({ step }) => {
+		await vrtPauseBeforePseudoHoverSnapshot({ step });
 	},
 };
 
@@ -93,7 +94,7 @@ export const HoverStateDark: StoryObj<typeof ProjectCard> = {
 		...defaultGlobals,
 		theme: "dark",
 	},
-	play: async () => {
-		await new Promise((resolve) => setTimeout(resolve, 300));
+	play: async ({ step }) => {
+		await vrtPauseBeforePseudoHoverSnapshot({ step });
 	},
 };

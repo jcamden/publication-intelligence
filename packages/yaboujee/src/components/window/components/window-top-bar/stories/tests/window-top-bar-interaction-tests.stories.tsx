@@ -1,6 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import { WindowTopBar } from "../../window-top-bar";
+import {
+	clickCloseButton,
+	clickMaximizeButton,
+	clickRestoreButton,
+	clickUnpopButton,
+	closeButtonIsVisible,
+	maximizeButtonIsVisible,
+	restoreButtonIsVisible,
+	twoToolbarButtonsAreVisible,
+	unpopButtonIsVisible,
+	unpopVisibleAndCloseVisibleByRegion,
+} from "../helpers/steps";
 import { defaultWindowTopBarArgs } from "../shared";
 
 const meta: Meta<typeof WindowTopBar> = {
@@ -32,12 +44,11 @@ export const MaximizeButtonClick: Story = {
 			<WindowTopBar {...defaultWindowTopBarArgs} onMaximize={handleMaximize} />
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const maximizeButton = canvas.getByLabelText("Maximize");
-
-		await userEvent.click(maximizeButton);
-		await expect(maximizeButton).toBeVisible();
+		const user = userEvent.setup();
+		await clickMaximizeButton({ canvas, user, step });
+		await maximizeButtonIsVisible({ canvas, step });
 	},
 };
 
@@ -55,12 +66,11 @@ export const MaximizeButtonRestoreState: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const restoreButton = canvas.getByLabelText("Restore");
-
-		await expect(restoreButton).toBeVisible();
-		await userEvent.click(restoreButton);
+		const user = userEvent.setup();
+		await restoreButtonIsVisible({ canvas, step });
+		await clickRestoreButton({ canvas, user, step });
 	},
 };
 
@@ -78,12 +88,11 @@ export const CloseButtonClick: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const closeButton = canvas.getByLabelText("Close");
-
-		await userEvent.click(closeButton);
-		await expect(closeButton).toBeVisible();
+		const user = userEvent.setup();
+		await clickCloseButton({ canvas, user, step });
+		await closeButtonIsVisible({ canvas, step });
 	},
 };
 
@@ -101,12 +110,11 @@ export const UnpopButtonClick: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const unpopButton = canvas.getByLabelText("Return to sidebar");
-
-		await userEvent.click(unpopButton);
-		await expect(unpopButton).toBeVisible();
+		const user = userEvent.setup();
+		await clickUnpopButton({ canvas, user, step });
+		await unpopButtonIsVisible({ canvas, step });
 	},
 };
 
@@ -126,17 +134,9 @@ export const ButtonVisibilityBySidebarState: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const sidebarVisible = canvas.getByTestId("sidebar-visible");
-		const unpopButton =
-			within(sidebarVisible).getByLabelText("Return to sidebar");
-		await expect(unpopButton).toBeVisible();
-
-		const sidebarCollapsed = canvas.getByTestId("sidebar-collapsed");
-		const closeButton = within(sidebarCollapsed).getByLabelText("Close");
-		await expect(closeButton).toBeVisible();
+		await unpopVisibleAndCloseVisibleByRegion({ canvas, step });
 	},
 };
 
@@ -149,14 +149,8 @@ export const KeyboardAccessibility: Story = {
 			<WindowTopBar {...defaultWindowTopBarArgs} sidebarCollapsed={false} />
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-
-		for (const button of buttons) {
-			await expect(button).toBeVisible();
-		}
-
-		await expect(buttons.length).toBe(2);
+		await twoToolbarButtonsAreVisible({ canvas, step });
 	},
 };

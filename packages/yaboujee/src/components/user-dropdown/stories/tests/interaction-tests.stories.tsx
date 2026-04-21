@@ -1,7 +1,12 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { UserDropdown } from "../../user-dropdown";
+import {
+	clickUserDropdownTrigger,
+	dropdownItemsAreVisible,
+	userInfoIsVisible,
+} from "../helpers/steps";
 import { defaultHandlers, defaultUser } from "../shared";
 
 export default {
@@ -19,21 +24,11 @@ export const OpensDropdownMenu: StoryObj<typeof UserDropdown> = {
 			<UserDropdown {...defaultUser} {...defaultHandlers} />
 		</div>
 	),
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const trigger = canvas.getByRole("button");
-
-		await userEvent.click(trigger);
-
-		// Wait for dropdown to open and find items in the document (dropdown may be in a portal)
-		await waitFor(async () => {
-			const body = within(document.body);
-			const settingsItem = await body.findByText("Settings");
-			const signOutItem = await body.findByText("Sign out");
-
-			await expect(settingsItem).toBeInTheDocument();
-			await expect(signOutItem).toBeInTheDocument();
-		});
+		await clickUserDropdownTrigger({ canvas, user, step });
+		await dropdownItemsAreVisible({ step });
 	},
 };
 
@@ -43,20 +38,14 @@ export const DisplaysUserInfo: StoryObj<typeof UserDropdown> = {
 			<UserDropdown {...defaultUser} {...defaultHandlers} />
 		</div>
 	),
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const trigger = canvas.getByRole("button");
-
-		await userEvent.click(trigger);
-
-		// Wait for dropdown to open and find items in the document (dropdown may be in a portal)
-		await waitFor(async () => {
-			const body = within(document.body);
-			const userName = await body.findByText(defaultUser.userName);
-			const userEmail = await body.findByText(defaultUser.userEmail);
-
-			await expect(userName).toBeInTheDocument();
-			await expect(userEmail).toBeInTheDocument();
+		await clickUserDropdownTrigger({ canvas, user, step });
+		await userInfoIsVisible({
+			userName: defaultUser.userName,
+			userEmail: defaultUser.userEmail,
+			step,
 		});
 	},
 };

@@ -50,4 +50,12 @@ Match URL hierarchy, including dynamic segments: e.g. `Projects/[projectDir]/Edi
 
 ## Test helpers
 
-Shared steps: `app/test-helpers/interaction-steps.ts`; Storybook decorators: `app/test-utils/`.
+- Prefer colocation with the leafiest applicable component:
+  - `{dir}/stories/helpers/selectors.ts`
+  - `{dir}/stories/helpers/steps.ts`
+- Root fallback (only when the leafiest common ancestor is effectively the workspace root):
+  - `apps/index-pdf-frontend/src/app/_stories/helpers/{selectors,steps}.ts`
+  - `packages/yaboujee/src/_stories/helpers/{selectors,steps}.ts`
+- Cross-workspace direction:
+  - `apps/index-pdf-frontend` may import generic story helpers from `@pubint/yaboujee/_stories` when testing yaboujee-owned components.
+  - `packages/yaboujee` must not import from `apps/index-pdf-frontend`.

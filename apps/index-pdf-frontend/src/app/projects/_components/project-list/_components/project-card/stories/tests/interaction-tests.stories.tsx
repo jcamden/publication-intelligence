@@ -1,7 +1,13 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { ProjectCard } from "../../project-card";
+import {
+	cardLinkVisibleWithHref,
+	hoverCardAndClickSettings,
+	settingsButtonInDocumentAfterHoverCard,
+	settingsButtonStillInDocument,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -33,15 +39,13 @@ export const ClickableCard: StoryObj<typeof ProjectCard> = {
 		project: mockProject,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		// Find the clickable card element
-		const card = canvas.getByRole("link");
-		await expect(card).toBeVisible();
-
-		// Verify it has the correct href
-		await expect(card).toHaveAttribute("href", "/projects/wbc-daniel/editor");
+		await cardLinkVisibleWithHref({
+			canvas,
+			expectedHref: "/projects/wbc-daniel/editor",
+			step,
+		});
 	},
 };
 
@@ -50,22 +54,10 @@ export const SettingsButtonAppearsOnHover: StoryObj<typeof ProjectCard> = {
 		project: mockProject,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
-
-		// Settings button exists (but has opacity-0 initially)
-		const settingsButton = canvas.getByRole("button", {
-			name: /project settings/i,
-		});
-		await expect(settingsButton).toBeInTheDocument();
-
-		// Find the card and hover to reveal settings button
-		const card = canvas.getByRole("link");
-		await user.hover(card);
-
-		// Button is now revealed via group-hover (can be clicked even if opacity animation is ongoing)
-		await expect(settingsButton).toBeInTheDocument();
+		await settingsButtonInDocumentAfterHoverCard({ canvas, user, step });
 	},
 };
 
@@ -74,22 +66,10 @@ export const SettingsButtonTriggersCallback: StoryObj<typeof ProjectCard> = {
 		project: mockProject,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
-
-		// Hover to show settings button
-		const card = canvas.getByRole("link");
-		await user.hover(card);
-
-		// Click settings button
-		const settingsButton = canvas.getByRole("button", {
-			name: /project settings/i,
-		});
-		await user.click(settingsButton);
-
-		// Note: In real app, onSettingsClick callback would be triggered
-		// In storybook, we just verify the button is clickable
+		await hoverCardAndClickSettings({ canvas, user, step });
 	},
 };
 
@@ -98,21 +78,10 @@ export const SettingsButtonStopsPropagation: StoryObj<typeof ProjectCard> = {
 		project: mockProject,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
-
-		// Hover to show settings button
-		const card = canvas.getByRole("link");
-		await user.hover(card);
-
-		// Click settings button (should not navigate to editor)
-		const settingsButton = canvas.getByRole("button", {
-			name: /project settings/i,
-		});
-		await user.click(settingsButton);
-
-		// Verify the settings button is still visible (didn't navigate away)
-		await expect(settingsButton).toBeInTheDocument();
+		await hoverCardAndClickSettings({ canvas, user, step });
+		await settingsButtonStillInDocument({ canvas, step });
 	},
 };

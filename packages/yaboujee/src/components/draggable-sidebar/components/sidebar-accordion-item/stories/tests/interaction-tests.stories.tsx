@@ -1,9 +1,18 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Accordion } from "@pubint/yabasic/components/ui/accordion";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { SidebarAccordionItem } from "../../sidebar-accordion-item";
+import {
+	clickDragHandle,
+	clickPopOutButton,
+	clickTestSectionTrigger,
+	dragHandleIsButtonAndVisible,
+	expandedCountShows,
+	expandedStateShows,
+	popOutButtonAccessibleName,
+} from "../helpers/steps";
 import {
 	defaultSidebarAccordionItemArgs,
 	mockDragHandleProps,
@@ -60,12 +69,11 @@ export const PopButtonClick: Story = {
 			</Accordion>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const popButton = canvas.getByLabelText("Pop out to window");
-
-		await userEvent.click(popButton);
-		await expect(popButton).toHaveAccessibleName("Pop out to window");
+		const user = userEvent.setup();
+		await clickPopOutButton({ canvas, user, step });
+		await popOutButtonAccessibleName({ canvas, step });
 	},
 };
 
@@ -100,16 +108,12 @@ export const AccordionTrigger: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const expandedCount = canvas.getByTestId("expanded-count");
-
-		await expect(expandedCount).toHaveTextContent("0");
-
-		const trigger = canvas.getByRole("button", { name: /test section/i });
-		await userEvent.click(trigger);
-
-		await expect(expandedCount).toHaveTextContent("1");
+		const user = userEvent.setup();
+		await expandedCountShows({ canvas, expected: "0", step });
+		await clickTestSectionTrigger({ canvas, user, step });
+		await expandedCountShows({ canvas, expected: "1", step });
 	},
 };
 
@@ -141,12 +145,9 @@ export const DragHandlePresence: Story = {
 			</Accordion>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const dragHandle = canvas.getByLabelText("Drag to reorder");
-
-		await expect(dragHandle).toBeVisible();
-		await expect(dragHandle).toHaveAttribute("role", "button");
+		await dragHandleIsButtonAndVisible({ canvas, step });
 	},
 };
 
@@ -183,15 +184,11 @@ export const DragHandleStopPropagation: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const expandedState = canvas.getByTestId("expanded-state");
-
-		await expect(expandedState).toHaveTextContent("collapsed");
-
-		const dragHandle = canvas.getByLabelText("Drag to reorder");
-		await userEvent.click(dragHandle);
-
-		await expect(expandedState).toHaveTextContent("collapsed");
+		const user = userEvent.setup();
+		await expandedStateShows({ canvas, expected: "collapsed", step });
+		await clickDragHandle({ canvas, user, step });
+		await expandedStateShows({ canvas, expected: "collapsed", step });
 	},
 };

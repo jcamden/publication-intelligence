@@ -1,7 +1,17 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { SignupForm } from "../../signup-form";
+import {
+	alertRolesExist,
+	clickCreateAccount,
+	createAccountButtonIsNotDisabled,
+	createAccountButtonIsVisible,
+	emailAndPasswordAriaInvalid,
+	pressTabToBlur,
+	typeInvalidSignupFields,
+	typeSignupCredentials,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -21,52 +31,38 @@ export default {
 } satisfies Meta<typeof SignupForm>;
 
 export const FormSubmitsWithValidData: StoryObj<typeof SignupForm> = {
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
 
-		const nameInput = canvas.getByLabelText(/name/i);
-		const emailInput = canvas.getByLabelText(/email/i);
-		const passwordInput = canvas.getByLabelText(/password/i);
-		const submitButton = canvas.getByRole("button", {
-			name: /create account/i,
+		await typeSignupCredentials({
+			canvas,
+			user,
+			name: "Test User",
+			email: "test@example.com",
+			password: "password123",
+			step,
 		});
 
-		await user.type(nameInput, "Test User");
-		await user.type(emailInput, "test@example.com");
-		await user.type(passwordInput, "password123");
+		await createAccountButtonIsNotDisabled({ canvas, step });
 
-		// Verify button is enabled before submit
-		await expect(submitButton).not.toBeDisabled();
+		await clickCreateAccount({ canvas, user, step });
 
-		await user.click(submitButton);
-
-		// Form submission completes (button returns to enabled state)
-		await expect(submitButton).toBeVisible();
+		await createAccountButtonIsVisible({ canvas, step });
 	},
 };
 
 export const FormShowsValidationErrors: StoryObj<typeof SignupForm> = {
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
 
-		const emailInput = canvas.getByLabelText(/email/i);
-		const passwordInput = canvas.getByLabelText(/password/i);
+		await typeInvalidSignupFields({ canvas, user, step });
 
-		// Enter invalid data
-		await user.type(emailInput, "invalid-email");
-		await user.type(passwordInput, "short");
+		await pressTabToBlur({ user, step });
 
-		// Trigger validation by blurring
-		await user.tab();
+		await emailAndPasswordAriaInvalid({ canvas, step });
 
-		// Verify form fields show invalid state
-		await expect(emailInput).toHaveAttribute("aria-invalid", "true");
-		await expect(passwordInput).toHaveAttribute("aria-invalid", "true");
-
-		// Verify error messages are present (without checking exact text)
-		const errors = canvas.getAllByRole("alert");
-		await expect(errors.length).toBeGreaterThan(0);
+		await alertRolesExist({ canvas, step });
 	},
 };

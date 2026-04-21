@@ -1,8 +1,18 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { PdfViewerToolbar } from "../../pdf-viewer-toolbar";
+import {
+	boundaryControlsAreDisabled,
+	clickNextThenPreviousPage,
+	typeInvalidPageBlurResets,
+	typeInvalidZoomBlurResets,
+	typePageBlurToCommit,
+	typePageEnterToCommit,
+	typeZoomEnterToCommit,
+	zoomInThenOut,
+} from "../helpers/steps";
 import { defaultArgs } from "../shared";
 
 const meta: Meta<typeof PdfViewerToolbar> = {
@@ -17,9 +27,7 @@ const meta: Meta<typeof PdfViewerToolbar> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/**
- * Test page navigation buttons
- */
+/** Page field starts at 5; next/prev change committed page. */
 export const PageNavigation: Story = {
 	args: defaultArgs,
 	render: () => {
@@ -36,30 +44,14 @@ export const PageNavigation: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		// Get the wrapper elements that are actually clickable (parent of the inner Button with pointer-events-none)
-		const prevButtonInner = canvas.getByLabelText("Previous page");
-		const nextButtonInner = canvas.getByLabelText("Next page");
-		const prevButton = prevButtonInner.parentElement;
-		const nextButton = nextButtonInner.parentElement;
-		if (!prevButton || !nextButton) throw new Error("Button parents not found");
-		const pageInput = canvas.getByLabelText("Current page");
-
-		// Test next button
-		await userEvent.click(nextButton);
-		await expect(pageInput).toHaveValue(6);
-
-		// Test prev button
-		await userEvent.click(prevButton);
-		await expect(pageInput).toHaveValue(5);
+		const user = userEvent.setup();
+		await clickNextThenPreviousPage({ canvas, user, step });
 	},
 };
 
-/**
- * Test direct page input with blur
- */
+/** Direct page input commits on blur. */
 export const DirectPageInput: Story = {
 	args: defaultArgs,
 	render: () => {
@@ -76,29 +68,14 @@ export const DirectPageInput: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const pageInput = canvas.getByLabelText("Current page");
-
-		// Clear and type new value
-		await userEvent.clear(pageInput);
-		await userEvent.type(pageInput, "8");
-
-		// Value should be in input but not committed yet
-		await expect(pageInput).toHaveValue(8);
-
-		// Blur to commit
-		await userEvent.tab();
-
-		// Value should persist after blur
-		await expect(pageInput).toHaveValue(8);
+		const user = userEvent.setup();
+		await typePageBlurToCommit({ canvas, user, value: "8", step });
 	},
 };
 
-/**
- * Test page input with Enter key
- */
+/** Page field commits on Enter. */
 export const PageInputWithEnter: Story = {
 	args: defaultArgs,
 	render: () => {
@@ -115,23 +92,20 @@ export const PageInputWithEnter: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const pageInput = canvas.getByLabelText("Current page");
-
-		// Clear and type new value
-		await userEvent.clear(pageInput);
-		await userEvent.type(pageInput, "3{Enter}");
-
-		// Value should be committed
-		await expect(pageInput).toHaveValue(3);
+		const user = userEvent.setup();
+		await typePageEnterToCommit({
+			canvas,
+			user,
+			valueWithEnter: "3{Enter}",
+			expectedValue: 3,
+			step,
+		});
 	},
 };
 
-/**
- * Test invalid page input resets
- */
+/** Out-of-range page input resets after blur. */
 export const InvalidPageInput: Story = {
 	args: defaultArgs,
 	render: () => {
@@ -148,26 +122,20 @@ export const InvalidPageInput: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const pageInput = canvas.getByLabelText("Current page");
-
-		// Try to enter invalid value (out of range)
-		await userEvent.clear(pageInput);
-		await userEvent.type(pageInput, "99");
-
-		// Blur to trigger validation
-		await userEvent.tab();
-
-		// Should reset to current page (5)
-		await expect(pageInput).toHaveValue(5);
+		const user = userEvent.setup();
+		await typeInvalidPageBlurResets({
+			canvas,
+			user,
+			invalidValue: "99",
+			expectedAfterBlur: 5,
+			step,
+		});
 	},
 };
 
-/**
- * Test zoom controls
- */
+/** Zoom +/- updates percentage display. */
 export const ZoomControls: Story = {
 	args: defaultArgs,
 	render: () => {
@@ -184,31 +152,14 @@ export const ZoomControls: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		// Get the wrapper elements that are actually clickable (parent of the inner Button with pointer-events-none)
-		const zoomInButtonInner = canvas.getByLabelText("Zoom in");
-		const zoomOutButtonInner = canvas.getByLabelText("Zoom out");
-		const zoomInButton = zoomInButtonInner.parentElement;
-		const zoomOutButton = zoomOutButtonInner.parentElement;
-		if (!zoomInButton || !zoomOutButton)
-			throw new Error("Button parents not found");
-		const zoomInput = canvas.getByLabelText("Zoom percentage");
-
-		// Test zoom in
-		await userEvent.click(zoomInButton);
-		await expect(zoomInput).toHaveValue(150);
-
-		// Test zoom out
-		await userEvent.click(zoomOutButton);
-		await expect(zoomInput).toHaveValue(125);
+		const user = userEvent.setup();
+		await zoomInThenOut({ canvas, user, step });
 	},
 };
 
-/**
- * Test direct zoom input
- */
+/** Zoom field commits on Enter. */
 export const DirectZoomInput: Story = {
 	args: defaultArgs,
 	render: () => {
@@ -225,23 +176,20 @@ export const DirectZoomInput: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const zoomInput = canvas.getByLabelText("Zoom percentage");
-
-		// Clear and type new zoom value
-		await userEvent.clear(zoomInput);
-		await userEvent.type(zoomInput, "200{Enter}");
-
-		// Value should be committed
-		await expect(zoomInput).toHaveValue(200);
+		const user = userEvent.setup();
+		await typeZoomEnterToCommit({
+			canvas,
+			user,
+			valueWithEnter: "200{Enter}",
+			expectedValue: 200,
+			step,
+		});
 	},
 };
 
-/**
- * Test invalid zoom input resets
- */
+/** Out-of-range zoom resets after blur. */
 export const InvalidZoomInput: Story = {
 	args: defaultArgs,
 	render: () => {
@@ -258,26 +206,20 @@ export const InvalidZoomInput: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const zoomInput = canvas.getByLabelText("Zoom percentage");
-
-		// Try to enter invalid value (out of range)
-		await userEvent.clear(zoomInput);
-		await userEvent.type(zoomInput, "500");
-
-		// Blur to trigger validation
-		await userEvent.tab();
-
-		// Should reset to current zoom (125%)
-		await expect(zoomInput).toHaveValue(125);
+		const user = userEvent.setup();
+		await typeInvalidZoomBlurResets({
+			canvas,
+			user,
+			invalidValue: "500",
+			expectedAfterBlur: 125,
+			step,
+		});
 	},
 };
 
-/**
- * Test boundary conditions
- */
+/** First page and minimum zoom disable back controls. */
 export const BoundaryConditions: Story = {
 	args: {
 		...defaultArgs,
@@ -298,14 +240,8 @@ export const BoundaryConditions: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const prevButton = canvas.getByLabelText("Previous page");
-		const zoomOutButton = canvas.getByLabelText("Zoom out");
-
-		// Test that buttons are disabled at boundaries
-		await expect(prevButton).toBeDisabled();
-		await expect(zoomOutButton).toBeDisabled();
+		await boundaryControlsAreDisabled({ canvas, step });
 	},
 };

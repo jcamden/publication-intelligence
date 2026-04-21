@@ -35,4 +35,4 @@ src/components/card/
 
 ## Rules in repo
 
-Cursor: `.cursor/rules/ui-component-testing.mdc`. Shared steps: `apps/index-pdf-frontend/src/test-helpers/interaction-steps.ts`.
+Cursor: `.cursor/rules/ui-component-testing.mdc`. Colocate Storybook selectors/steps under each component’s `stories/helpers/` (or `src/app/_stories/helpers/` when shared across the app).

@@ -1,7 +1,11 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import { ErrorState } from "../../error-state";
+import {
+	clickRetryButton,
+	onRetryCallbackIsCalledOnce,
+} from "../helpers/steps";
 
 const meta = {
 	...defaultInteractionTestMeta,
@@ -21,18 +25,13 @@ export const ClickRetryButton: Story = {
 	},
 	play: async ({ canvasElement, args, step }) => {
 		const canvas = within(canvasElement);
+		const user = userEvent.setup();
 		const onRetry = args.onRetry as ReturnType<typeof fn>;
 
 		// Reset mock to ensure clean state for test run
 		onRetry.mockClear();
 
-		await step("Click retry button", async () => {
-			const retryButton = canvas.getByRole("button", { name: /try again/i });
-			await userEvent.click(retryButton);
-		});
-
-		await step("Verify onRetry was called", async () => {
-			await expect(onRetry).toHaveBeenCalledTimes(1);
-		});
+		await clickRetryButton({ canvas, user, step });
+		await onRetryCallbackIsCalledOnce({ onRetry, step });
 	},
 };

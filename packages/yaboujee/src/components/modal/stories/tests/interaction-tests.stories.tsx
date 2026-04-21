@@ -1,9 +1,19 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { Modal } from "../../modal";
+import {
+	closeCallbackIsCalledOnce,
+	modalChildContentIsVisible,
+	modalContentIsVisible,
+	modalFooterIsVisible,
+	modalTitleIsVisible,
+	noCloseButtonIsVisible,
+	openModalByClickingOpenButton,
+	triggerModalOpenAndClose,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -29,16 +39,15 @@ export const TriggerOpensModal: StoryObj<typeof Modal> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const openButton = canvas.getByTestId("open-button");
-
-		await expect(openButton).toBeVisible();
-		await userEvent.click(openButton);
-
-		const bodyCanvas = within(document.body);
-		const modalContent = await bodyCanvas.findByTestId("modal-content");
-		await expect(modalContent).toBeVisible();
+		await openModalByClickingOpenButton({
+			canvas,
+			user,
+			step,
+		});
+		await modalContentIsVisible({ step });
 	},
 };
 
@@ -58,20 +67,14 @@ export const CloseButtonClosesModal: StoryObj<typeof Modal> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const triggerButton = canvas.getByTestId("trigger-button");
-		const stateDisplay = canvas.getByTestId("modal-state");
-
-		await expect(stateDisplay).toHaveTextContent("closed");
-
-		await userEvent.click(triggerButton);
-		await expect(stateDisplay).toHaveTextContent("open");
-
-		const bodyCanvas = within(document.body);
-		const closeButton = await bodyCanvas.findByRole("button", { name: /✕/i });
-		await userEvent.click(closeButton);
-		await expect(stateDisplay).toHaveTextContent("closed");
+		await triggerModalOpenAndClose({
+			canvas,
+			user,
+			step,
+		});
 	},
 };
 
@@ -85,16 +88,11 @@ export const DisplaysTitle: StoryObj<typeof Modal> = {
 			</Modal>
 		);
 	},
-	play: async () => {
-		const canvas = within(document.body);
-		const title = await canvas.findByText("Test Title");
-
-		await waitFor(
-			async () => {
-				await expect(title).toBeVisible();
-			},
-			{ timeout: 500 },
-		);
+	play: async ({ step }) => {
+		await modalTitleIsVisible({
+			title: "Test Title",
+			step,
+		});
 	},
 };
 
@@ -108,17 +106,8 @@ export const DisplaysChildren: StoryObj<typeof Modal> = {
 			</Modal>
 		);
 	},
-	play: async () => {
-		const canvas = within(document.body);
-		const content = await canvas.findByTestId("child-content");
-
-		await waitFor(
-			async () => {
-				await expect(content).toBeVisible();
-			},
-			{ timeout: 500 },
-		);
-		await expect(content).toHaveTextContent("This is the modal content");
+	play: async ({ step }) => {
+		await modalChildContentIsVisible({ step });
 	},
 };
 
@@ -141,17 +130,8 @@ export const DisplaysFooter: StoryObj<typeof Modal> = {
 			</Modal>
 		);
 	},
-	play: async () => {
-		const canvas = within(document.body);
-		const footerButton = await canvas.findByTestId("footer-button");
-
-		await waitFor(
-			async () => {
-				await expect(footerButton).toBeVisible();
-			},
-			{ timeout: 500 },
-		);
-		await expect(footerButton).toHaveTextContent("Action");
+	play: async ({ step }) => {
+		await modalFooterIsVisible({ step });
 	},
 };
 
@@ -170,11 +150,8 @@ export const HidesCloseButton: StoryObj<typeof Modal> = {
 			</Modal>
 		);
 	},
-	play: async () => {
-		const canvas = within(document.body);
-		const closeButtons = canvas.queryAllByRole("button", { name: /✕/i });
-
-		await expect(closeButtons.length).toBe(0);
+	play: async ({ step }) => {
+		await noCloseButtonIsVisible({ step });
 	},
 };
 
@@ -202,19 +179,13 @@ export const CallsOnCloseCallback: StoryObj<typeof Modal> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const openBtn = canvas.getByTestId("open-btn");
-		const closeCount = canvas.getByTestId("close-count");
-
-		await expect(closeCount).toHaveTextContent("0");
-
-		await userEvent.click(openBtn);
-
-		const bodyCanvas = within(document.body);
-		const closeButton = await bodyCanvas.findByRole("button", { name: /✕/i });
-		await userEvent.click(closeButton);
-
-		await expect(closeCount).toHaveTextContent("1");
+		await closeCallbackIsCalledOnce({
+			canvas,
+			user,
+			step,
+		});
 	},
 };

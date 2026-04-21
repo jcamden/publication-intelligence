@@ -2,6 +2,7 @@ import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { UserDropdown } from "../../user-dropdown";
+import { clickUserDropdownTrigger } from "../helpers/steps";
 import { defaultHandlers, defaultUser } from "../shared";
 
 export default {
@@ -23,10 +24,10 @@ export const DefaultLight: StoryObj<typeof UserDropdown> = {
 			<UserDropdown {...defaultUser} {...defaultHandlers} />
 		</div>
 	),
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const trigger = canvas.getByRole("button");
-		await userEvent.click(trigger);
+		await clickUserDropdownTrigger({ canvas, user, step });
 	},
 };
 
@@ -41,9 +42,9 @@ export const DefaultDark: StoryObj<typeof UserDropdown> = {
 			<UserDropdown {...defaultUser} {...defaultHandlers} />
 		</div>
 	),
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const trigger = canvas.getByRole("button");
-		await userEvent.click(trigger);
+		await clickUserDropdownTrigger({ canvas, user, step });
 	},
 };

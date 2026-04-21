@@ -1,8 +1,16 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { Window } from "../../window";
+import {
+	clickMaximizeButton,
+	clickWindowTitleHeading,
+	focusStateShows,
+	maximizedStateShows,
+	scrollTestHeadingIsVisible,
+	unpopAndCloseButtonsAreVisible,
+} from "../helpers/steps";
 
 const meta: Meta<typeof Window> = {
 	...defaultInteractionTestMeta,
@@ -49,16 +57,17 @@ export const FocusBehavior: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const focusState = canvas.getByTestId("focus-state");
-
-		await expect(focusState).toHaveTextContent("not-focused");
-
-		const window = canvas.getByRole("heading", { name: /focus test window/i });
-		await userEvent.click(window);
-
-		await expect(focusState).toHaveTextContent("focused");
+		const user = userEvent.setup();
+		await focusStateShows({ canvas, expected: "not-focused", step });
+		await clickWindowTitleHeading({
+			canvas,
+			user,
+			name: /focus test window/i,
+			step,
+		});
+		await focusStateShows({ canvas, expected: "focused", step });
 	},
 };
 
@@ -95,16 +104,12 @@ export const MaximizeButton: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const maximizedState = canvas.getByTestId("maximized-state");
-
-		await expect(maximizedState).toHaveTextContent("normal");
-
-		const maximizeButton = canvas.getByLabelText("Maximize");
-		await userEvent.click(maximizeButton);
-
-		await expect(maximizedState).toHaveTextContent("maximized");
+		const user = userEvent.setup();
+		await maximizedStateShows({ canvas, expected: "normal", step });
+		await clickMaximizeButton({ canvas, user, step });
+		await maximizedStateShows({ canvas, expected: "maximized", step });
 	},
 };
 
@@ -159,16 +164,9 @@ export const CloseAndUnpopButtons: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		const withUnpop = canvas.getByTestId("with-unpop");
-		const unpopButton = within(withUnpop).getByLabelText("Return to sidebar");
-		await expect(unpopButton).toBeVisible();
-
-		const withClose = canvas.getByTestId("with-close");
-		const closeButton = within(withClose).getByLabelText("Close");
-		await expect(closeButton).toBeVisible();
+		await unpopAndCloseButtonsAreVisible({ canvas, step });
 	},
 };
 
@@ -203,10 +201,8 @@ export const ScrollableContentDetection: Story = {
 			</Window>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const window = canvas.getByRole("heading", { name: /scroll test/i });
-
-		await expect(window).toBeVisible();
+		await scrollTestHeadingIsVisible({ canvas, step });
 	},
 };

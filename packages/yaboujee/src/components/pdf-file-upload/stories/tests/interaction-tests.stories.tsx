@@ -1,8 +1,16 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { PdfFileUpload } from "../../pdf-file-upload";
+import {
+	callbackStatusShows,
+	clearButtonIsDisabled,
+	clickClearUploadButton,
+	errorMessageIsVisible,
+	uploadContainerDoesNotShowFileName,
+	uploadContainerShowsFileName,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -34,11 +42,9 @@ export const FileUploadTriggersCallback: StoryObj<typeof PdfFileUpload> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const status = canvas.getByTestId("callback-status");
-
-		await expect(status).toHaveTextContent("not-fired");
+		await callbackStatusShows({ canvas, expected: "not-fired", step });
 	},
 };
 
@@ -61,18 +67,16 @@ export const ClearButtonRemovesFile: StoryObj<typeof PdfFileUpload> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const container = canvas.getByTestId("upload-container");
-
-		await expect(container).toHaveTextContent("test.pdf");
-
-		// Get the clear button (X button) - it's the second button (first is the file input wrapper)
-		const buttons = canvas.getAllByRole("button");
-		const clearButton = buttons[buttons.length - 1]; // The clear button is the last button
-		await userEvent.click(clearButton);
-
-		await expect(container).not.toHaveTextContent("test.pdf");
+		const user = userEvent.setup();
+		await uploadContainerShowsFileName({ canvas, fileName: "test.pdf", step });
+		await clickClearUploadButton({ canvas, user, step });
+		await uploadContainerDoesNotShowFileName({
+			canvas,
+			fileName: "test.pdf",
+			step,
+		});
 	},
 };
 
@@ -96,12 +100,9 @@ export const DisabledStatePreventsClear: StoryObj<typeof PdfFileUpload> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-		const clearButton = buttons[buttons.length - 1]; // The clear button is the last button
-
-		await expect(clearButton).toBeDisabled();
+		await clearButtonIsDisabled({ canvas, step });
 	},
 };
 
@@ -120,10 +121,12 @@ export const DisplaysErrorMessage: StoryObj<typeof PdfFileUpload> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const errorMessage = canvas.getByText("Only PDF files are allowed");
-
-		await expect(errorMessage).toBeVisible();
+		await errorMessageIsVisible({
+			canvas,
+			text: "Only PDF files are allowed",
+			step,
+		});
 	},
 };

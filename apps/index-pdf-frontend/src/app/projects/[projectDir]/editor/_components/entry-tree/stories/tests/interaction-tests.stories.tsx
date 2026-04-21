@@ -1,9 +1,10 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { within } from "@storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import { mockMentions } from "../../../../_mocks/mentions";
 import { EntryTree } from "../../entry-tree";
+import { emptyStateShowsMessage, expandCollapseNodes } from "../helpers/steps";
 
 const meta: Meta<typeof EntryTree> = {
 	...defaultInteractionTestMeta,
@@ -24,9 +25,6 @@ const meta: Meta<typeof EntryTree> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/**
- * Test: Expand and collapse nodes
- */
 export const ExpandCollapseNodes: Story = {
 	args: {
 		entries: mockSubjectEntries,
@@ -34,36 +32,10 @@ export const ExpandCollapseNodes: Story = {
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		await step("Find parent entry", async () => {
-			const philosophyEntry = canvas.getByText("Philosophy");
-			expect(philosophyEntry).toBeInTheDocument();
-		});
-
-		await step("Find expand button and collapse", async () => {
-			const expandButtons = canvas.getAllByRole("button");
-			// Find the chevron button (not the entry button itself)
-			const chevronButton = expandButtons.find((btn) =>
-				btn.querySelector("svg.lucide-chevron-down"),
-			);
-			if (chevronButton) {
-				await userEvent.click(chevronButton);
-			}
-		});
-
-		await step("Verify children hidden", async () => {
-			// Wait a bit for collapse animation
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			// Kant should not be visible when Philosophy is collapsed
-			// Note: Entry might still be in DOM but hidden - test would need CSS checks
-		});
+		await expandCollapseNodes({ canvas, step });
 	},
 };
 
-/**
- * Test: Empty state shows message (Create Entry moved to parent toolbar)
- */
 export const EmptyStateShowsMessage: Story = {
 	args: {
 		entries: [],
@@ -71,10 +43,6 @@ export const EmptyStateShowsMessage: Story = {
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		await step("Verify empty message", async () => {
-			const message = canvas.getByText("No entries yet");
-			expect(message).toBeInTheDocument();
-		});
+		await emptyStateShowsMessage({ canvas, step });
 	},
 };

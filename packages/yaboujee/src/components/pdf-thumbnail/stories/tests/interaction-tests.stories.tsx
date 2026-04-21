@@ -1,8 +1,9 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import { within } from "@storybook/test";
 import { createMockPdfFile } from "../../../pdf/test-helpers/mock-factories";
 import { PdfThumbnail } from "../../pdf-thumbnail";
+import { thumbnailContainerIsInDocument } from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -23,11 +24,13 @@ export const RendersWithFile: StoryObj<typeof PdfThumbnail> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const container = canvas.getByTestId("thumbnail-container");
-
-		await expect(container).toBeInTheDocument();
+		await thumbnailContainerIsInDocument({
+			canvas,
+			testId: "thumbnail-container",
+			step,
+		});
 	},
 };
 
@@ -42,10 +45,12 @@ export const RendersWithBlobUrl: StoryObj<typeof PdfThumbnail> = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const container = canvas.getByTestId("blob-thumbnail");
-
-		await expect(container).toBeInTheDocument();
+		await thumbnailContainerIsInDocument({
+			canvas,
+			testId: "blob-thumbnail",
+			step,
+		});
 	},
 };

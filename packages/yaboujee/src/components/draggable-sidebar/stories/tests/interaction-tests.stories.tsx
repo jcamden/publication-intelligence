@@ -1,10 +1,17 @@
 import type { DropResult } from "@hello-pangea/dnd";
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { FileText, Tag, User } from "lucide-react";
 import { useState } from "react";
 import { DraggableSidebar } from "../../draggable-sidebar";
+import {
+	clickAccordionTriggersForLabels,
+	clickFirstPopOutButton,
+	clickPagesAccordionTrigger,
+	expandedCountShows,
+	popOutButtonsExist,
+} from "../helpers/steps";
 
 const PagesContent = () => <div style={{ padding: "12px" }}>Pages content</div>;
 const TagsContent = () => <div style={{ padding: "12px" }}>Tags content</div>;
@@ -65,16 +72,12 @@ export const AccordionExpandCollapse: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const expandedCount = canvas.getByTestId("expanded-count");
-
-		await expect(expandedCount).toHaveTextContent("0");
-
-		const pagesButton = canvas.getByRole("button", { name: /pages/i });
-		await userEvent.click(pagesButton);
-
-		await expect(expandedCount).toHaveTextContent("1");
+		const user = userEvent.setup();
+		await expandedCountShows({ canvas, expected: "0", step });
+		await clickPagesAccordionTrigger({ canvas, user, step });
+		await expandedCountShows({ canvas, expected: "1", step });
 	},
 };
 
@@ -101,13 +104,11 @@ export const PopButtonActions: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const popButtons = canvas.getAllByLabelText("Pop out to window");
-
-		await expect(popButtons.length).toBeGreaterThan(0);
-
-		await userEvent.click(popButtons[0]);
+		const user = userEvent.setup();
+		await popOutButtonsExist({ canvas, step });
+		await clickFirstPopOutButton({ canvas, user, step });
 	},
 };
 
@@ -137,32 +138,15 @@ export const MultipleSectionToggle: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const expandedCount = canvas.getByTestId("expanded-count");
-
-		await expect(expandedCount).toHaveTextContent("0");
-
-		// Click accordion triggers by finding the text and clicking its parent button
-		const pagesText = canvas.getByText("Pages");
-		const pagesButton = pagesText.closest("button");
-		if (!pagesButton) throw new Error("Pages button not found");
-		await userEvent.click(pagesButton);
-
-		await waitFor(() => expect(expandedCount).toHaveTextContent("1"));
-
-		const tagsText = canvas.getByText("Tags");
-		const tagsButton = tagsText.closest("button");
-		if (!tagsButton) throw new Error("Tags button not found");
-		await userEvent.click(tagsButton);
-
-		await waitFor(() => expect(expandedCount).toHaveTextContent("2"));
-
-		const authorText = canvas.getByText("Author");
-		const authorButton = authorText.closest("button");
-		if (!authorButton) throw new Error("Author button not found");
-		await userEvent.click(authorButton);
-
-		await waitFor(() => expect(expandedCount).toHaveTextContent("3"));
+		const user = userEvent.setup();
+		await expandedCountShows({ canvas, expected: "0", step });
+		await clickAccordionTriggersForLabels({
+			canvas,
+			user,
+			labels: ["Pages", "Tags", "Author"],
+			step,
+		});
 	},
 };

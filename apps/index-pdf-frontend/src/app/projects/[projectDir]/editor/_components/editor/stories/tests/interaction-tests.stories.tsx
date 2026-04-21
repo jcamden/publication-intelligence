@@ -2,45 +2,29 @@ import {
 	defaultGlobals,
 	defaultInteractionTestMeta,
 } from "@pubint/storybook-config";
+import { waitMs } from "@pubint/yaboujee/_stories";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
-import { awaitHighlights } from "@/app/_common/_test-helpers/interaction-steps";
+import { expect, userEvent, within } from "@storybook/test";
 import {
 	TestDecorator,
 	TrpcDecorator,
 } from "@/app/_common/_test-utils/storybook-utils";
 import { Editor } from "../../editor";
+import {
+	awaitHighlights,
+	clickCancelInAlertDialog,
+	clickDeleteInAlertDialog,
+	clickDeleteInOpenMentionPopover,
+	clickEditInOpenMentionPopover,
+	clickHighlightAndWaitForPopover,
+	focusOpenPopoverDialog,
+	pressEscape,
+	waitForAlertDialog,
+	waitForAlertDialogAbsent,
+	waitForAlertDialogWithDeleteHighlightCopy,
+	waitForPdfAnnotationPopoverDetached,
+} from "../helpers/steps";
 import { SAMPLE_PDF_URL } from "../shared";
-
-// Shared helper: Click a highlight and wait for details popover
-const clickHighlightAndWaitForPopover = async ({
-	canvas,
-	highlightId,
-	step,
-}: {
-	canvas: ReturnType<typeof within>;
-	highlightId: string;
-	// biome-ignore lint/suspicious/noExplicitAny: Step function type is complex, usage is type-safe
-	step: any;
-}) => {
-	await step("Click highlight", async () => {
-		const highlight = canvas.getByTestId(highlightId);
-		await userEvent.click(highlight);
-	});
-
-	await step("Wait for details popover", async () => {
-		await waitFor(
-			async () => {
-				// Wait for the popover dialog to appear (MentionDetailsPopover has role="dialog")
-				const popover = within(document.body).getByRole("dialog", {
-					hidden: true,
-				});
-				await expect(popover).toBeInTheDocument();
-			},
-			{ timeout: 2000 },
-		);
-	});
-};
 
 const meta: Meta<typeof Editor> = {
 	...defaultInteractionTestMeta,
@@ -73,12 +57,13 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * PDF loading, highlight rendering, and zoom setup (50%) are handled by decorator/beforeEach.
+ * Asserts mention details for the top-center highlight in view mode.
  */
 export const ClickHighlightShowsDetails: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await awaitHighlights({ canvas });
+		await awaitHighlights({ canvas, step });
 
 		await clickHighlightAndWaitForPopover({
 			canvas,
@@ -86,10 +71,13 @@ export const ClickHighlightShowsDetails: Story = {
 			step,
 		});
 
-		await step("Verify popover shows mention information", async () => {
+		await step("Matching mention label text is in the document", async () => {
 			const body = within(document.body);
 			await expect(body.getByText(/Should be top center/i)).toBeInTheDocument();
-			// In View mode, the popover has Edit and Close buttons
+		});
+
+		await step("Edit and Close buttons are in the document", async () => {
+			const body = within(document.body);
 			await expect(
 				body.getByRole("button", { name: /^edit$/i }),
 			).toBeInTheDocument();
@@ -100,11 +88,12 @@ export const ClickHighlightShowsDetails: Story = {
 	},
 };
 
+/** Opens edit mode from the mention details popover. */
 export const EditButtonOpensHandler: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await awaitHighlights({ canvas });
+		await awaitHighlights({ canvas, step });
 
 		await clickHighlightAndWaitForPopover({
 			canvas,
@@ -112,25 +101,23 @@ export const EditButtonOpensHandler: Story = {
 			step,
 		});
 
-		await step("Click Edit button", async () => {
-			const body = within(document.body);
-			const editButton = body.getByRole("button", { name: /^edit$/i });
-			await userEvent.click(editButton);
-		});
+		await clickEditInOpenMentionPopover({ step });
 
-		await step("Verify entered Edit mode", async () => {
-			const body = within(document.body);
-			// In Edit mode, should see Delete, Cancel, and Save buttons
-			await expect(
-				body.getByRole("button", { name: /^delete$/i }),
-			).toBeInTheDocument();
-			await expect(
-				body.getByRole("button", { name: /cancel/i }),
-			).toBeInTheDocument();
-			await expect(
-				body.getByRole("button", { name: /save/i }),
-			).toBeInTheDocument();
-		});
+		await step(
+			"Delete, Cancel, and Save buttons are in the document",
+			async () => {
+				const body = within(document.body);
+				await expect(
+					body.getByRole("button", { name: /^delete$/i }),
+				).toBeInTheDocument();
+				await expect(
+					body.getByRole("button", { name: /cancel/i }),
+				).toBeInTheDocument();
+				await expect(
+					body.getByRole("button", { name: /save/i }),
+				).toBeInTheDocument();
+			},
+		);
 	},
 };
 
@@ -138,7 +125,7 @@ export const DeleteHighlightFlow: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await awaitHighlights({ canvas });
+		await awaitHighlights({ canvas, step });
 
 		await clickHighlightAndWaitForPopover({
 			canvas,
@@ -146,46 +133,11 @@ export const DeleteHighlightFlow: Story = {
 			step,
 		});
 
-		await step("Enter Edit mode", async () => {
-			const body = within(document.body);
-			const editButton = body.getByRole("button", { name: /^edit$/i });
-			await userEvent.click(editButton);
-		});
-
-		await step("Click Delete button", async () => {
-			const body = within(document.body);
-			const deleteButton = body.getByRole("button", { name: /^delete$/i });
-			await userEvent.click(deleteButton);
-		});
-
-		await step("Verify confirmation dialog appears", async () => {
-			await waitFor(
-				async () => {
-					const body = within(document.body);
-					const dialog = body.getByRole("alertdialog");
-					await expect(dialog).toBeInTheDocument();
-					await expect(body.getByText(/delete highlight/i)).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-		});
-
-		await step("Confirm deletion", async () => {
-			const body = within(document.body);
-			const confirmButton = body.getByRole("button", { name: /^delete$/i });
-			await userEvent.click(confirmButton);
-		});
-
-		await step("Verify dialog closes", async () => {
-			await waitFor(
-				async () => {
-					const body = within(document.body);
-					const dialog = body.queryByRole("alertdialog");
-					expect(dialog).not.toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-		});
+		await clickEditInOpenMentionPopover({ step });
+		await clickDeleteInOpenMentionPopover({ step });
+		await waitForAlertDialogWithDeleteHighlightCopy({ step });
+		await clickDeleteInAlertDialog({ step });
+		await waitForAlertDialogAbsent({ step });
 	},
 };
 
@@ -201,7 +153,7 @@ export const CancelDeletion: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await awaitHighlights({ canvas });
+		await awaitHighlights({ canvas, step });
 
 		await clickHighlightAndWaitForPopover({
 			canvas,
@@ -209,45 +161,11 @@ export const CancelDeletion: Story = {
 			step,
 		});
 
-		await step("Enter Edit mode", async () => {
-			const body = within(document.body);
-			const editButton = body.getByRole("button", { name: /^edit$/i });
-			await userEvent.click(editButton);
-		});
-
-		await step("Click Delete button", async () => {
-			const body = within(document.body);
-			const deleteButton = body.getByRole("button", { name: /^delete$/i });
-			await userEvent.click(deleteButton);
-		});
-
-		await step("Verify confirmation dialog appears", async () => {
-			await waitFor(
-				async () => {
-					const body = within(document.body);
-					const dialog = body.getByRole("alertdialog");
-					await expect(dialog).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-		});
-
-		await step("Cancel deletion", async () => {
-			const body = within(document.body);
-			const cancelButton = body.getByRole("button", { name: /cancel/i });
-			await userEvent.click(cancelButton);
-		});
-
-		await step("Verify dialog closes", async () => {
-			await waitFor(
-				async () => {
-					const body = within(document.body);
-					const dialog = body.queryByRole("alertdialog");
-					expect(dialog).not.toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-		});
+		await clickEditInOpenMentionPopover({ step });
+		await clickDeleteInOpenMentionPopover({ step });
+		await waitForAlertDialog({ step });
+		await clickCancelInAlertDialog({ step });
+		await waitForAlertDialogAbsent({ step });
 	},
 };
 
@@ -263,7 +181,7 @@ export const EscapeKeyClosesPopover: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await awaitHighlights({ canvas });
+		await awaitHighlights({ canvas, step });
 
 		await clickHighlightAndWaitForPopover({
 			canvas,
@@ -271,35 +189,10 @@ export const EscapeKeyClosesPopover: Story = {
 			step,
 		});
 
-		await step(
-			"Focus popover container (not Close button — it captures first Escape)",
-			async () => {
-				const body = within(document.body);
-				const popover = body.getByRole("dialog", { hidden: true });
-				(popover as HTMLElement).focus();
-			},
-		);
-
-		await step("Press Escape key", async () => {
-			await userEvent.keyboard("{Escape}");
-		});
-
-		// Allow close handler and Base UI exit animation (~100ms) to complete before asserting
-		await step("Wait for close to settle", async () => {
-			await new Promise((resolve) => setTimeout(resolve, 150));
-		});
-
-		await step("Verify popover closes", async () => {
-			await waitFor(
-				async () => {
-					const popover = document.querySelector(
-						"[data-pdf-annotation-popover]",
-					);
-					expect(popover).toBeNull();
-				},
-				{ timeout: 5000, interval: 100 },
-			);
-		});
+		await focusOpenPopoverDialog({ step });
+		await pressEscape({ step });
+		await waitMs({ ms: 150, step });
+		await waitForPdfAnnotationPopoverDetached({ step });
 	},
 };
 
@@ -315,7 +208,7 @@ export const DeleteKeyShortcut: Story = {
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 
-		await awaitHighlights({ canvas });
+		await awaitHighlights({ canvas, step });
 
 		await clickHighlightAndWaitForPopover({
 			canvas,
@@ -323,26 +216,12 @@ export const DeleteKeyShortcut: Story = {
 			step,
 		});
 
-		await step("Enter Edit mode", async () => {
-			const body = within(document.body);
-			const editButton = body.getByRole("button", { name: /^edit$/i });
-			await userEvent.click(editButton);
-		});
+		await clickEditInOpenMentionPopover({ step });
 
 		await step("Press Delete key", async () => {
 			await userEvent.keyboard("{Delete}");
 		});
 
-		await step("Verify confirmation dialog appears", async () => {
-			await waitFor(
-				async () => {
-					const body = within(document.body);
-					const dialog = body.getByRole("alertdialog");
-					await expect(dialog).toBeInTheDocument();
-					await expect(body.getByText(/delete highlight/i)).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-		});
+		await waitForAlertDialogWithDeleteHighlightCopy({ step });
 	},
 };

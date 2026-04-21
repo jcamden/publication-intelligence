@@ -1,7 +1,8 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { CreateProjectModal } from "../../create-project-modal";
+import { vrtDuplicateTitleAndDirectoryInCreateModal } from "../helpers/steps";
 
 export default {
 	...defaultVrtMeta,
@@ -55,26 +56,10 @@ export const WithValidationErrorsLight: StoryObj<typeof CreateProjectModal> = {
 		...defaultGlobals,
 		theme: "light",
 	},
-	play: async ({ canvasElement: _canvasElement }) => {
+	play: async ({ step }) => {
 		const user = userEvent.setup();
-
-		// Modal renders in portal - query from document.body
 		const body = within(document.body);
-
-		// Wait for modal to appear
-		await waitFor(async () => {
-			const titleInput = body.getByLabelText(/project title/i);
-			await expect(titleInput).toBeInTheDocument();
-		});
-
-		const titleInput = body.getByLabelText(/project title/i);
-		const projectDirInput = body.getByLabelText(/project directory/i);
-
-		// Trigger validation errors
-		await user.type(titleInput, "Existing Project");
-		await user.tab();
-		await user.type(projectDirInput, "existing-project");
-		await user.tab();
+		await vrtDuplicateTitleAndDirectoryInCreateModal({ body, user, step });
 	},
 };
 
@@ -94,25 +79,9 @@ export const WithValidationErrorsDark: StoryObj<typeof CreateProjectModal> = {
 		...defaultGlobals,
 		theme: "dark",
 	},
-	play: async ({ canvasElement: _canvasElement }) => {
+	play: async ({ step }) => {
 		const user = userEvent.setup();
-
-		// Modal renders in portal - query from document.body
 		const body = within(document.body);
-
-		// Wait for modal to appear
-		await waitFor(async () => {
-			const titleInput = body.getByLabelText(/project title/i);
-			await expect(titleInput).toBeInTheDocument();
-		});
-
-		const titleInput = body.getByLabelText(/project title/i);
-		const projectDirInput = body.getByLabelText(/project directory/i);
-
-		// Trigger validation errors
-		await user.type(titleInput, "Existing Project");
-		await user.tab();
-		await user.type(projectDirInput, "existing-project");
-		await user.tab();
+		await vrtDuplicateTitleAndDirectoryInCreateModal({ body, user, step });
 	},
 };

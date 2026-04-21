@@ -1,7 +1,15 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { LoginForm } from "../../login-form";
+import {
+	alertRolesExist,
+	clickSignIn,
+	fieldsHaveAriaInvalid,
+	submitButtonIsNotDisabled,
+	submitButtonIsVisible,
+	typeLoginCredentials,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -21,48 +29,45 @@ export default {
 } satisfies Meta<typeof LoginForm>;
 
 export const FormSubmitsWithValidData: StoryObj<typeof LoginForm> = {
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
 
-		const emailInput = canvas.getByLabelText(/email/i);
-		const passwordInput = canvas.getByLabelText(/password/i);
-		const submitButton = canvas.getByRole("button", { name: /sign in/i });
+		await typeLoginCredentials({
+			canvas,
+			user,
+			email: "test@example.com",
+			password: "password123",
+			step,
+		});
 
-		await user.type(emailInput, "test@example.com");
-		await user.type(passwordInput, "password123");
+		await submitButtonIsNotDisabled({ canvas, step });
 
-		// Verify button is enabled before submit
-		await expect(submitButton).not.toBeDisabled();
+		await clickSignIn({ canvas, user, step });
 
-		await user.click(submitButton);
-
-		// Form submission completes (button returns to enabled state)
-		await expect(submitButton).toBeVisible();
+		await submitButtonIsVisible({ canvas, step });
 	},
 };
 
 export const FormShowsValidationErrors: StoryObj<typeof LoginForm> = {
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
 
-		const emailInput = canvas.getByLabelText(/email/i);
-		const passwordInput = canvas.getByLabelText(/password/i);
+		await typeLoginCredentials({
+			canvas,
+			user,
+			email: "invalid-email",
+			password: "short",
+			step,
+		});
 
-		// Enter invalid data
-		await user.type(emailInput, "invalid-email");
-		await user.type(passwordInput, "short");
+		await step("Press Tab to blur fields", async () => {
+			await user.tab();
+		});
 
-		// Trigger validation by blurring
-		await user.tab();
+		await fieldsHaveAriaInvalid({ canvas, step });
 
-		// Verify form fields show invalid state
-		await expect(emailInput).toHaveAttribute("aria-invalid", "true");
-		await expect(passwordInput).toHaveAttribute("aria-invalid", "true");
-
-		// Verify error messages are present (without checking exact text)
-		const errors = canvas.getAllByRole("alert");
-		await expect(errors.length).toBeGreaterThan(0);
+		await alertRolesExist({ canvas, step });
 	},
 };

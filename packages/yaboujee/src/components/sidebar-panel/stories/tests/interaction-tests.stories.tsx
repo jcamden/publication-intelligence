@@ -1,7 +1,16 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import { SidebarPanel } from "../../sidebar-panel";
+import {
+	clickClosePanelButton,
+	closeButtonIsVisible,
+	closePanelButtonHasAccessibleName,
+	contentIsVisible,
+	noButtonsInDocument,
+	noHeadingsInDocument,
+	panelHasClassName,
+} from "../helpers/steps";
 import { SIDEBAR_PANEL_TEST_IDS } from "../shared";
 
 const meta: Meta<typeof SidebarPanel> = {
@@ -32,12 +41,11 @@ export const CloseButtonClick: Story = {
 			</SidebarPanel>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const closeButton = canvas.getByRole("button", { name: /close panel/i });
-
-		await userEvent.click(closeButton);
-		await expect(closeButton).toHaveAccessibleName("Close panel");
+		const user = userEvent.setup();
+		await clickClosePanelButton({ canvas, user, step });
+		await closePanelButtonHasAccessibleName({ canvas, step });
 	},
 };
 
@@ -52,17 +60,11 @@ export const NoHeaderWhenEmpty: Story = {
 			</SidebarPanel>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const content = canvas.getByTestId(SIDEBAR_PANEL_TEST_IDS.content);
-
-		await expect(content).toBeVisible();
-
-		const headings = canvas.queryAllByRole("heading");
-		await expect(headings.length).toBe(0);
-
-		const buttons = canvas.queryAllByRole("button");
-		await expect(buttons.length).toBe(0);
+		await contentIsVisible({ canvas, step });
+		await noHeadingsInDocument({ canvas, step });
+		await noButtonsInDocument({ canvas, step });
 	},
 };
 
@@ -81,11 +83,13 @@ export const CustomClassNameApplied: Story = {
 			</SidebarPanel>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const panel = canvas.getByTestId(SIDEBAR_PANEL_TEST_IDS.panel);
-
-		await expect(panel).toHaveClass("custom-test-class");
+		await panelHasClassName({
+			canvas,
+			className: "custom-test-class",
+			step,
+		});
 	},
 };
 
@@ -101,13 +105,9 @@ export const OnlyCloseButton: Story = {
 			</SidebarPanel>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const closeButton = canvas.getByRole("button", { name: /close panel/i });
-
-		await expect(closeButton).toBeVisible();
-
-		const headings = canvas.queryAllByRole("heading");
-		await expect(headings.length).toBe(0);
+		await closeButtonIsVisible({ canvas, step });
+		await noHeadingsInDocument({ canvas, step });
 	},
 };

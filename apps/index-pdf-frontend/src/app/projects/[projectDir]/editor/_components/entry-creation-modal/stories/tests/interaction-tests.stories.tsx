@@ -1,8 +1,14 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import { EntryCreationModal } from "../../entry-creation-modal";
+import {
+	allowSameLabelUnderDifferentParent,
+	cancelClosesModal,
+	createEntryWithParent,
+	createTopLevelEntry,
+	validateUniqueLabelUnderSameParent,
+} from "../helpers/steps";
 
 const meta: Meta<typeof EntryCreationModal> = {
 	...defaultInteractionTestMeta,
@@ -17,9 +23,6 @@ const meta: Meta<typeof EntryCreationModal> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/**
- * Test: Create top-level entry
- */
 export const CreateTopLevelEntry: Story = {
 	args: {
 		open: true,
@@ -29,23 +32,10 @@ export const CreateTopLevelEntry: Story = {
 		existingEntries: mockSubjectEntries,
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Fill label field", async () => {
-			const labelInput = body.getByLabelText("Label");
-			await userEvent.type(labelInput, "New Entry");
-		});
-
-		await step("Click create button", async () => {
-			const createButton = body.getByRole("button", { name: "Create" });
-			await userEvent.click(createButton);
-		});
+		await createTopLevelEntry({ step });
 	},
 };
 
-/**
- * Test: Validate unique label under same parent
- */
 export const ValidateUniqueLabelUnderSameParent: Story = {
 	args: {
 		open: true,
@@ -55,46 +45,10 @@ export const ValidateUniqueLabelUnderSameParent: Story = {
 		existingEntries: mockSubjectEntries,
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Wait for modal to be fully rendered", async () => {
-			await waitFor(
-				() => {
-					const modal = body.getByRole("dialog", { hidden: true });
-					expect(modal).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-
-			// Extra time for modal to initialize in headless mode
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
-
-		await step("Enter existing top-level label without parent", async () => {
-			const labelInput = body.getByLabelText("Label");
-			await userEvent.type(labelInput, "Philosophy");
-		});
-
-		await step("Submit form and verify error appears", async () => {
-			const createButton = body.getByRole("button", { name: "Create" });
-			await userEvent.click(createButton);
-
-			await waitFor(
-				async () => {
-					const alert = body.getByRole("alert");
-					await expect(alert).toHaveTextContent(
-						/already exists under this parent/i,
-					);
-				},
-				{ timeout: 5000, interval: 50 },
-			);
-		});
+		await validateUniqueLabelUnderSameParent({ step });
 	},
 };
 
-/**
- * Test: Allow same label under different parent
- */
 export const AllowSameLabelUnderDifferentParent: Story = {
 	args: {
 		open: true,
@@ -102,73 +56,13 @@ export const AllowSameLabelUnderDifferentParent: Story = {
 		projectId: "mock-project-id",
 		projectIndexTypeId: "mock-subject-index-type-id",
 		existingEntries: mockSubjectEntries,
-		prefillLabel: "Kant, Immanuel", // Already exists under Philosophy
+		prefillLabel: "Kant, Immanuel",
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Wait for modal to be fully rendered", async () => {
-			await waitFor(
-				() => {
-					const modal = body.getByRole("dialog", { hidden: true });
-					expect(modal).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
-
-		await step(
-			"Select different parent (Science instead of Philosophy)",
-			async () => {
-				const parentInput = body.getByLabelText(/Parent Entry/);
-				await userEvent.click(parentInput);
-
-				await waitFor(
-					async () => {
-						const options = body.queryAllByRole("option");
-						await expect(options.length).toBeGreaterThan(0);
-					},
-					{ timeout: 2000 },
-				);
-
-				const options = body.getAllByRole("option");
-				const scienceOption = options.find(
-					(opt) => opt.textContent === "Science",
-				);
-				if (!scienceOption) {
-					throw new Error("Science option not found");
-				}
-
-				(scienceOption as HTMLElement).click();
-				await new Promise((resolve) => setTimeout(resolve, 500));
-			},
-		);
-
-		await step(
-			"Submit form should succeed without validation error",
-			async () => {
-				const createButton = body.getByRole("button", { name: "Create" });
-				await userEvent.click(createButton);
-
-				// Wait a moment to see if any error appears
-				await new Promise((resolve) => setTimeout(resolve, 500));
-
-				// Verify no validation error appears
-				const alerts = body.queryAllByRole("alert");
-				const hasValidationError = alerts.some((alert) =>
-					alert.textContent?.includes("already exists"),
-				);
-				expect(hasValidationError).toBe(false);
-			},
-		);
+		await allowSameLabelUnderDifferentParent({ step });
 	},
 };
 
-/**
- * Test: Create entry with parent
- */
 export const CreateEntryWithParent: Story = {
 	args: {
 		open: true,
@@ -178,52 +72,10 @@ export const CreateEntryWithParent: Story = {
 		existingEntries: mockSubjectEntries,
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Fill label field", async () => {
-			const labelInput = body.getByLabelText("Label");
-			await userEvent.type(labelInput, "Epistemology");
-		});
-
-		await step("Select parent entry", async () => {
-			const parentInput = body.getByLabelText(/Parent Entry/);
-			await userEvent.click(parentInput);
-
-			// Wait for options to appear
-			await waitFor(
-				async () => {
-					const options = body.queryAllByRole("option");
-					await expect(options.length).toBeGreaterThan(0);
-				},
-				{ timeout: 2000 },
-			);
-
-			// Select "Philosophy" using native DOM click (userEvent.click doesn't work here)
-			const options = body.getAllByRole("option");
-			const philosophyOption = options.find(
-				(opt) => opt.textContent === "Philosophy",
-			);
-			if (!philosophyOption) {
-				throw new Error("Philosophy option not found");
-			}
-
-			// Force click using native DOM method
-			(philosophyOption as HTMLElement).click();
-
-			// Give it a moment to register the selection
-			await new Promise((resolve) => setTimeout(resolve, 500));
-		});
-
-		await step("Submit form", async () => {
-			const createButton = body.getByRole("button", { name: "Create" });
-			await userEvent.click(createButton);
-		});
+		await createEntryWithParent({ step });
 	},
 };
 
-/**
- * Test: Cancel closes modal without creating
- */
 export const CancelClosesModal: Story = {
 	args: {
 		open: true,
@@ -233,16 +85,6 @@ export const CancelClosesModal: Story = {
 		existingEntries: mockSubjectEntries,
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Fill some data", async () => {
-			const labelInput = body.getByLabelText("Label");
-			await userEvent.type(labelInput, "Test Entry");
-		});
-
-		await step("Click cancel button", async () => {
-			const cancelButton = body.getByRole("button", { name: "Cancel" });
-			await userEvent.click(cancelButton);
-		});
+		await cancelClosesModal({ step });
 	},
 };

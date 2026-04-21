@@ -1,7 +1,13 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, waitFor, within } from "@storybook/test";
+import { fn } from "@storybook/test";
 import { SelectionPopover } from "../../selection-popover";
+import {
+	clickCancel,
+	clickCreateMention,
+	expectButtonsDisabledDuringCreation,
+	expectTruncatedSelectionPreview,
+} from "../helpers/steps";
 import { SelectionPopoverWrapper } from "../shared";
 
 const meta: Meta<typeof SelectionPopover> = {
@@ -18,9 +24,6 @@ const meta: Meta<typeof SelectionPopover> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/**
- * Test create mention button click
- */
 export const CreateMentionClick: Story = {
 	render: () => {
 		const handleCreate = fn();
@@ -33,28 +36,11 @@ export const CreateMentionClick: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement: _canvasElement, step }) => {
-		const body = within(document.body);
-
-		await step("Click create mention button", async () => {
-			const createButton = body.getByRole("button", {
-				name: /create mention/i,
-			});
-			await waitFor(
-				async () => {
-					await expect(createButton).toBeVisible();
-				},
-				{ timeout: 500 },
-			);
-			await expect(createButton).toBeEnabled();
-			await userEvent.click(createButton);
-		});
+	play: async ({ step }) => {
+		await clickCreateMention({ step });
 	},
 };
 
-/**
- * Test cancel button click
- */
 export const CancelClick: Story = {
 	render: () => {
 		const handleCancel = fn();
@@ -67,26 +53,11 @@ export const CancelClick: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement: _canvasElement, step }) => {
-		const body = within(document.body);
-
-		await step("Click cancel button", async () => {
-			const cancelButton = body.getByRole("button", { name: /cancel/i });
-			await waitFor(
-				async () => {
-					await expect(cancelButton).toBeVisible();
-				},
-				{ timeout: 500 },
-			);
-			await expect(cancelButton).toBeEnabled();
-			await userEvent.click(cancelButton);
-		});
+	play: async ({ step }) => {
+		await clickCancel({ step });
 	},
 };
 
-/**
- * Test disabled state during creation
- */
 export const DisabledDuringCreation: Story = {
 	render: () => {
 		return (
@@ -98,22 +69,11 @@ export const DisabledDuringCreation: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement: _canvasElement, step }) => {
-		const body = within(document.body);
-
-		await step("Verify buttons are disabled during creation", async () => {
-			const createButton = body.getByRole("button", { name: /creating/i });
-			const cancelButton = body.getByRole("button", { name: /cancel/i });
-
-			await expect(createButton).toBeDisabled();
-			await expect(cancelButton).toBeDisabled();
-		});
+	play: async ({ step }) => {
+		await expectButtonsDisabledDuringCreation({ step });
 	},
 };
 
-/**
- * Test text truncation display
- */
 export const TextTruncation: Story = {
 	render: () => {
 		const longText =
@@ -127,20 +87,7 @@ export const TextTruncation: Story = {
 			/>
 		);
 	},
-	play: async ({ canvasElement: _canvasElement, step }) => {
-		const body = within(document.body);
-
-		await step("Verify text is truncated with ellipsis", async () => {
-			// Query for the popover's text preview which includes quotes
-			const textPreview = body.getByText(
-				/"This is a very long text selection that should be truncated \.\.\./,
-			);
-			await waitFor(
-				async () => {
-					await expect(textPreview).toBeVisible();
-				},
-				{ timeout: 500 },
-			);
-		});
+	play: async ({ step }) => {
+		await expectTruncatedSelectionPreview({ step });
 	},
 };

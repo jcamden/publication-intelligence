@@ -1,8 +1,16 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
+import { within } from "@storybook/test";
 import { useEffect, useRef, useState } from "react";
 import { PdfAnnotationPopover } from "../../pdf-annotation-popover";
+import {
+	clickCancelButton,
+	popoverIsPositionedLeftOrRightOfAnchor,
+	pressEscapeKey,
+	resultShowsText,
+	waitForPopoverContentTestIdInDocument,
+	waitForPopoverTextVisibleInDocument,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -77,31 +85,12 @@ export const EscapeKeyClosesPopover: Story = {
 	render: () => <InteractiveWrapper />,
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const body = within(document.body);
-
-		await step("Wait for popover to be visible", async () => {
-			await waitFor(
-				async () => {
-					const popover = body.getByText("Popover content");
-					await expect(popover).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
+		await waitForPopoverTextVisibleInDocument({
+			text: "Popover content",
+			step,
 		});
-
-		await step("Press Escape key", async () => {
-			await userEvent.keyboard("{Escape}");
-		});
-
-		await step("Verify popover closed", async () => {
-			await waitFor(
-				async () => {
-					const result = canvas.getByTestId("result");
-					await expect(result).toHaveTextContent("Cancelled");
-				},
-				{ timeout: 2000 },
-			);
-		});
+		await pressEscapeKey({ step });
+		await resultShowsText({ canvas, text: "Cancelled", step });
 	},
 };
 
@@ -112,32 +101,12 @@ export const CancelButtonClosesPopover: Story = {
 	render: () => <InteractiveWrapper />,
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const body = within(document.body);
-
-		await step("Wait for popover to be visible", async () => {
-			await waitFor(
-				async () => {
-					const popover = body.getByText("Popover content");
-					await expect(popover).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
+		await waitForPopoverTextVisibleInDocument({
+			text: "Popover content",
+			step,
 		});
-
-		await step("Click cancel button", async () => {
-			const cancelButton = body.getByRole("button", { name: "Cancel" });
-			await userEvent.click(cancelButton);
-		});
-
-		await step("Verify popover closed", async () => {
-			await waitFor(
-				async () => {
-					const result = canvas.getByTestId("result");
-					await expect(result).toHaveTextContent("Cancelled");
-				},
-				{ timeout: 2000 },
-			);
-		});
+		await clickCancelButton({ step });
+		await resultShowsText({ canvas, text: "Cancelled", step });
 	},
 };
 
@@ -181,38 +150,7 @@ export const PopoverPositionsCorrectly: Story = {
 	},
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const body = within(document.body);
-
-		await step("Wait for popover to be visible", async () => {
-			await waitFor(
-				async () => {
-					const popover = body.getByTestId("popover-content");
-					await expect(popover).toBeInTheDocument();
-				},
-				{ timeout: 2000 },
-			);
-		});
-
-		await step("Verify popover is positioned near anchor", async () => {
-			const anchor = canvas.getByTestId("anchor");
-			const popoverContent = body.getByTestId("popover-content");
-
-			// Get the popover container - Base UI uses data-pdf-annotation-popover
-			const popover = popoverContent.closest("[data-pdf-annotation-popover]");
-
-			if (!popover) {
-				throw new Error("Popover container not found");
-			}
-
-			const anchorRect = anchor.getBoundingClientRect();
-			const popoverRect = popover.getBoundingClientRect();
-
-			// Popover should be positioned to the right of anchor (with 10px gap)
-			// or to the left if there's not enough space
-			const isToTheRight = popoverRect.left >= anchorRect.right;
-			const isToTheLeft = popoverRect.right <= anchorRect.left;
-
-			await expect(isToTheRight || isToTheLeft).toBe(true);
-		});
+		await waitForPopoverContentTestIdInDocument({ step });
+		await popoverIsPositionedLeftOrRightOfAnchor({ canvas, step });
 	},
 };

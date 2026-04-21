@@ -16,7 +16,7 @@ Shared helpers live next to code; this file is a **map**, not a full catalog.
 |------|------|
 | `src/app/projects/[projectDir]/editor/_mocks/` | `mockMentions`, `mockIndexEntries`, `mockIndexTypes` |
 | `src/app/_common/_test-utils/storybook-utils/` | `TestDecorator`, `TrpcDecorator` |
-| `src/app/_common/_test-helpers/interaction-steps.ts` | Reusable Storybook steps (e.g. modals) |
+| `src/app/projects/[projectDir]/editor/_components/editor/stories/helpers/{selectors,steps}.ts` | Colocated Storybook steps for editor interaction tests |
 
 ## Yaboujee (`packages/yaboujee`)
 

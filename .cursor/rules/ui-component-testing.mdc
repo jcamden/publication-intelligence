@@ -9,11 +9,41 @@ alwaysApply: true
 
 - Stories: `{component}.stories.tsx`
 - Tests under `stories/tests/`: `interaction-tests.stories.tsx`, `visual-regression-tests.stories.tsx`
+- Helpers under `stories/helpers/`: `selectors.ts`, `steps.ts` (keep tests thin; see below)
 - Three Storybook configs per package: `.storybook/` (browse), `.storybook-interaction/` (Vitest), `.storybook-vrt/` (Playwright VRT) — filter via `stories` in `main.ts`, not tags.
 
 ## Queries
 
 Testing Library order: `getByRole` → `getByLabelText` → `getByPlaceholderText` → `getByText` → … → `getByTestId` last.
+
+## Helpers: selectors + steps (required)
+
+All interaction and VRT tests must follow this split:
+
+- **`stories/helpers/selectors.ts`**
+  - Export a **single** selectors object named `{componentName}Selectors`, e.g. `createProjectModalSelectors`.
+  - Define selectors as properties on that object:
+    - `export const createProjectModalSelectors = { root: (body) => ..., submitButton: (body) => ... }`
+  - Selectors should be **query functions**, not raw strings/constants.
+  - Selectors are the **only** place that should do DOM queries (`getByRole`, `getByLabelText`, etc.).
+
+- **`stories/helpers/steps.ts`**
+  - Export step functions for **all** setup, actions, and assertions used by tests.
+  - Steps may import selectors (and other steps), but should not query the DOM directly.
+  - Step labels should be **BDD / user-perspective** and strictly describe what happens or what is asserted in the browser:
+    - Good: `Click Save button`, `Press Tab key`, `Submit button is disabled`, `Error message is visible`
+    - Avoid: `Wait for ...`, and avoid encoding test intent like “duplicate” in step labels (put intent in the test file as a comment).
+  - Keep steps small and composable (e.g. “Fill input” and “Blur input” are separate steps).
+  - Avoid fixed sleeps (`setTimeout`, `new Promise(resolve => setTimeout(...))`). Prefer waiting on a **DOM signal** that indicates readiness (e.g. “Title input is populated”, “Spinner is not visible”, “Save button is enabled”).
+    - If a fixed delay is truly unavoidable (rare; usually for animations), the step label must be literal and specific (e.g. `Wait 300 ms`). Put generic delay helpers in `@pubint/yaboujee/_stories`.
+
+## Shared generic steps/types
+
+When a helper is very generic (e.g. `pressTab`, shared `StoryContext` types, or default `waitFor` options), it should live in **yaboujee** and be imported by consumers:
+
+- Prefer `@pubint/yaboujee/_stories` for:
+  - shared step/type helpers (e.g. `StoryContext`, `StoryUser`, `pressTab`)
+  - shared waitFor defaults (e.g. `storyWaitForDefaults`)
 
 ## Play functions
 
@@ -45,4 +75,4 @@ Modals/dialogs: use `screen` / `within(document.body)`, `waitFor`, `{ hidden: tr
 
 ## Deeper detail
 
-See `docs/testing/frontend-component-testing.md` and `apps/index-pdf-frontend/src/test-helpers/interaction-steps.ts`.
+See `docs/testing/frontend-component-testing.md`.

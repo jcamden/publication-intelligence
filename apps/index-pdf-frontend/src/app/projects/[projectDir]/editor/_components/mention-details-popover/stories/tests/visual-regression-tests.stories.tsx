@@ -1,7 +1,11 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import { within } from "@storybook/test";
 import { MentionDetailsPopover } from "../../mention-details-popover";
+import {
+	vrtOpenEditModeForSnapshot,
+	vrtPauseForPseudoHoverSnapshot,
+} from "../helpers/steps";
 
 const mockIndexEntries = [
 	{ id: "entry-1", label: "Critique of Pure Reason", parentId: "parent-1" },
@@ -126,8 +130,8 @@ export const HoverEditButton: Story = {
 		...defaultGlobals,
 		viewport: { value: "mobile1" },
 	},
-	play: async () => {
-		await new Promise((resolve) => setTimeout(resolve, 300));
+	play: async ({ step }) => {
+		await vrtPauseForPseudoHoverSnapshot({ step });
 	},
 };
 
@@ -148,8 +152,8 @@ export const HoverDeleteButton: Story = {
 		...defaultGlobals,
 		viewport: { value: "mobile1" },
 	},
-	play: async () => {
-		await new Promise((resolve) => setTimeout(resolve, 300));
+	play: async ({ step }) => {
+		await vrtPauseForPseudoHoverSnapshot({ step });
 	},
 };
 
@@ -196,10 +200,8 @@ export const EditModeWithSublocation: Story = {
 		...defaultGlobals,
 		viewport: { value: "mobile1" },
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const editButton = canvas.getByRole("button", { name: /^edit$/i });
-		await userEvent.click(editButton);
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		await vrtOpenEditModeForSnapshot({ canvas, step });
 	},
 };

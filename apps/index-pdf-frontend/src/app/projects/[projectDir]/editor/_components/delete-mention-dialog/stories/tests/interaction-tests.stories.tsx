@@ -1,7 +1,12 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "@storybook/test";
 import { DeleteMentionDialog } from "../../delete-mention-dialog";
+import {
+	clickCancelInDialog,
+	clickDeleteInDialog,
+	expectDeleteMentionDialogContent,
+	waitForDeleteMentionDialog,
+} from "../helpers/steps";
 
 const meta = {
 	...defaultInteractionTestMeta,
@@ -27,22 +32,8 @@ export const ConfirmDelete: Story = {
 		},
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Wait for dialog to appear", async () => {
-			await waitFor(
-				async () => {
-					const dialog = body.getByRole("alertdialog");
-					await expect(dialog).toBeInTheDocument();
-				},
-				{ timeout: 1000 },
-			);
-		});
-
-		await step("Click Delete button", async () => {
-			const deleteButton = body.getByRole("button", { name: /delete/i });
-			await userEvent.click(deleteButton);
-		});
+		await waitForDeleteMentionDialog({ step });
+		await clickDeleteInDialog({ step });
 	},
 };
 
@@ -57,22 +48,8 @@ export const CancelDelete: Story = {
 		},
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Wait for dialog to appear", async () => {
-			await waitFor(
-				async () => {
-					const dialog = body.getByRole("alertdialog");
-					await expect(dialog).toBeInTheDocument();
-				},
-				{ timeout: 1000 },
-			);
-		});
-
-		await step("Click Cancel button", async () => {
-			const cancelButton = body.getByRole("button", { name: /cancel/i });
-			await userEvent.click(cancelButton);
-		});
+		await waitForDeleteMentionDialog({ step });
+		await clickCancelInDialog({ step });
 	},
 };
 
@@ -87,35 +64,6 @@ export const VerifyContent: Story = {
 		},
 	},
 	play: async ({ step }) => {
-		const body = within(document.body);
-
-		await step("Wait for dialog to appear", async () => {
-			await waitFor(
-				async () => {
-					const dialog = body.getByRole("alertdialog");
-					await expect(dialog).toBeInTheDocument();
-				},
-				{ timeout: 1000 },
-			);
-		});
-
-		await step("Verify title is displayed", async () => {
-			await expect(body.getByText(/delete highlight/i)).toBeInTheDocument();
-		});
-
-		await step("Verify description is displayed", async () => {
-			await expect(
-				body.getByText(/this will remove the highlight/i),
-			).toBeInTheDocument();
-		});
-
-		await step("Verify both buttons are present", async () => {
-			await expect(
-				body.getByRole("button", { name: /cancel/i }),
-			).toBeInTheDocument();
-			await expect(
-				body.getByRole("button", { name: /delete/i }),
-			).toBeInTheDocument();
-		});
+		await expectDeleteMentionDialogContent({ step });
 	},
 };

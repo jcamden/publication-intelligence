@@ -1,8 +1,22 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { useState } from "react";
 import { StyledToggleButtonGroup } from "../../styled-toggle-button-group";
+import {
+	activeCountShows,
+	activeIndexShows,
+	allClickableButtonsAreVisible,
+	buttonOrderShows,
+	clickableButtonAtIndexHasFocus,
+	clickableButtonCountIs,
+	clickClickableButtonAtIndex,
+	focusClickableButtonAtIndex,
+	infoTextIsVisible,
+	innerButtonsHaveExpectedAccessibleNames,
+	roleButtonsExist,
+	tabTwice,
+} from "../helpers/steps";
 import { createMockStyledButtons } from "../shared";
 
 const meta: Meta<typeof StyledToggleButtonGroup> = {
@@ -39,20 +53,14 @@ export const ButtonClick: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const activeIndex = canvas.getByTestId("active-index");
-		const buttons = canvas.getAllByRole("button");
-		// Each button is rendered as a wrapper div + inner Button, so we need to click every other element (the wrappers)
-		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
-
-		await expect(activeIndex).toHaveTextContent("0");
-
-		await userEvent.click(clickableButtons[1]);
-		await expect(activeIndex).toHaveTextContent("1");
-
-		await userEvent.click(clickableButtons[2]);
-		await expect(activeIndex).toHaveTextContent("2");
+		await activeIndexShows({ canvas, expected: "0", step });
+		await clickClickableButtonAtIndex({ canvas, user, index: 1, step });
+		await activeIndexShows({ canvas, expected: "1", step });
+		await clickClickableButtonAtIndex({ canvas, user, index: 2, step });
+		await activeIndexShows({ canvas, expected: "2", step });
 	},
 };
 
@@ -78,19 +86,13 @@ export const KeyboardNavigation: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-		// Each button is rendered as a wrapper div + inner Button, so we need to use every other element (the wrappers)
-		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
-
-		clickableButtons[0].focus();
-		await expect(clickableButtons[0]).toHaveFocus();
-
-		// Tab twice: first tab goes to the inner button, second tab goes to the next wrapper
-		await userEvent.keyboard("{Tab}");
-		await userEvent.keyboard("{Tab}");
-		await expect(clickableButtons[1]).toHaveFocus();
+		await focusClickableButtonAtIndex({ canvas, index: 0, step });
+		await clickableButtonAtIndexHasFocus({ canvas, index: 0, step });
+		await tabTwice({ user, step });
+		await clickableButtonAtIndexHasFocus({ canvas, index: 1, step });
 	},
 };
 
@@ -129,11 +131,9 @@ export const DragAndDropReorder: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const buttonOrder = canvas.getByTestId("button-order");
-
-		await expect(buttonOrder).toHaveTextContent("view,pages,search");
+		await buttonOrderShows({ canvas, expected: "view,pages,search", step });
 	},
 };
 
@@ -155,11 +155,14 @@ export const ExcludedButtonsStayInPlace: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-
-		await expect(buttons.length).toBeGreaterThan(0);
+		await roleButtonsExist({ canvas, step });
+		await infoTextIsVisible({
+			canvas,
+			expected: /first and last buttons locked/i,
+			step,
+		});
 	},
 };
 
@@ -192,26 +195,18 @@ export const MultipleButtonInteractions: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-		// Each button is rendered as a wrapper div + inner Button, so we need to click every other element (the wrappers)
-		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
-		const activeCount = canvas.getByTestId("active-count");
-
-		await expect(activeCount).toHaveTextContent("0");
-
-		await userEvent.click(clickableButtons[0]);
-		await expect(activeCount).toHaveTextContent("1");
-
-		await userEvent.click(clickableButtons[1]);
-		await expect(activeCount).toHaveTextContent("2");
-
-		await userEvent.click(clickableButtons[2]);
-		await expect(activeCount).toHaveTextContent("3");
-
-		await userEvent.click(clickableButtons[0]);
-		await expect(activeCount).toHaveTextContent("2");
+		await activeCountShows({ canvas, expected: "0", step });
+		await clickClickableButtonAtIndex({ canvas, user, index: 0, step });
+		await activeCountShows({ canvas, expected: "1", step });
+		await clickClickableButtonAtIndex({ canvas, user, index: 1, step });
+		await activeCountShows({ canvas, expected: "2", step });
+		await clickClickableButtonAtIndex({ canvas, user, index: 2, step });
+		await activeCountShows({ canvas, expected: "3", step });
+		await clickClickableButtonAtIndex({ canvas, user, index: 0, step });
+		await activeCountShows({ canvas, expected: "2", step });
 	},
 };
 
@@ -226,17 +221,10 @@ export const AllButtonsRender: Story = {
 		});
 		return <StyledToggleButtonGroup buttons={buttons} />;
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-		// Each button is rendered as a wrapper div + inner Button, so we need to check every other element (the wrappers)
-		const clickableButtons = buttons.filter((_, index) => index % 2 === 0);
-
-		await expect(clickableButtons.length).toBe(5);
-
-		for (const button of clickableButtons) {
-			await expect(button).toBeVisible();
-		}
+		await clickableButtonCountIs({ canvas, expected: 5, step });
+		await allClickableButtonsAreVisible({ canvas, step });
 	},
 };
 
@@ -248,15 +236,12 @@ export const AriaLabelsFromTooltips: Story = {
 		const buttons = createMockStyledButtons({ count: 3, activeIndices: [0] });
 		return <StyledToggleButtonGroup buttons={buttons} />;
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const buttons = canvas.getAllByRole("button");
-		// Each button is rendered as a wrapper div + inner Button
-		// The inner Button (odd indices) has the aria-label
-		const innerButtons = buttons.filter((_, index) => index % 2 === 1);
-
-		await expect(innerButtons[0]).toHaveAccessibleName("Toggle view");
-		await expect(innerButtons[1]).toHaveAccessibleName("Show pages");
-		await expect(innerButtons[2]).toHaveAccessibleName("Open search");
+		await innerButtonsHaveExpectedAccessibleNames({
+			canvas,
+			names: ["Toggle view", "Show pages", "Open search"],
+			step,
+		});
 	},
 };

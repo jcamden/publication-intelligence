@@ -6,7 +6,8 @@
 	"types": "./src/index.ts",
 	"exports": {
 		".": "./src/index.ts",
-		"./styles": "./src/index.css"
+		"./styles": "./src/index.css",
+		"./_stories": "./src/_stories/index.ts"
 	},
 	"scripts": {
 		"build": "tsc",

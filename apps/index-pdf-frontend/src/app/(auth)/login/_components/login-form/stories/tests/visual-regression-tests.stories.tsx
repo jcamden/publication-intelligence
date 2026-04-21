@@ -2,6 +2,7 @@ import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { LoginForm } from "../../login-form";
+import { showValidationErrorsForVrt } from "../helpers/steps";
 
 export default {
 	...defaultVrtMeta,
@@ -45,18 +46,10 @@ export const ErrorStateLight: StoryObj<typeof LoginForm> = {
 		theme: "light",
 		viewport: { value: "mobile1" },
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
-
-		const emailInput = canvas.getByLabelText(/email/i);
-		const passwordInput = canvas.getByLabelText(/password/i);
-
-		// Trigger validation errors by entering invalid data and blurring
-		await user.type(emailInput, "invalid-email");
-		await user.tab();
-		await user.type(passwordInput, "short");
-		await user.tab();
+		await showValidationErrorsForVrt({ canvas, user, step });
 	},
 };
 
@@ -69,17 +62,9 @@ export const ErrorStateDark: StoryObj<typeof LoginForm> = {
 		theme: "dark",
 		viewport: { value: "mobile1" },
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
-
-		const emailInput = canvas.getByLabelText(/email/i);
-		const passwordInput = canvas.getByLabelText(/password/i);
-
-		// Trigger validation errors by entering invalid data and blurring
-		await user.type(emailInput, "invalid-email");
-		await user.tab();
-		await user.type(passwordInput, "short");
-		await user.tab();
+		await showValidationErrorsForVrt({ canvas, user, step });
 	},
 };

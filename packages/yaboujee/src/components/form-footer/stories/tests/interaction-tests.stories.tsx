@@ -1,7 +1,8 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import { within } from "@storybook/test";
 import { FormFooter } from "../../form-footer";
+import { footerLinkMatchesExpectedTarget } from "../helpers/steps";
 import { longTextVariant } from "../shared";
 
 export default {
@@ -15,12 +16,13 @@ export default {
 
 export const LinkBehavior: StoryObj<typeof FormFooter> = {
 	args: longTextVariant,
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const link = canvas.getByText(longTextVariant.linkText);
-
-		await expect(link).toBeVisible();
-		await expect(link).toHaveAttribute("href", longTextVariant.linkHref);
-		await expect(link.tagName.toLowerCase()).toBe("a");
+		await footerLinkMatchesExpectedTarget({
+			canvas,
+			linkText: longTextVariant.linkText,
+			linkHref: longTextVariant.linkHref,
+			step,
+		});
 	},
 };

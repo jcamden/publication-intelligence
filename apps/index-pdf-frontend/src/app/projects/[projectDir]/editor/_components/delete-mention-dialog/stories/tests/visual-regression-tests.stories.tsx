@@ -1,6 +1,7 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { DeleteMentionDialog } from "../../delete-mention-dialog";
+import { vrtPauseBeforeDialogSnapshot } from "../helpers/steps";
 
 const meta = {
 	...defaultVrtMeta,
@@ -25,8 +26,8 @@ export const Default: Story = {
 		...defaultGlobals,
 		viewport: { value: "mobile1" },
 	},
-	play: async () => {
-		await new Promise((resolve) => setTimeout(resolve, 100));
+	play: async ({ step }) => {
+		await vrtPauseBeforeDialogSnapshot({ step });
 	},
 };
 
@@ -41,7 +42,7 @@ export const DefaultDark: Story = {
 		backgrounds: { value: "dark" },
 		viewport: { value: "mobile1" },
 	},
-	play: async () => {
-		await new Promise((resolve) => setTimeout(resolve, 100));
+	play: async ({ step }) => {
+		await vrtPauseBeforeDialogSnapshot({ step });
 	},
 };

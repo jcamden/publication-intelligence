@@ -1,7 +1,23 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, screen, userEvent, waitFor } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { EditProjectModal } from "../../edit-project-modal";
+import {
+	blurByPressingTab,
+	clearAndFillProjectDir,
+	clearAndFillProjectTitle,
+	clickDeleteProjectButton,
+	deleteConfirmationDialogIsVisible,
+	deleteConfirmationInputIsRequired,
+	pauseForDebouncedProjectDirUpdate,
+	projectDataIsLoaded,
+	projectDirAlreadyInUseErrorIsNotVisible,
+	projectDirAlreadyInUseErrorIsVisible,
+	projectTitleAlreadyExistsErrorIsNotVisible,
+	projectTitleAlreadyExistsErrorIsVisible,
+	projectTitleInputHasValue,
+	waitForEditProjectModal,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -24,47 +40,13 @@ export const DeleteButtonOpensConfirmation: StoryObj<typeof EditProjectModal> =
 		},
 		play: async ({ step }) => {
 			const user = userEvent.setup();
+			const body = within(document.body);
 
-			await step("Wait for modal to render", async () => {
-				await waitFor(async () => {
-					const modal = screen.getByRole("dialog", { hidden: true });
-					await expect(modal).toBeInTheDocument();
-				});
-			});
-
-			await step("Wait for project data to load", async () => {
-				await new Promise((resolve) => setTimeout(resolve, 500));
-			});
-
-			await step("Click delete button", async () => {
-				const deleteButton = screen.getByRole("button", {
-					name: /delete project/i,
-				});
-				await user.click(deleteButton);
-			});
-
-			await step("Verify confirmation dialog appears", async () => {
-				// DeleteProjectDialog renders as a separate AlertDialog
-				await waitFor(async () => {
-					const confirmDialog = screen.getByText(
-						/are you sure you want to delete this project/i,
-					);
-					await expect(confirmDialog).toBeVisible();
-				});
-			});
-
-			await step("Verify confirmation input is required", async () => {
-				const confirmInput = screen.getByPlaceholderText(
-					/type project name to confirm/i,
-				);
-				await expect(confirmInput).toBeInTheDocument();
-
-				// Delete button in confirmation dialog should be disabled
-				const deleteConfirmButton = screen.getByRole("button", {
-					name: /^delete$/i,
-				});
-				await expect(deleteConfirmButton).toBeDisabled();
-			});
+			await waitForEditProjectModal({ body, step });
+			await projectDataIsLoaded({ body, step });
+			await clickDeleteProjectButton({ body, user, step });
+			await deleteConfirmationDialogIsVisible({ body, step });
+			await deleteConfirmationInputIsRequired({ body, step });
 		},
 	};
 
@@ -83,33 +65,19 @@ export const ShowsErrorWhenTitleMatchesOtherProject: StoryObj<
 	},
 	play: async ({ step }) => {
 		const user = userEvent.setup();
+		const body = within(document.body);
 
-		await step("Wait for modal to render", async () => {
-			await waitFor(async () => {
-				const modal = screen.getByRole("dialog", { hidden: true });
-				await expect(modal).toBeInTheDocument();
-			});
+		await waitForEditProjectModal({ body, step });
+		await projectDataIsLoaded({ body, step });
+		// Intent: set title to match another project.
+		await clearAndFillProjectTitle({
+			body,
+			user,
+			title: "Another Project",
+			step,
 		});
-
-		await step("Wait for project data to load", async () => {
-			await new Promise((resolve) => setTimeout(resolve, 500));
-		});
-
-		await step("Change title to existing project title", async () => {
-			const titleInput = screen.getByLabelText(/project title/i);
-			await user.clear(titleInput);
-			await user.type(titleInput, "Another Project");
-			await user.tab();
-		});
-
-		await step("Verify validation error appears", async () => {
-			await waitFor(async () => {
-				const errorMessage = screen.getByText(
-					/a project with this title already exists/i,
-				);
-				await expect(errorMessage).toBeVisible();
-			});
-		});
+		await blurByPressingTab({ user, step });
+		await projectTitleAlreadyExistsErrorIsVisible({ body, step });
 	},
 };
 
@@ -128,33 +96,19 @@ export const ShowsErrorWhenProjectDirMatchesOtherProject: StoryObj<
 	},
 	play: async ({ step }) => {
 		const user = userEvent.setup();
+		const body = within(document.body);
 
-		await step("Wait for modal to render", async () => {
-			await waitFor(async () => {
-				const modal = screen.getByRole("dialog", { hidden: true });
-				await expect(modal).toBeInTheDocument();
-			});
+		await waitForEditProjectModal({ body, step });
+		await projectDataIsLoaded({ body, step });
+		// Intent: set project directory to match another project.
+		await clearAndFillProjectDir({
+			body,
+			user,
+			projectDir: "another-project",
+			step,
 		});
-
-		await step("Wait for project data to load", async () => {
-			await new Promise((resolve) => setTimeout(resolve, 500));
-		});
-
-		await step("Change project_dir to existing project_dir", async () => {
-			const projectDirInput = screen.getByLabelText(/project directory/i);
-			await user.clear(projectDirInput);
-			await user.type(projectDirInput, "another-project");
-			await user.tab();
-		});
-
-		await step("Verify validation error appears", async () => {
-			await waitFor(async () => {
-				const errorMessage = screen.getByText(
-					/this project directory is already in use/i,
-				);
-				await expect(errorMessage).toBeVisible();
-			});
-		});
+		await blurByPressingTab({ user, step });
+		await projectDirAlreadyInUseErrorIsVisible({ body, step });
 	},
 };
 
@@ -171,31 +125,17 @@ export const AllowsKeepingSameTitle: StoryObj<typeof EditProjectModal> = {
 	},
 	play: async ({ step }) => {
 		const user = userEvent.setup();
+		const body = within(document.body);
 
-		await step("Wait for modal to render", async () => {
-			await waitFor(async () => {
-				const modal = screen.getByRole("dialog", { hidden: true });
-				await expect(modal).toBeInTheDocument();
-			});
+		await waitForEditProjectModal({ body, step });
+		await projectDataIsLoaded({ body, step });
+		await projectTitleInputHasValue({
+			body,
+			expectedTitle: "Test Project Title",
+			step,
 		});
-
-		await step("Wait for project data to load", async () => {
-			await new Promise((resolve) => setTimeout(resolve, 500));
-		});
-
-		await step("Keep the same title (no change)", async () => {
-			const titleInput = screen.getByLabelText(/project title/i);
-			await expect(titleInput).toHaveValue("Test Project Title");
-			await user.click(titleInput);
-			await user.tab();
-		});
-
-		await step("Verify no validation error appears", async () => {
-			const errorMessage = screen.queryByText(
-				/a project with this title already exists/i,
-			);
-			await expect(errorMessage).not.toBeInTheDocument();
-		});
+		await blurByPressingTab({ user, step });
+		await projectTitleAlreadyExistsErrorIsNotVisible({ body, step });
 	},
 };
 
@@ -212,46 +152,25 @@ export const AllowsKeepingSameProjectDir: StoryObj<typeof EditProjectModal> = {
 	},
 	play: async ({ step }) => {
 		const user = userEvent.setup();
+		const body = within(document.body);
 
-		await step("Wait for modal to render", async () => {
-			await waitFor(async () => {
-				const modal = screen.getByRole("dialog", { hidden: true });
-				await expect(modal).toBeInTheDocument();
-			});
+		await waitForEditProjectModal({ body, step });
+		await projectDataIsLoaded({ body, step });
+		// Intent: change title (which updates project_dir), then revert project_dir.
+		await clearAndFillProjectTitle({
+			body,
+			user,
+			title: "Updated Title",
+			step,
 		});
-
-		await step("Wait for project data to load", async () => {
-			await new Promise((resolve) => setTimeout(resolve, 500));
+		await pauseForDebouncedProjectDirUpdate({ step });
+		await clearAndFillProjectDir({
+			body,
+			user,
+			projectDir: "test-project",
+			step,
 		});
-
-		await step(
-			"Change the title (which auto-updates project_dir)",
-			async () => {
-				const titleInput = screen.getByLabelText(/project title/i);
-				await user.clear(titleInput);
-				await user.type(titleInput, "Updated Title");
-			},
-		);
-
-		await step("Wait for debounced project_dir update", async () => {
-			await new Promise((resolve) => setTimeout(resolve, 200));
-		});
-
-		await step(
-			"Manually revert project_dir back to original value",
-			async () => {
-				const projectDirInput = screen.getByLabelText(/project directory/i);
-				await user.clear(projectDirInput);
-				await user.type(projectDirInput, "test-project");
-				await user.tab();
-			},
-		);
-
-		await step("Verify no validation error appears", async () => {
-			const errorMessage = screen.queryByText(
-				/this project directory is already in use/i,
-			);
-			await expect(errorMessage).not.toBeInTheDocument();
-		});
+		await blurByPressingTab({ user, step });
+		await projectDirAlreadyInUseErrorIsNotVisible({ body, step });
 	},
 };

@@ -1,8 +1,9 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import type { PdfHighlight } from "../../../../../../types";
 import { PdfHighlightBox } from "../../pdf-highlight-box";
+import { clickHighlightAndExpectPresent } from "../helpers/steps";
 
 const meta: Meta<typeof PdfHighlightBox> = {
 	...defaultInteractionTestMeta,
@@ -49,13 +50,14 @@ export const ClickHandler: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
-
-		const highlightButton = canvas.getByTestId("highlight-highlight-1");
-		await user.click(highlightButton);
-
-		await expect(highlightButton).toBeInTheDocument();
+		await clickHighlightAndExpectPresent({
+			canvas,
+			user,
+			testId: "highlight-highlight-1",
+			step,
+		});
 	},
 };

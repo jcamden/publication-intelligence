@@ -1,8 +1,12 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import type { PdfHighlight } from "../../../../types";
 import { PdfHighlightLayer } from "../../pdf-highlight-layer";
+import {
+	clickFirstHighlightButton,
+	highlightButtonCountIs,
+} from "../helpers/steps";
 
 const meta: Meta<typeof PdfHighlightLayer> = {
 	...defaultInteractionTestMeta,
@@ -60,12 +64,11 @@ export const HighlightClick: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const highlights = canvas.getAllByRole("button");
-
-		await expect(highlights).toHaveLength(2);
-		await userEvent.click(highlights[0]);
+		const user = userEvent.setup();
+		await highlightButtonCountIs({ canvas, expected: 2, step });
+		await clickFirstHighlightButton({ canvas, user, step });
 	},
 };
 
@@ -105,10 +108,8 @@ export const PageFiltering: Story = {
 			</div>
 		);
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const highlights = canvas.getAllByRole("button");
-
-		await expect(highlights).toHaveLength(2);
+		await highlightButtonCountIs({ canvas, expected: 2, step });
 	},
 };

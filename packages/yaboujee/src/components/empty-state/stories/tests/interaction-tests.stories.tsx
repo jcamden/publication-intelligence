@@ -1,8 +1,12 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { fn, userEvent, within } from "@storybook/test";
 import { EmptyState } from "../../empty-state";
+import {
+	actionClickCallbackIsCalledOnce,
+	clickActionButton,
+} from "../helpers/steps";
 
 const meta = {
 	...defaultInteractionTestMeta,
@@ -33,6 +37,7 @@ export const ActionButtonClick: Story = {
 		onActionClick: fn(),
 	},
 	play: async ({ args, canvasElement, step }) => {
+		const user = userEvent.setup();
 		const canvas = within(canvasElement);
 		const { onActionClick } = args as typeof args & {
 			onActionClick: ReturnType<typeof fn>;
@@ -41,15 +46,7 @@ export const ActionButtonClick: Story = {
 		// Reset mock to ensure clean state for test run
 		onActionClick.mockClear();
 
-		await step(
-			"Click action button and verify callback is called",
-			async () => {
-				const button = canvas.getByRole("button", { name: /create project/i });
-
-				await userEvent.click(button);
-
-				await expect(onActionClick).toHaveBeenCalledTimes(1);
-			},
-		);
+		await clickActionButton({ canvas, user, step });
+		await actionClickCallbackIsCalledOnce({ onActionClick, step });
 	},
 };

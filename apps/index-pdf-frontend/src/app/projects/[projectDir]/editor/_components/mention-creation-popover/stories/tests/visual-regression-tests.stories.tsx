@@ -1,9 +1,13 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import { within } from "@storybook/test";
 import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import { mockSubjectEntries } from "../../../../_mocks/index-entries";
 import { MentionCreationPopover } from "../../mention-creation-popover";
+import {
+	vrtSearchNonexistentInMentionPicker,
+	vrtSearchPartialPhilInMentionPicker,
+} from "../helpers/steps";
 import { mockDraft, mockRegionDraft } from "../shared";
 
 const meta = {
@@ -57,12 +61,9 @@ export const WithSearchResults: Story = {
 		...defaultGlobals,
 		viewport: { value: "mobile1" },
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const input = canvas.getByPlaceholderText("Search or create...");
-		await userEvent.clear(input);
-		await userEvent.type(input, "Phil", { delay: 10 });
-		await new Promise((resolve) => setTimeout(resolve, 300));
+		await vrtSearchPartialPhilInMentionPicker({ canvas, step });
 	},
 };
 
@@ -73,12 +74,9 @@ export const WithSearchResultsDark: Story = {
 		theme: "dark",
 		viewport: { value: "mobile1" },
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const input = canvas.getByPlaceholderText("Search or create...");
-		await userEvent.clear(input);
-		await userEvent.type(input, "Phil", { delay: 10 });
-		await new Promise((resolve) => setTimeout(resolve, 300));
+		await vrtSearchPartialPhilInMentionPicker({ canvas, step });
 	},
 };
 
@@ -88,12 +86,9 @@ export const NoResults: Story = {
 		...defaultGlobals,
 		viewport: { value: "mobile1" },
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-		const input = canvas.getByPlaceholderText("Search or create...");
-		await userEvent.clear(input);
-		await userEvent.type(input, "Nonexistent", { delay: 10 });
-		await new Promise((resolve) => setTimeout(resolve, 300));
+		await vrtSearchNonexistentInMentionPicker({ canvas, step });
 	},
 };
 

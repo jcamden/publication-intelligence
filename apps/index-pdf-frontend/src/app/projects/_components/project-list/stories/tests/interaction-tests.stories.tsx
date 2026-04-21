@@ -1,7 +1,14 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import { userEvent, within } from "@storybook/test";
 import { ProjectList } from "../../project-list";
+import {
+	cardLinkCountAndFirstHref,
+	emptyStateAndCreateButtonVisible,
+	hoverFirstCardAndClickFirstSettings,
+	loadingSkeletonCardsExist,
+	threeMockProjectTitlesAreVisible,
+} from "../helpers/steps";
 
 export default {
 	...defaultInteractionTestMeta,
@@ -64,15 +71,9 @@ export const DisplaysProjects: StoryObj<typeof ProjectList> = {
 		isLoading: false,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		// Verify all project titles are visible
-		await expect(
-			canvas.getByText("Word Biblical Commentary: Daniel"),
-		).toBeVisible();
-		await expect(canvas.getByText("NIV Study Bible")).toBeVisible();
-		await expect(canvas.getByText("Systematic Theology")).toBeVisible();
+		await threeMockProjectTitlesAreVisible({ canvas, step });
 	},
 };
 
@@ -82,10 +83,8 @@ export const ShowsLoadingState: StoryObj<typeof ProjectList> = {
 		isLoading: true,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
-		// Verify loading skeleton cards are present (they have animate-pulse class)
-		const skeletonCards = canvasElement.querySelectorAll(".animate-pulse");
-		expect(skeletonCards.length).toBeGreaterThan(0);
+	play: async ({ canvasElement, step }) => {
+		await loadingSkeletonCardsExist({ canvasElement, step });
 	},
 };
 
@@ -96,18 +95,9 @@ export const ShowsEmptyState: StoryObj<typeof ProjectList> = {
 		onSettingsClick: () => {},
 		onCreateClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		// Verify empty state message
-		const emptyMessage = canvas.getByText(/no projects yet/i);
-		await expect(emptyMessage).toBeVisible();
-
-		// Verify create button is present
-		const createButton = canvas.getByRole("button", {
-			name: /create.*project/i,
-		});
-		await expect(createButton).toBeVisible();
+		await emptyStateAndCreateButtonVisible({ canvas, step });
 	},
 };
 
@@ -117,22 +107,10 @@ export const SettingsButtonsWork: StoryObj<typeof ProjectList> = {
 		isLoading: false,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();
-
-		// Settings buttons exist (with opacity-0 initially)
-		const settingsButtons = canvas.getAllByRole("button", {
-			name: /project settings/i,
-		});
-		expect(settingsButtons.length).toBeGreaterThan(0);
-
-		// Find first project card and hover to reveal settings button
-		const firstCard = canvas.getAllByRole("link")[0];
-		await user.hover(firstCard);
-
-		// Click settings button (it's now visible via group-hover)
-		await user.click(settingsButtons[0]);
+		await hoverFirstCardAndClickFirstSettings({ canvas, user, step });
 	},
 };
 
@@ -142,17 +120,13 @@ export const ProjectCardsAreClickable: StoryObj<typeof ProjectList> = {
 		isLoading: false,
 		onSettingsClick: () => {},
 	},
-	play: async ({ canvasElement }) => {
+	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
-
-		// Verify all cards are links
-		const cards = canvas.getAllByRole("link");
-		await expect(cards.length).toBe(mockProjects.length);
-
-		// Verify first card has correct href
-		await expect(cards[0]).toHaveAttribute(
-			"href",
-			"/projects/wbc-daniel/editor",
-		);
+		await cardLinkCountAndFirstHref({
+			canvas,
+			expectedCount: mockProjects.length,
+			firstHref: "/projects/wbc-daniel/editor",
+			step,
+		});
 	},
 };
