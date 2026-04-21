@@ -1,10 +1,10 @@
 # Styling Architecture
 
-This document explains how the styling system works in Pixel.
+This document explains how the styling system works in Yaboujee.
 
 ## Overview
 
-The Pixel design system uses a layered approach to styling:
+The Yaboujee design system uses a layered approach to styling:
 
 ```
 Design Tokens (TypeScript + CSS vars)
@@ -15,7 +15,7 @@ CSS Cascade Layers (organized styling)
   ↓
 BaseUI Components (accessible primitives)
   ↓
-Pixel Components (styled wrappers)
+Yaboujee Components (styled wrappers)
 ```
 
 ## 1. Design Tokens
@@ -128,7 +128,7 @@ import { Button as BaseButton } from "@base-ui/react/button";
 // BaseButton has ARIA, keyboard nav, focus management, but no styles
 ```
 
-## 5. Pixel Components
+## 5. Yaboujee Components
 
 We wrap BaseUI with our styling system:
 
@@ -215,7 +215,7 @@ return (
     <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
       Toggle Theme
     </button>
-    {/* All Pixel components here will respect the theme */}
+    {/* All Yaboujee components here will respect the theme */}
   </div>
 );
 ```
@@ -362,6 +362,6 @@ import styles from './Button.module.css';
 <button className={styles.button}>
 
 // AFTER
-import { Button } from '@pubint/pixel';
+import { Button } from '@pubint/yaboujee';
 <Button variant="primary">
 ```

@@ -1,4 +1,4 @@
-# Pixel Design System - Usage Examples
+# Yaboujee Design System - Usage Examples
 
 ## Setup
 
@@ -9,7 +9,7 @@ Already set up in your monorepo with workspace protocol:
 ```json
 {
   "dependencies": {
-    "@pubint/pixel": "workspace:*"
+    "@pubint/yaboujee": "workspace:*"
   }
 }
 ```
@@ -20,13 +20,13 @@ In your app's root CSS file (e.g., `globals.css`):
 
 ```css
 @import "tailwindcss";
-@import "@pubint/pixel/styles";
+@import "@pubint/yaboujee/styles";
 ```
 
 ### 3. Import components
 
 ```tsx
-import { Button, Input, Modal } from "@pubint/pixel";
+import { Button, Input, Modal } from "@pubint/yaboujee";
 ```
 
 ## Component Examples
@@ -34,7 +34,7 @@ import { Button, Input, Modal } from "@pubint/pixel";
 ### Button Component
 
 ```tsx
-import { Button } from "@pubint/pixel";
+import { Button } from "@pubint/yaboujee";
 
 // Primary button
 <Button variant="primary" size="md" onClick={handleClick}>
@@ -65,7 +65,7 @@ import { Button } from "@pubint/pixel";
 ### Input Component
 
 ```tsx
-import { Input } from "@pubint/pixel";
+import { Input } from "@pubint/yaboujee";
 import { useState } from "react";
 
 function MyForm() {
@@ -124,7 +124,7 @@ function MyForm() {
 ### Modal Component
 
 ```tsx
-import { Modal, Button } from "@pubint/pixel";
+import { Modal, Button } from "@pubint/yaboujee";
 import { useState } from "react";
 
 function MyComponent() {
@@ -162,7 +162,7 @@ function MyComponent() {
 ### Complete Form Example
 
 ```tsx
-import { Button, Input } from "@pubint/pixel";
+import { Button, Input } from "@pubint/yaboujee";
 import { useState } from "react";
 
 function AuthForm() {
@@ -237,7 +237,7 @@ function AuthForm() {
 
 ```tsx
 import { useState } from "react";
-import { Button } from "@pubint/pixel";
+import { Button } from "@pubint/yaboujee";
 
 function App() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -248,7 +248,7 @@ function App() {
         Toggle {theme === "light" ? "Dark" : "Light"} Mode
       </Button>
       
-      {/* All Pixel components here will respect the theme */}
+      {/* All Yaboujee components here will respect the theme */}
     </div>
   );
 }
@@ -289,7 +289,7 @@ function App() {
 ### In TypeScript/JavaScript
 
 ```tsx
-import { colors, spacing, radius, typography } from "@pubint/pixel";
+import { colors, spacing, radius, typography } from "@pubint/yaboujee";
 
 // Use tokens programmatically
 const myStyles = {
@@ -320,7 +320,7 @@ const myStyles = {
 ```tsx
 // Tailwind utilities read from the same tokens
 <div className="bg-primary text-white p-4 rounded-lg">
-  Styled with Tailwind + Pixel tokens
+  Styled with Tailwind + Yaboujee tokens
 </div>
 
 // Theme-aware utilities
@@ -334,7 +334,7 @@ const myStyles = {
 All components are fully typed:
 
 ```tsx
-import type { ButtonProps, ButtonVariant, ButtonSize } from "@pubint/pixel";
+import type { ButtonProps, ButtonVariant, ButtonSize } from "@pubint/yaboujee";
 
 // Type-safe props
 const buttonProps: ButtonProps = {
@@ -376,7 +376,7 @@ Use the `@layer overrides` in your CSS:
 
 ```css
 @layer overrides {
-  /* Override any Pixel styles */
+  /* Override any Yaboujee styles */
   .my-custom-button {
     /* Your custom styles here */
   }

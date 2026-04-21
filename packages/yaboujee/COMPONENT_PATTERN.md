@@ -1,6 +1,6 @@
 # Component Development Pattern
 
-This document outlines the established patterns for creating new components in the Pixel design system.
+This document outlines the established patterns for creating new components in the Yaboujee design system.
 
 ## Directory Structure
 
@@ -127,7 +127,7 @@ export type {
 import type { Meta, StoryObj } from "@storybook/react";
 import { ComponentName } from "../ComponentName";
 
-const codeBlock = `import { ComponentName } from "@pubint/pixel";
+const codeBlock = `import { ComponentName } from "@pubint/yaboujee";
 
 const MyComponent = () => {
   return <ComponentName variant="primary">Content</ComponentName>;

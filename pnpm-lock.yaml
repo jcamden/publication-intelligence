@@ -395,9 +395,6 @@ importers:
       '@playwright/test':
         specifier: ^1.58.0
         version: 1.58.0
-      '@pubint/core':
-        specifier: workspace:*
-        version: link:../core
       '@types/node':
         specifier: ^22.10.5
         version: 22.19.7
@@ -7470,7 +7467,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vitest: 4.0.18(@types/node@25.2.1)(@vitest/browser-playwright@4.0.18)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(msw@2.12.7(@types/node@25.2.1)(typescript@5.9.3))(tsx@4.21.0)
+      vitest: 4.0.18(@types/node@22.19.7)(@vitest/browser-playwright@4.0.18)(@vitest/ui@4.0.18)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(msw@2.12.7(@types/node@22.19.7)(typescript@5.9.3))(tsx@4.21.0)
 
   '@vitest/utils@2.0.5':
     dependencies:

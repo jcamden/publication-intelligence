@@ -53,3 +53,9 @@ db/gel/gel.local.toml
 
 # Local file storage
 apps/index-pdf-backend/.data/
+
+# Python (apps/index-pdf-extractor)
+venv/
+*.egg-info/
+__pycache__/
+*.pyc

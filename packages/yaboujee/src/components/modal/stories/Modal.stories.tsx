@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Alert } from "../../alert";
 import { Modal } from "../modal";
 
-const codeBlock = `import { Modal, Button } from "@pubint/pixel";
+const codeBlock = `import { Modal, Button } from "@pubint/yaboujee";
 import { useState } from "react";
 
 const MyModal = () => {

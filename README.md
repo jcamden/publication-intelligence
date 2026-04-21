@@ -91,8 +91,9 @@ pnpm dev
 ## Documentation
 
 - **[COMMANDS.md](./COMMANDS.md)** - Quick command reference for all available scripts
-- **[TESTING.md](./TESTING.md)** - Testing guide (Vitest, Storybook, Playwright)
+- **[docs/testing/README.md](./docs/testing/README.md)** - Testing guide (Vitest, Storybook, Playwright)
 - **[apps/index-pdf-backend/TESTING.md](./apps/index-pdf-backend/TESTING.md)** - Backend testing with PGLite
+- **[docs/](./docs/)** - Architecture, business context, and development docs
 
 ## Development
 
