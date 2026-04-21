@@ -47,7 +47,7 @@ export const callPyMuPDFExtractor = async ({
 
 	const extractorPath = join(
 		__dirname,
-		"../../../../../apps/index-pdf-extractor/extract_pdf.py",
+		"../../../../../index-pdf-extractor/extract_pdf.py",
 	);
 
 	if (!existsSync(extractorPath)) {
@@ -57,7 +57,7 @@ export const callPyMuPDFExtractor = async ({
 	// Use venv Python interpreter
 	const venvPython = join(
 		__dirname,
-		"../../../../../apps/index-pdf-extractor/venv/bin/python",
+		"../../../../../index-pdf-extractor/venv/bin/python",
 	);
 
 	if (!existsSync(venvPython)) {
