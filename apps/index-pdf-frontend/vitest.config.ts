@@ -21,6 +21,10 @@ export default defineConfig({
 	},
 	resolve: {
 		alias: {
+			"@/app/projects": path.resolve(
+				__dirname,
+				"./src/app/(with-project-nav)/projects",
+			),
 			"@": path.resolve(__dirname, "./src"),
 		},
 	},

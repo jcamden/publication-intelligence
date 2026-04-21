@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { StorybookConfig } from "@storybook/nextjs-vite";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -14,6 +15,23 @@ const config: StorybookConfig = {
 	async viteFinal(config) {
 		config.plugins = config.plugins || [];
 		config.plugins.push(tailwindcss());
+		config.resolve ??= {};
+		const alias = config.resolve.alias;
+		const projectsAlias = path.resolve(
+			__dirname,
+			"../src/app/(with-project-nav)/projects",
+		);
+		if (Array.isArray(alias)) {
+			config.resolve.alias = [
+				...alias,
+				{ find: "@/app/projects", replacement: projectsAlias },
+			];
+		} else {
+			config.resolve.alias = {
+				...(alias as Record<string, string> | undefined),
+				"@/app/projects": projectsAlias,
+			};
+		}
 		return config;
 	},
 };

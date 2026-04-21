@@ -20,6 +20,7 @@
 			}
 		],
 		"paths": {
+			"@/app/projects/*": ["./src/app/(with-project-nav)/projects/*"],
 			"@/*": ["./src/*"],
 			"@gel": ["../../db/gel/generated/index.ts"],
 			"@pubint/yabasic/*": ["../../packages/yabasic/src/*"],
