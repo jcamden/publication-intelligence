@@ -44,7 +44,7 @@ describe("ScriptureIndexConfig API (Integration)", () => {
 		// Enable scripture index type and capture project index type id
 		const enableRes = await context.authenticatedRequest.inject({
 			method: "POST",
-			url: "/trpc/projectIndexType.enable",
+			url: "/trpc/projectHighlightConfig.enable",
 			payload: {
 				projectId: context.testProjectId,
 				highlightType: "scripture",
@@ -237,7 +237,7 @@ describe("ScriptureIndexConfig API (Integration)", () => {
 			// Test user already has subject from createTestUser; enable subject index type
 			const enableRes = await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "subject",
@@ -247,7 +247,7 @@ describe("ScriptureIndexConfig API (Integration)", () => {
 			expect(enableRes.statusCode).toBe(200);
 			const listRes = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 			const list = JSON.parse(listRes.body).result.data;
 			const subjectPitId = list.find(

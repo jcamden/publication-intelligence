@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { localFileStorage } from "../../infrastructure/storage";
 import { verifyToken } from "../auth/auth.service";
-import * as sourceDocumentService from "./sourceDocument.service";
-import { UploadSourceDocumentSchema } from "./sourceDocument.types";
+import * as sourceDocumentService from "./source-document.service";
+import { UploadSourceDocumentSchema } from "./source-document.types";
 
 // ============================================================================
 // Fastify HTTP Routes - File Upload

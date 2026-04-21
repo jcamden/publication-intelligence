@@ -61,7 +61,7 @@ export default function SettingsPage() {
 	});
 
 	// Fetch user's addons
-	const userAddonsQuery = trpc.projectIndexType.listUserAddons.useQuery(
+	const userAddonsQuery = trpc.projectHighlightConfig.listUserAddons.useQuery(
 		undefined,
 		{
 			enabled: !!authToken,
@@ -148,17 +148,20 @@ export default function SettingsPage() {
 	}, [userSettingsQuery.data]);
 
 	// Addon mutations
-	const grantAddonMutation = trpc.projectIndexType.grantAddon.useMutation({
-		onSuccess: () => {
-			userAddonsQuery.refetch();
+	const grantAddonMutation = trpc.projectHighlightConfig.grantAddon.useMutation(
+		{
+			onSuccess: () => {
+				userAddonsQuery.refetch();
+			},
 		},
-	});
+	);
 
-	const revokeAddonMutation = trpc.projectIndexType.revokeAddon.useMutation({
-		onSuccess: () => {
-			userAddonsQuery.refetch();
-		},
-	});
+	const revokeAddonMutation =
+		trpc.projectHighlightConfig.revokeAddon.useMutation({
+			onSuccess: () => {
+				userAddonsQuery.refetch();
+			},
+		});
 
 	// Available addons (hardcoded for MVP)
 	const availableAddons = [

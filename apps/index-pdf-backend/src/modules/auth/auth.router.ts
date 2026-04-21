@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-// import { eventEmitter } from "../../events/emitter";
+// import { eventEmitter } from "../../event-bus/emitter";
 import { logEvent } from "../../logger";
 import { protectedProcedure, publicProcedure, router } from "../../trpc";
 import { login, signup } from "./auth.service";

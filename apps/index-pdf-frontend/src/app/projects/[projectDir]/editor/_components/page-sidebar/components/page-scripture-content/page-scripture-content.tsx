@@ -36,7 +36,7 @@ export const PageScriptureContent = ({
 	pageNumber,
 }: PageScriptureContentProps) => {
 	const [matcherModalOpen, setMatcherModalOpen] = useState(false);
-	const { data: projectIndexTypes } = trpc.projectIndexType.list.useQuery(
+	const { data: projectIndexTypes } = trpc.projectHighlightConfig.list.useQuery(
 		{ projectId: projectId || "" },
 		{ enabled: !!projectId },
 	);

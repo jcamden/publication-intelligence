@@ -33,7 +33,7 @@ export const ProjectSubjectContent = () => {
 
 	// Fetch project index types to get the projectIndexTypeId
 	const { data: projectIndexTypes, isLoading: isLoadingIndexTypes } =
-		trpc.projectIndexType.list.useQuery(
+		trpc.projectHighlightConfig.list.useQuery(
 			{ projectId: projectId || "" },
 			{ enabled: !!projectId },
 		);

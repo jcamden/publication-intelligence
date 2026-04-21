@@ -4,11 +4,11 @@ import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { insertEvent } from "../event/event.repo";
 import { getProjectById } from "../project/project.repo";
-import * as sourceDocumentRepo from "./sourceDocument.repo";
+import * as sourceDocumentRepo from "./source-document.repo";
 import type {
 	SourceDocument,
 	SourceDocumentListItem,
-} from "./sourceDocument.types";
+} from "./source-document.types";
 
 // ============================================================================
 // Service Layer - Domain logic and orchestration

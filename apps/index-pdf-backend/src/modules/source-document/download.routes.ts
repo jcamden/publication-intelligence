@@ -4,7 +4,7 @@ import { localFileStorage } from "../../infrastructure/storage";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
 import { verifyToken } from "../auth/auth.service";
-import * as sourceDocumentRepo from "./sourceDocument.repo";
+import * as sourceDocumentRepo from "./source-document.repo";
 
 // ============================================================================
 // Fastify HTTP Routes - File Download

@@ -31,7 +31,7 @@ export const EditProjectModal = ({
 	);
 
 	// Fetch enabled index types
-	const indexTypesQuery = trpc.projectIndexType.list.useQuery(
+	const indexTypesQuery = trpc.projectHighlightConfig.list.useQuery(
 		{ projectId },
 		{ enabled: open && !!projectId },
 	);

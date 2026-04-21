@@ -34,7 +34,7 @@ export default function IndexPage() {
 		},
 	);
 
-	const indexTypesQuery = trpc.projectIndexType.list.useQuery(
+	const indexTypesQuery = trpc.projectHighlightConfig.list.useQuery(
 		{ projectId: projectQuery.data?.id ?? "" },
 		{
 			enabled: !!projectQuery.data?.id,

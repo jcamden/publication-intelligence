@@ -140,7 +140,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	}, [fileUrl, setPdfUrl]);
 
 	// Fetch project index types from backend
-	const projectIndexTypesQuery = trpc.projectIndexType.list.useQuery(
+	const projectIndexTypesQuery = trpc.projectHighlightConfig.list.useQuery(
 		{ projectId: projectId ?? "" },
 		{ enabled: !!projectId },
 	);

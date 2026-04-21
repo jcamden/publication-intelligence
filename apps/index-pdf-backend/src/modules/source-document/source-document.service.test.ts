@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { localFileStorage } from "../../infrastructure/storage";
 import { createTestProject, createTestUser } from "../../test/factories";
 import { createTestPdfBuffer, FAKE_UUID } from "../../test/mocks";
-import * as sourceDocumentService from "./sourceDocument.service";
+import * as sourceDocumentService from "./source-document.service";
 
 // ============================================================================
 // Domain / Service Layer Tests

@@ -32,7 +32,7 @@ export const ProjectAuthorContent = () => {
 	>(null);
 
 	const { data: projectIndexTypes, isLoading: isLoadingIndexTypes } =
-		trpc.projectIndexType.list.useQuery(
+		trpc.projectHighlightConfig.list.useQuery(
 			{ projectId: projectId || "" },
 			{ enabled: !!projectId },
 		);

@@ -31,13 +31,13 @@ export const usePersistColorChange = ({
 	const previousHueRef = useRef<number | null>(null);
 
 	// Query to get the project highlight config ID for this highlight type
-	const projectConfigsQuery = trpc.projectIndexType.list.useQuery(
+	const projectConfigsQuery = trpc.projectHighlightConfig.list.useQuery(
 		{ projectId: projectId ?? "" },
 		{ enabled: !!projectId && enabled },
 	);
 
 	// Mutation to update color
-	const updateColorMutation = trpc.projectIndexType.update.useMutation();
+	const updateColorMutation = trpc.projectHighlightConfig.update.useMutation();
 
 	// Debounce effect
 	// biome-ignore lint/correctness/useExhaustiveDependencies: updateColorMutation is intentionally omitted - it's recreated on every render and would reset the debounce timer

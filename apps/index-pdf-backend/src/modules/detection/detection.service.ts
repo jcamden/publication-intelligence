@@ -8,7 +8,7 @@ import * as indexMentionRepo from "../index-mention/index-mention.repo";
 import {
 	getSourceDocumentById,
 	listSourceDocumentsByProject,
-} from "../source-document/sourceDocument.repo";
+} from "../source-document/source-document.repo";
 import { getUserSettings } from "../user-settings/user-settings.repo";
 import { buildAliasIndex, scanTextWithAliasIndex } from "./alias-engine";
 import type { ResolvedAliasMatch } from "./alias-engine.types";

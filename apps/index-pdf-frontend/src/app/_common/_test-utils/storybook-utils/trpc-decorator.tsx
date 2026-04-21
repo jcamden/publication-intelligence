@@ -88,13 +88,13 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 
 								// Process each batched query
 								Object.keys(inputs).forEach((key) => {
-									if (key.includes("projectIndexType.listUserAddons")) {
+									if (key.includes("projectHighlightConfig.listUserAddons")) {
 										results[key] = {
 											result: {
 												data: ["subject", "author", "scripture"],
 											},
 										};
-									} else if (key.includes("projectIndexType.list")) {
+									} else if (key.includes("projectHighlightConfig.list")) {
 										results[key] = {
 											result: {
 												data: [
@@ -233,7 +233,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
-					if (urlString.includes("projectIndexType.listUserAddons")) {
+					if (urlString.includes("projectHighlightConfig.listUserAddons")) {
 						return new Response(
 							JSON.stringify({
 								result: {
@@ -246,7 +246,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
-					if (urlString.includes("projectIndexType.list")) {
+					if (urlString.includes("projectHighlightConfig.list")) {
 						return new Response(
 							JSON.stringify({
 								result: {

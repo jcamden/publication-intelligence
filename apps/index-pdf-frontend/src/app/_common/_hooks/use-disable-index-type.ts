@@ -16,16 +16,16 @@ import { trpc } from "@/app/_common/_utils/trpc";
 export const useDisableIndexType = ({ projectId }: { projectId: string }) => {
 	const utils = trpc.useUtils();
 
-	return trpc.projectIndexType.disable.useMutation({
+	return trpc.projectHighlightConfig.disable.useMutation({
 		onMutate: async (input) => {
-			await utils.projectIndexType.list.cancel({ projectId });
+			await utils.projectHighlightConfig.list.cancel({ projectId });
 
-			const previous = utils.projectIndexType.list.getData({
+			const previous = utils.projectHighlightConfig.list.getData({
 				projectId,
 			});
 
 			// Immediately remove from list (soft delete)
-			utils.projectIndexType.list.setData({ projectId }, (old) =>
+			utils.projectHighlightConfig.list.setData({ projectId }, (old) =>
 				(old || []).filter((t) => t.id !== input.id),
 			);
 
@@ -34,7 +34,10 @@ export const useDisableIndexType = ({ projectId }: { projectId: string }) => {
 
 		onError: (err, _input, context) => {
 			if (context?.previous) {
-				utils.projectIndexType.list.setData({ projectId }, context.previous);
+				utils.projectHighlightConfig.list.setData(
+					{ projectId },
+					context.previous,
+				);
 			}
 
 			toast.error(`Failed to disable index type: ${err.message}`);
@@ -45,8 +48,8 @@ export const useDisableIndexType = ({ projectId }: { projectId: string }) => {
 		},
 
 		onSettled: () => {
-			utils.projectIndexType.list.invalidate({ projectId });
-			utils.projectIndexType.listAvailable.invalidate({
+			utils.projectHighlightConfig.list.invalidate({ projectId });
+			utils.projectHighlightConfig.listAvailable.invalidate({
 				projectId,
 			});
 		},

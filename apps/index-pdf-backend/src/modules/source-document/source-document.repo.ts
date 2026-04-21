@@ -5,7 +5,7 @@ import type {
 	CreateSourceDocumentInput,
 	SourceDocument,
 	SourceDocumentListItem,
-} from "./sourceDocument.types";
+} from "./source-document.types";
 
 // ============================================================================
 // Repository Layer - Drizzle ORM queries

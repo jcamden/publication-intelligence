@@ -149,14 +149,15 @@ export const ProjectForm = ({
 	} = useAuthenticatedPdf({ url: editModePdfUrl });
 
 	// Query user's actual addons from backend
-	const userAddonsQuery = trpc.projectIndexType.listUserAddons.useQuery();
+	const userAddonsQuery = trpc.projectHighlightConfig.listUserAddons.useQuery();
 	const userAddons = new Set(
 		Array.isArray(userAddonsQuery.data) ? userAddonsQuery.data : [],
 	);
 
 	const createProjectMutation = trpc.project.create.useMutation();
 	const updateProjectMutation = trpc.project.update.useMutation();
-	const enableIndexTypeMutation = trpc.projectIndexType.enable.useMutation();
+	const enableIndexTypeMutation =
+		trpc.projectHighlightConfig.enable.useMutation();
 
 	const form = useForm({
 		defaultValues: {

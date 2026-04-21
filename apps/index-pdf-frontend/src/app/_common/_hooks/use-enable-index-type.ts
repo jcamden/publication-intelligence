@@ -16,11 +16,13 @@ import { trpc } from "@/app/_common/_utils/trpc";
 export const useEnableIndexType = () => {
 	const utils = trpc.useUtils();
 
-	return trpc.projectIndexType.enable.useMutation({
+	return trpc.projectHighlightConfig.enable.useMutation({
 		onMutate: async (input) => {
-			await utils.projectIndexType.list.cancel({ projectId: input.projectId });
+			await utils.projectHighlightConfig.list.cancel({
+				projectId: input.projectId,
+			});
 
-			const previous = utils.projectIndexType.list.getData({
+			const previous = utils.projectHighlightConfig.list.getData({
 				projectId: input.projectId,
 			});
 
@@ -42,7 +44,7 @@ export const useEnableIndexType = () => {
 				entry_count: 0,
 			};
 
-			utils.projectIndexType.list.setData(
+			utils.projectHighlightConfig.list.setData(
 				{ projectId: input.projectId },
 				(old) => [...(old || []), optimisticItem],
 			);
@@ -52,7 +54,7 @@ export const useEnableIndexType = () => {
 
 		onError: (err, input, context) => {
 			if (context?.previous) {
-				utils.projectIndexType.list.setData(
+				utils.projectHighlightConfig.list.setData(
 					{ projectId: input.projectId },
 					context.previous,
 				);
@@ -72,11 +74,11 @@ export const useEnableIndexType = () => {
 		},
 
 		onSettled: (_data, _err, variables) => {
-			utils.projectIndexType.list.invalidate({
+			utils.projectHighlightConfig.list.invalidate({
 				projectId: variables.projectId,
 			});
 			// Also invalidate available types
-			utils.projectIndexType.listAvailable.invalidate({
+			utils.projectHighlightConfig.listAvailable.invalidate({
 				projectId: variables.projectId,
 			});
 		},

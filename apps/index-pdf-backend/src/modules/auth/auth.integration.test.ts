@@ -71,7 +71,7 @@ describe("Auth API (Integration)", () => {
 			// Verify user has subject addon
 			const addonsResponse = await server.inject({
 				method: "GET",
-				url: "/trpc/projectIndexType.listUserAddons",
+				url: "/trpc/projectHighlightConfig.listUserAddons",
 				headers: {
 					authorization: `Bearer ${token}`,
 				},

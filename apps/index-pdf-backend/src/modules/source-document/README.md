@@ -9,12 +9,12 @@ Client (Frontend)
     ↓ (multipart/form-data)
 HTTP Route (upload.routes.ts)
     ↓
-Service Layer (sourceDocument.service.ts)
+Service Layer (source-document.service.ts)
     ├─→ Project validation
     ├─→ PDF validation (@pubint/pdf)
     ├─→ File hash computation
     ├─→ Storage Service (local-file-storage.ts)
-    └─→ Repository Layer (sourceDocument.repo.ts)
+    └─→ Repository Layer (source-document.repo.ts)
         └─→ Gel Database
 ```
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../../trpc";
-import * as sourceDocumentService from "./sourceDocument.service";
+import * as sourceDocumentService from "./source-document.service";
 
 // ============================================================================
 // tRPC Router - HTTP/API layer

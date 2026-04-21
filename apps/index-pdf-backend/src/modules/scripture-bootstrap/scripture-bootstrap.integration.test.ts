@@ -92,7 +92,7 @@ describe("ScriptureBootstrap API (Integration)", () => {
 
 		const enableRes = await context.authenticatedRequest.inject({
 			method: "POST",
-			url: "/trpc/projectIndexType.enable",
+			url: "/trpc/projectHighlightConfig.enable",
 			payload: {
 				projectId: context.testProjectId,
 				highlightType: "scripture",

@@ -64,13 +64,13 @@ describe("ProjectIndexType API (Integration)", () => {
 		await closeTestServer(context.server);
 	});
 
-	describe("GET /trpc/projectIndexType.listUserAddons", () => {
+	describe("GET /trpc/projectHighlightConfig.listUserAddons", () => {
 		it("should return user's granted addons", async ({
 			authenticatedRequest,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "GET",
-				url: "/trpc/projectIndexType.listUserAddons",
+				url: "/trpc/projectHighlightConfig.listUserAddons",
 			});
 
 			expect(response.statusCode).toBe(200);
@@ -85,21 +85,21 @@ describe("ProjectIndexType API (Integration)", () => {
 		it("should require authentication", async ({ server }) => {
 			const response = await server.inject({
 				method: "GET",
-				url: "/trpc/projectIndexType.listUserAddons",
+				url: "/trpc/projectHighlightConfig.listUserAddons",
 			});
 
 			expect(response.statusCode).toBe(401);
 		});
 	});
 
-	describe("POST /trpc/projectIndexType.listAvailable", () => {
+	describe("POST /trpc/projectHighlightConfig.listAvailable", () => {
 		it("should list available index types user can enable", async ({
 			authenticatedRequest,
 			testProjectId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 
 			expect(response.statusCode).toBe(200);
@@ -112,21 +112,21 @@ describe("ProjectIndexType API (Integration)", () => {
 		it("should require authentication", async ({ server, testProjectId }) => {
 			const response = await server.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 
 			expect(response.statusCode).toBe(401);
 		});
 	});
 
-	describe("POST /trpc/projectIndexType.enable", () => {
+	describe("POST /trpc/projectHighlightConfig.enable", () => {
 		it("should enable index type for project", async ({
 			authenticatedRequest,
 			testProjectId,
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "subject",
@@ -146,7 +146,7 @@ describe("ProjectIndexType API (Integration)", () => {
 		}) => {
 			const response = await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "author",
@@ -166,7 +166,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			// User doesn't have scripture addon
 			const response = await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "scripture",
@@ -178,7 +178,7 @@ describe("ProjectIndexType API (Integration)", () => {
 		});
 	});
 
-	describe("GET /trpc/projectIndexType.list", () => {
+	describe("GET /trpc/projectHighlightConfig.list", () => {
 		it("should list enabled index types", async ({
 			authenticatedRequest,
 			testProjectId,
@@ -186,7 +186,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			// First enable some index types
 			await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "subject",
@@ -196,7 +196,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 			await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "author",
@@ -206,7 +206,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 			const response = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 
 			expect(response.statusCode).toBe(200);
@@ -216,7 +216,7 @@ describe("ProjectIndexType API (Integration)", () => {
 		});
 	});
 
-	describe("POST /trpc/projectIndexType.update", () => {
+	describe("POST /trpc/projectHighlightConfig.update", () => {
 		it("should update color", async ({
 			authenticatedRequest,
 			testProjectId,
@@ -224,7 +224,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			// Enable an index type first
 			await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "subject",
@@ -235,7 +235,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			// Get the enabled project index type
 			const listResponse = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 
 			const list = JSON.parse(listResponse.body).result.data;
@@ -243,7 +243,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 			const response = await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.update",
+				url: "/trpc/projectHighlightConfig.update",
 				payload: {
 					id: pitId,
 					data: {
@@ -264,7 +264,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			// Enable an index type first
 			await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "subject",
@@ -274,7 +274,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 			const listResponse = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 
 			const list = JSON.parse(listResponse.body).result.data;
@@ -282,7 +282,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 			const response = await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.update",
+				url: "/trpc/projectHighlightConfig.update",
 				payload: {
 					id: pitId,
 					data: {
@@ -299,7 +299,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 	// Removed: reorder endpoint no longer exists (ordinal is now client-side concern)
 
-	describe("POST /trpc/projectIndexType.disable", () => {
+	describe("POST /trpc/projectHighlightConfig.disable", () => {
 		it("should disable index type (soft delete)", async ({
 			authenticatedRequest,
 			testProjectId,
@@ -307,7 +307,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			// Enable an index type first
 			await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.enable",
+				url: "/trpc/projectHighlightConfig.enable",
 				payload: {
 					projectId: testProjectId,
 					highlightType: "subject",
@@ -317,7 +317,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 			const listResponse = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 
 			const list = JSON.parse(listResponse.body).result.data;
@@ -325,7 +325,7 @@ describe("ProjectIndexType API (Integration)", () => {
 
 			const response = await authenticatedRequest.inject({
 				method: "POST",
-				url: "/trpc/projectIndexType.disable",
+				url: "/trpc/projectHighlightConfig.disable",
 				payload: {
 					id: pitId,
 				},
@@ -336,7 +336,7 @@ describe("ProjectIndexType API (Integration)", () => {
 			// Verify it's no longer in list
 			const newListResponse = await authenticatedRequest.inject({
 				method: "GET",
-				url: `/trpc/projectIndexType.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+				url: `/trpc/projectHighlightConfig.list?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
 			});
 
 			const newList = JSON.parse(newListResponse.body).result.data;

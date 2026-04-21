@@ -59,7 +59,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 				operation: async (request) =>
 					request.inject({
 						method: "POST",
-						url: "/trpc/projectIndexType.enable",
+						url: "/trpc/projectHighlightConfig.enable",
 						payload: {
 							projectId: project.id,
 							highlightType: "scripture",
@@ -91,7 +91,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 				operation: async (request) =>
 					request.inject({
 						method: "POST",
-						url: "/trpc/projectIndexType.enable",
+						url: "/trpc/projectHighlightConfig.enable",
 						payload: {
 							projectId: project.id,
 							highlightType: "subject",
@@ -128,7 +128,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 				operation: async (request) =>
 					request.inject({
 						method: "POST",
-						url: "/trpc/projectIndexType.enable",
+						url: "/trpc/projectHighlightConfig.enable",
 						payload: {
 							projectId: project.id,
 							highlightType: "scripture",
@@ -166,7 +166,7 @@ describe("ProjectIndexType Security & Authorization", () => {
 				operation: async (request) =>
 					request.inject({
 						method: "GET",
-						url: `/trpc/projectIndexType.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: project.id }))}`,
+						url: `/trpc/projectHighlightConfig.listAvailable?input=${encodeURIComponent(JSON.stringify({ projectId: project.id }))}`,
 					}),
 			});
 
