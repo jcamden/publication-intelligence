@@ -1,8 +1,8 @@
 import { computeFileHash, validatePdfFile } from "@pubint/pdf";
+import { emitEvent } from "../../event-bus/emit-event";
 import type { StorageService } from "../../infrastructure/storage";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import { getProjectById } from "../project/project.repo";
 import * as sourceDocumentRepo from "./source-document.repo";
 import type {
@@ -84,35 +84,23 @@ export const uploadSourceDocument = async ({
 		},
 	});
 
-	logEvent({
-		event: "source_document.uploaded",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "document.uploaded",
+			entityType: "SourceDocument",
+			entityId: document.id,
 			metadata: {
-				projectId: foundProject.id,
-				documentId: document.id,
+				title: document.title,
+				fileName: document.file_name,
+				fileSize: document.file_size,
+				contentHash: document.content_hash,
 				filename: file.filename,
 				sizeBytes,
 				storageKey,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "document.uploaded",
-		projectId: foundProject.id,
-		userId,
-		entityType: "SourceDocument",
-		entityId: document.id,
-		metadata: {
-			title: document.title,
-			fileName: document.file_name,
-			fileSize: document.file_size,
-			contentHash: document.content_hash,
-		},
-		requestId,
-	});
+		{ userId, projectId: foundProject.id, requestId },
+	);
 
 	return document;
 };
@@ -194,24 +182,15 @@ export const deleteSourceDocument = async ({
 
 	const deleted = requireFound(result);
 
-	logEvent({
-		event: "source_document.deleted",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "document.deleted",
+			entityType: "SourceDocument",
+			entityId: deleted.id,
 			metadata: {
-				documentId: deleted.id,
 				deleted_at: deleted.deleted_at,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "document.deleted",
-		projectId: found.project.id,
-		userId,
-		entityType: "SourceDocument",
-		entityId: deleted.id,
-		requestId,
-	});
+		{ userId, projectId: found.project.id, requestId },
+	);
 };

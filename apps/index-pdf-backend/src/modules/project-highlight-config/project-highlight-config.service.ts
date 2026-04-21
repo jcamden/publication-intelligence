@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import type { IndexType } from "../../db/schema/index-type-config";
+import { emitEvent } from "../../event-bus/emit-event";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import * as projectHighlightConfigRepo from "./project-highlight-config.repo";
 import type {
 	AvailableHighlightType,
@@ -164,32 +164,20 @@ export const enableProjectHighlightConfig = async ({
 		userId,
 	});
 
-	logEvent({
-		event: "project_highlight_config.enabled",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "highlight_config.enabled",
+			entityType: "IndexEntry",
+			entityId: config.id,
 			metadata: {
-				projectId: input.projectId,
 				projectHighlightConfigId: config.id,
 				highlightType: input.highlightType,
+				displayName: config.displayName,
+				colorHue: input.colorHue,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "highlight_config.enabled",
-		projectId: input.projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: config.id,
-		metadata: {
-			highlightType: input.highlightType,
-			displayName: config.displayName,
-			colorHue: input.colorHue,
-		},
-		requestId,
-	});
+		{ userId, projectId: input.projectId, requestId },
+	);
 
 	return config;
 };
@@ -236,27 +224,18 @@ export const updateProjectHighlightConfig = async ({
 
 	const found = requireFound(updated);
 
-	logEvent({
-		event: "project_highlight_config.updated",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "highlight_config.updated",
+			entityType: "IndexEntry",
+			entityId: id,
 			metadata: {
+				...input,
 				projectHighlightConfigId: id,
-				changes: input,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "highlight_config.updated",
-		projectId: found.project.id,
-		userId,
-		entityType: "IndexEntry",
-		entityId: id,
-		metadata: input,
-		requestId,
-	});
+		{ userId, projectId: found.project.id, requestId },
+	);
 
 	return found;
 };
@@ -383,31 +362,21 @@ export const disableProjectHighlightConfig = async ({
 
 	const result = requireFound(disabled);
 
-	logEvent({
-		event: "project_highlight_config.disabled",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "highlight_config.disabled",
+			entityType: "IndexEntry",
+			entityId: id,
 			metadata: {
 				projectHighlightConfigId: id,
 				entryCount: found.entry_count,
+				highlightType: found.highlightType,
+				displayName: found.displayName,
+				hadEntries: found.entry_count > 0,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "highlight_config.disabled",
-		projectId: found.project.id,
-		userId,
-		entityType: "IndexEntry",
-		entityId: id,
-		metadata: {
-			highlightType: found.highlightType,
-			displayName: found.displayName,
-			hadEntries: found.entry_count > 0,
-		},
-		requestId,
-	});
+		{ userId, projectId: found.project.id, requestId },
+	);
 
 	return result;
 };

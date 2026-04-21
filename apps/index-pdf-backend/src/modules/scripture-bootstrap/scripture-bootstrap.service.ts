@@ -13,8 +13,8 @@ import {
 	slugifyBootstrapKey,
 } from "@pubint/core";
 import { TRPCError } from "@trpc/server";
+import { emitEvent } from "../../event-bus/emit-event";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import type { CanonId } from "../scripture-index-config/scripture-index-config.types";
 import {
 	type AddEntriesConfig,
@@ -408,36 +408,23 @@ export async function run({
 
 	await updateBootstrapRunCounts({ userId, runId, counts });
 
-	logEvent({
-		event: "scripture_bootstrap.completed",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "scripture_bootstrap.run_completed",
 			metadata: {
 				projectId,
 				projectIndexTypeId,
 				configSnapshotHash: hash,
-				...counts,
+				entriesCreated: counts.entriesCreated,
+				entriesReused: counts.entriesReused,
+				matchersCreated: counts.matchersCreated,
+				matchersReused: counts.matchersReused,
+				groupsCreated: counts.groupsCreated,
+				membershipsCreated: counts.membershipsCreated,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "scripture_bootstrap.run_completed",
-		projectId,
-		userId,
-		metadata: {
-			projectIndexTypeId,
-			configSnapshotHash: hash,
-			entriesCreated: counts.entriesCreated,
-			entriesReused: counts.entriesReused,
-			matchersCreated: counts.matchersCreated,
-			matchersReused: counts.matchersReused,
-			groupsCreated: counts.groupsCreated,
-			membershipsCreated: counts.membershipsCreated,
-		},
-		requestId,
-	});
+		{ userId, projectId, requestId },
+	);
 
 	return counts;
 }

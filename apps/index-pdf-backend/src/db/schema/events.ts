@@ -43,6 +43,24 @@ export const events = pgTable(
 				)
 			)`,
 		}),
+		// Inserts must satisfy the same ownership as SELECT (or a typed unauthenticated audit row
+		// for failed login when user_id/project_id are null).
+		pgPolicy("events_insert_authenticated", {
+			for: "insert",
+			to: authenticatedRole,
+			withCheck: sql`(
+				${table.userId} = auth.user_id()
+				OR EXISTS (
+					SELECT 1 FROM projects
+					WHERE projects.id = ${table.projectId}
+				)
+				OR (
+					${table.type} = 'auth.failed_login_attempt'
+					AND ${table.userId} IS NULL
+					AND ${table.projectId} IS NULL
+				)
+			)`,
+		}),
 		// Events are insert-only (no update/delete by users)
 	],
 );

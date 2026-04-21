@@ -1,4 +1,4 @@
-import { db } from "../../db/client";
+import { type DbTransaction, db } from "../../db/client";
 import { events } from "../../db/schema";
 import type { InsertEventInput } from "./event.types";
 
@@ -6,8 +6,12 @@ import type { InsertEventInput } from "./event.types";
 // Event Repository - Domain event persistence
 // ============================================================================
 
-export const insertEvent = async (input: InsertEventInput): Promise<void> => {
-	await db.insert(events).values({
+export const insertEvent = async (
+	input: InsertEventInput,
+	options?: { tx?: DbTransaction },
+): Promise<void> => {
+	const runner = options?.tx ?? db;
+	await runner.insert(events).values({
 		type: input.type,
 		projectId: input.projectId ?? null,
 		userId: input.userId ?? null,

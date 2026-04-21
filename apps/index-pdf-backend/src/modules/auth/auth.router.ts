@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-// import { eventEmitter } from "../../event-bus/emitter";
+import { emitEvent } from "../../event-bus/emit-event";
 import { logEvent } from "../../logger";
 import { protectedProcedure, publicProcedure, router } from "../../trpc";
 import { login, signup } from "./auth.service";
@@ -18,28 +18,8 @@ export const authRouter = router({
 					email: input.email,
 					password: input.password,
 					name: input.name ?? undefined,
+					requestId: ctx.requestId,
 				});
-
-				logEvent({
-					event: "auth.user_created",
-					context: {
-						requestId: ctx.requestId,
-						userId: user.id,
-						metadata: {
-							email: user.email,
-							hasName: !!user.name,
-						},
-					},
-				});
-
-				// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
-				// await eventEmitter.emit({
-				// 	type: "user.created",
-				// 	timestamp: new Date(),
-				// 	userId: user.id,
-				// 	email: user.email,
-				// 	name: user.name ?? undefined,
-				// });
 
 				return {
 					user,
@@ -79,49 +59,31 @@ export const authRouter = router({
 					password: input.password,
 				});
 
-				logEvent({
-					event: "auth.user_logged_in",
-					context: {
-						requestId: ctx.requestId,
-						userId: user.id,
+				await emitEvent(
+					{
+						type: "user.logged_in",
 						metadata: {
 							email: user.email,
 						},
 					},
-				});
-
-				// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
-				// await eventEmitter.emit({
-				// 	type: "user.logged_in",
-				// 	timestamp: new Date(),
-				// 	userId: user.id,
-				// 	email: user.email,
-				// });
+					{ userId: user.id, requestId: ctx.requestId },
+				);
 
 				return {
 					user,
 					token,
 				};
 			} catch (error) {
-				logEvent({
-					event: "auth.login_failed",
-					context: {
-						requestId: ctx.requestId,
-						error,
+				await emitEvent(
+					{
+						type: "auth.failed_login_attempt",
 						metadata: {
 							email: input.email,
 							reason: error instanceof Error ? error.message : "Unknown error",
 						},
 					},
-				});
-
-				// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
-				// await eventEmitter.emit({
-				// 	type: "auth.failed_login_attempt",
-				// 	timestamp: new Date(),
-				// 	email: input.email,
-				// 	reason: error instanceof Error ? error.message : "Unknown error",
-				// });
+					{ requestId: ctx.requestId },
+				);
 
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
@@ -135,24 +97,15 @@ export const authRouter = router({
 	}),
 
 	signOut: protectedProcedure.mutation(async ({ ctx }) => {
-		logEvent({
-			event: "auth.user_logged_out",
-			context: {
-				requestId: ctx.requestId,
-				userId: ctx.user.id,
+		await emitEvent(
+			{
+				type: "user.logged_out",
 				metadata: {
 					email: ctx.user.email,
 				},
 			},
-		});
-
-		// TODO: Uncomment when adding realtime updates, webhooks, or async event handlers
-		// await eventEmitter.emit({
-		// 	type: "user.logged_out",
-		// 	timestamp: new Date(),
-		// 	userId: ctx.user.id,
-		// 	email: ctx.user.email,
-		// });
+			{ userId: ctx.user.id, requestId: ctx.requestId },
+		);
 
 		return { message: "Signed out successfully" };
 	}),

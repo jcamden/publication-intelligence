@@ -6,9 +6,9 @@ import {
 	indexMentions,
 	projectIndexTypes,
 } from "../../db/schema";
+import { emitEvent } from "../../event-bus/emit-event";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import * as indexEntryRepo from "../index-entry/index-entry.repo";
 import * as indexMentionRepo from "./index-mention.repo";
 import type {
@@ -107,35 +107,22 @@ export const createIndexMention = async ({
 		userId,
 	});
 
-	logEvent({
-		event: "index_mention.created",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "index_mention.created",
+			entityType: "IndexMention",
+			entityId: mention.id,
 			metadata: {
 				mentionId: mention.id,
-				entryId: input.entryId,
-				documentId: input.documentId,
-				pageNumber: input.pageNumber,
+				entryId: mention.entryId,
+				documentId: mention.documentId,
+				pageNumber: mention.pageNumber,
 				mentionType: input.mentionType,
+				textSpan: mention.textSpan,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "index_mention.created",
-		projectId: entry[0].projectId,
-		userId,
-		entityType: "IndexMention",
-		entityId: mention.id,
-		metadata: {
-			entryId: mention.entryId,
-			documentId: mention.documentId,
-			pageNumber: mention.pageNumber,
-			textSpan: mention.textSpan,
-		},
-		requestId,
-	});
+		{ userId, projectId: entry[0].projectId, requestId },
+	);
 
 	return mention;
 };
@@ -196,18 +183,6 @@ export const updateIndexMention = async ({
 
 	const result = requireFound(updated);
 
-	logEvent({
-		event: "index_mention.updated",
-		context: {
-			requestId,
-			userId,
-			metadata: {
-				mentionId: input.id,
-				changes: input,
-			},
-		},
-	});
-
 	const entry = await db
 		.select({ projectId: indexEntries.projectId })
 		.from(indexEntries)
@@ -215,18 +190,20 @@ export const updateIndexMention = async ({
 		.limit(1);
 
 	if (entry.length > 0) {
-		await insertEvent({
-			type: "index_mention.updated",
-			projectId: entry[0].projectId,
-			userId,
-			entityType: "IndexMention",
-			entityId: result.id,
-			metadata: {
-				entryId: result.entryId,
-				revision: result.revision,
+		await emitEvent(
+			{
+				type: "index_mention.updated",
+				entityType: "IndexMention",
+				entityId: result.id,
+				metadata: {
+					mentionId: input.id,
+					entryId: result.entryId,
+					revision: result.revision,
+					changes: input,
+				},
 			},
-			requestId,
-		});
+			{ userId, projectId: entry[0].projectId, requestId },
+		);
 	}
 
 	return result;
@@ -294,32 +271,21 @@ export const updateIndexMentionTypes = async ({
 		userId,
 	});
 
-	logEvent({
-		event: "index_mention.types_updated",
-		context: {
-			requestId,
-			userId,
-			metadata: {
-				mentionIds: input.mentionIds,
-				operation: input.operation,
-				projectIndexTypeIds: input.projectIndexTypeIds,
-			},
-		},
-	});
-
 	if (entry.length > 0) {
-		await insertEvent({
-			type: "index_mention.types_updated",
-			projectId: entry[0].projectId,
-			userId,
-			entityType: "IndexMention",
-			entityId: input.mentionIds[0],
-			metadata: {
-				count: input.mentionIds.length,
-				operation: input.operation,
+		await emitEvent(
+			{
+				type: "index_mention.types_updated",
+				entityType: "IndexMention",
+				entityId: input.mentionIds[0],
+				metadata: {
+					mentionIds: input.mentionIds,
+					count: input.mentionIds.length,
+					operation: input.operation,
+					projectIndexTypeIds: input.projectIndexTypeIds,
+				},
 			},
-			requestId,
-		});
+			{ userId, projectId: entry[0].projectId, requestId },
+		);
 	}
 
 	return updated;
@@ -366,29 +332,18 @@ export const bulkCreateIndexMentions = async ({
 		userId,
 	});
 
-	logEvent({
-		event: "index_mention.bulk_created",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "index_mention.bulk_created",
+			entityType: "IndexMention",
+			entityId: created[0]?.id || "",
 			metadata: {
 				count: created.length,
 				projectId,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "index_mention.bulk_created",
-		projectId,
-		userId,
-		entityType: "IndexMention",
-		entityId: created[0]?.id || "",
-		metadata: {
-			count: created.length,
-		},
-		requestId,
-	});
+		{ userId, projectId, requestId },
+	);
 
 	return created;
 };
@@ -442,17 +397,6 @@ export const deleteIndexMention = async ({
 
 	const result = requireFound(deleted);
 
-	logEvent({
-		event: "index_mention.deleted",
-		context: {
-			requestId,
-			userId,
-			metadata: {
-				mentionId: input.id,
-			},
-		},
-	});
-
 	const entry = await db
 		.select({ projectId: indexEntries.projectId })
 		.from(indexEntries)
@@ -460,17 +404,18 @@ export const deleteIndexMention = async ({
 		.limit(1);
 
 	if (entry.length > 0) {
-		await insertEvent({
-			type: "index_mention.deleted",
-			projectId: entry[0].projectId,
-			userId,
-			entityType: "IndexMention",
-			entityId: result.id,
-			metadata: {
-				entryId: result.entryId,
+		await emitEvent(
+			{
+				type: "index_mention.deleted",
+				entityType: "IndexMention",
+				entityId: result.id,
+				metadata: {
+					mentionId: input.id,
+					entryId: result.entryId,
+				},
 			},
-			requestId,
-		});
+			{ userId, projectId: entry[0].projectId, requestId },
+		);
 	}
 
 	return result;
@@ -520,30 +465,18 @@ export const deleteAllMentionsByEntry = async ({
 		});
 	}
 
-	logEvent({
-		event: "index_mention.bulk_deleted_by_entry",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "index_mention.bulk_deleted_by_entry",
+			entityType: "IndexEntry",
+			entityId: entryId,
 			metadata: {
 				entryId,
-				projectId,
 				deletedCount: mentions.length,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "index_mention.bulk_deleted_by_entry",
-		projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: entryId,
-		metadata: {
-			deletedCount: mentions.length,
-		},
-		requestId,
-	});
+		{ userId, projectId, requestId },
+	);
 
 	return { deletedCount: mentions.length };
 };

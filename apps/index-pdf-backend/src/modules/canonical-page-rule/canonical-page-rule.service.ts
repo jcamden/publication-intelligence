@@ -4,8 +4,8 @@ import {
 	generateRomanNumerals,
 } from "@pubint/core";
 import { TRPCError } from "@trpc/server";
+import { emitEvent } from "../../event-bus/emit-event";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import * as ruleRepo from "./canonical-page-rule.repo";
 import type {
 	CanonicalPageRule,
@@ -88,34 +88,23 @@ export const createRule = async ({
 
 	const rule = await ruleRepo.createRule({ input });
 
-	logEvent({
-		event: "canonical_page_rule.created",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "canonical_page_rule.created",
+			entityType: "IndexEntry",
+			entityId: rule.id,
 			metadata: {
 				ruleId: rule.id,
-				projectId: input.projectId,
-				ruleType: input.ruleType,
+				ruleType: rule.ruleType,
+				documentPageStart: rule.documentPageStart,
+				documentPageEnd: rule.documentPageEnd,
+				label: rule.label,
 				documentPageRange: `${input.documentPageStart}-${input.documentPageEnd}`,
+				inputRuleType: input.ruleType,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "canonical_page_rule.created",
-		projectId: input.projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: rule.id,
-		metadata: {
-			ruleType: rule.ruleType,
-			documentPageStart: rule.documentPageStart,
-			documentPageEnd: rule.documentPageEnd,
-			label: rule.label,
-		},
-		requestId,
-	});
+		{ userId, projectId: input.projectId, requestId },
+	);
 
 	// Check for auto-join opportunities
 	await autoJoinContiguousRules({

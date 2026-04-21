@@ -5,6 +5,10 @@ import jwt from "jsonwebtoken";
 import { db } from "../../db/client";
 import { userIndexTypeAddons, users } from "../../db/schema";
 import { env } from "../../env";
+import {
+	emitEvent,
+	runTransactionWithPostCommit,
+} from "../../event-bus/emit-event";
 
 // ============================================================================
 // Auth Service - Custom JWT-based authentication
@@ -26,10 +30,12 @@ export const signup = async ({
 	email,
 	password,
 	name,
+	requestId,
 }: {
 	email: string;
 	password: string;
 	name?: string;
+	requestId: string;
 }) => {
 	// Check if user exists
 	const existing = await db
@@ -49,7 +55,7 @@ export const signup = async ({
 	// RLS policy requires id = auth.user_id(), so we set context to the new ID
 	const newUserId = randomUUID();
 
-	const [user] = await db.transaction(async (tx) => {
+	const [user] = await runTransactionWithPostCommit(async (tx) => {
 		// Set auth context for RLS (transaction-scoped)
 		await tx.execute(
 			sql`SELECT set_config('request.jwt.claim.sub', ${newUserId}, TRUE)`,
@@ -67,11 +73,28 @@ export const signup = async ({
 			})
 			.returning();
 
+		const inserted = newUsers[0];
+		if (!inserted) {
+			throw new Error("User insert returned no row");
+		}
+
 		// Grant default "subject" addon to new user
 		await tx.insert(userIndexTypeAddons).values({
 			userId: newUserId,
 			indexType: "subject",
 		});
+
+		await emitEvent(
+			{
+				type: "user.created",
+				metadata: {
+					email: inserted.email,
+					hasName: !!inserted.name,
+				},
+			},
+			{ userId: inserted.id, requestId },
+			{ tx },
+		);
 
 		return newUsers;
 	});

@@ -1,53 +1,13 @@
-export type AuthEvent =
-	| UserCreatedEvent
-	| UserUpdatedEvent
-	| UserDeletedEvent
-	| UserLoggedInEvent
-	| UserLoggedOutEvent
-	| FailedLoginAttemptEvent;
+import type { DomainEvent } from "./domain-event";
 
-export type UserCreatedEvent = {
-	type: "user.created";
-	timestamp: Date;
-	userId: string;
-	email: string;
-	name?: string;
-};
-
-export type UserUpdatedEvent = {
-	type: "user.updated";
-	timestamp: Date;
-	userId: string;
-	changes: {
-		email?: string;
-		name?: string;
-	};
-};
-
-export type UserDeletedEvent = {
-	type: "user.deleted";
-	timestamp: Date;
-	userId: string;
-	email: string;
-};
-
-export type UserLoggedInEvent = {
-	type: "user.logged_in";
-	timestamp: Date;
-	userId: string;
-	email: string;
-};
-
-export type UserLoggedOutEvent = {
-	type: "user.logged_out";
-	timestamp: Date;
-	userId: string;
-	email: string;
-};
-
-export type FailedLoginAttemptEvent = {
-	type: "auth.failed_login_attempt";
-	timestamp: Date;
-	email: string;
-	reason: string;
-};
+/** Auth-related subset of {@link DomainEvent} (in-process subscribers / future realtime). */
+export type AuthEvent = Extract<
+	DomainEvent,
+	{
+		type:
+			| "user.created"
+			| "user.logged_in"
+			| "user.logged_out"
+			| "auth.failed_login_attempt";
+	}
+>;

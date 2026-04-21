@@ -15,7 +15,7 @@ export type InsertEventInput = {
 	type: string; // e.g., 'project.created', 'document.uploaded'
 	projectId?: string;
 	userId?: string;
-	entityType?: EntityType;
+	entityType?: EntityType | null;
 	entityId?: string;
 	metadata?: Record<string, unknown>;
 	requestId?: string;

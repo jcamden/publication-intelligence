@@ -2,9 +2,9 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { indexEntries } from "../../db/schema";
+import { emitEvent } from "../../event-bus/emit-event";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import * as indexEntryRepo from "./index-entry.repo";
 import type {
 	CreateCrossReferenceInput,
@@ -126,36 +126,23 @@ export const createIndexEntry = async ({
 		userId,
 	});
 
-	logEvent({
-		event: "index_entry.created",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "index_entry.created",
+			entityType: "IndexEntry",
+			entityId: entry.id,
 			metadata: {
 				entryId: entry.id,
 				projectId: input.projectId,
-				projectIndexTypeId: input.projectIndexTypeId,
-				label: input.label,
-				slug: input.slug,
+				projectIndexTypeId: entry.projectIndexTypeId,
+				label: entry.label,
+				slug: entry.slug,
 				parentId: input.parentId,
 				matcherCount: input.matchers?.length || 0,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "index_entry.created",
-		projectId: input.projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: entry.id,
-		metadata: {
-			label: entry.label,
-			slug: entry.slug,
-			projectIndexTypeId: entry.projectIndexTypeId,
-		},
-		requestId,
-	});
+		{ userId, projectId: input.projectId, requestId },
+	);
 
 	return entry;
 };
@@ -187,30 +174,20 @@ export const updateIndexEntry = async ({
 
 	const entry = requireFound(updated);
 
-	logEvent({
-		event: "index_entry.updated",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "index_entry.updated",
+			entityType: "IndexEntry",
+			entityId: entry.id,
 			metadata: {
 				entryId: input.id,
+				label: entry.label,
+				revision: entry.revision,
 				changes: input,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "index_entry.updated",
-		projectId: entry.projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: entry.id,
-		metadata: {
-			label: entry.label,
-			revision: entry.revision,
-		},
-		requestId,
-	});
+		{ userId, projectId: entry.projectId, requestId },
+	);
 
 	return entry;
 };
@@ -349,30 +326,19 @@ export const updateIndexEntryParent = async ({
 
 	const entry = requireFound(updated);
 
-	logEvent({
-		event: "index_entry.parent_updated",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "index_entry.parent_updated",
+			entityType: "IndexEntry",
+			entityId: entry.id,
 			metadata: {
 				entryId: input.id,
-				parentId: input.parentId,
+				label: entry.label,
+				parentId: entry.parentId,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "index_entry.parent_updated",
-		projectId: entry.projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: entry.id,
-		metadata: {
-			label: entry.label,
-			parentId: entry.parentId,
-		},
-		requestId,
-	});
+		{ userId, projectId: entry.projectId, requestId },
+	);
 
 	return entry;
 };
@@ -421,30 +387,20 @@ export const deleteIndexEntry = async ({
 
 	const result = requireFound(deleted);
 
-	logEvent({
-		event: "index_entry.deleted",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "index_entry.deleted",
+			entityType: "IndexEntry",
+			entityId: entry.id,
 			metadata: {
 				entryId: input.id,
+				label: entry.label,
 				cascadeToChildren: input.cascadeToChildren,
+				cascaded: input.cascadeToChildren,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "index_entry.deleted",
-		projectId: entry.projectId,
-		userId,
-		entityType: "IndexEntry",
-		entityId: entry.id,
-		metadata: {
-			label: entry.label,
-			cascaded: input.cascadeToChildren,
-		},
-		requestId,
-	});
+		{ userId, projectId: entry.projectId, requestId },
+	);
 
 	return result;
 };

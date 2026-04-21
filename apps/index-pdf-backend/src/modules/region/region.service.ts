@@ -1,7 +1,7 @@
 import { validatePageRange } from "@pubint/core";
 import { TRPCError } from "@trpc/server";
+import { emitEvent } from "../../event-bus/emit-event";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import * as regionRepo from "./region.repo";
 import type {
 	CreateRegionInput,
@@ -125,33 +125,20 @@ export const createRegion = async ({
 
 	const region = await regionRepo.createRegion({ input });
 
-	logEvent({
-		event: "region.created",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "region.created",
+			entityType: "IndexEntry",
+			entityId: region.id,
 			metadata: {
 				regionId: region.id,
-				projectId: input.projectId,
-				regionType: input.regionType,
-				pageConfigMode: input.pageConfigMode,
+				regionType: region.regionType,
+				pageConfigMode: region.pageConfigMode,
+				color: region.color,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "region.created",
-		projectId: input.projectId,
-		userId,
-		entityType: "IndexEntry", // TODO: Add Region to entityTypeEnum
-		entityId: region.id,
-		metadata: {
-			regionType: region.regionType,
-			pageConfigMode: region.pageConfigMode,
-			color: region.color,
-		},
-		requestId,
-	});
+		{ userId, projectId: input.projectId, requestId },
+	);
 
 	return region;
 };

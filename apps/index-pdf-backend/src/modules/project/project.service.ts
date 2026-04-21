@@ -1,6 +1,6 @@
+import { emitEvent } from "../../event-bus/emit-event";
 import { requireFound } from "../../lib/errors";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import * as projectRepo from "./project.repo";
 import type {
 	CreateProjectInput,
@@ -24,29 +24,17 @@ export const createProject = async ({
 }): Promise<Project> => {
 	const project = await projectRepo.createProject({ userId, input });
 
-	logEvent({
-		event: "project.created",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "project.created",
+			entityType: "Project",
+			entityId: project.id,
 			metadata: {
-				projectId: project.id,
 				title: project.title,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "project.created",
-		projectId: project.id,
-		userId,
-		entityType: "Project",
-		entityId: project.id,
-		metadata: {
-			title: project.title,
-		},
-		requestId,
-	});
+		{ userId, projectId: project.id, requestId },
+	);
 
 	return project;
 };
@@ -143,29 +131,17 @@ export const updateProject = async ({
 	// Throw NOT_FOUND if project doesn't exist or user lacks access
 	const updated = requireFound(project);
 
-	logEvent({
-		event: "project.updated",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "project.updated",
+			entityType: "Project",
+			entityId: updated.id,
 			metadata: {
-				projectId: updated.id,
 				changes: input,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "project.updated",
-		projectId: updated.id,
-		userId,
-		entityType: "Project",
-		entityId: updated.id,
-		metadata: {
-			changes: input,
-		},
-		requestId,
-	});
+		{ userId, projectId: updated.id, requestId },
+	);
 
 	return updated;
 };
@@ -184,24 +160,15 @@ export const deleteProject = async ({
 	// Throw NOT_FOUND if project doesn't exist, already deleted, or user lacks access
 	const deleted = requireFound(result);
 
-	logEvent({
-		event: "project.deleted",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "project.deleted",
+			entityType: "Project",
+			entityId: deleted.id,
 			metadata: {
-				projectId: deleted.id,
 				deleted_at: deleted.deleted_at,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "project.deleted",
-		projectId: deleted.id,
-		userId,
-		entityType: "Project",
-		entityId: deleted.id,
-		requestId,
-	});
+		{ userId, projectId: deleted.id, requestId },
+	);
 };

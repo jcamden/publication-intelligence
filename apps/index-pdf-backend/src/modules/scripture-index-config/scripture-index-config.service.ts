@@ -1,7 +1,7 @@
 import { isValidCanonId } from "@pubint/core";
 import { TRPCError } from "@trpc/server";
+import { emitEvent } from "../../event-bus/emit-event";
 import { logEvent } from "../../logger";
-import { insertEvent } from "../event/event.repo";
 import * as scriptureIndexConfigRepo from "./scripture-index-config.repo";
 import type {
 	ScriptureIndexConfig,
@@ -105,11 +105,10 @@ export async function upsertScriptureConfig({
 		userId,
 	});
 
-	logEvent({
-		event: "scripture_index_config.upserted",
-		context: {
-			requestId,
-			userId,
+	await emitEvent(
+		{
+			type: "scripture_index_config.updated",
+			entityId: config.id,
 			metadata: {
 				projectId: input.projectId,
 				projectIndexTypeId: input.projectIndexTypeId,
@@ -135,28 +134,18 @@ export async function upsertScriptureConfig({
 					includeDeadSeaScrolls: config.includeDeadSeaScrolls,
 					alwaysDisplayUnknownEntry: config.alwaysDisplayUnknownEntry,
 				},
+				selectedCanon: config.selectedCanon,
+				includeApocrypha: config.includeApocrypha,
+				includeJewishWritings: config.includeJewishWritings,
+				includeClassicalWritings: config.includeClassicalWritings,
+				includeChristianWritings: config.includeChristianWritings,
+				includeDeadSeaScrolls: config.includeDeadSeaScrolls,
+				alwaysDisplayUnknownEntry: config.alwaysDisplayUnknownEntry,
+				updatedAt: config.updatedAt,
 			},
 		},
-	});
-
-	await insertEvent({
-		type: "scripture_index_config.updated",
-		projectId: input.projectId,
-		userId,
-		entityId: config.id,
-		metadata: {
-			projectIndexTypeId: input.projectIndexTypeId,
-			selectedCanon: config.selectedCanon,
-			includeApocrypha: config.includeApocrypha,
-			includeJewishWritings: config.includeJewishWritings,
-			includeClassicalWritings: config.includeClassicalWritings,
-			includeChristianWritings: config.includeChristianWritings,
-			includeDeadSeaScrolls: config.includeDeadSeaScrolls,
-			alwaysDisplayUnknownEntry: config.alwaysDisplayUnknownEntry,
-			updatedAt: config.updatedAt,
-		},
-		requestId,
-	});
+		{ userId, projectId: input.projectId, requestId },
+	);
 
 	return config;
 }
