@@ -1,104 +1,104 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1738800000000,
-      "tag": "0000_create_auth_functions",
-      "breakpoints": false
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773160772452,
-      "tag": "0001_slimy_invaders",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1773166480427,
-      "tag": "0002_daily_flatman",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1773169139033,
-      "tag": "0003_cynical_harry_osborn",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1773174615828,
-      "tag": "0004_bent_mockingbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1773177891341,
-      "tag": "0005_damp_shape",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1773190969110,
-      "tag": "0006_melodic_iron_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1773201959940,
-      "tag": "0007_tiresome_longshot",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1773435191015,
-      "tag": "0008_broad_colossus",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1773441110073,
-      "tag": "0009_real_shiva",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1773497569043,
-      "tag": "0010_spicy_mister_fear",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1773498797511,
-      "tag": "0011_typical_sunfire",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1773511315260,
-      "tag": "0012_chemical_blazing_skull",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1776739521873,
-      "tag": "0013_optimal_thor_girl",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1738800000000,
+			"tag": "0000_create_auth_functions",
+			"breakpoints": false
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1773160772452,
+			"tag": "0001_slimy_invaders",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1773166480427,
+			"tag": "0002_daily_flatman",
+			"breakpoints": true
+		},
+		{
+			"idx": 3,
+			"version": "7",
+			"when": 1773169139033,
+			"tag": "0003_cynical_harry_osborn",
+			"breakpoints": true
+		},
+		{
+			"idx": 4,
+			"version": "7",
+			"when": 1773174615828,
+			"tag": "0004_bent_mockingbird",
+			"breakpoints": true
+		},
+		{
+			"idx": 5,
+			"version": "7",
+			"when": 1773177891341,
+			"tag": "0005_damp_shape",
+			"breakpoints": true
+		},
+		{
+			"idx": 6,
+			"version": "7",
+			"when": 1773190969110,
+			"tag": "0006_melodic_iron_man",
+			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1773201959940,
+			"tag": "0007_tiresome_longshot",
+			"breakpoints": true
+		},
+		{
+			"idx": 8,
+			"version": "7",
+			"when": 1773435191015,
+			"tag": "0008_broad_colossus",
+			"breakpoints": true
+		},
+		{
+			"idx": 9,
+			"version": "7",
+			"when": 1773441110073,
+			"tag": "0009_real_shiva",
+			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1773497569043,
+			"tag": "0010_spicy_mister_fear",
+			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1773498797511,
+			"tag": "0011_typical_sunfire",
+			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1773511315260,
+			"tag": "0012_chemical_blazing_skull",
+			"breakpoints": true
+		},
+		{
+			"idx": 13,
+			"version": "7",
+			"when": 1776739521873,
+			"tag": "0013_optimal_thor_girl",
+			"breakpoints": true
+		}
+	]
 }

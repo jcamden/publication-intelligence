@@ -1,0 +1,27 @@
+---
+description: Prefer arrow functions for components and module-level helpers
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript / TSX function style
+
+Use **arrow function** syntax for module-scoped React components and helpers.
+
+```tsx
+// Preferred
+export const MyComponent = (props: Props) => <div />;
+
+const parseId = (raw: string) => Number.parseInt(raw, 10);
+
+// Avoid for new code
+export function MyComponent(props: Props) {
+	return <div />;
+}
+```
+
+**Exceptions (use `function` when it reads better or is required):**
+
+- Generator functions (`function*`)
+- Overloads and certain declaration merging patterns in `.ts` files
+- `forwardRef` / `memo` wrappers where the codebase already uses a consistent `function` pattern for that file
