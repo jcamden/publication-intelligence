@@ -2,14 +2,11 @@ import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 import { within } from "@storybook/test";
 
 export const editorInteractionSelectors = {
-	highlightLayer: (canvas: StorybookCanvas) =>
-		canvas.queryByTestId("pdf-highlight-layer"),
-
+	documentBody: () => within(document.body),
 	highlight: (canvas: StorybookCanvas, testId: string) =>
 		canvas.getByTestId(testId),
-
-	documentBody: () => within(document.body),
-
+	highlightLayer: (canvas: StorybookCanvas) =>
+		canvas.queryByTestId("pdf-highlight-layer"),
 	pdfAnnotationPopover: () =>
 		document.querySelector("[data-pdf-annotation-popover]"),
 };

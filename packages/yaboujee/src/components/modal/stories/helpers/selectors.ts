@@ -2,34 +2,33 @@ import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 import { within } from "@storybook/test";
 
 export type ModalStorySelectors = {
-	openButton: (canvas: StorybookCanvas) => HTMLElement;
-	triggerButton: (canvas: StorybookCanvas) => HTMLElement;
-	modalState: (canvas: StorybookCanvas) => HTMLElement;
 	body: () => StorybookCanvas;
-	modalContent: () => Promise<HTMLElement>;
-	closeButton: () => Promise<HTMLElement>;
-	title: (text: string) => Promise<HTMLElement>;
 	childContent: () => Promise<HTMLElement>;
-	footerButton: () => Promise<HTMLElement>;
+	closeButton: () => Promise<HTMLElement>;
 	closeButtons: () => HTMLElement[];
-	openBtn: (canvas: StorybookCanvas) => HTMLElement;
 	closeCount: (canvas: StorybookCanvas) => HTMLElement;
+	footerButton: () => Promise<HTMLElement>;
+	modalContent: () => Promise<HTMLElement>;
+	modalState: (canvas: StorybookCanvas) => HTMLElement;
+	openBtn: (canvas: StorybookCanvas) => HTMLElement;
+	openButton: (canvas: StorybookCanvas) => HTMLElement;
+	title: (text: string) => Promise<HTMLElement>;
+	triggerButton: (canvas: StorybookCanvas) => HTMLElement;
 };
 
 export const modalSelectors: ModalStorySelectors = {
-	openButton: (canvas: StorybookCanvas) => canvas.getByTestId("open-button"),
-	triggerButton: (canvas: StorybookCanvas) =>
-		canvas.getByTestId("trigger-button"),
-	modalState: (canvas: StorybookCanvas) => canvas.getByTestId("modal-state"),
-
 	body: () => within(document.body),
-	modalContent: () => modalSelectors.body().findByTestId("modal-content"),
-	closeButton: () => modalSelectors.body().findByRole("button", { name: /✕/i }),
-	title: (text: string) => modalSelectors.body().findByText(text),
 	childContent: () => modalSelectors.body().findByTestId("child-content"),
-	footerButton: () => modalSelectors.body().findByTestId("footer-button"),
+	closeButton: () => modalSelectors.body().findByRole("button", { name: /✕/i }),
 	closeButtons: () =>
 		modalSelectors.body().queryAllByRole("button", { name: /✕/i }),
-	openBtn: (canvas: StorybookCanvas) => canvas.getByTestId("open-btn"),
 	closeCount: (canvas: StorybookCanvas) => canvas.getByTestId("close-count"),
+	footerButton: () => modalSelectors.body().findByTestId("footer-button"),
+	modalContent: () => modalSelectors.body().findByTestId("modal-content"),
+	modalState: (canvas: StorybookCanvas) => canvas.getByTestId("modal-state"),
+	openBtn: (canvas: StorybookCanvas) => canvas.getByTestId("open-btn"),
+	openButton: (canvas: StorybookCanvas) => canvas.getByTestId("open-button"),
+	title: (text: string) => modalSelectors.body().findByText(text),
+	triggerButton: (canvas: StorybookCanvas) =>
+		canvas.getByTestId("trigger-button"),
 };

@@ -1,7 +1,6 @@
 import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 
 export const entryTreeSelectors = {
-	philosophyEntry: (canvas: StorybookCanvas) => canvas.getByText("Philosophy"),
 	emptyMessage: (canvas: StorybookCanvas) => canvas.getByText("No entries yet"),
 	expandChevronButton: (canvas: StorybookCanvas) => {
 		const expandButtons = canvas.getAllByRole("button");
@@ -13,4 +12,5 @@ export const entryTreeSelectors = {
 		}
 		return chevronButton;
 	},
+	philosophyEntry: (canvas: StorybookCanvas) => canvas.getByText("Philosophy"),
 };

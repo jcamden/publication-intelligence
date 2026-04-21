@@ -195,3 +195,11 @@ export const blurByPressingTab = async ({
 } & Pick<StoryContext, "step">) => {
 	await pressTab({ user, step });
 };
+
+/** Prefer this over Tab after programmatic `setControlledInputValue` on project_dir so onBlur validators see the committed value. */
+export const blurProjectDirInput = async ({ body, step }: StoryContext) => {
+	await step("Blur Project Directory input", async () => {
+		const projectDirInput = editProjectModalSelectors.projectDirInput(body);
+		(projectDirInput as HTMLElement).blur();
+	});
+};

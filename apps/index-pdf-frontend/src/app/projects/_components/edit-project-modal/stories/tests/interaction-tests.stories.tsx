@@ -4,6 +4,7 @@ import { userEvent, within } from "@storybook/test";
 import { EditProjectModal } from "../../edit-project-modal";
 import {
 	blurByPressingTab,
+	blurProjectDirInput,
 	clearAndFillProjectDir,
 	clearAndFillProjectTitle,
 	clickDeleteProjectButton,
@@ -107,7 +108,7 @@ export const ShowsErrorWhenProjectDirMatchesOtherProject: StoryObj<
 			projectDir: "another-project",
 			step,
 		});
-		await blurByPressingTab({ user, step });
+		await blurProjectDirInput({ body, step });
 		await projectDirAlreadyInUseErrorIsVisible({ body, step });
 	},
 };
@@ -170,7 +171,7 @@ export const AllowsKeepingSameProjectDir: StoryObj<typeof EditProjectModal> = {
 			projectDir: "test-project",
 			step,
 		});
-		await blurByPressingTab({ user, step });
+		await blurProjectDirInput({ body, step });
 		await projectDirAlreadyInUseErrorIsNotVisible({ body, step });
 	},
 };

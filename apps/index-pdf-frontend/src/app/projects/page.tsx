@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { trpc } from "@/app/_common/_trpc/client";
+import { ProjectNavbar } from "../_common/_components/project-navbar";
 import { CreateProjectModal } from "./_components/create-project-modal";
 import { EditProjectModal } from "./_components/edit-project-modal";
 import { ProjectList } from "./_components/project-list";
-import { ProjectNavbar } from "./_components/project-navbar";
 
 export default function ProjectsPage() {
 	const router = useRouter();

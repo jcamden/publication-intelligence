@@ -2,21 +2,21 @@ import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 import { within } from "@storybook/test";
 
 export type UserDropdownStorySelectors = {
-	trigger: (canvas: StorybookCanvas) => HTMLElement;
 	body: () => StorybookCanvas;
 	settingsItem: () => Promise<HTMLElement>;
 	signOutItem: () => Promise<HTMLElement>;
-	userName: (userName: string) => Promise<HTMLElement>;
+	trigger: (canvas: StorybookCanvas) => HTMLElement;
 	userEmail: (userEmail: string) => Promise<HTMLElement>;
+	userName: (userName: string) => Promise<HTMLElement>;
 };
 
 export const userDropdownSelectors: UserDropdownStorySelectors = {
-	trigger: (canvas: StorybookCanvas) => canvas.getByRole("button"),
 	body: () => within(document.body),
 	settingsItem: () => userDropdownSelectors.body().findByText("Settings"),
 	signOutItem: () => userDropdownSelectors.body().findByText("Sign out"),
-	userName: (userName: string) =>
-		userDropdownSelectors.body().findByText(userName),
+	trigger: (canvas: StorybookCanvas) => canvas.getByRole("button"),
 	userEmail: (userEmail: string) =>
 		userDropdownSelectors.body().findByText(userEmail),
+	userName: (userName: string) =>
+		userDropdownSelectors.body().findByText(userName),
 };

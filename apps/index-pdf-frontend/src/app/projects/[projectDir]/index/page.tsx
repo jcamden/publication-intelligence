@@ -10,7 +10,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { trpc } from "@/app/_common/_trpc/client";
-import { ProjectNavbar } from "../../_components/project-navbar";
+import { ProjectNavbar } from "../../../_common/_components/project-navbar";
 import { SubjectIndexContent } from "./_components/subject-index-content";
 
 export default function IndexPage() {

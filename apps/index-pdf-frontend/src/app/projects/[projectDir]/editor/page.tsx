@@ -2,10 +2,10 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { ProjectNavbar } from "@/app/_common/_components/project-navbar";
 import { API_URL } from "@/app/_common/_config/api";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { trpc } from "@/app/_common/_trpc/client";
-import { ProjectNavbar } from "@/app/projects/_components/project-navbar";
 import { useAuthenticatedPdf } from "@/app/projects/_hooks/use-authenticated-pdf";
 import { Editor } from "./_components/editor";
 

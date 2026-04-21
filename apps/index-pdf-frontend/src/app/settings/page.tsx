@@ -28,9 +28,9 @@ import { CheckIcon, Loader2, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { ProjectNavbar } from "@/app/_common/_components/project-navbar";
 import { useAuthToken } from "@/app/_common/_hooks/use-auth-token";
 import { trpc } from "@/app/_common/_trpc/client";
-import { ProjectNavbar } from "@/app/projects/_components/project-navbar";
 import { mentionCreationShowPageSublocationAtom } from "@/app/projects/[projectDir]/editor/_atoms/editor-atoms";
 import { DeleteAccountDialog } from "./_components/delete-account-dialog";
 
