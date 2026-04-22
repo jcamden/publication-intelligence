@@ -492,6 +492,59 @@ export const listCrossReferences = async ({
 	return relations as CrossReference[];
 };
 
+export const listCrossReferencesByProjectIndexType = async ({
+	projectId,
+	projectIndexTypeId,
+	userId,
+	requestId,
+}: {
+	projectId: string;
+	projectIndexTypeId?: string;
+	userId: string;
+	requestId: string;
+}): Promise<Record<string, CrossReference[]>> => {
+	logEvent({
+		event: "cross_reference.list_by_project_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: { projectId, projectIndexTypeId },
+		},
+	});
+
+	const entries = await indexEntryRepo.listIndexEntries({
+		projectId,
+		projectIndexTypeId,
+	});
+
+	const entryIds = entries.map((e) => e.id);
+
+	if (entryIds.length === 0) {
+		return {};
+	}
+
+	const crossRefsMap = await indexEntryRepo.getCrossReferencesForEntries({
+		entryIds,
+	});
+
+	const result: Record<string, CrossReference[]> = {};
+	for (const entryId of entryIds) {
+		const rows = crossRefsMap.get(entryId) ?? [];
+		result[entryId] = rows.map((row) => ({
+			id: row.id,
+			fromEntryId: row.fromEntryId,
+			toEntryId: row.toEntryId,
+			arbitraryValue: row.arbitraryValue,
+			relationType: row.relationType as CrossReference["relationType"],
+			toEntry: row.toEntry
+				? { id: row.toEntry.id, label: row.toEntry.label }
+				: null,
+		}));
+	}
+
+	return result;
+};
+
 const REDIRECT_TYPES = ["see", "qv"] as const;
 const SEE_ALSO_TYPE = "see_also";
 

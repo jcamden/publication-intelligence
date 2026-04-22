@@ -181,33 +181,17 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		{ enabled: !!projectId },
 	);
 
-	// Fetch cross-references for all entries (so entry picker can hide "See" entries)
-	const crossReferencesQueries = trpc.useQueries((t) =>
-		backendAllEntries.map((entry) =>
-			t.indexEntry.crossReference.list(
-				{ entryId: entry.id },
-				{ enabled: !!entry.id },
-			),
-		),
-	);
+	// Fetch cross-references for all entries in a single query (so entry picker can hide "See" entries)
+	const { data: crossReferencesData = {} } =
+		trpc.indexEntry.crossReference.listByProjectIndexType.useQuery(
+			{ projectId: projectId ?? "" },
+			{ enabled: !!projectId },
+		);
 
-	const allCrossReferences = useMemo(() => {
-		const map = new Map<
-			string,
-			Array<{
-				id: string;
-				toEntryId: string | null;
-				arbitraryValue: string | null;
-				relationType: "see" | "see_also" | "qv";
-				toEntry?: { id: string; label: string } | null;
-			}>
-		>();
-		backendAllEntries.forEach((entry, index) => {
-			const data = crossReferencesQueries[index]?.data ?? [];
-			map.set(entry.id, data);
-		});
-		return map;
-	}, [backendAllEntries, crossReferencesQueries]);
+	const allCrossReferences = useMemo(
+		() => new Map(Object.entries(crossReferencesData)),
+		[crossReferencesData],
+	);
 
 	// Convert backend entries to frontend format (add indexType, metadata, crossReferences)
 	const allEntries = useMemo(() => {

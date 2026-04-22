@@ -164,6 +164,22 @@ export const indexEntryRouter = router({
 				});
 			}),
 
+		listByProjectIndexType: protectedProcedure
+			.input(
+				z.object({
+					projectId: z.string().uuid(),
+					projectIndexTypeId: z.string().uuid().optional(),
+				}),
+			)
+			.query(async ({ input, ctx }) => {
+				return await indexEntryService.listCrossReferencesByProjectIndexType({
+					projectId: input.projectId,
+					projectIndexTypeId: input.projectIndexTypeId,
+					userId: ctx.user.id,
+					requestId: ctx.requestId,
+				});
+			}),
+
 		create: protectedProcedure
 			.input(CreateCrossReferenceSchema)
 			.mutation(async ({ input, ctx }) => {

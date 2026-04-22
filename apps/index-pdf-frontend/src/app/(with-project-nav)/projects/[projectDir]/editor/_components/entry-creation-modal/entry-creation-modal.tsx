@@ -143,6 +143,7 @@ export const EntryCreationModal = ({
 							utils.indexEntry.crossReference.list.invalidate({
 								entryId: newEntry.id,
 							});
+							utils.indexEntry.crossReference.listByProjectIndexType.invalidate();
 							toast.success(
 								`Entry created with ${pendingCrossReferences.length} cross-reference(s)`,
 							);
