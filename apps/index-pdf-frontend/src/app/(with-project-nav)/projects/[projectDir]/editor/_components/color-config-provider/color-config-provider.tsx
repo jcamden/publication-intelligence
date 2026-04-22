@@ -3,7 +3,7 @@
 import { useAtomValue } from "jotai";
 import { useEffect } from "react";
 import { colorConfigAtom } from "../../_atoms/highlight-atoms";
-import { injectColorVariables } from "../../_utils/color-utils";
+import { injectColorVariables } from "./color-utils";
 
 /**
  * Provider that injects color configuration CSS variables

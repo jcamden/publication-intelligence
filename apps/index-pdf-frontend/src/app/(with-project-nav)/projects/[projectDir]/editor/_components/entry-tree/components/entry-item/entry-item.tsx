@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
+import { formatCrossReferencesAsSegments } from "@/app/projects/[projectDir]/_utils/cross-reference-utils";
 import type { IndexEntry } from "../../../../_types/index-entry";
-import { formatCrossReferencesAsSegments } from "../../../../_utils/cross-reference-utils";
 import type { Mention } from "../../../editor/editor";
 import { TreeRow } from "../tree-row";
 import { useApproveEntry } from "./_hooks/use-approve-entry";

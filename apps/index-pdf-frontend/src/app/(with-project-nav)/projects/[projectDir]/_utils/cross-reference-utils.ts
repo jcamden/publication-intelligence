@@ -1,5 +1,5 @@
-import type { CrossReference, IndexEntry } from "../_types/index-entry";
-import { getEntryPathColonForm } from "./index-entry-utils";
+import type { CrossReference, IndexEntry } from "../editor/_types/index-entry";
+import { getEntryPathColonForm } from "../editor/_utils/index-entry-utils";
 
 type FormatCrossReferencesOptions = {
 	crossReferences: CrossReference[];

@@ -2,8 +2,8 @@ import type {
 	ColorConfig,
 	IndexTypeColor,
 	IndexTypeName,
-} from "../_types/color-config";
-import { formatOklch } from "../_types/color-config";
+} from "../../_types/color-config";
+import { formatOklch } from "../../_types/color-config";
 
 /**
  * Base lightness and chroma values for color generation
