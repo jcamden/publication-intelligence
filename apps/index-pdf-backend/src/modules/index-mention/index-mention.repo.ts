@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, withUserContext } from "../../db/client";
 import {
 	indexEntries,
@@ -11,6 +11,7 @@ import type {
 	BoundingBox,
 	CreateIndexMentionInput,
 	IndexMention,
+	IndexMentionForPageListItem,
 	IndexMentionListItem,
 	UpdateIndexMentionInput,
 	UpdateIndexMentionTypesInput,
@@ -109,6 +110,112 @@ export const listIndexMentions = async ({
 			createdAt: mention.createdAt.toISOString(),
 		};
 	});
+};
+
+export const listIndexMentionsForPage = async ({
+	projectId,
+	documentId,
+	pageNumber,
+	projectIndexTypeIds,
+	includeDeleted = false,
+}: {
+	projectId: string;
+	documentId: string;
+	pageNumber: number;
+	projectIndexTypeIds?: string[];
+	includeDeleted?: boolean;
+}): Promise<IndexMentionForPageListItem[]> => {
+	const mentions = await db
+		.select({
+			id: indexMentions.id,
+			entryId: indexMentions.entryId,
+			projectIndexTypeId: indexMentions.projectIndexTypeId,
+			pageNumber: indexMentions.pageNumber,
+			textSpan: indexMentions.textSpan,
+			bboxes: indexMentions.bboxes,
+			mentionType: indexMentions.mentionType,
+			pageSublocation: indexMentions.pageSublocation,
+			detectionRunId: indexMentions.detectionRunId,
+			createdAt: indexMentions.createdAt,
+			indexType: projectIndexTypes.highlightType,
+			colorHue: projectIndexTypes.colorHue,
+		})
+		.from(indexMentions)
+		.innerJoin(
+			sourceDocuments,
+			eq(indexMentions.documentId, sourceDocuments.id),
+		)
+		.innerJoin(
+			projectIndexTypes,
+			eq(indexMentions.projectIndexTypeId, projectIndexTypes.id),
+		)
+		.where(
+			and(
+				eq(sourceDocuments.projectId, projectId),
+				eq(indexMentions.documentId, documentId),
+				eq(indexMentions.pageNumber, pageNumber),
+				projectIndexTypeIds && projectIndexTypeIds.length > 0
+					? inArray(indexMentions.projectIndexTypeId, projectIndexTypeIds)
+					: undefined,
+				includeDeleted ? undefined : isNull(indexMentions.deletedAt),
+			),
+		)
+		.orderBy(indexMentions.createdAt);
+
+	return mentions.map((m) => ({
+		id: m.id,
+		entryId: m.entryId,
+		pageNumber: m.pageNumber,
+		textSpan: m.textSpan,
+		bboxes: m.bboxes as unknown as BoundingBox[] | null,
+		mentionType: m.mentionType,
+		pageSublocation: m.pageSublocation,
+		detectionRunId: m.detectionRunId,
+		indexTypes: [
+			{
+				projectIndexTypeId: m.projectIndexTypeId,
+				indexType: m.indexType,
+				colorHue: m.colorHue,
+			},
+		],
+		createdAt: m.createdAt.toISOString(),
+	}));
+};
+
+export const countsByEntry = async ({
+	projectId,
+	documentId,
+	projectIndexTypeIds,
+	includeDeleted = false,
+}: {
+	projectId: string;
+	documentId: string;
+	projectIndexTypeIds?: string[];
+	includeDeleted?: boolean;
+}): Promise<Record<string, number>> => {
+	const rows = await db
+		.select({
+			entryId: indexMentions.entryId,
+			count: count(),
+		})
+		.from(indexMentions)
+		.innerJoin(
+			sourceDocuments,
+			eq(indexMentions.documentId, sourceDocuments.id),
+		)
+		.where(
+			and(
+				eq(sourceDocuments.projectId, projectId),
+				eq(indexMentions.documentId, documentId),
+				projectIndexTypeIds && projectIndexTypeIds.length > 0
+					? inArray(indexMentions.projectIndexTypeId, projectIndexTypeIds)
+					: undefined,
+				includeDeleted ? undefined : isNull(indexMentions.deletedAt),
+			),
+		)
+		.groupBy(indexMentions.entryId);
+
+	return Object.fromEntries(rows.map((r) => [r.entryId, r.count]));
 };
 
 /**

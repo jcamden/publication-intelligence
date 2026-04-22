@@ -13,10 +13,13 @@ import * as indexEntryRepo from "../index-entry/index-entry.repo";
 import * as indexMentionRepo from "./index-mention.repo";
 import type {
 	BulkCreateIndexMentionsInput,
+	CountsByEntryInput,
 	CreateIndexMentionInput,
 	DeleteIndexMentionInput,
 	IndexMention,
+	IndexMentionForPageListItem,
 	IndexMentionListItem,
+	ListIndexMentionsForPageInput,
 	ListIndexMentionsInput,
 	UpdateIndexMentionInput,
 	UpdateIndexMentionTypesInput,
@@ -57,6 +60,69 @@ export const listIndexMentions = async ({
 		projectId,
 		documentId,
 		pageNumber,
+		projectIndexTypeIds,
+		includeDeleted,
+	});
+};
+
+export const listIndexMentionsForPage = async ({
+	projectId,
+	documentId,
+	pageNumber,
+	projectIndexTypeIds,
+	includeDeleted,
+	userId,
+	requestId,
+}: ListIndexMentionsForPageInput & {
+	userId: string;
+	requestId: string;
+}): Promise<IndexMentionForPageListItem[]> => {
+	logEvent({
+		event: "index_mention.list_for_page_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: {
+				projectId,
+				documentId,
+				pageNumber,
+				projectIndexTypeIds,
+				includeDeleted,
+			},
+		},
+	});
+
+	return await indexMentionRepo.listIndexMentionsForPage({
+		projectId,
+		documentId,
+		pageNumber,
+		projectIndexTypeIds,
+		includeDeleted,
+	});
+};
+
+export const countsByEntry = async ({
+	projectId,
+	documentId,
+	projectIndexTypeIds,
+	includeDeleted,
+	userId,
+	requestId,
+}: CountsByEntryInput & { userId: string; requestId: string }): Promise<
+	Record<string, number>
+> => {
+	logEvent({
+		event: "index_mention.counts_by_entry_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: { projectId, documentId, projectIndexTypeIds, includeDeleted },
+		},
+	});
+
+	return await indexMentionRepo.countsByEntry({
+		projectId,
+		documentId,
 		projectIndexTypeIds,
 		includeDeleted,
 	});

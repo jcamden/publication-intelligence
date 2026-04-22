@@ -98,21 +98,13 @@ export const useDeleteEntry = () => {
 		},
 
 		onSettled: (_data, _err, variables) => {
-			// Invalidate specific type query
-			utils.indexEntry.list.invalidate({
-				projectId: variables.projectId,
-				projectIndexTypeId: variables.projectIndexTypeId,
-			});
-
-			// Invalidate all entries query
-			utils.indexEntry.list.invalidate({
+			// Entries are cached centrally via listLean; refresh the shared cache.
+			utils.indexEntry.listLean.invalidate({
 				projectId: variables.projectId,
 			});
 
 			// Invalidate mentions since they cascade delete with the entry
-			utils.indexMention.list.invalidate({
-				projectId: variables.projectId,
-			});
+			utils.indexMention.list.invalidate();
 
 			utils.indexEntry.getIndexView.invalidate();
 		},

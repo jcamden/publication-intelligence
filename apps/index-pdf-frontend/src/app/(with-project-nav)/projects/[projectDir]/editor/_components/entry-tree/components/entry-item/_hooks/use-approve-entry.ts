@@ -52,7 +52,7 @@ export const useApproveEntry = ({
 
 		onSettled: () => {
 			// Refetch to ensure consistency
-			utils.indexEntry.list.invalidate({ projectId, projectIndexTypeId });
+			utils.indexEntry.listLean.invalidate({ projectId });
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});

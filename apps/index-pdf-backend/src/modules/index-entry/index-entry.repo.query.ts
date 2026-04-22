@@ -13,6 +13,7 @@ import * as indexMentionRepo from "../index-mention/index-mention.repo";
 import type {
 	CrossReference,
 	IndexEntry,
+	IndexEntryLeanListItem,
 	IndexEntryListItem,
 	IndexEntrySearchResult,
 	IndexView,
@@ -212,6 +213,57 @@ export const listIndexEntries = async ({
 			updatedAt: entry.updatedAt?.toISOString() || null,
 		};
 	});
+};
+
+export const listIndexEntriesLean = async ({
+	projectId,
+	projectIndexTypeId,
+	includeDeleted = false,
+}: {
+	projectId: string;
+	projectIndexTypeId?: string;
+	includeDeleted?: boolean;
+}): Promise<IndexEntryLeanListItem[]> => {
+	const rows = await db
+		.select({
+			id: indexEntries.id,
+			projectIndexTypeId: indexEntries.projectIndexTypeId,
+			slug: indexEntries.slug,
+			label: indexEntries.label,
+			parentId: indexEntries.parentId,
+			groupId: indexEntryGroups.id,
+			groupPosition: indexEntryGroupEntries.position,
+		})
+		.from(indexEntries)
+		.leftJoin(
+			indexEntryGroupEntries,
+			eq(indexEntryGroupEntries.entryId, indexEntries.id),
+		)
+		.leftJoin(
+			indexEntryGroups,
+			and(
+				eq(indexEntryGroups.id, indexEntryGroupEntries.groupId),
+				eq(indexEntryGroups.projectId, projectId),
+				isNull(indexEntryGroups.deletedAt),
+				// Ensure the group's index type matches the entry's index type
+				eq(
+					indexEntryGroups.projectIndexTypeId,
+					indexEntries.projectIndexTypeId,
+				),
+			),
+		)
+		.where(
+			and(
+				eq(indexEntries.projectId, projectId),
+				projectIndexTypeId
+					? eq(indexEntries.projectIndexTypeId, projectIndexTypeId)
+					: undefined,
+				includeDeleted ? undefined : isNull(indexEntries.deletedAt),
+			),
+		)
+		.orderBy(indexEntries.parentId, indexEntries.label);
+
+	return rows;
 };
 
 export const getIndexEntryById = async ({

@@ -129,10 +129,7 @@ export const EntryEditModal = ({
 								projectId,
 								projectIndexTypeId,
 							});
-							utils.indexEntry.list.invalidate({
-								projectId,
-								projectIndexTypeId,
-							});
+							utils.indexEntry.listLean.invalidate({ projectId });
 						}
 						onClose();
 					},

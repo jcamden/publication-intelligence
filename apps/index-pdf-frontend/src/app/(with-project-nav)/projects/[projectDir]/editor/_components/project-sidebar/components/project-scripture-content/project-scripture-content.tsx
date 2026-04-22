@@ -53,12 +53,11 @@ export const ProjectScriptureContent = () => {
 		data: backendEntries = [],
 		isLoading: isLoadingEntries,
 		error: entriesError,
-	} = trpc.indexEntry.list.useQuery(
+	} = trpc.indexEntry.listLean.useQuery(
 		{
 			projectId: projectId || "",
-			projectIndexTypeId: scriptureProjectIndexTypeId,
 		},
-		{ enabled: !!projectId && !!scriptureProjectIndexTypeId },
+		{ enabled: !!projectId },
 	);
 
 	// Fetch cross references for all entries in a single query
@@ -77,18 +76,28 @@ export const ProjectScriptureContent = () => {
 	);
 
 	// Convert backend entries to frontend format (add indexType field and cross references)
-	const allEntries = backendEntries.map((e) => ({
-		...e,
-		indexType: "scripture" as const,
-		projectId: projectId || undefined,
-		projectIndexTypeId: scriptureProjectIndexTypeId,
-		groupId: e.groupId ?? null,
-		groupPosition: e.groupPosition ?? null,
-		metadata: {
-			matchers: e.matchers?.map((m) => m.text) || [],
-		},
-		crossReferences: allCrossReferences.get(e.id) || [],
-	}));
+	const allEntries = useMemo(() => {
+		if (!scriptureProjectIndexTypeId) return [];
+		return backendEntries
+			.filter((e) => e.projectIndexTypeId === scriptureProjectIndexTypeId)
+			.map((e) => ({
+				...e,
+				indexType: "scripture" as const,
+				projectId: projectId || undefined,
+				projectIndexTypeId: scriptureProjectIndexTypeId,
+				groupId: e.groupId ?? null,
+				groupPosition: e.groupPosition ?? null,
+				metadata: {
+					matchers: [],
+				},
+				crossReferences: allCrossReferences.get(e.id) || [],
+			}));
+	}, [
+		backendEntries,
+		scriptureProjectIndexTypeId,
+		projectId,
+		allCrossReferences,
+	]);
 
 	// Fetch scripture config (for alwaysDisplayUnknownEntry and entry filtering)
 	const { data: scriptureConfig } = trpc.scriptureIndexConfig.get.useQuery(
@@ -109,34 +118,19 @@ export const ProjectScriptureContent = () => {
 	);
 
 	// Fetch mentions for this document
-	const { data: backendMentions = [], isLoading: isLoadingMentions } =
-		trpc.indexMention.list.useQuery(
+	const { data: mentionCountsByEntryId = {}, isLoading: isLoadingMentions } =
+		trpc.indexMention.countsByEntry.useQuery(
 			{
 				projectId: projectId || "",
 				documentId: documentId || "",
 			},
-			{ enabled: !!projectId && !!documentId },
+			{ enabled: !!projectId && !!documentId, gcTime: 2 * 60 * 1000 },
 		);
-
-	// Convert backend mentions to frontend format
-	const allMentions = backendMentions.map((m) => ({
-		id: m.id,
-		pageNumber: m.pageNumber ?? 1,
-		text: m.textSpan,
-		bboxes: m.bboxes ?? [],
-		entryId: m.entryId,
-		entryLabel: m.entry.label,
-		indexType: m.indexTypes[0]?.indexType ?? "",
-		pageSublocation: m.pageSublocation ?? null,
-		type: m.mentionType as "text" | "region",
-		createdAt: new Date(m.createdAt),
-	}));
 
 	// Filter entries for EntryTree: include Unknown only if it has mentions OR alwaysDisplayUnknownEntry
 	const unknownEntry = allEntries.find((e) => e.slug === "unknown");
 	const unknownHasMentions =
-		unknownEntry != null &&
-		allMentions.some((m) => m.entryId === unknownEntry.id);
+		unknownEntry != null && (mentionCountsByEntryId[unknownEntry.id] ?? 0) > 0;
 	const showUnknown =
 		unknownEntry != null &&
 		(unknownHasMentions ||
@@ -169,9 +163,8 @@ export const ProjectScriptureContent = () => {
 				projectId: projectId || "",
 				projectIndexTypeId: scriptureProjectIndexTypeId ?? "",
 			});
-			utils.indexEntry.list.invalidate({
+			utils.indexEntry.listLean.invalidate({
 				projectId: projectId || "",
-				projectIndexTypeId: scriptureProjectIndexTypeId,
 			});
 		},
 		onError: (error) => {
@@ -214,9 +207,8 @@ export const ProjectScriptureContent = () => {
 			utils.detection.getIndexEntryGroup.invalidate({
 				groupId: variables.groupId,
 			});
-			utils.indexEntry.list.invalidate({
+			utils.indexEntry.listLean.invalidate({
 				projectId: projectId || "",
-				projectIndexTypeId: scriptureProjectIndexTypeId,
 			});
 		},
 		onError: (error) => {
@@ -241,9 +233,8 @@ export const ProjectScriptureContent = () => {
 			projectId: projectId || "",
 			projectIndexTypeId: scriptureProjectIndexTypeId ?? "",
 		});
-		utils.indexEntry.list.invalidate({
+		utils.indexEntry.listLean.invalidate({
 			projectId: projectId || "",
-			projectIndexTypeId: scriptureProjectIndexTypeId,
 		});
 	}, [utils, projectId, scriptureProjectIndexTypeId]);
 
@@ -259,9 +250,7 @@ export const ProjectScriptureContent = () => {
 						onSettings={() => setSettingsModalOpen(true)}
 						groupsEnabled={groupsEnabled}
 						showMatcherDetection={true}
-						hasEntriesWithMatchers={entries.some(
-							(e) => (e.metadata?.matchers?.length ?? 0) > 0,
-						)}
+						hasEntriesWithMatchers={true}
 					/>
 					<AddEntriesFromBooksModal
 						open={addEntriesModalOpen}
@@ -291,7 +280,7 @@ export const ProjectScriptureContent = () => {
 			<IndexPanelScrollArea viewportRef={setScrollViewportRef}>
 				<EntryTree
 					entries={entries}
-					mentions={allMentions}
+					mentionCountsByEntryId={mentionCountsByEntryId}
 					groups={
 						groupsEnabled
 							? groups.map((g) => ({

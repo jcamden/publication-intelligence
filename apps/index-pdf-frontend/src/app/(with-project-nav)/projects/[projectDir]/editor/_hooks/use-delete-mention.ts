@@ -6,20 +6,20 @@ export const useDeleteMention = () => {
 
 	return trpc.indexMention.delete.useMutation({
 		onMutate: async (deleteInput) => {
-			await utils.indexMention.list.cancel({
+			await utils.indexMention.listForPage.cancel({
 				projectId: deleteInput.projectId,
 				documentId: deleteInput.documentId,
 				pageNumber: deleteInput.pageNumber,
 			});
 
-			const previous = utils.indexMention.list.getData({
+			const previous = utils.indexMention.listForPage.getData({
 				projectId: deleteInput.projectId,
 				documentId: deleteInput.documentId,
 				pageNumber: deleteInput.pageNumber,
 			});
 
 			// Immediately remove (soft delete)
-			utils.indexMention.list.setData(
+			utils.indexMention.listForPage.setData(
 				{
 					projectId: deleteInput.projectId,
 					documentId: deleteInput.documentId,
@@ -33,7 +33,7 @@ export const useDeleteMention = () => {
 
 		onError: (err, deleteInput, context) => {
 			if (context?.previous) {
-				utils.indexMention.list.setData(
+				utils.indexMention.listForPage.setData(
 					{
 						projectId: deleteInput.projectId,
 						documentId: deleteInput.documentId,
@@ -51,11 +51,12 @@ export const useDeleteMention = () => {
 		},
 
 		onSettled: (_data, _err, variables) => {
-			utils.indexMention.list.invalidate({
+			utils.indexMention.listForPage.invalidate({
 				projectId: variables.projectId,
 				documentId: variables.documentId,
 				pageNumber: variables.pageNumber,
 			});
+			utils.indexMention.countsByEntry.invalidate();
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});

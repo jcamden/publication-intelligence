@@ -1,6 +1,5 @@
 import { toast } from "sonner";
 import { trpc } from "@/app/_common/_trpc/client";
-import type { IndexMentionListItem } from "@/app/_common/_trpc/types";
 
 /**
  * Custom hook for creating IndexMentions with optimistic updates.
@@ -24,14 +23,15 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 			const queryParams = {
 				projectId,
 				documentId: newMention.documentId,
+				pageNumber: newMention.pageNumber,
 			};
 
-			await utils.indexMention.list.cancel(queryParams);
+			await utils.indexMention.listForPage.cancel(queryParams);
 
-			const previous = utils.indexMention.list.getData(queryParams);
+			const previous = utils.indexMention.listForPage.getData(queryParams);
 
 			// Optimistically add mention
-			utils.indexMention.list.setData(queryParams, (old) => [
+			utils.indexMention.listForPage.setData(queryParams, (old) => [
 				...(old || []),
 				{
 					id: `temp-${Date.now()}`,
@@ -41,14 +41,10 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 					bboxes: newMention.bboxesPdf,
 					mentionType: newMention.mentionType || "text",
 					pageSublocation: null,
-					entry: {
-						id: newMention.entryId,
-						label: "",
-					},
 					indexTypes: [],
 					detectionRunId: null,
 					createdAt: new Date().toISOString(),
-				} satisfies IndexMentionListItem,
+				},
 			]);
 
 			return { previous, queryParams };
@@ -56,7 +52,10 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 
 		onError: (err, _newMention, context) => {
 			if (context?.previous && context?.queryParams) {
-				utils.indexMention.list.setData(context.queryParams, context.previous);
+				utils.indexMention.listForPage.setData(
+					context.queryParams,
+					context.previous,
+				);
 			}
 
 			toast.error(`Failed to create mention: ${err.message}`);
@@ -68,8 +67,9 @@ export const useCreateMention = ({ projectId }: { projectId: string }) => {
 
 		onSettled: (_data, _err, _variables, context) => {
 			if (context?.queryParams) {
-				utils.indexMention.list.invalidate(context.queryParams);
+				utils.indexMention.listForPage.invalidate(context.queryParams);
 			}
+			utils.indexMention.countsByEntry.invalidate();
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});

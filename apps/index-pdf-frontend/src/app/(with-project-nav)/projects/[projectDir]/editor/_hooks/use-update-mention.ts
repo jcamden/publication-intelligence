@@ -6,20 +6,20 @@ export const useUpdateMention = () => {
 
 	return trpc.indexMention.update.useMutation({
 		onMutate: async (update) => {
-			await utils.indexMention.list.cancel({
+			await utils.indexMention.listForPage.cancel({
 				projectId: update.projectId,
 				documentId: update.documentId,
 				pageNumber: update.pageNumber,
 			});
 
-			const previous = utils.indexMention.list.getData({
+			const previous = utils.indexMention.listForPage.getData({
 				projectId: update.projectId,
 				documentId: update.documentId,
 				pageNumber: update.pageNumber,
 			});
 
 			// Optimistically update
-			utils.indexMention.list.setData(
+			utils.indexMention.listForPage.setData(
 				{
 					projectId: update.projectId,
 					documentId: update.documentId,
@@ -42,7 +42,7 @@ export const useUpdateMention = () => {
 
 		onError: (err, update, context) => {
 			if (context?.previous) {
-				utils.indexMention.list.setData(
+				utils.indexMention.listForPage.setData(
 					{
 						projectId: update.projectId,
 						documentId: update.documentId,
@@ -60,11 +60,12 @@ export const useUpdateMention = () => {
 		},
 
 		onSettled: (_data, _err, variables) => {
-			utils.indexMention.list.invalidate({
+			utils.indexMention.listForPage.invalidate({
 				projectId: variables.projectId,
 				documentId: variables.documentId,
 				pageNumber: variables.pageNumber,
 			});
+			utils.indexMention.countsByEntry.invalidate();
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});

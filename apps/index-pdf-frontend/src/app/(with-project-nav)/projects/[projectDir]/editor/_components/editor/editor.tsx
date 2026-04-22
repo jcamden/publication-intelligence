@@ -161,10 +161,25 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	// Get tRPC utils for cache invalidation
 	const utils = trpc.useUtils();
 
+	const invalidateMentionsForPage = useCallback(
+		(pageNumber: number) => {
+			if (!projectId || !documentId || pageNumber < 1) return;
+			utils.indexMention.listForPage.invalidate({
+				projectId,
+				documentId,
+				pageNumber,
+			});
+		},
+		[utils.indexMention.listForPage, projectId, documentId],
+	);
+
 	// Mutation for deleting mentions
 	const deleteMentionMutation = trpc.indexMention.delete.useMutation({
 		onSuccess: () => {
-			utils.indexMention.list.invalidate();
+			invalidateMentionsForPage(currentPage);
+			invalidateMentionsForPage(currentPage - 1);
+			invalidateMentionsForPage(currentPage + 1);
+			utils.indexMention.countsByEntry.invalidate();
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
@@ -172,13 +187,16 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	// Mutation for updating mentions (from mention-details-popover save)
 	const updateMentionMutation = trpc.indexMention.update.useMutation({
 		onSuccess: () => {
-			utils.indexMention.list.invalidate();
+			invalidateMentionsForPage(currentPage);
+			invalidateMentionsForPage(currentPage - 1);
+			invalidateMentionsForPage(currentPage + 1);
+			utils.indexMention.countsByEntry.invalidate();
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});
 
 	// Fetch all entries for the project (needed for mention details popover and entry picker)
-	const { data: backendAllEntries = [] } = trpc.indexEntry.list.useQuery(
+	const { data: backendAllEntries = [] } = trpc.indexEntry.listLean.useQuery(
 		{
 			projectId: projectId ?? "",
 		},
@@ -214,7 +232,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				indexType: (projectIndexType?.indexType ||
 					"subject") as IndexEntry["indexType"],
 				metadata: {
-					matchers: e.matchers?.map((m) => m.text) || [],
+					matchers: [],
 				},
 				crossReferences: allCrossReferences.get(e.id) ?? [],
 			};
@@ -227,13 +245,36 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	);
 
 	// Fetch mentions from backend (used for page sidebar and highlights)
-	const { data: backendMentions = [] } = trpc.indexMention.list.useQuery(
+	const { data: backendMentions = [] } = trpc.indexMention.listForPage.useQuery(
 		{
 			projectId: projectId ?? "",
 			documentId: documentId ?? "",
+			pageNumber: currentPage,
 		},
-		{ enabled: !!projectId && !!documentId },
+		{
+			enabled: !!projectId && !!documentId && currentPage > 0,
+			gcTime: 2 * 60 * 1000,
+		},
 	);
+
+	// Prefetch adjacent pages so paging is instant.
+	useEffect(() => {
+		if (!projectId || !documentId || currentPage < 1) return;
+		const prev = currentPage - 1;
+		const next = currentPage + 1;
+		if (prev >= 1) {
+			utils.indexMention.listForPage.prefetch({
+				projectId,
+				documentId,
+				pageNumber: prev,
+			});
+		}
+		utils.indexMention.listForPage.prefetch({
+			projectId,
+			documentId,
+			pageNumber: next,
+		});
+	}, [utils.indexMention.listForPage, projectId, documentId, currentPage]);
 
 	// Convert backend mentions to editor format. Memoized so identity is stable
 	// across editor re-renders — downstream memoization (highlight layer,
@@ -243,7 +284,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 			const entry = entriesById.get(m.entryId);
 			const entryLabel = entry
 				? getEntryDisplayLabelFromMap({ entry, byId: entriesById })
-				: m.entry.label;
+				: "";
 
 			return {
 				id: m.id,

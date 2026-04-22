@@ -10,7 +10,7 @@ import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/p
 type IndexType = "subject" | "author" | "scripture";
 
 export const DetectionPanel = () => {
-	const { projectId } = useProjectContext();
+	const { projectId, documentId } = useProjectContext();
 	const utils = trpc.useUtils();
 	const [pageRangeStart, setPageRangeStart] = useState<string>("");
 	const [pageRangeEnd, setPageRangeEnd] = useState<string>("");
@@ -121,15 +121,18 @@ export const DetectionPanel = () => {
 			prevRunStatusesRef.current.set(run.id, run.status);
 		}
 		if (didComplete) {
-			utils.indexMention.list.invalidate({ projectId });
-			utils.indexEntry.list.invalidate({ projectId });
+			if (documentId) {
+				utils.indexMention.list.invalidate({ projectId, documentId });
+			}
+			utils.indexEntry.listLean.invalidate({ projectId });
 			utils.indexEntry.getIndexView.invalidate();
 		}
 	}, [
 		detectionRuns,
 		projectId,
+		documentId,
 		utils.indexMention.list,
-		utils.indexEntry.list,
+		utils.indexEntry.listLean,
 		utils.indexEntry.getIndexView,
 	]);
 

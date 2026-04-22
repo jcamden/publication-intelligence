@@ -48,10 +48,7 @@ export const MergeGroupModal = ({
 				projectId,
 				projectIndexTypeId,
 			});
-			utils.indexEntry.list.invalidate({
-				projectId,
-				projectIndexTypeId,
-			});
+			utils.indexEntry.listLean.invalidate({ projectId });
 			toast.success(
 				`Merged "${sourceGroup.name}" into "${target?.name ?? "target"}"`,
 			);

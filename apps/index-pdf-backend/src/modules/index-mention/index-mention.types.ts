@@ -69,6 +69,23 @@ export type IndexMentionListItem = {
 	createdAt: string;
 };
 
+export type IndexMentionForPageListItem = {
+	id: string;
+	entryId: string;
+	pageNumber: number;
+	textSpan: string;
+	bboxes: BoundingBox[] | null;
+	mentionType: "text" | "region";
+	pageSublocation: string | null;
+	detectionRunId: string | null;
+	indexTypes: Array<{
+		projectIndexTypeId: string;
+		indexType: string;
+		colorHue: number;
+	}>;
+	createdAt: string;
+};
+
 // ============================================================================
 // Zod Schemas for Validation
 // ============================================================================
@@ -90,6 +107,27 @@ export const ListIndexMentionsSchema = z.object({
 });
 
 export type ListIndexMentionsInput = z.infer<typeof ListIndexMentionsSchema>;
+
+export const ListIndexMentionsForPageSchema = z.object({
+	projectId: z.string().uuid(),
+	documentId: z.string().uuid(),
+	pageNumber: z.number().int().min(1),
+	projectIndexTypeIds: z.array(z.string().uuid()).optional(),
+	includeDeleted: z.boolean().optional(),
+});
+
+export type ListIndexMentionsForPageInput = z.infer<
+	typeof ListIndexMentionsForPageSchema
+>;
+
+export const CountsByEntrySchema = z.object({
+	projectId: z.string().uuid(),
+	documentId: z.string().uuid(),
+	projectIndexTypeIds: z.array(z.string().uuid()).optional(),
+	includeDeleted: z.boolean().optional(),
+});
+
+export type CountsByEntryInput = z.infer<typeof CountsByEntrySchema>;
 
 export const CreateIndexMentionSchema = z.object({
 	documentId: z.string().uuid(),

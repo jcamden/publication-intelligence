@@ -3,8 +3,10 @@ import { protectedProcedure, router } from "../../trpc";
 import * as indexMentionService from "./index-mention.service";
 import {
 	BulkCreateIndexMentionsSchema,
+	CountsByEntrySchema,
 	CreateIndexMentionSchema,
 	DeleteIndexMentionSchema,
+	ListIndexMentionsForPageSchema,
 	ListIndexMentionsSchema,
 	UpdateIndexMentionSchema,
 	UpdateIndexMentionTypesSchema,
@@ -22,6 +24,33 @@ export const indexMentionRouter = router({
 				projectId: input.projectId,
 				documentId: input.documentId,
 				pageNumber: input.pageNumber,
+				projectIndexTypeIds: input.projectIndexTypeIds,
+				includeDeleted: input.includeDeleted,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
+
+	listForPage: protectedProcedure
+		.input(ListIndexMentionsForPageSchema)
+		.query(async ({ input, ctx }) => {
+			return await indexMentionService.listIndexMentionsForPage({
+				projectId: input.projectId,
+				documentId: input.documentId,
+				pageNumber: input.pageNumber,
+				projectIndexTypeIds: input.projectIndexTypeIds,
+				includeDeleted: input.includeDeleted,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
+
+	countsByEntry: protectedProcedure
+		.input(CountsByEntrySchema)
+		.query(async ({ input, ctx }) => {
+			return await indexMentionService.countsByEntry({
+				projectId: input.projectId,
+				documentId: input.documentId,
 				projectIndexTypeIds: input.projectIndexTypeIds,
 				includeDeleted: input.includeDeleted,
 				userId: ctx.user.id,

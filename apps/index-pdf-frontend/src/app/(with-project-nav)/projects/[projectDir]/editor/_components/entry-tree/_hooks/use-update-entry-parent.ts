@@ -91,13 +91,8 @@ export const useUpdateEntryParent = ({ projectId }: { projectId: string }) => {
 			toast.success("Entry moved");
 		},
 
-		onSettled: (_data, _err, _input, context) => {
-			if (context?.projectIndexTypeId) {
-				utils.indexEntry.list.invalidate({
-					projectId,
-					projectIndexTypeId: context.projectIndexTypeId,
-				});
-			}
+		onSettled: () => {
+			utils.indexEntry.listLean.invalidate({ projectId });
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});

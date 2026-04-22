@@ -121,10 +121,7 @@ export const EditGroupModal = ({
 				projectId,
 				projectIndexTypeId,
 			});
-			utils.indexEntry.list.invalidate({
-				projectId,
-				projectIndexTypeId,
-			});
+			utils.indexEntry.listLean.invalidate({ projectId });
 			setShowDeleteDialog(false);
 			onClose();
 		},
@@ -222,10 +219,7 @@ export const EditGroupModal = ({
 						projectId,
 						projectIndexTypeId,
 					});
-					utils.indexEntry.list.invalidate({
-						projectId,
-						projectIndexTypeId,
-					});
+					utils.indexEntry.listLean.invalidate({ projectId });
 					onClose();
 					return;
 				}
@@ -273,10 +267,7 @@ export const EditGroupModal = ({
 					projectId,
 					projectIndexTypeId,
 				});
-				utils.indexEntry.list.invalidate({
-					projectId,
-					projectIndexTypeId,
-				});
+				utils.indexEntry.listLean.invalidate({ projectId });
 				onClose();
 			} catch {
 				// Errors already surfaced via mutation onError

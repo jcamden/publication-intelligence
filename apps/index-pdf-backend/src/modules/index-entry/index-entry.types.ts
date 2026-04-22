@@ -81,9 +81,31 @@ export type IndexEntrySearchResult = {
 	matchedText?: string;
 };
 
+export type IndexEntryLeanListItem = {
+	id: string;
+	projectIndexTypeId: string;
+	slug: string;
+	label: string;
+	parentId: string | null;
+	/** Group ID when entry is a root member of a group (index_entry_group_entries). */
+	groupId: string | null;
+	/** Position within group (for custom sort). Null when not in group or unordered. */
+	groupPosition: number | null;
+};
+
 // ============================================================================
 // Zod Schemas for Validation
 // ============================================================================
+
+export const ListIndexEntriesLeanSchema = z.object({
+	projectId: z.string().uuid(),
+	projectIndexTypeId: z.string().uuid().optional(),
+	includeDeleted: z.boolean().optional(),
+});
+
+export type ListIndexEntriesLeanInput = z.infer<
+	typeof ListIndexEntriesLeanSchema
+>;
 
 export const CreateIndexEntrySchema = z.object({
 	projectId: z.string().uuid(),

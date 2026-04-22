@@ -6,6 +6,7 @@ import {
 	CreateIndexEntrySchema,
 	DeleteCrossReferenceSchema,
 	DeleteIndexEntrySchema,
+	ListIndexEntriesLeanSchema,
 	TransferMatchersSchema,
 	TransferMentionsSchema,
 	UpdateIndexEntryParentSchema,
@@ -27,6 +28,18 @@ export const indexEntryRouter = router({
 		)
 		.query(async ({ input, ctx }) => {
 			return await indexEntryService.listIndexEntries({
+				projectId: input.projectId,
+				projectIndexTypeId: input.projectIndexTypeId,
+				includeDeleted: input.includeDeleted,
+				userId: ctx.user.id,
+				requestId: ctx.requestId,
+			});
+		}),
+
+	listLean: protectedProcedure
+		.input(ListIndexEntriesLeanSchema)
+		.query(async ({ input, ctx }) => {
+			return await indexEntryService.listIndexEntriesLean({
 				projectId: input.projectId,
 				projectIndexTypeId: input.projectIndexTypeId,
 				includeDeleted: input.includeDeleted,

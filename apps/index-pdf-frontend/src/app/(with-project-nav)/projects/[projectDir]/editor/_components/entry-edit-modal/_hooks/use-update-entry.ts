@@ -56,9 +56,8 @@ export const useUpdateEntry = () => {
 		},
 
 		onSettled: (_data, _err, variables) => {
-			utils.indexEntry.list.invalidate({
+			utils.indexEntry.listLean.invalidate({
 				projectId: variables.projectId,
-				projectIndexTypeId: variables.projectIndexTypeId,
 			});
 			utils.indexEntry.getIndexView.invalidate();
 		},

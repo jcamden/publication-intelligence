@@ -13,6 +13,7 @@ import type {
 	DeleteCrossReferenceInput,
 	DeleteIndexEntryInput,
 	IndexEntry,
+	IndexEntryLeanListItem,
 	IndexEntryListItem,
 	IndexEntrySearchResult,
 	IndexView,
@@ -54,6 +55,35 @@ export const listIndexEntries = async ({
 	});
 
 	return await indexEntryRepo.listIndexEntries({
+		projectId,
+		projectIndexTypeId,
+		includeDeleted,
+	});
+};
+
+export const listIndexEntriesLean = async ({
+	projectId,
+	projectIndexTypeId,
+	includeDeleted,
+	userId,
+	requestId,
+}: {
+	projectId: string;
+	projectIndexTypeId?: string;
+	includeDeleted?: boolean;
+	userId: string;
+	requestId: string;
+}): Promise<IndexEntryLeanListItem[]> => {
+	logEvent({
+		event: "index_entry.list_lean_requested",
+		context: {
+			requestId,
+			userId,
+			metadata: { projectId, projectIndexTypeId, includeDeleted },
+		},
+	});
+
+	return await indexEntryRepo.listIndexEntriesLean({
 		projectId,
 		projectIndexTypeId,
 		includeDeleted,

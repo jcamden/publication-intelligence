@@ -18,28 +18,14 @@ export const useApproveMention = ({
 
 	return trpc.indexMention.approve.useMutation({
 		onMutate: async (approveInput) => {
-			// Cancel all potentially affected queries
-			await utils.indexMention.list.cancel();
+			await utils.indexMention.listForPage.cancel();
 
-			// Update the main editor cache (projectId + documentId only)
-			const editorCacheKey = { projectId, documentId };
-			const previousEditor = utils.indexMention.list.getData(editorCacheKey);
-
-			utils.indexMention.list.setData(editorCacheKey, (old) =>
-				(old || []).map((mention) =>
-					mention.id === approveInput.id
-						? { ...mention, detectionRunId: null }
-						: mention,
-				),
-			);
-
-			// Also update page-specific cache if pageNumber is provided
-			let previousPage: typeof previousEditor;
-			if (pageNumber !== undefined) {
+			let previousPage: unknown;
+			if (documentId && pageNumber !== undefined) {
 				const pageCacheKey = { projectId, documentId, pageNumber };
-				previousPage = utils.indexMention.list.getData(pageCacheKey);
+				previousPage = utils.indexMention.listForPage.getData(pageCacheKey);
 
-				utils.indexMention.list.setData(pageCacheKey, (old) =>
+				utils.indexMention.listForPage.setData(pageCacheKey, (old) =>
 					(old || []).map((mention) =>
 						mention.id === approveInput.id
 							? { ...mention, detectionRunId: null }
@@ -48,21 +34,20 @@ export const useApproveMention = ({
 				);
 			}
 
-			return { previousEditor, previousPage };
+			return { previousPage };
 		},
 
 		onError: (err, _approveInput, context) => {
 			// Rollback on error
-			if (context?.previousEditor) {
-				utils.indexMention.list.setData(
-					{ projectId, documentId },
-					context.previousEditor,
-				);
-			}
-			if (context?.previousPage && pageNumber !== undefined) {
-				utils.indexMention.list.setData(
+			if (
+				context?.previousPage &&
+				documentId &&
+				pageNumber !== undefined &&
+				pageNumber >= 1
+			) {
+				utils.indexMention.listForPage.setData(
 					{ projectId, documentId, pageNumber },
-					context.previousPage,
+					context.previousPage as never,
 				);
 			}
 			toast.error(`Failed to approve mention: ${err.message}`);
@@ -73,8 +58,14 @@ export const useApproveMention = ({
 		},
 
 		onSettled: () => {
-			// Invalidate all mention queries for this project to ensure consistency
-			utils.indexMention.list.invalidate({ projectId });
+			if (documentId && pageNumber !== undefined && pageNumber >= 1) {
+				utils.indexMention.listForPage.invalidate({
+					projectId,
+					documentId,
+					pageNumber,
+				});
+			}
+			utils.indexMention.countsByEntry.invalidate();
 			utils.indexEntry.getIndexView.invalidate();
 		},
 	});

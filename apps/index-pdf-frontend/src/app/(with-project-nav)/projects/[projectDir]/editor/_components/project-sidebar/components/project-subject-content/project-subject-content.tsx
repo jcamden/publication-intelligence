@@ -52,12 +52,11 @@ export const ProjectSubjectContent = () => {
 		data: backendEntries = [],
 		isLoading: isLoadingEntries,
 		error: entriesError,
-	} = trpc.indexEntry.list.useQuery(
+	} = trpc.indexEntry.listLean.useQuery(
 		{
 			projectId: projectId || "",
-			projectIndexTypeId: subjectProjectIndexTypeId,
 		},
-		{ enabled: !!projectId && !!subjectProjectIndexTypeId },
+		{ enabled: !!projectId },
 	);
 
 	// Fetch cross references for all entries in a single query
@@ -76,18 +75,28 @@ export const ProjectSubjectContent = () => {
 	);
 
 	// Convert backend entries to frontend format (add indexType field and cross references)
-	const entries = backendEntries.map((e) => ({
-		...e,
-		indexType: "subject" as const,
-		projectId: projectId || undefined,
-		projectIndexTypeId: subjectProjectIndexTypeId,
-		groupId: e.groupId ?? null,
-		groupPosition: e.groupPosition ?? null,
-		metadata: {
-			matchers: e.matchers?.map((m) => m.text) || [],
-		},
-		crossReferences: allCrossReferences.get(e.id) || [],
-	}));
+	const entries = useMemo(() => {
+		if (!subjectProjectIndexTypeId) return [];
+		return backendEntries
+			.filter((e) => e.projectIndexTypeId === subjectProjectIndexTypeId)
+			.map((e) => ({
+				...e,
+				indexType: "subject" as const,
+				projectId: projectId || undefined,
+				projectIndexTypeId: subjectProjectIndexTypeId,
+				groupId: e.groupId ?? null,
+				groupPosition: e.groupPosition ?? null,
+				metadata: {
+					matchers: [],
+				},
+				crossReferences: allCrossReferences.get(e.id) || [],
+			}));
+	}, [
+		backendEntries,
+		subjectProjectIndexTypeId,
+		projectId,
+		allCrossReferences,
+	]);
 
 	// Fetch groups for this index type
 	const { data: groups = [] } = trpc.detection.listIndexEntryGroups.useQuery(
@@ -99,28 +108,14 @@ export const ProjectSubjectContent = () => {
 	);
 
 	// Fetch mentions for this document
-	const { data: backendMentions = [], isLoading: isLoadingMentions } =
-		trpc.indexMention.list.useQuery(
+	const { data: mentionCountsByEntryId = {}, isLoading: isLoadingMentions } =
+		trpc.indexMention.countsByEntry.useQuery(
 			{
 				projectId: projectId || "",
 				documentId: documentId || "",
 			},
-			{ enabled: !!projectId && !!documentId },
+			{ enabled: !!projectId && !!documentId, gcTime: 2 * 60 * 1000 },
 		);
-
-	// Convert backend mentions to frontend format
-	const allMentions = backendMentions.map((m) => ({
-		id: m.id,
-		pageNumber: m.pageNumber ?? 1,
-		text: m.textSpan,
-		bboxes: m.bboxes ?? [],
-		entryId: m.entryId,
-		entryLabel: m.entry.label,
-		indexType: m.indexTypes[0]?.indexType ?? "",
-		type: m.mentionType as "text" | "region",
-		pageSublocation: m.pageSublocation ?? null,
-		createdAt: new Date(m.createdAt),
-	}));
 
 	// Persist color changes to backend
 	usePersistColorChange({
@@ -146,9 +141,8 @@ export const ProjectSubjectContent = () => {
 				projectId: projectId || "",
 				projectIndexTypeId: subjectProjectIndexTypeId ?? "",
 			});
-			utils.indexEntry.list.invalidate({
+			utils.indexEntry.listLean.invalidate({
 				projectId: projectId || "",
-				projectIndexTypeId: subjectProjectIndexTypeId,
 			});
 		},
 		onError: (error) => {
@@ -191,9 +185,8 @@ export const ProjectSubjectContent = () => {
 			utils.detection.getIndexEntryGroup.invalidate({
 				groupId: variables.groupId,
 			});
-			utils.indexEntry.list.invalidate({
+			utils.indexEntry.listLean.invalidate({
 				projectId: projectId || "",
-				projectIndexTypeId: subjectProjectIndexTypeId,
 			});
 		},
 		onError: (error) => {
@@ -224,9 +217,7 @@ export const ProjectSubjectContent = () => {
 						onSettings={() => setSettingsModalOpen(true)}
 						groupsEnabled={groupsEnabled}
 						showMatcherDetection={true}
-						hasEntriesWithMatchers={entries.some(
-							(e) => (e.metadata?.matchers?.length ?? 0) > 0,
-						)}
+						hasEntriesWithMatchers={true}
 					/>
 					<MatcherDetectionModal
 						open={matcherModalOpen}
@@ -247,7 +238,7 @@ export const ProjectSubjectContent = () => {
 			<IndexPanelScrollArea viewportRef={setScrollViewportRef}>
 				<EntryTree
 					entries={entries}
-					mentions={allMentions}
+					mentionCountsByEntryId={mentionCountsByEntryId}
 					groups={
 						groupsEnabled
 							? groups.map((g) => ({

@@ -141,12 +141,8 @@ export const useCreateEntry = () => {
 
 		onSettled: (_data, _err, variables) => {
 			// Refetch to ensure consistency
-			// Invalidate both the specific query (for sidebar) and the general query (for editor)
-			utils.indexEntry.list.invalidate({
-				projectId: variables.projectId,
-				projectIndexTypeId: variables.projectIndexTypeId,
-			});
-			utils.indexEntry.list.invalidate({
+			// Entries are cached centrally via listLean; refresh the shared cache.
+			utils.indexEntry.listLean.invalidate({
 				projectId: variables.projectId,
 			});
 			utils.indexEntry.getIndexView.invalidate();

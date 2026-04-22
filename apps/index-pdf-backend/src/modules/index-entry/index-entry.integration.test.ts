@@ -451,6 +451,37 @@ describe("IndexEntry API (Integration)", () => {
 		});
 	});
 
+	describe("GET /trpc/indexEntry.listLean", () => {
+		it("should list lean entries for a project", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			subjectIndexTypeId,
+		}) => {
+			await createTestIndexEntry({
+				projectId: testProjectId,
+				projectIndexTypeId: subjectIndexTypeId,
+				label: "Theology",
+				slug: "theology",
+				userId: testUser.userId,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexEntry.listLean?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toHaveLength(1);
+			expect(body.result.data[0]).toMatchObject({
+				label: "Theology",
+				slug: "theology",
+				projectIndexTypeId: subjectIndexTypeId,
+			});
+		});
+	});
+
 	describe("POST /trpc/indexEntry.update", () => {
 		it("should update entry label", async ({
 			testUser,

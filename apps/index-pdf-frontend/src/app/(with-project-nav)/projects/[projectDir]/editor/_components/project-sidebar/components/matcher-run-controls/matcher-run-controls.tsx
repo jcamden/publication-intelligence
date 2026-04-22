@@ -99,16 +99,14 @@ export const MatcherRunControls = ({
 			prevRunStatusesRef.current.set(run.id, run.status);
 		}
 		if (didComplete) {
-			utils.indexMention.list.invalidate({ projectId });
-			utils.indexEntry.list.invalidate({ projectId });
+			utils.indexEntry.listLean.invalidate({ projectId });
 			utils.indexEntry.getIndexView.invalidate();
 		}
 	}, [
 		detectionRuns,
 		projectId,
 		indexType,
-		utils.indexMention.list,
-		utils.indexEntry.list,
+		utils.indexEntry.listLean,
 		utils.indexEntry.getIndexView,
 	]);
 

@@ -60,11 +60,8 @@ export const DeleteGroupDialog = ({
 				projectId,
 				projectIndexTypeId,
 			});
-			utils.indexEntry.list.invalidate({
-				projectId,
-				projectIndexTypeId,
-			});
-			utils.indexMention.list.invalidate({ projectId });
+			utils.indexEntry.listLean.invalidate({ projectId });
+			utils.indexMention.list.invalidate();
 			setShowConfirmDialog(false);
 			onOpenChange(false);
 		},

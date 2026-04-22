@@ -40,7 +40,8 @@ export type EntryTreeGroup = {
 
 export type EntryTreeProps = {
 	entries: IndexEntry[]; // All entries for this index type
-	mentions: Mention[]; // For showing counts
+	mentions?: Mention[]; // For showing counts (legacy)
+	mentionCountsByEntryId?: Record<string, number>; // Preferred: avoids loading full mentions payload
 	/** When empty, entries are shown as flat A-Z list. When provided, groups are shown as bordered boxes. */
 	groups?: EntryTreeGroup[];
 	projectId?: string; // Optional for hierarchy updates (disabled if not provided)
@@ -60,7 +61,8 @@ const LARGE_TREE_VIRTUALIZE_AFTER = 600;
 
 export const EntryTree = ({
 	entries,
-	mentions,
+	mentions = [],
+	mentionCountsByEntryId,
 	groups = [],
 	projectId = "",
 	projectIndexTypeId,
@@ -74,12 +76,15 @@ export const EntryTree = ({
 	error = null,
 }: EntryTreeProps) => {
 	const mentionCountByEntryId = useMemo(() => {
+		if (mentionCountsByEntryId) {
+			return new Map<string, number>(Object.entries(mentionCountsByEntryId));
+		}
 		const map = new Map<string, number>();
 		for (const m of mentions) {
 			map.set(m.entryId, (map.get(m.entryId) ?? 0) + 1);
 		}
 		return map;
-	}, [mentions]);
+	}, [mentionCountsByEntryId, mentions]);
 
 	const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
 	const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);

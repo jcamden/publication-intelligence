@@ -387,6 +387,81 @@ describe("IndexMention API (Integration)", () => {
 		});
 	});
 
+	describe("GET /trpc/indexMention.listForPage", () => {
+		it("should list mentions for a document page", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			testDocumentId,
+			subjectEntryId,
+		}) => {
+			await createTestIndexMention({
+				entryId: subjectEntryId,
+				documentId: testDocumentId,
+				userId: testUser.userId,
+				pageNumber: 5,
+				textSpan: "mention p5",
+			});
+			await createTestIndexMention({
+				entryId: subjectEntryId,
+				documentId: testDocumentId,
+				userId: testUser.userId,
+				pageNumber: 6,
+				textSpan: "mention p6",
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexMention.listForPage?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, documentId: testDocumentId, pageNumber: 5 }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data).toHaveLength(1);
+			expect(body.result.data[0].pageNumber).toBe(5);
+		});
+	});
+
+	describe("GET /trpc/indexMention.countsByEntry", () => {
+		it("should return mention counts by entry for a document", async ({
+			testUser,
+			authenticatedRequest,
+			testProjectId,
+			testDocumentId,
+			subjectEntryId,
+			authorEntryId,
+		}) => {
+			await createTestIndexMention({
+				entryId: subjectEntryId,
+				documentId: testDocumentId,
+				userId: testUser.userId,
+				pageNumber: 5,
+			});
+			await createTestIndexMention({
+				entryId: subjectEntryId,
+				documentId: testDocumentId,
+				userId: testUser.userId,
+				pageNumber: 6,
+			});
+			await createTestIndexMention({
+				entryId: authorEntryId,
+				documentId: testDocumentId,
+				userId: testUser.userId,
+				pageNumber: 5,
+			});
+
+			const response = await authenticatedRequest.inject({
+				method: "GET",
+				url: `/trpc/indexMention.countsByEntry?input=${encodeURIComponent(JSON.stringify({ projectId: testProjectId, documentId: testDocumentId }))}`,
+			});
+
+			expect(response.statusCode).toBe(200);
+			const body = JSON.parse(response.body);
+			expect(body.result.data[subjectEntryId]).toBe(2);
+			expect(body.result.data[authorEntryId]).toBe(1);
+		});
+	});
+
 	describe("POST /trpc/indexMention.update", () => {
 		it("should update mention text span", async ({
 			testUser,
