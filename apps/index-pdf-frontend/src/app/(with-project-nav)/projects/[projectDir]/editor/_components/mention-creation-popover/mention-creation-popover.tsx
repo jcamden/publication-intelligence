@@ -6,12 +6,13 @@ import { FormInput } from "@pubint/yaboujee";
 import { useForm } from "@tanstack/react-form";
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
+import { getEntriesForType } from "@/app/projects/[projectDir]/_utils/entry-filters";
 import { mentionCreationShowPageSublocationAtom } from "../../_atoms/pdf-chrome-atoms";
-import type { IndexEntry } from "../../_types/index-entry";
-import { findEntryByText } from "../../_utils/index-entry-utils";
 import type { Mention } from "../editor/editor";
 import { EntryCreationModal } from "../entry-creation-modal";
 import { EntryPicker } from "../entry-picker";
+import { findEntryByText } from "./_utils/find-entry-by-text";
 
 export type BoundingBox = {
 	x: number;
@@ -105,7 +106,10 @@ export const MentionCreationPopover = ({
 
 	// Filter entries to current index type
 	const entriesForType = useMemo(() => {
-		const filtered = allEntries.filter((e) => e.indexType === indexType);
+		const filtered = getEntriesForType({
+			entries: allEntries,
+			indexType,
+		});
 		console.log("[MentionCreationPopover] entriesForType filtered:", {
 			totalEntries: allEntries.length,
 			filteredCount: filtered.length,

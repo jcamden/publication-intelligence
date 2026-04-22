@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { mockSubjectEntries } from "../../../_mocks/index-entries";
-import { mockMentions } from "../../../_mocks/mentions";
+import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
+import { mockSubjectEntries } from "../../../_mocks/mock-index-entries";
+import { mockMentions } from "../../../_mocks/mock-mentions";
 import { EntryTree } from "../entry-tree";
 
 const meta: Meta<typeof EntryTree> = {
@@ -47,7 +48,10 @@ export const EmptyState: Story = {
  */
 export const FlatList: Story = {
 	args: {
-		entries: mockSubjectEntries.filter((e) => e.parentId === null), // Only top-level
+		entries: getChildEntries({
+			entries: mockSubjectEntries,
+			parentId: null,
+		}), // Only top-level
 		mentions: mockMentions,
 	},
 };

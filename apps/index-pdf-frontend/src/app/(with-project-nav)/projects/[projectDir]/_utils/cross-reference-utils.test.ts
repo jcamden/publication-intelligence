@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CrossReference, IndexEntry } from "../editor/_types/index-entry";
+import type { CrossReference, IndexEntry } from "../_types/index-entry";
 import {
 	formatCrossReferences,
 	formatSingleCrossReferenceLabel,

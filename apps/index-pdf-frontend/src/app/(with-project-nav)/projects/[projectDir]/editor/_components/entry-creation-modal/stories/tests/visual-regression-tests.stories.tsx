@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
-import { mockSubjectEntries } from "../../../../_mocks/index-entries";
+import { mockSubjectEntries } from "../../../../_mocks/mock-index-entries";
 import { EntryCreationModal } from "../../entry-creation-modal";
 import { vrtFillLabelAndSelectPhilosophyParent } from "../helpers/steps";
 

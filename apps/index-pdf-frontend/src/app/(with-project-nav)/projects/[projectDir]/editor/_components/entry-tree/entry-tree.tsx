@@ -3,7 +3,8 @@
 import { getCanonBookKeys, isValidCanonId } from "@pubint/core";
 import { ErrorState } from "@pubint/yaboujee";
 import { useEffect, useMemo, useState } from "react";
-import type { IndexEntry } from "../../_types/index-entry";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
+import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
 import { DeleteEntryDialog } from "../delete-entry-dialog/delete-entry-dialog";
 import { DeleteGroupDialog } from "../delete-group-dialog/delete-group-dialog";
 import type { Mention } from "../editor/editor";
@@ -78,7 +79,7 @@ const EntryTreeNode = ({
 	onMerge,
 }: EntryTreeNodeProps) => {
 	const children = useMemo(
-		() => entries.filter((e) => e.parentId === entry.id),
+		() => getChildEntries({ entries, parentId: entry.id }),
 		[entries, entry.id],
 	);
 
@@ -186,7 +187,7 @@ export const EntryTree = ({
 	}, [entries, deletingEntry]);
 
 	const topLevelEntries = useMemo(
-		() => entries.filter((e) => e.parentId === null),
+		() => getChildEntries({ entries, parentId: null }),
 		[entries],
 	);
 

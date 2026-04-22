@@ -13,12 +13,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/app/_common/_trpc/client";
 import type { CrossReference } from "@/app/_common/_trpc/types";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import {
 	formatSingleCrossReferenceLabel,
 	getDirectiveForSingleRef,
 } from "@/app/projects/[projectDir]/_utils/cross-reference-utils";
-import type { IndexEntry } from "../../../_types/index-entry";
-import { getEntryDisplayLabel } from "../../../_utils/index-entry-utils";
+import { getEntryDisplayLabel } from "@/app/projects/[projectDir]/_utils/entry-path-formatting";
 import { EntryPicker } from "../../entry-picker/entry-picker";
 
 type CrossReferenceEditorProps = {

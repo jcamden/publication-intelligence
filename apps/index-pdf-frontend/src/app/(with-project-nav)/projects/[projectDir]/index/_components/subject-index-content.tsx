@@ -3,8 +3,9 @@
 import { useMemo } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
 import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/_hooks/use-region-derived-page-numbers";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import { formatCrossReferencesAsSegments } from "@/app/projects/[projectDir]/_utils/cross-reference-utils";
-import type { IndexEntry } from "@/app/projects/[projectDir]/editor/_types/index-entry";
+import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
 import { documentPageRangeToCanonicalRangeString } from "../_utils/canonical-page-range";
 
 const EMPTY_MESSAGE =
@@ -88,7 +89,7 @@ const IndexViewTree = ({
 	rootEntryIds,
 }: IndexViewTreeProps) => {
 	const children = useMemo(() => {
-		let filtered = entries.filter((e) => e.parentId === parentId);
+		let filtered = getChildEntries({ entries, parentId });
 		if (parentId === null && rootEntryIds && rootEntryIds.length > 0) {
 			filtered = filtered.filter((e) => rootEntryIds.includes(e.id));
 		}
@@ -191,7 +192,7 @@ export const SubjectIndexContent = ({
 		useMemo(() => {
 			const entries = allEntries;
 			const groupIds = new Set(groups.map((g) => g.id));
-			const roots = entries.filter((e) => e.parentId === null);
+			const roots = getChildEntries({ entries, parentId: null });
 			const ungrouped = roots
 				.filter((e) => !e.groupId || !groupIds.has(e.groupId))
 				.sort(sortByLabel)

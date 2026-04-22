@@ -8,8 +8,9 @@ import { Modal } from "@pubint/yaboujee";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/app/_common/_trpc/client";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import { useDeleteEntry } from "@/app/projects/[projectDir]/editor/_hooks/use-delete-entry";
-import type { IndexEntry } from "../../_types/index-entry";
+import { getDescendants } from "@/app/projects/[projectDir]/editor/_utils/available-parents";
 import { EntryPicker } from "../entry-picker/entry-picker";
 
 export type EntryMergeModalProps = {
@@ -41,20 +42,11 @@ export const EntryMergeModal = ({
 		trpc.indexEntry.crossReference.transferMentions.useMutation();
 
 	const excludeIds = useMemo(() => {
-		const getDescendants = (entryId: string): Set<string> => {
-			const descendants = new Set<string>();
-			const findChildren = (id: string) => {
-				const children = existingEntries.filter((e) => e.parentId === id);
-				for (const child of children) {
-					descendants.add(child.id);
-					findChildren(child.id);
-				}
-			};
-			findChildren(entryId);
-			return descendants;
-		};
-		const descendantIds = getDescendants(sourceEntry.id);
-		return [sourceEntry.id, ...descendantIds];
+		const descendantEntries = getDescendants({
+			entries: existingEntries,
+			parentId: sourceEntry.id,
+		});
+		return [sourceEntry.id, ...descendantEntries.map((e) => e.id)];
 	}, [existingEntries, sourceEntry.id]);
 
 	const targetEntry = useMemo(

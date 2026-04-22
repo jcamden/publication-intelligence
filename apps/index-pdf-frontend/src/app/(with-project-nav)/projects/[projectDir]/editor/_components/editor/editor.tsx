@@ -6,6 +6,8 @@ import { formatOklchColor } from "@pubint/yaboujee/utils/index-type-colors";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
+import { getEntryDisplayLabel } from "@/app/projects/[projectDir]/_utils/entry-path-formatting";
 import {
 	colorConfigAtom,
 	highlightColorConfigAtom,
@@ -35,8 +37,6 @@ import type {
 	HighlightColorConfig,
 	IndexTypeName,
 } from "../../_types/highlight-config";
-import type { IndexEntry } from "../../_types/index-entry";
-import { getEntryDisplayLabel } from "../../_utils/index-entry-utils";
 import { ColorConfigProvider } from "../color-config-provider";
 import { CreateExcludeRegionModal } from "../create-exclude-region-modal";
 import { CreatePageNumberRegionModal } from "../create-page-number-region-modal";

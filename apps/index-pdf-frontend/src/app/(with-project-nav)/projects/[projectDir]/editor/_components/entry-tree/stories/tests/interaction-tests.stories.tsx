@@ -1,8 +1,8 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import type { Meta, StoryObj } from "@storybook/react";
 import { within } from "@storybook/test";
-import { mockSubjectEntries } from "../../../../_mocks/index-entries";
-import { mockMentions } from "../../../../_mocks/mentions";
+import { mockSubjectEntries } from "../../../../_mocks/mock-index-entries";
+import { mockMentions } from "../../../../_mocks/mock-mentions";
 import { EntryTree } from "../../entry-tree";
 import { emptyStateShowsMessage, expandCollapseNodes } from "../helpers/steps";
 

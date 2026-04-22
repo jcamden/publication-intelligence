@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import type { IndexEntry } from "../../../_types/index-entry";
-import { getEntryDepth } from "../../../_utils/index-entry-utils";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
+import { getEntryDepth } from "../_utils/get-entry-depth";
 
 export type EntryLabelProps = {
 	entry: IndexEntry;

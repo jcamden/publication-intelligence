@@ -1,4 +1,4 @@
-import type { IndexEntry } from "../_types/index-entry";
+import type { IndexEntry } from "../../_types/index-entry";
 
 // Subject Index Entries (with hierarchy)
 export const mockSubjectEntries: IndexEntry[] = [

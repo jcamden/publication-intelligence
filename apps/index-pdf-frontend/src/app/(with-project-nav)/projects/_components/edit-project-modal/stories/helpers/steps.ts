@@ -124,6 +124,8 @@ export const projectTitleAlreadyExistsErrorIsVisible = async ({
 }: StoryContext) => {
 	await step("Project title already exists error is visible", async () => {
 		await waitFor(async () => {
+			const titleInput = editProjectModalSelectors.projectTitleInput(body);
+			await expect(titleInput).toHaveAttribute("aria-invalid", "true");
 			const error = editProjectModalSelectors.titleAlreadyExistsError(body);
 			await expect(error).toBeVisible();
 		}, storyWaitForDefaults);
@@ -203,6 +205,27 @@ export const blurActiveFieldByClickingDescription = async ({
 	await step("Move focus to Description field", async () => {
 		const description = editProjectModalSelectors.descriptionTextarea(body);
 		await user.click(description);
+	});
+};
+
+/**
+ * Ensures the title input blurs after programmatic value updates. Without an explicit
+ * `.focus()` on the title field, focus can drift before `click(description)`, so blur
+ * validation runs against a stale title (flake).
+ */
+export const blurProjectTitleInput = async ({
+	body,
+	user,
+	step,
+}: {
+	user: StoryUser;
+} & StoryContext) => {
+	await step("Blur Project Title input", async () => {
+		const titleInput = editProjectModalSelectors.projectTitleInput(body);
+		(titleInput as HTMLElement).focus();
+		const description = editProjectModalSelectors.descriptionTextarea(body);
+		await user.click(description);
+		await yieldForFormStateCommit();
 	});
 };
 

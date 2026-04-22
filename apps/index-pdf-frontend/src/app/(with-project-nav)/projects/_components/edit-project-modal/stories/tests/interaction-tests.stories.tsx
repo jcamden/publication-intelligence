@@ -3,8 +3,8 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { userEvent, within } from "@storybook/test";
 import { EditProjectModal } from "../../edit-project-modal";
 import {
-	blurActiveFieldByClickingDescription,
 	blurProjectDirInput,
+	blurProjectTitleInput,
 	clearAndFillProjectDir,
 	clearAndFillProjectTitle,
 	clickDeleteProjectButton,
@@ -78,7 +78,7 @@ export const ShowsErrorWhenTitleMatchesOtherProject: StoryObj<
 			title: "Another Project",
 			step,
 		});
-		await blurActiveFieldByClickingDescription({ body, user, step });
+		await blurProjectTitleInput({ body, user, step });
 		await projectTitleAlreadyExistsErrorIsVisible({ body, step });
 	},
 };
@@ -137,7 +137,7 @@ export const AllowsKeepingSameTitle: StoryObj<typeof EditProjectModal> = {
 			step,
 		});
 		await focusProjectTitleInput({ body, user, step });
-		await blurActiveFieldByClickingDescription({ body, user, step });
+		await blurProjectTitleInput({ body, user, step });
 		await projectTitleAlreadyExistsErrorIsNotVisible({ body, step });
 	},
 };

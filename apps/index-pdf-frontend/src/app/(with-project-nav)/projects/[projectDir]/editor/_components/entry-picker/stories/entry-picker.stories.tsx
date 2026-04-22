@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { useState } from "react";
-import type { IndexEntry } from "../../../_types/index-entry";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
+import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
 import { EntryPicker } from "../entry-picker";
 
 const meta = {
@@ -244,7 +245,7 @@ export const SingleEntry: Story = {
  */
 export const FlatList: Story = {
 	args: {
-		entries: mockEntries.filter((e) => e.parentId === null),
+		entries: getChildEntries({ entries: mockEntries, parentId: null }),
 		value: null,
 		onValueChange: fn(),
 		placeholder: "Select from flat list...",

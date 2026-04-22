@@ -10,8 +10,8 @@ import {
 import { X } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
-import type { IndexEntry } from "../../_types/index-entry";
-import { getEntryDisplayLabel } from "../../_utils/index-entry-utils";
+import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
+import { getEntryDisplayLabel } from "@/app/projects/[projectDir]/_utils/entry-path-formatting";
 
 const hasSeeCrossReference = (entry: IndexEntry): boolean =>
 	entry.crossReferences?.some((ref) => ref.relationType === "see") ?? false;

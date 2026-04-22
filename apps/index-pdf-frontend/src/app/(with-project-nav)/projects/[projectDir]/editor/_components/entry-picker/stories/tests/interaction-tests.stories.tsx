@@ -7,7 +7,7 @@ import {
 	TestDecorator,
 	TrpcDecorator,
 } from "@/app/_common/_test-utils/storybook-utils";
-import { mockSubjectEntries } from "../../../../_mocks/index-entries";
+import { mockSubjectEntries } from "../../../../_mocks/mock-index-entries";
 import { EntryPicker } from "../../entry-picker";
 import {
 	createNestedEntry,

@@ -2,7 +2,7 @@
 
 import type { PdfHighlight } from "@pubint/yaboujee";
 import { PdfHighlightLayer } from "@pubint/yaboujee";
-import type { ViewerMention } from "@/app/projects/[projectDir]/editor/_types/mentions";
+import type { ViewerMention } from "./mentions-types";
 
 type ViewerHighlightLayerProps = {
 	pageNumber: number;
