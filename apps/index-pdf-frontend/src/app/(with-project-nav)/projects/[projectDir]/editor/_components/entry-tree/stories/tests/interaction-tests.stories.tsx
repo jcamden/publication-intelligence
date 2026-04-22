@@ -1,6 +1,6 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { within } from "storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/mock-index-entries";
 import { mockMentions } from "../../../../_mocks/mock-mentions";
 import { EntryTree } from "../../entry-tree";

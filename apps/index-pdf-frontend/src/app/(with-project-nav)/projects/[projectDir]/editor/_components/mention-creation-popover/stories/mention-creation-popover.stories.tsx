@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import { mockSubjectEntries } from "../../../_mocks/mock-index-entries";
 import type { MentionDraft } from "../mention-creation-popover";

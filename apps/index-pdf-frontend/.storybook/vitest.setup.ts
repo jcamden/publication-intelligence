@@ -1,8 +1,9 @@
+import * as a11yAddonAnnotations from "@storybook/addon-a11y/preview";
 import { setProjectAnnotations } from "@storybook/nextjs-vite";
 import { beforeAll } from "vitest";
 import * as previewAnnotations from "./preview";
 
-setProjectAnnotations([previewAnnotations]);
+setProjectAnnotations([a11yAddonAnnotations, previewAnnotations]);
 
 // Clear localStorage once before all tests, then allow persistence between tests
 beforeAll(() => {

@@ -16,7 +16,7 @@
 		"clean": "rm -rf dist",
 		"typecheck": "tsc --noEmit",
 		"test": "pnpm test:unit",
-		"test:unit": "vitest run",
+		"test:unit": "mkdir -p test-results && vitest run; VITEST_EXIT=$?; pnpx tsx ../../scripts/format-unit-test-results.ts test-results/unit-tests.json test-results/unit-summary.md; exit $VITEST_EXIT",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
 	},

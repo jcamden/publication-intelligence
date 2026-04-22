@@ -1,8 +1,10 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { within } from "storybook/test";
 import { mockSubjectEntries } from "../../../../_mocks/mock-index-entries";
 import type { Mention } from "../../../editor/editor";
 import { EntryTree } from "../../entry-tree";
+import { expandAllNodes } from "../helpers/steps";
 
 const mockMentions: Mention[] = [
 	{
@@ -48,5 +50,9 @@ export const NestedHierarchy: Story = {
 	globals: {
 		...defaultGlobals,
 		viewport: { value: "mobile1" },
+	},
+	play: async ({ canvasElement, step }) => {
+		const canvas = within(canvasElement);
+		await expandAllNodes({ canvas, step });
 	},
 };

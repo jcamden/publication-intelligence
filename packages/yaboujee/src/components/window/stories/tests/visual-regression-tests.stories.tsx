@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Window } from "../../window";
 
 const meta: Meta<typeof Window> = {

@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { PageBiblioContent } from "../../page-biblio-content";
 
 const meta: Meta<typeof PageBiblioContent> = {

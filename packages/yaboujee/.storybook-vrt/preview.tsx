@@ -1,4 +1,5 @@
 import type { Preview } from "@storybook/react";
+import { MINIMAL_VIEWPORTS } from "storybook/viewport";
 import "../src/index.css";
 
 const preview: Preview = {
@@ -24,6 +25,21 @@ const preview: Preview = {
 						enabled: true,
 					},
 				],
+			},
+		},
+		viewport: {
+			options: {
+				...MINIMAL_VIEWPORTS,
+				mobile1: {
+					name: "mobile1 (375×667)",
+					styles: { width: "375px", height: "667px" },
+					type: "mobile",
+				},
+				tablet: {
+					name: "tablet (768×1024)",
+					styles: { width: "768px", height: "1024px" },
+					type: "tablet",
+				},
 			},
 		},
 	},

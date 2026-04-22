@@ -3,8 +3,8 @@ import {
 	defaultInteractionTestMeta,
 } from "@pubint/storybook-config";
 import { waitMs } from "@pubint/yaboujee/_stories";
-import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent, within } from "storybook/test";
 import {
 	TestDecorator,
 	TrpcDecorator,

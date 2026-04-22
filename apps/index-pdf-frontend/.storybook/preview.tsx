@@ -1,5 +1,6 @@
 import type { Preview } from "@storybook/nextjs-vite";
 import { Provider as JotaiProvider } from "jotai";
+import { MINIMAL_VIEWPORTS } from "storybook/viewport";
 import { MockProjectProvider } from "../src/app/_common/_test-utils/storybook-utils/project-decorator";
 import { MockThemeProvider } from "../src/app/_common/_test-utils/storybook-utils/theme-decorator";
 import { TrpcDecorator } from "../src/app/_common/_test-utils/storybook-utils/trpc-decorator";
@@ -31,6 +32,21 @@ const preview: Preview = {
 				date: /Date$/i,
 			},
 		},
+		viewport: {
+			options: {
+				...MINIMAL_VIEWPORTS,
+				mobile1: {
+					name: "mobile1 (375×667)",
+					styles: { width: "375px", height: "667px" },
+					type: "mobile",
+				},
+				tablet: {
+					name: "tablet (768×1024)",
+					styles: { width: "768px", height: "1024px" },
+					type: "tablet",
+				},
+			},
+		},
 		backgrounds: {
 			default: "light",
 			values: [
@@ -47,6 +63,11 @@ const preview: Preview = {
 					},
 				],
 			},
+
+			// 'todo' - show a11y violations in the test UI only
+			// 'error' - fail CI on a11y violations
+			// 'off' - skip a11y checks entirely
+			test: "todo",
 		},
 		nextjs: {
 			appDirectory: true,

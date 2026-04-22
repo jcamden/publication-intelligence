@@ -1,7 +1,7 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { pressTab } from "@pubint/yaboujee/_stories";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { userEvent, within } from "storybook/test";
 import { CreateProjectModal } from "../../create-project-modal";
 import {
 	blurProjectDirInput,

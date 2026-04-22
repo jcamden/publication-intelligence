@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { createMockPdfFile } from "../../pdf/test-helpers/mock-factories";
 import { PdfThumbnail } from "../pdf-thumbnail";
 

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { SignupForm } from "../signup-form";
 
 const codeBlock = `import { SignupForm } from "@/components/auth/signup-form";

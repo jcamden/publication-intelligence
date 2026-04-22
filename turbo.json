@@ -27,6 +27,7 @@
 		},
 		"test:unit": {
 			"cache": true,
+			"outputs": ["test-results/**"],
 			"inputs": ["src/**", "*.json", "*.config.*", "test/**", "vitest.*.ts"]
 		},
 		"test:interaction": {

@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Inbox } from "lucide-react";
 import { EmptyState } from "../../empty-state";
 

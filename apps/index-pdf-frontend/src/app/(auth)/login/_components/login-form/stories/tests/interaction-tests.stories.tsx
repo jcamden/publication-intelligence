@@ -1,6 +1,6 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { userEvent, within } from "storybook/test";
 import { LoginForm } from "../../login-form";
 import {
 	alertRolesExist,

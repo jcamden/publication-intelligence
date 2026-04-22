@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
 import { Accordion } from "@pubint/yabasic/components/ui/accordion";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FileText, Tag } from "lucide-react";
 import { useState } from "react";
 import { SidebarAccordionItem } from "../../sidebar-accordion-item";

@@ -1,9 +1,9 @@
 import type { DropResult } from "@hello-pangea/dnd";
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FileText, Tag, User } from "lucide-react";
 import { useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { DraggableSidebar } from "../../draggable-sidebar";
 import {
 	clickAccordionTriggersForLabels,

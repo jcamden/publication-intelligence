@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { ProjectAuthorContent } from "../project-author-content";
 
 const meta: Meta<typeof ProjectAuthorContent> = {

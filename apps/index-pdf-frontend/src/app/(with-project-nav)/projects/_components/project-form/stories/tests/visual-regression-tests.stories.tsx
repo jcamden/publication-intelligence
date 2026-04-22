@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { within } from "storybook/test";
 import { ProjectForm } from "../../project-form";
 import {
 	vrtFillTitleDescriptionAndWaitForDirectorySlug,
@@ -35,12 +35,14 @@ export const DefaultDark: StoryObj<typeof ProjectForm> = {
 		onCancel: () => {},
 		existingProjects: [],
 	},
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
+
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
 };
 
@@ -70,13 +72,16 @@ export const WithValidationErrorsDark: StoryObj<typeof ProjectForm> = {
 			{ project_dir: "existing-project", title: "Existing Project" },
 		],
 	},
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
+
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
+
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		await vrtShowDuplicateTitleAndProjectDirectoryErrors({ canvas, step });

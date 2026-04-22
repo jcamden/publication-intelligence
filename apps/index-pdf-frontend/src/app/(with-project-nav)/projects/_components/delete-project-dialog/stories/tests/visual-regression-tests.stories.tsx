@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { DeleteProjectDialog } from "../../delete-project-dialog";
 
 export default {
@@ -31,12 +31,14 @@ export const DefaultDark: StoryObj<typeof DeleteProjectDialog> = {
 		onOpenChange: () => {},
 		onSuccess: () => {},
 	},
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
+
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
 		viewport: { value: "mobile2", isRotated: true },
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
 };

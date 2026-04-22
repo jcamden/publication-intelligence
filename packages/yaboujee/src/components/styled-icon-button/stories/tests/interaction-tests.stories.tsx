@@ -1,8 +1,8 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn, userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Eye, Plus } from "lucide-react";
 import { useState } from "react";
+import { fn, userEvent, within } from "storybook/test";
 import { StyledIconButton } from "../../styled-icon-button";
 import {
 	activeStateShowsActive,

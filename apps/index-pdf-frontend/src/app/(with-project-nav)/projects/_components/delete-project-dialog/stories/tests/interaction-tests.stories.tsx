@@ -1,6 +1,6 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { userEvent } from "storybook/test";
 import { DeleteProjectDialog } from "../../delete-project-dialog";
 import {
 	alertDialogIsInDocument,

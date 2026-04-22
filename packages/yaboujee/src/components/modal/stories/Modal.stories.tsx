@@ -1,7 +1,7 @@
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { Field, FieldLabel } from "@pubint/yabasic/components/ui/field";
 import { Input } from "@pubint/yabasic/components/ui/input";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { Alert } from "../../alert";
 import { Modal } from "../modal";

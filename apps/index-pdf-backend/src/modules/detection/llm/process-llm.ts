@@ -166,6 +166,28 @@ export const processDetection = async ({
 		}),
 	);
 
+	// Hoisted per-run: suppression list and index-type id lookups.
+	const suppressedList = await detectionRepo.getSuppressedSuggestions({
+		userId,
+		projectId: run.projectId,
+	});
+
+	const projectIndexTypeIdByType = new Map<string, string | null>();
+	const getProjectIndexTypeIdCached = async (
+		indexType: string,
+	): Promise<string | null> => {
+		if (projectIndexTypeIdByType.has(indexType)) {
+			return projectIndexTypeIdByType.get(indexType) ?? null;
+		}
+		const id = await detectionRepo.getProjectIndexTypeByType({
+			userId,
+			projectId: run.projectId,
+			indexType,
+		});
+		projectIndexTypeIdByType.set(indexType, id);
+		return id;
+	};
+
 	for (const pageNum of pagesToProcess) {
 		const mentionsCreatedBeforePage = mentionsCreated;
 		const currentRun = await detectionRepo.getDetectionRun({ userId, runId });
@@ -273,11 +295,6 @@ export const processDetection = async ({
 			);
 		}
 
-		const suppressedList = await detectionRepo.getSuppressedSuggestions({
-			userId,
-			projectId: run.projectId,
-		});
-
 		const unsuppressedEntries = llmResponse.entries.filter((entry) => {
 			const normalizedLabel = entry.label
 				.toLowerCase()
@@ -295,11 +312,9 @@ export const processDetection = async ({
 		);
 
 		for (const entry of unsuppressedEntries) {
-			const projectIndexTypeId = await detectionRepo.getProjectIndexTypeByType({
-				userId,
-				projectId: run.projectId,
-				indexType: entry.indexType,
-			});
+			const projectIndexTypeId = await getProjectIndexTypeIdCached(
+				entry.indexType,
+			);
 
 			if (!projectIndexTypeId) {
 				console.warn(

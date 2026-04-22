@@ -1,4 +1,5 @@
-import type { Preview } from "@storybook/react";
+import type { Preview } from "@storybook/react-vite";
+import { MINIMAL_VIEWPORTS } from "storybook/viewport";
 import "../src/index.css";
 
 const preview: Preview = {
@@ -24,6 +25,26 @@ const preview: Preview = {
 						enabled: true,
 					},
 				],
+			},
+
+			// 'todo' - show a11y violations in the test UI only
+			// 'error' - fail CI on a11y violations
+			// 'off' - skip a11y checks entirely
+			test: "todo",
+		},
+		viewport: {
+			options: {
+				...MINIMAL_VIEWPORTS,
+				mobile1: {
+					name: "mobile1 (375×667)",
+					styles: { width: "375px", height: "667px" },
+					type: "mobile",
+				},
+				tablet: {
+					name: "tablet (768×1024)",
+					styles: { width: "768px", height: "1024px" },
+					type: "tablet",
+				},
 			},
 		},
 	},

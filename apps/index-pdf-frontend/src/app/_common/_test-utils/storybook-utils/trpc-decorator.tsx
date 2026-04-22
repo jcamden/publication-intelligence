@@ -83,18 +83,35 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 
 						if (batchInput) {
 							try {
-								const inputs = JSON.parse(batchInput);
+								const inputs = JSON.parse(batchInput) as Record<
+									string,
+									unknown
+								>;
 								const results: Record<string, unknown> = {};
 
-								// Process each batched query
-								Object.keys(inputs).forEach((key) => {
-									if (key.includes("projectHighlightConfig.listUserAddons")) {
+								// Batch URL path is like: /trpc/procA,procB?batch=1&input=...
+								const pathname = urlObj.pathname;
+								const trpcIndex = pathname.lastIndexOf("/trpc/");
+								const procedures =
+									trpcIndex >= 0
+										? pathname.slice(trpcIndex + "/trpc/".length).split(",")
+										: [];
+
+								const keys = Object.keys(inputs).sort(
+									(a, b) => Number(a) - Number(b),
+								);
+
+								// Process each batched query by procedure name (stable by index).
+								keys.forEach((key, idx) => {
+									const proc = procedures[idx] ?? "";
+
+									if (proc === "projectHighlightConfig.listUserAddons") {
 										results[key] = {
 											result: {
 												data: ["subject", "author", "scripture"],
 											},
 										};
-									} else if (key.includes("projectHighlightConfig.list")) {
+									} else if (proc === "projectHighlightConfig.list") {
 										results[key] = {
 											result: {
 												data: [
@@ -131,7 +148,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 												],
 											},
 										};
-									} else if (key.includes("detection.listIndexEntryGroups")) {
+									} else if (proc === "detection.listIndexEntryGroups") {
 										const batchItem = inputs[key] as
 											| { json?: { projectId?: string } }
 											| undefined;
@@ -146,7 +163,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 															{
 																id: "mock-group-1",
 																projectId: "mock-project-id",
-																projectIndexTypeId: "mock-pit-subject-id",
+																projectIndexTypeId: "mock-pit-author-id",
 																name: "Group A",
 																slug: "group-a",
 																parserProfileId: null,
@@ -159,7 +176,7 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 															{
 																id: "mock-group-2",
 																projectId: "mock-project-id",
-																projectIndexTypeId: "mock-pit-subject-id",
+																projectIndexTypeId: "mock-pit-author-id",
 																name: "Group B",
 																slug: "group-b",
 																parserProfileId: "scripture-biblical",
@@ -172,10 +189,82 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 														],
 											},
 										};
-									} else if (key.includes("detection.listDetectionRuns")) {
+									} else if (proc === "detection.listDetectionRuns") {
 										results[key] = {
 											result: {
 												data: [],
+											},
+										};
+									} else if (proc === "indexEntry.listLean") {
+										results[key] = {
+											result: {
+												data: [
+													{
+														id: "mock-subject-entry-1",
+														label: "Grace",
+														slug: "grace",
+														parentId: null,
+														projectIndexTypeId: "mock-pit-subject-id",
+														groupId: "mock-group-1",
+														groupPosition: 1,
+													},
+													{
+														id: "mock-author-entry-1",
+														label: "Augustine",
+														slug: "augustine",
+														parentId: null,
+														projectIndexTypeId: "mock-pit-author-id",
+														groupId: "mock-group-1",
+														groupPosition: 1,
+													},
+													{
+														id: "mock-author-entry-2",
+														label: "Calvin",
+														slug: "calvin",
+														parentId: null,
+														projectIndexTypeId: "mock-pit-author-id",
+														groupId: "mock-group-2",
+														groupPosition: 1,
+													},
+													{
+														id: "mock-scripture-entry-1",
+														label: "Genesis",
+														slug: "genesis",
+														parentId: null,
+														projectIndexTypeId: "mock-pit-scripture-id",
+														groupId: null,
+														groupPosition: null,
+													},
+												],
+											},
+										};
+									} else if (proc === "indexMention.countsByEntry") {
+										results[key] = {
+											result: {
+												data: {
+													"mock-subject-entry-1": 12,
+													"mock-author-entry-1": 5,
+													"mock-author-entry-2": 2,
+													"mock-scripture-entry-1": 7,
+												},
+											},
+										};
+									} else if (
+										proc === "indexEntry.crossReference.listByProjectIndexType"
+									) {
+										results[key] = {
+											result: {
+												data: {
+													"mock-author-entry-1": [
+														{
+															id: "mock-xref-1",
+															fromEntryId: "mock-author-entry-1",
+															toEntryId: "mock-author-entry-2",
+															arbitraryValue: null,
+															relationType: "see_also",
+														},
+													],
+												},
 											},
 										};
 									}
@@ -288,6 +377,57 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
+					// NOTE: must come before indexEntry.list (substring match).
+					if (urlString.includes("indexEntry.listLean")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: [
+										{
+											id: "mock-subject-entry-1",
+											label: "Grace",
+											slug: "grace",
+											parentId: null,
+											projectIndexTypeId: "mock-pit-subject-id",
+											groupId: "mock-group-1",
+											groupPosition: 1,
+										},
+										{
+											id: "mock-author-entry-1",
+											label: "Augustine",
+											slug: "augustine",
+											parentId: null,
+											projectIndexTypeId: "mock-pit-author-id",
+											groupId: "mock-group-1",
+											groupPosition: 1,
+										},
+										{
+											id: "mock-author-entry-2",
+											label: "Calvin",
+											slug: "calvin",
+											parentId: null,
+											projectIndexTypeId: "mock-pit-author-id",
+											groupId: "mock-group-2",
+											groupPosition: 1,
+										},
+										{
+											id: "mock-scripture-entry-1",
+											label: "Genesis",
+											slug: "genesis",
+											parentId: null,
+											projectIndexTypeId: "mock-pit-scripture-id",
+											groupId: null,
+											groupPosition: null,
+										},
+									],
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
 					if (urlString.includes("indexEntry.list")) {
 						return new Response(
 							JSON.stringify({
@@ -368,6 +508,24 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 						);
 					}
 
+					if (urlString.includes("indexMention.countsByEntry")) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: {
+										"mock-subject-entry-1": 12,
+										"mock-author-entry-1": 5,
+										"mock-author-entry-2": 2,
+										"mock-scripture-entry-1": 7,
+									},
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
 					if (urlString.includes("region.list")) {
 						return new Response(
 							JSON.stringify({
@@ -395,20 +553,6 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 					}
 
 					if (urlString.includes("canonicalPageRule.list")) {
-						return new Response(
-							JSON.stringify({
-								result: {
-									data: [],
-								},
-							}),
-							{
-								headers: { "Content-Type": "application/json" },
-							},
-						);
-					}
-
-					// Mock query: indexEntry.list
-					if (urlString.includes("indexEntry.list")) {
 						return new Response(
 							JSON.stringify({
 								result: {
@@ -480,6 +624,33 @@ const createMockTrpcClient = (config?: TrpcDecoratorConfig) =>
 										crossReferences: [],
 										createdAt: new Date().toISOString(),
 										updatedAt: new Date().toISOString(),
+									},
+								},
+							}),
+							{
+								headers: { "Content-Type": "application/json" },
+							},
+						);
+					}
+
+					if (
+						urlString.includes(
+							"indexEntry.crossReference.listByProjectIndexType",
+						)
+					) {
+						return new Response(
+							JSON.stringify({
+								result: {
+									data: {
+										"mock-author-entry-1": [
+											{
+												id: "mock-xref-1",
+												fromEntryId: "mock-author-entry-1",
+												toEntryId: "mock-author-entry-2",
+												arbitraryValue: null,
+												relationType: "see_also",
+											},
+										],
 									},
 								},
 							}),

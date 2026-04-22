@@ -1,7 +1,7 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn, waitFor } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { fn, waitFor } from "storybook/test";
 import { PdfViewer } from "../../pdf-viewer";
 import {
 	defaultArgs,

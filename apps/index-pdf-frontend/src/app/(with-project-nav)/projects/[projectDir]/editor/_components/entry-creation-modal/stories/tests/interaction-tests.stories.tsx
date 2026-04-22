@@ -1,5 +1,5 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { mockSubjectEntries } from "../../../../_mocks/mock-index-entries";
 import { EntryCreationModal } from "../../entry-creation-modal";
 import {

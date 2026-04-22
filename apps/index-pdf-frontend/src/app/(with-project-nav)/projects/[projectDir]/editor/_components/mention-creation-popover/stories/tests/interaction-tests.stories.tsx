@@ -1,7 +1,7 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
+import { within } from "storybook/test";
 import {
 	TestDecorator,
 	TrpcDecorator,

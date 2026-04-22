@@ -19,7 +19,7 @@
 		"lint:biome": "biome ci .",
 		"clean": "rm -rf dist",
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
+		"test": "mkdir -p test-results && vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
 	},

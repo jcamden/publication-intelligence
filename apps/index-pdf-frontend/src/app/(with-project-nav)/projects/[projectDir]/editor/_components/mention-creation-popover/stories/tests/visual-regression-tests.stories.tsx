@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { within } from "storybook/test";
 import { TestDecorator } from "@/app/_common/_test-utils/storybook-utils";
 import { mockSubjectEntries } from "../../../../_mocks/mock-index-entries";
 import { MentionCreationPopover } from "../../mention-creation-popover";

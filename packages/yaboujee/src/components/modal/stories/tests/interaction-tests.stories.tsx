@@ -1,8 +1,8 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { Modal } from "../../modal";
 import {
 	closeCallbackIsCalledOnce,

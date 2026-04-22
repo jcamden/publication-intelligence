@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { userEvent, within } from "storybook/test";
 import { LoginForm } from "../../login-form";
 import { showValidationErrorsForVrt } from "../helpers/steps";
 
@@ -30,13 +30,14 @@ export const MobileLight: StoryObj<typeof LoginForm> = {
 };
 
 export const MobileDark: StoryObj<typeof LoginForm> = {
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
 		viewport: { value: "mobile1" },
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
 };
 
@@ -54,14 +55,16 @@ export const ErrorStateLight: StoryObj<typeof LoginForm> = {
 };
 
 export const ErrorStateDark: StoryObj<typeof LoginForm> = {
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
 		viewport: { value: "mobile1" },
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
+
 	play: async ({ canvasElement, step }) => {
 		const canvas = within(canvasElement);
 		const user = userEvent.setup();

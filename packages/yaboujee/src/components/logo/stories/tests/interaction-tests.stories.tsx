@@ -1,6 +1,6 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { within } from "storybook/test";
 import { Logo } from "../../logo";
 import { logoLinkHasHref } from "../helpers/steps";
 

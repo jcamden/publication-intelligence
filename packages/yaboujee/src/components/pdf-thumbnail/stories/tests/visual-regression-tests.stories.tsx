@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { waitFor } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { waitFor } from "storybook/test";
 import { createMockPdfFile } from "../../../pdf/test-helpers/mock-factories";
 import { PdfThumbnail } from "../../pdf-thumbnail";
 

@@ -1,7 +1,7 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useRef, useState } from "react";
+import { within } from "storybook/test";
 import { PdfAnnotationPopover } from "../../pdf-annotation-popover";
 import {
 	clickCancelButton,

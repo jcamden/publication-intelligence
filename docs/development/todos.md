@@ -35,11 +35,13 @@ Grab-bag of things to do, grouped loosely by area. Expected to churn.
 
 ### Index Editor
 
-- split up EntryTree
-- Move the create-entry and create-group buttons out of `EntryTree`.
-- Make `EntryTree` scrollable and filterable/searchable.
-- Fix entry tree scroll area.
+- split up EntryTree file
+- Make `EntryTree` filterable/searchable. (The mentions list should be filterable too, so probably some opportunity for code sharing there. Might as well implement both at the same time.)
 - Fix the numerous drag-and-drop issues in `EntryTree`.
+    - dragging an entry into a group doesn't work (it greys out and the group has blue highlight styles but they freeze; when I refresh the page, nothing has happened)
+    - dragging an entry out of a gruop also doesn't work
+    - We also need to be able to move a nested entry out to the top level of a group,
+    
 - Add section colors to the window component.
 - Move region and text buttons to the PDF toolbar; add a type selector next to them. Keep them on until toggled off.
 - Replace full header and content color with probably just a colored icon for accordion items.

@@ -1,6 +1,6 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { UserDropdown } from "../../user-dropdown";
 import { clickUserDropdownTrigger } from "../helpers/steps";
 import { defaultHandlers, defaultUser } from "../shared";

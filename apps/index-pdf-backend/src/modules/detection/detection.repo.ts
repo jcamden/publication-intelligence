@@ -681,6 +681,209 @@ export const getMatcherWithEntry = async ({
 };
 
 /**
+ * Batch fetch matchers with parent entry fields for scripture resolution.
+ * Keyed by matcher id.
+ */
+export const getMatchersWithEntryByIds = async ({
+	userId,
+	projectIndexTypeId,
+	matcherIds,
+}: {
+	userId: string;
+	projectIndexTypeId: string;
+	matcherIds: string[];
+}): Promise<
+	Array<{
+		matcherId: string;
+		entryId: string;
+		projectId: string;
+		label: string;
+		slug: string;
+	}>
+> => {
+	if (matcherIds.length === 0) return [];
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({
+					matcherId: indexMatchers.id,
+					entryId: indexMatchers.entryId,
+					projectId: indexEntries.projectId,
+					label: indexEntries.label,
+					slug: indexEntries.slug,
+				})
+				.from(indexMatchers)
+				.innerJoin(
+					indexEntries,
+					and(
+						eq(indexMatchers.entryId, indexEntries.id),
+						eq(
+							indexEntries.projectIndexTypeId,
+							indexMatchers.projectIndexTypeId,
+						),
+					),
+				)
+				.where(
+					and(
+						eq(indexMatchers.projectIndexTypeId, projectIndexTypeId),
+						inArray(indexMatchers.id, matcherIds),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+			return rows;
+		},
+	});
+};
+
+/**
+ * Batch fetch entry ids/parentIds by slug for a project index type.
+ * Keyed by slug.
+ */
+export const getEntriesByProjectTypeAndSlugs = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	slugs,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	slugs: string[];
+}): Promise<Array<{ slug: string; id: string; parentId: string | null }>> => {
+	if (slugs.length === 0) return [];
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			const rows = await tx
+				.select({
+					slug: indexEntries.slug,
+					id: indexEntries.id,
+					parentId: indexEntries.parentId,
+				})
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+						inArray(indexEntries.slug, slugs),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+			return rows;
+		},
+	});
+};
+
+/**
+ * Batch create child entries. Uses ON CONFLICT DO NOTHING then re-queries to
+ * return ids for all requested slugs.
+ */
+export const createChildEntriesBatch = async ({
+	userId,
+	projectId,
+	projectIndexTypeId,
+	detectionRunId,
+	children,
+}: {
+	userId: string;
+	projectId: string;
+	projectIndexTypeId: string;
+	detectionRunId: string;
+	children: Array<{ parentId: string; slug: string; label: string }>;
+}): Promise<Array<{ slug: string; id: string; parentId: string | null }>> => {
+	if (children.length === 0) return [];
+	return await withUserContext({
+		userId,
+		fn: async (tx) => {
+			// index_entries slug uniqueness is implemented as a PARTIAL unique index
+			// (project_id, project_index_type_id, slug) WHERE deleted_at IS NULL.
+			// Postgres requires ON CONFLICT targets to match a unique constraint/index,
+			// and Drizzle can't target the partial predicate here, so we do:
+			// 1) prefetch existing slugs
+			// 2) insert only missing slugs (in deterministic order)
+			// 3) re-query and return all requested rows
+
+			const uniqBySlug = new Map<
+				string,
+				{ parentId: string; slug: string; label: string }
+			>();
+			for (const c of children) {
+				if (!uniqBySlug.has(c.slug)) uniqBySlug.set(c.slug, c);
+			}
+			const slugs = Array.from(uniqBySlug.keys());
+
+			const existing = await tx
+				.select({ slug: indexEntries.slug })
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+						inArray(indexEntries.slug, slugs),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+			const existingSlugs = new Set(existing.map((r) => r.slug));
+
+			const missingValues = slugs
+				.filter((slug) => !existingSlugs.has(slug))
+				.sort()
+				.map((slug) => {
+					const c = uniqBySlug.get(slug);
+					if (!c) {
+						throw new Error(
+							`Invariant violation: missing child spec for slug "${slug}"`,
+						);
+					}
+					return {
+						projectId,
+						projectIndexTypeId,
+						parentId: c.parentId,
+						slug: c.slug,
+						label: c.label,
+						detectionRunId,
+						status: "active" as const,
+					};
+				});
+
+			if (missingValues.length > 0) {
+				// If a rare race inserts the same slug between our select and insert,
+				// this statement can fail; for safety we fall back to per-row insert.
+				try {
+					await tx.insert(indexEntries).values(missingValues);
+				} catch {
+					for (const v of missingValues) {
+						try {
+							await tx.insert(indexEntries).values(v);
+						} catch {
+							// ignore unique conflicts; we'll re-query below
+						}
+					}
+				}
+			}
+
+			const rows = await tx
+				.select({
+					slug: indexEntries.slug,
+					id: indexEntries.id,
+					parentId: indexEntries.parentId,
+				})
+				.from(indexEntries)
+				.where(
+					and(
+						eq(indexEntries.projectId, projectId),
+						eq(indexEntries.projectIndexTypeId, projectIndexTypeId),
+						inArray(indexEntries.slug, slugs),
+						isNull(indexEntries.deletedAt),
+					),
+				);
+			return rows;
+		},
+	});
+};
+
+/**
  * Get or create the Unknown book entry for a scripture project. Idempotent.
  * Used by standalone ref scan to assign refs without clear book context.
  */

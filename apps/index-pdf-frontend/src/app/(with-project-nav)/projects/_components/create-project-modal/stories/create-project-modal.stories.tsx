@@ -1,7 +1,7 @@
 import { Button } from "@pubint/yabasic/components/ui/button";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
+import { fn } from "storybook/test";
 import { CreateProjectModal } from "../create-project-modal";
 
 const meta = {

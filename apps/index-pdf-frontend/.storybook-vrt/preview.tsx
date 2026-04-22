@@ -1,4 +1,5 @@
 import type { Preview } from "@storybook/nextjs-vite";
+import { MINIMAL_VIEWPORTS } from "storybook/viewport";
 import { MockProjectProvider } from "../src/app/_common/_test-utils/storybook-utils/project-decorator";
 import { MockThemeProvider } from "../src/app/_common/_test-utils/storybook-utils/theme-decorator";
 import { TrpcDecorator } from "../src/app/_common/_test-utils/storybook-utils/trpc-decorator";
@@ -52,6 +53,21 @@ const preview: Preview = {
 			navigation: {
 				pathname: "/",
 				query: {},
+			},
+		},
+		viewport: {
+			options: {
+				...MINIMAL_VIEWPORTS,
+				mobile1: {
+					name: "mobile1 (375×667)",
+					styles: { width: "375px", height: "667px" },
+					type: "mobile",
+				},
+				tablet: {
+					name: "tablet (768×1024)",
+					styles: { width: "768px", height: "1024px" },
+					type: "tablet",
+				},
 			},
 		},
 	},

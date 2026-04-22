@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Eye, Plus, Settings, Zap } from "lucide-react";
 import { StyledIconButton } from "../../styled-icon-button";
 import { defaultStyledIconButtonArgs } from "../shared";

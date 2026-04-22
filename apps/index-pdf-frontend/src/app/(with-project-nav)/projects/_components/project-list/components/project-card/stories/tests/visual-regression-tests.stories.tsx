@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { ProjectCard } from "../../project-card";
 import { vrtPauseBeforePseudoHoverSnapshot } from "../helpers/steps";
 
@@ -51,12 +51,14 @@ export const DefaultDark: StoryObj<typeof ProjectCard> = {
 		project: mockProject,
 		onSettingsClick: () => {},
 	},
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
+
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
 };
 
@@ -85,7 +87,6 @@ export const HoverStateDark: StoryObj<typeof ProjectCard> = {
 		onSettingsClick: () => {},
 	},
 	parameters: {
-		backgrounds: { default: "dark" },
 		pseudo: {
 			hover: true,
 		},
@@ -93,6 +94,10 @@ export const HoverStateDark: StoryObj<typeof ProjectCard> = {
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
 	play: async ({ step }) => {
 		await vrtPauseBeforePseudoHoverSnapshot({ step });

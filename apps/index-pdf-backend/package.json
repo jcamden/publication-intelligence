@@ -17,9 +17,9 @@
 		"clean": "rm -rf dist",
 		"typecheck": "tsc --noEmit",
 		"test": "pnpm test:unit",
-		"test:unit": "NODE_ENV=test vitest run",
+		"test:unit": "mkdir -p test-results && NODE_ENV=test vitest run; VITEST_EXIT=$?; pnpx tsx ../../scripts/format-unit-test-results.ts test-results/unit-tests.json test-results/unit-summary.md; exit $VITEST_EXIT",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage",
+		"test:coverage": "mkdir -p test-results && vitest run --coverage",
 		"test:integration": "vitest run --testNamePattern='Integration'",
 		"test:service": "vitest run --testNamePattern='Service'"
 	},

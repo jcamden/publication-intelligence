@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { ProjectSidebar } from "../project-sidebar";
 
 const meta: Meta<typeof ProjectSidebar> = {

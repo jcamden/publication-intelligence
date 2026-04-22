@@ -2,6 +2,13 @@ import type { StorybookCanvas } from "@pubint/yaboujee/_stories";
 
 export const entryTreeSelectors = {
 	emptyMessage: (canvas: StorybookCanvas) => canvas.getByText("No entries yet"),
+	expandChevronButtons: (canvas: StorybookCanvas) => {
+		const buttons = canvas.getAllByRole("button");
+		// Collapsed nodes show a chevron-right.
+		return buttons.filter((btn: HTMLElement) =>
+			Boolean(btn.querySelector("svg.lucide-chevron-right")),
+		);
+	},
 	toggleChevronButton: (canvas: StorybookCanvas) => {
 		const expandButtons = canvas.getAllByRole("button");
 		// Entry nodes are collapsed by default, so expect a chevron-right.

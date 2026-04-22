@@ -2,7 +2,7 @@ import {
 	defaultGlobals,
 	visualRegressionTestConfig,
 } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { WindowTopBar } from "../../window-top-bar";
 import { defaultWindowTopBarArgs } from "../shared";
 

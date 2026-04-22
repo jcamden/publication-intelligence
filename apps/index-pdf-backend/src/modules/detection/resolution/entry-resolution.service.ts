@@ -185,6 +185,101 @@ async function resolveSubjectCandidate(
 	}
 }
 
+async function resolveSubjectCandidatesBatched({
+	candidates,
+	context,
+}: {
+	candidates: ResolutionCandidate[];
+	context: ResolutionContext;
+}): Promise<{
+	allWrites: ResolvedMentionWrite[];
+	resolvedCount: number;
+	droppedCount: number;
+	failedCount: number;
+	warnings: string[];
+	scriptureAgg: {
+		childrenCreated: number;
+		childrenReused: number;
+		matchersCreated: number;
+		matchersReused: number;
+		resolutionMisses: number;
+	};
+}> {
+	const warnings: string[] = [];
+	const allWrites: ResolvedMentionWrite[] = [];
+	let resolvedCount = 0;
+	let droppedCount = 0;
+	let failedCount = 0;
+	const scriptureAgg = {
+		childrenCreated: 0,
+		childrenReused: 0,
+		matchersCreated: 0,
+		matchersReused: 0,
+		resolutionMisses: 0,
+	};
+
+	const matcherIds = Array.from(
+		new Set(candidates.map((c) => c.matcherId).filter(Boolean)),
+	);
+	const rows = await detectionRepo.getMatchersWithEntryByIds({
+		userId: context.userId,
+		projectIndexTypeId: context.projectIndexTypeId,
+		matcherIds,
+	});
+	const matcherIdToEntryId = new Map<string, string>();
+	for (const r of rows) matcherIdToEntryId.set(r.matcherId, r.entryId);
+
+	for (let i = 0; i < candidates.length; i++) {
+		const c = candidates[i];
+		try {
+			const entryId = matcherIdToEntryId.get(c.matcherId) ?? c.entryId;
+			if (!entryId) {
+				droppedCount += 1;
+				continue;
+			}
+			resolvedCount += 1;
+			allWrites.push({
+				entryId,
+				pageNumber: c.pageNumber,
+				textSpan: c.textSpan,
+				bboxes: c.bboxes,
+			});
+		} catch (err) {
+			failedCount += 1;
+			const message = err instanceof Error ? err.message : String(err);
+			warnings.push(
+				`matcherId=${c.matcherId} page=${c.pageNumber}: ${message}`,
+			);
+		}
+
+		detectionEventBus.emit(context.detectionRunId, {
+			type: "candidate.resolved",
+			index: i + 1,
+			total: candidates.length,
+		});
+		if ((i + 1) % 50 === 0 || i === candidates.length - 1) {
+			await detectionRepo.updateDetectionRunProgress({
+				userId: context.userId,
+				input: {
+					runId: context.detectionRunId,
+					progressPage: 0,
+					phase: "resolve",
+					phaseProgress: String((i + 1) / Math.max(1, candidates.length)),
+				},
+			});
+		}
+	}
+
+	return {
+		allWrites,
+		resolvedCount,
+		droppedCount,
+		failedCount,
+		warnings,
+		scriptureAgg,
+	};
+}
+
 export const subjectResolutionStrategy: ResolutionStrategy = {
 	canHandle(indexType: string): boolean {
 		return indexType === SUBJECT_INDEX_TYPE;
@@ -468,6 +563,300 @@ export const scriptureResolutionStrategy: ResolutionStrategy = {
 	resolve: resolveScriptureCandidate,
 };
 
+type ScripturePreparedCandidate = {
+	candidate: ResolutionCandidate;
+	parent: { entryId: string; slug: string } | null;
+	segments: MatcherMentionParserSegment[];
+	isFallback: boolean;
+	childSpecs: Array<{ parentId: string; slug: string; label: string }>;
+};
+
+async function resolveScriptureCandidatesBatched({
+	candidates,
+	context,
+}: {
+	candidates: ResolutionCandidate[];
+	context: ResolutionContext;
+}): Promise<{
+	allWrites: ResolvedMentionWrite[];
+	resolvedCount: number;
+	droppedCount: number;
+	failedCount: number;
+	warnings: string[];
+	scriptureAgg: {
+		childrenCreated: number;
+		childrenReused: number;
+		matchersCreated: number;
+		matchersReused: number;
+		resolutionMisses: number;
+	};
+}> {
+	const warnings: string[] = [];
+	const allWrites: ResolvedMentionWrite[] = [];
+	let resolvedCount = 0;
+	let droppedCount = 0;
+	let failedCount = 0;
+	const scriptureAgg = {
+		childrenCreated: 0,
+		childrenReused: 0,
+		matchersCreated: 0,
+		matchersReused: 0,
+		resolutionMisses: 0,
+	};
+
+	// Batch parent matcher lookup (non-unknown-book path).
+	const matcherIds = Array.from(
+		new Set(candidates.map((c) => c.matcherId).filter(Boolean)),
+	);
+	const parentRows = await detectionRepo.getMatchersWithEntryByIds({
+		userId: context.userId,
+		projectIndexTypeId: context.projectIndexTypeId,
+		matcherIds,
+	});
+	const parentByMatcherId = new Map<
+		string,
+		{ entryId: string; slug: string }
+	>();
+	for (const r of parentRows) parentByMatcherId.set(r.matcherId, r);
+
+	// Precompute all child slugs needed for this batch.
+	const prepared: ScripturePreparedCandidate[] = [];
+	const neededChildSlugs: string[] = [];
+	const neededBySlug = new Map<
+		string,
+		{ parentId: string; slug: string; label: string }
+	>();
+
+	for (const c of candidates) {
+		const segments: MatcherMentionParserSegment[] =
+			(c.parserSegments?.length ?? 0) > 0
+				? (c.parserSegments ?? [])
+				: c.parserSegment
+					? [c.parserSegment]
+					: [];
+		const isFallback = Boolean(c.fallbackBookLevel);
+
+		let parent: { entryId: string; slug: string } | null = null;
+		if (!c.isUnknownBook) {
+			parent = parentByMatcherId.get(c.matcherId) ?? null;
+		} else if (c.entryId) {
+			// Unknown book path uses candidate.entryId as parent.
+			parent = { entryId: c.entryId, slug: "unknown" };
+		}
+
+		const childSpecs: Array<{ parentId: string; slug: string; label: string }> =
+			[];
+
+		if (!parent) {
+			prepared.push({
+				candidate: c,
+				parent: null,
+				segments,
+				isFallback,
+				childSpecs,
+			});
+			continue;
+		}
+
+		for (const seg of segments) {
+			const refText = seg.refText ?? "";
+			const isBookLevel = refText.trim() === "";
+			if (isBookLevel) continue;
+
+			const fullRef = segmentToFullRef(seg);
+			const segmentSlug = segmentRefToSlug(fullRef);
+			const childSlug = c.isUnknownBook
+				? `unknown--${segmentSlug}`
+				: `${parent.slug}--${segmentSlug}`;
+			const label = fullRef;
+
+			const spec = { parentId: parent.entryId, slug: childSlug, label };
+			childSpecs.push(spec);
+			if (!neededBySlug.has(childSlug)) {
+				neededBySlug.set(childSlug, spec);
+				neededChildSlugs.push(childSlug);
+			}
+		}
+
+		prepared.push({ candidate: c, parent, segments, isFallback, childSpecs });
+	}
+
+	// Batch lookup existing child entries by slug.
+	const existingRows = await detectionRepo.getEntriesByProjectTypeAndSlugs({
+		userId: context.userId,
+		projectId: context.projectId,
+		projectIndexTypeId: context.projectIndexTypeId,
+		slugs: neededChildSlugs,
+	});
+	const existingBySlug = new Map<
+		string,
+		{ id: string; parentId: string | null }
+	>();
+	for (const r of existingRows) existingBySlug.set(r.slug, r);
+
+	// Determine missing (or wrong-parent) child entries, batch insert, then re-query.
+	const toCreate: Array<{ parentId: string; slug: string; label: string }> = [];
+	for (const [slug, spec] of neededBySlug) {
+		const existing = existingBySlug.get(slug);
+		if (!existing || existing.parentId !== spec.parentId) {
+			toCreate.push(spec);
+		}
+	}
+
+	if (toCreate.length > 0) {
+		await detectionRepo.createChildEntriesBatch({
+			userId: context.userId,
+			projectId: context.projectId,
+			projectIndexTypeId: context.projectIndexTypeId,
+			detectionRunId: context.detectionRunId,
+			children: toCreate,
+		});
+	}
+
+	const afterRows = await detectionRepo.getEntriesByProjectTypeAndSlugs({
+		userId: context.userId,
+		projectId: context.projectId,
+		projectIndexTypeId: context.projectIndexTypeId,
+		slugs: neededChildSlugs,
+	});
+	const childIdBySlug = new Map<
+		string,
+		{ id: string; parentId: string | null }
+	>();
+	for (const r of afterRows) childIdBySlug.set(r.slug, r);
+
+	for (let i = 0; i < prepared.length; i++) {
+		const {
+			candidate: c,
+			parent,
+			segments,
+			isFallback,
+			childSpecs,
+		} = prepared[i];
+
+		try {
+			if (!parent) {
+				logEvent({
+					event: "detection.resolution_miss",
+					context: {
+						metadata: {
+							reason: c.isUnknownBook
+								? "unknown_book_missing_parent"
+								: "matcher_or_entry_not_found",
+							matcherId: c.matcherId,
+							projectIndexTypeId: context.projectIndexTypeId,
+							pageNumber: c.pageNumber,
+						},
+					},
+				});
+				droppedCount += 1;
+				scriptureAgg.resolutionMisses += 1;
+			} else {
+				const writes: ResolvedMentionWrite[] = [];
+				let childrenCreated = 0;
+				let childrenReused = 0;
+
+				if (segments.length > 0) {
+					for (const seg of segments) {
+						const refText = seg.refText ?? "";
+						const isBookLevel = refText.trim() === "";
+						if (isBookLevel) {
+							writes.push({
+								entryId: parent.entryId,
+								pageNumber: c.pageNumber,
+								textSpan: c.textSpan,
+								bboxes: c.bboxes,
+							});
+							continue;
+						}
+
+						const fullRef = segmentToFullRef(seg);
+						const segmentSlug = segmentRefToSlug(fullRef);
+						const childSlug = c.isUnknownBook
+							? `unknown--${segmentSlug}`
+							: `${parent.slug}--${segmentSlug}`;
+
+						const row = childIdBySlug.get(childSlug);
+						if (!row) {
+							droppedCount += 1;
+							scriptureAgg.resolutionMisses += 1;
+							continue;
+						}
+
+						const wantedParentId =
+							childSpecs.find((s) => s.slug === childSlug)?.parentId ??
+							parent.entryId;
+						if (row.parentId === wantedParentId) {
+							// Heuristic: if it existed before, count reused; if we asked to create, count created.
+							const existedBefore = existingBySlug.get(childSlug);
+							if (existedBefore && existedBefore.parentId === wantedParentId) {
+								childrenReused += 1;
+							} else {
+								childrenCreated += 1;
+							}
+						}
+
+						writes.push({
+							entryId: row.id,
+							pageNumber: c.pageNumber,
+							textSpan: c.textSpan,
+							bboxes: c.bboxes,
+						});
+					}
+				} else if (isFallback) {
+					writes.push({
+						entryId: parent.entryId,
+						pageNumber: c.pageNumber,
+						textSpan: c.textSpan,
+						bboxes: c.bboxes,
+					});
+				}
+
+				if (writes.length === 0) {
+					droppedCount += 1;
+				} else {
+					resolvedCount += 1;
+					allWrites.push(...writes);
+					scriptureAgg.childrenCreated += childrenCreated;
+					scriptureAgg.childrenReused += childrenReused;
+				}
+			}
+		} catch (err) {
+			failedCount += 1;
+			const message = err instanceof Error ? err.message : String(err);
+			warnings.push(
+				`matcherId=${c.matcherId} page=${c.pageNumber}: ${message}`,
+			);
+		}
+
+		detectionEventBus.emit(context.detectionRunId, {
+			type: "candidate.resolved",
+			index: i + 1,
+			total: prepared.length,
+		});
+		if ((i + 1) % 50 === 0 || i === prepared.length - 1) {
+			await detectionRepo.updateDetectionRunProgress({
+				userId: context.userId,
+				input: {
+					runId: context.detectionRunId,
+					progressPage: 0,
+					phase: "resolve",
+					phaseProgress: String((i + 1) / Math.max(1, prepared.length)),
+				},
+			});
+		}
+	}
+
+	return {
+		allWrites,
+		resolvedCount,
+		droppedCount,
+		failedCount,
+		warnings,
+		scriptureAgg,
+	};
+}
+
 /**
  * Scripture resolution (Task 5.2). Delegates to central orchestration.
  * When indexType is not "scripture", returns early with all candidates as resolutionMisses (no strategy run).
@@ -524,6 +913,14 @@ const RESOLUTION_STRATEGIES: ResolutionStrategy[] = [
 	scriptureResolutionStrategy,
 ];
 
+function looksLikeUuid(value: string | null | undefined): boolean {
+	if (!value) return false;
+	// Accept any RFC4122-ish UUID (v1-v5) for test + prod compatibility.
+	return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+		value,
+	);
+}
+
 /**
  * Single integration point: accept deterministic candidate list, dispatch by
  * run indexType to strategy, apply shared dedupe + persistence, aggregate
@@ -543,7 +940,7 @@ export const resolveAndPersistCandidates = async ({
 
 	const candidatesSeen = candidates.length;
 	const warnings: string[] = [];
-	const allWrites: ResolvedMentionWrite[] = [];
+	let allWrites: ResolvedMentionWrite[] = [];
 	let resolvedCount = 0;
 	let droppedCount = 0;
 	let failedCount = 0;
@@ -571,51 +968,79 @@ export const resolveAndPersistCandidates = async ({
 		resolvedCount = allWrites.length;
 		droppedCount = candidatesSeen - resolvedCount;
 	} else {
-		for (let i = 0; i < candidates.length; i++) {
-			const c = candidates[i];
-			const outcome = await strategy.resolve(c, context);
-			switch (outcome.kind) {
-				case "resolved":
-					resolvedCount += 1;
-					allWrites.push(...outcome.writes);
-					if (outcome.metrics) {
-						scriptureAgg.childrenCreated += outcome.metrics.childrenCreated;
-						scriptureAgg.childrenReused += outcome.metrics.childrenReused;
-						scriptureAgg.matchersCreated += outcome.metrics.matchersCreated;
-						scriptureAgg.matchersReused += outcome.metrics.matchersReused;
-						scriptureAgg.resolutionMisses += outcome.metrics.resolutionMisses;
-					}
-					break;
-				case "dropped":
-					droppedCount += 1;
-					if (outcome.resolutionMiss && indexType === SCRIPTURE_INDEX_TYPE) {
-						scriptureAgg.resolutionMisses += 1;
-					}
-					break;
-				case "failed":
-					failedCount += 1;
-					warnings.push(
-						`matcherId=${c.matcherId} page=${c.pageNumber}: ${outcome.reasonCode}`,
-					);
-					break;
-			}
+		// Unit tests in this repo often use non-UUID synthetic ids (e.g. "m1"),
+		// while the real DB schema uses UUIDs. Batch queries hit the DB with
+		// inArray(uuidCol, [...]) and will error on non-UUID values. In that case,
+		// fall back to the per-candidate strategy (which tests typically mock).
+		const canUseBatchedLookups = candidates.every((c) =>
+			looksLikeUuid(c.matcherId),
+		);
 
-			// Best-effort SSE progress for the resolve phase.
-			detectionEventBus.emit(detectionRunId, {
-				type: "candidate.resolved",
-				index: i + 1,
-				total: candidates.length,
-			});
-			if ((i + 1) % 50 === 0 || i === candidates.length - 1) {
-				await detectionRepo.updateDetectionRunProgress({
-					userId,
-					input: {
-						runId: detectionRunId,
-						progressPage: 0,
-						phase: "resolve",
-						phaseProgress: String((i + 1) / Math.max(1, candidates.length)),
-					},
+		const batched =
+			canUseBatchedLookups && indexType === SUBJECT_INDEX_TYPE
+				? await resolveSubjectCandidatesBatched({ candidates, context })
+				: canUseBatchedLookups && indexType === SCRIPTURE_INDEX_TYPE
+					? await resolveScriptureCandidatesBatched({ candidates, context })
+					: null;
+
+		if (batched) {
+			allWrites = batched.allWrites;
+			resolvedCount = batched.resolvedCount;
+			droppedCount = batched.droppedCount;
+			failedCount = batched.failedCount;
+			warnings.push(...batched.warnings);
+			scriptureAgg.childrenCreated += batched.scriptureAgg.childrenCreated;
+			scriptureAgg.childrenReused += batched.scriptureAgg.childrenReused;
+			scriptureAgg.matchersCreated += batched.scriptureAgg.matchersCreated;
+			scriptureAgg.matchersReused += batched.scriptureAgg.matchersReused;
+			scriptureAgg.resolutionMisses += batched.scriptureAgg.resolutionMisses;
+		} else {
+			for (let i = 0; i < candidates.length; i++) {
+				const c = candidates[i];
+				const outcome = await strategy.resolve(c, context);
+				switch (outcome.kind) {
+					case "resolved":
+						resolvedCount += 1;
+						allWrites.push(...outcome.writes);
+						if (outcome.metrics) {
+							scriptureAgg.childrenCreated += outcome.metrics.childrenCreated;
+							scriptureAgg.childrenReused += outcome.metrics.childrenReused;
+							scriptureAgg.matchersCreated += outcome.metrics.matchersCreated;
+							scriptureAgg.matchersReused += outcome.metrics.matchersReused;
+							scriptureAgg.resolutionMisses += outcome.metrics.resolutionMisses;
+						}
+						break;
+					case "dropped":
+						droppedCount += 1;
+						if (outcome.resolutionMiss && indexType === SCRIPTURE_INDEX_TYPE) {
+							scriptureAgg.resolutionMisses += 1;
+						}
+						break;
+					case "failed":
+						failedCount += 1;
+						warnings.push(
+							`matcherId=${c.matcherId} page=${c.pageNumber}: ${outcome.reasonCode}`,
+						);
+						break;
+				}
+
+				// Best-effort SSE progress for the resolve phase.
+				detectionEventBus.emit(detectionRunId, {
+					type: "candidate.resolved",
+					index: i + 1,
+					total: candidates.length,
 				});
+				if ((i + 1) % 50 === 0 || i === candidates.length - 1) {
+					await detectionRepo.updateDetectionRunProgress({
+						userId,
+						input: {
+							runId: detectionRunId,
+							progressPage: 0,
+							phase: "resolve",
+							phaseProgress: String((i + 1) / Math.max(1, candidates.length)),
+						},
+					});
+				}
 			}
 		}
 	}

@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PdfViewerToolbar } from "../../pdf-viewer-toolbar";
 import { defaultArgs } from "../shared";
 

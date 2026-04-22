@@ -1,8 +1,8 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { flushSync } from "react-dom";
+import { fn, within } from "storybook/test";
 import {
 	TestDecorator,
 	TrpcDecorator,

@@ -1,7 +1,7 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Button } from "@pubint/yabasic/components/ui/button";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn, userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn, userEvent, within } from "storybook/test";
 import { EmptyState } from "../../empty-state";
 import {
 	actionClickCallbackIsCalledOnce,

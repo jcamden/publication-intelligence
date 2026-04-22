@@ -1,4 +1,5 @@
-import path from "node:path";
+// This file has been automatically migrated to valid ESM format by Storybook.
+import path, { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { StorybookConfig } from "@storybook/nextjs-vite";
 import tailwindcss from "@tailwindcss/vite";
@@ -9,12 +10,12 @@ const __dirname = path.dirname(__filename);
 const config: StorybookConfig = {
 	stories: ["../src/**/*.mdx", "../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
 	addons: [
-		"@storybook/addon-vitest",
-		"@storybook/addon-a11y",
-		"@storybook/addon-docs",
-		"storybook-addon-pseudo-states",
+		getAbsolutePath("@storybook/addon-vitest"),
+		getAbsolutePath("@storybook/addon-a11y"),
+		getAbsolutePath("@storybook/addon-docs"),
+		getAbsolutePath("storybook-addon-pseudo-states"),
 	],
-	framework: "@storybook/nextjs-vite",
+	framework: getAbsolutePath("@storybook/nextjs-vite"),
 	staticDirs: ["../public"],
 	async viteFinal(config) {
 		config.plugins = config.plugins || [];
@@ -40,3 +41,7 @@ const config: StorybookConfig = {
 	},
 };
 export default config;
+
+function getAbsolutePath(value: string): string {
+	return dirname(fileURLToPath(import.meta.resolve(`${value}/package.json`)));
+}

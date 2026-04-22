@@ -1,8 +1,8 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
 import { Accordion } from "@pubint/yabasic/components/ui/accordion";
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn, userEvent, within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { fn, userEvent, within } from "storybook/test";
 import { SidebarAccordionItem } from "../../sidebar-accordion-item";
 import {
 	clickDragHandle,

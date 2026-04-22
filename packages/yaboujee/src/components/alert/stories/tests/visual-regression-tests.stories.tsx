@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Alert } from "../../alert";
 import { AllVariantsStack } from "../shared";
 
@@ -33,25 +33,29 @@ export const AllVariantsNarrowContainerWithCustomStyle: StoryObj<typeof Alert> =
 export const AllVariantsNarrowContainerWithCustomStyleDark: StoryObj<
 	typeof Alert
 > = {
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
 		viewport: { value: "mobile1" },
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
+
 	render: () => <AllVariantsStack customStyle="shadow-lg" />,
 };
 
 export const AllVariantsNarrowContainerDark: StoryObj<typeof Alert> = {
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
 		viewport: { value: "mobile1" },
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
+
 	render: () => <AllVariantsStack />,
 };

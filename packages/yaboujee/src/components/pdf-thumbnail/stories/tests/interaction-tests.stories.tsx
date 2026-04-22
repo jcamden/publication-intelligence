@@ -1,6 +1,6 @@
 import { defaultInteractionTestMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
-import { within } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { within } from "storybook/test";
 import { createMockPdfFile } from "../../../pdf/test-helpers/mock-factories";
 import { PdfThumbnail } from "../../pdf-thumbnail";
 import { thumbnailContainerIsInDocument } from "../helpers/steps";

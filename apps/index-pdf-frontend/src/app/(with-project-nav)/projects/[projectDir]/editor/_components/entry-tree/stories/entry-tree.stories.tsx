@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
 import { mockSubjectEntries } from "../../../_mocks/mock-index-entries";
 import { mockMentions } from "../../../_mocks/mock-mentions";

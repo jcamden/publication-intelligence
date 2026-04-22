@@ -1,6 +1,10 @@
 export const baseConfig = {
 	globals: true,
 	passWithNoTests: true,
+	reporters: [
+		"default",
+		["json", { outputFile: "test-results/unit-tests.json" }],
+	] as const,
 	include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
 	exclude: [
 		"**/node_modules/**",

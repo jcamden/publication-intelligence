@@ -1,5 +1,5 @@
 import { defaultGlobals, defaultVrtMeta } from "@pubint/storybook-config";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { ProjectList } from "../../project-list";
 
 export default {
@@ -75,12 +75,14 @@ export const DefaultDark: StoryObj<typeof ProjectList> = {
 		isLoading: false,
 		onSettingsClick: () => {},
 	},
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
+
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
 };
 
@@ -104,12 +106,14 @@ export const EmptyStateDark: StoryObj<typeof ProjectList> = {
 		onSettingsClick: () => {},
 		onCreateClick: () => {},
 	},
-	parameters: {
-		backgrounds: { default: "dark" },
-	},
+
 	globals: {
 		...defaultGlobals,
 		theme: "dark",
+
+		backgrounds: {
+			value: "dark",
+		},
 	},
 };
 

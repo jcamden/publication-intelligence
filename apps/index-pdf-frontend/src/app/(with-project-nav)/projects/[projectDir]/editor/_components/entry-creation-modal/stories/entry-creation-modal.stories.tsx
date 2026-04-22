@@ -1,5 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { fn } from "storybook/test";
 import { mockSubjectEntries } from "../../../_mocks/mock-index-entries";
 import { EntryCreationModal } from "../entry-creation-modal";
 

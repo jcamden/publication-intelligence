@@ -1,5 +1,5 @@
 import type { DropResult } from "@hello-pangea/dnd";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { FileText, Tag, User } from "lucide-react";
 import { useState } from "react";
 import { DraggableSidebar } from "../draggable-sidebar";

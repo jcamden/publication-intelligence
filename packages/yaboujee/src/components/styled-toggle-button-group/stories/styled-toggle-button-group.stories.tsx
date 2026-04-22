@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { StyledToggleButtonGroup } from "../styled-toggle-button-group";
 import { createMockStyledButtons } from "./shared";

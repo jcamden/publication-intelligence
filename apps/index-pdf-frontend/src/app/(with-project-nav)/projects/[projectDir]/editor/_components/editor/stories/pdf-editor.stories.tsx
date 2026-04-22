@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { Editor } from "../editor";
 import { ERROR_PDF_URL, SAMPLE_PDF_URL } from "./shared";
 

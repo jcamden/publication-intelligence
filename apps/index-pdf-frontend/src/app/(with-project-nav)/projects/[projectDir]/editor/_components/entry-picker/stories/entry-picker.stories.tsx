@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
+import { fn } from "storybook/test";
 import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
 import { EntryPicker } from "../entry-picker";
