@@ -103,6 +103,8 @@ function mapRowToDetectionRun(row: {
 	finishedAt: Date | null;
 	progressPage: number | null;
 	totalPages: number | null;
+	phase: string | null;
+	phaseProgress: string | null;
 	pageRangeStart: number | null;
 	pageRangeEnd: number | null;
 	model: string | null;
@@ -129,6 +131,8 @@ function mapRowToDetectionRun(row: {
 		finishedAt: row.finishedAt,
 		progressPage: row.progressPage,
 		totalPages: row.totalPages,
+		phase: row.phase,
+		phaseProgress: row.phaseProgress,
 		pageRangeStart: row.pageRangeStart,
 		pageRangeEnd: row.pageRangeEnd,
 		model: row.model,
@@ -198,6 +202,8 @@ export const listDetectionRuns = async ({
 				finishedAt: r.finishedAt,
 				progressPage: r.progressPage,
 				totalPages: r.totalPages,
+				phase: r.phase,
+				phaseProgress: r.phaseProgress,
 				pageRangeStart: r.pageRangeStart,
 				pageRangeEnd: r.pageRangeEnd,
 				model: r.model,
@@ -252,6 +258,10 @@ export const updateDetectionRunProgress = async ({
 					progressPage: input.progressPage,
 					entriesCreated: input.entriesCreated,
 					mentionsCreated: input.mentionsCreated,
+					...(input.phase !== undefined && { phase: input.phase }),
+					...(input.phaseProgress !== undefined && {
+						phaseProgress: input.phaseProgress,
+					}),
 				})
 				.where(eq(detectionRuns.id, input.runId));
 		},

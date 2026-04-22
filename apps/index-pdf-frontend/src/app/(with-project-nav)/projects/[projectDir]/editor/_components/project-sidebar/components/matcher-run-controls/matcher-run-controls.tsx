@@ -1,10 +1,11 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { logEvent } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_trpc/client";
 import { formatTrpcErrorMessage } from "@/app/_common/_trpc/error";
+import { useDetectionRunStream } from "../../../../_hooks/use-detection-run-stream";
 import {
 	MatcherRunControlsEmptyState,
 	MatcherRunControlsShared,
@@ -60,16 +61,6 @@ export const MatcherRunControls = ({
 		{ projectId: projectId || "" },
 		{
 			enabled: !!projectId,
-			refetchInterval: (query) => {
-				const runs = Array.isArray(query.state.data) ? query.state.data : [];
-				const hasActiveMatcherRun = runs.some(
-					(run) =>
-						run.runType === "matcher" &&
-						run.indexType === indexType &&
-						(run.status === "running" || run.status === "queued"),
-				);
-				return hasActiveMatcherRun ? 2000 : false;
-			},
 		},
 	);
 	const detectionRuns = Array.isArray(detectionRunsData)
@@ -83,32 +74,18 @@ export const MatcherRunControls = ({
 			(run.status === "running" || run.status === "queued"),
 	);
 
-	// Invalidate mentions when a matcher run completes (so highlights update without refresh)
-	const prevRunStatusesRef = useRef<Map<string, string>>(new Map());
+	const activeMatcherRunId = useMemo(
+		() => activeMatcherRun?.id ?? null,
+		[activeMatcherRun],
+	);
+	const stream = useDetectionRunStream({ runId: activeMatcherRunId });
+
 	useEffect(() => {
 		if (!projectId) return;
-		let didComplete = false;
-		for (const run of detectionRuns) {
-			if (run.runType !== "matcher" || run.indexType !== indexType) continue;
-			const prev = prevRunStatusesRef.current.get(run.id);
-			const wasActive = prev === "running" || prev === "queued";
-			const nowCompleted = run.status === "completed";
-			if (wasActive && nowCompleted) {
-				didComplete = true;
-			}
-			prevRunStatusesRef.current.set(run.id, run.status);
-		}
-		if (didComplete) {
-			utils.indexEntry.listLean.invalidate({ projectId });
-			utils.indexEntry.getIndexView.invalidate();
-		}
-	}, [
-		detectionRuns,
-		projectId,
-		indexType,
-		utils.indexEntry.listLean,
-		utils.indexEntry.getIndexView,
-	]);
+		if (stream.status !== "completed") return;
+		utils.indexEntry.listLean.invalidate({ projectId });
+		utils.indexEntry.getIndexView.invalidate();
+	}, [stream.status, projectId, utils]);
 
 	const runMatcher = trpc.detection.runMatcher.useMutation({
 		onSuccess: () => {

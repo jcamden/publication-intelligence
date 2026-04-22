@@ -7,6 +7,7 @@ import {
 } from "../../source-document/source-document.repo";
 import { getUserSettings } from "../../user-settings/user-settings.repo";
 import * as detectionRepo from "../detection.repo";
+import { detectionEventBus } from "../events";
 import {
 	DEFAULT_OVERLAP_THRESHOLD,
 	type FuzzyExistingMention,
@@ -57,6 +58,11 @@ export const processDetection = async ({
 			startedAt: new Date(),
 		},
 	});
+	detectionEventBus.emit(runId, { type: "run.status", status: "running" });
+	detectionEventBus.emit(runId, { type: "phase.start", name: "scan" });
+
+	let entriesCreated = 0;
+	let mentionsCreated = 0;
 
 	const sourceDocuments = await listSourceDocumentsByProject({
 		projectId: run.projectId,
@@ -161,6 +167,7 @@ export const processDetection = async ({
 	);
 
 	for (const pageNum of pagesToProcess) {
+		const mentionsCreatedBeforePage = mentionsCreated;
 		const currentRun = await detectionRepo.getDetectionRun({ userId, runId });
 		if (currentRun?.status === "cancelled") {
 			return;
@@ -287,9 +294,6 @@ export const processDetection = async ({
 			`Page ${pageNum}: ${unsuppressedEntries.length} unsuppressed entries (${llmResponse.entries.length - unsuppressedEntries.length} suppressed)`,
 		);
 
-		let entriesCreated = 0;
-		let mentionsCreated = 0;
-
 		for (const entry of unsuppressedEntries) {
 			const projectIndexTypeId = await detectionRepo.getProjectIndexTypeByType({
 				userId,
@@ -377,7 +381,21 @@ export const processDetection = async ({
 				progressPage: pageNum,
 				entriesCreated,
 				mentionsCreated,
+				phase: "scan",
+				phaseProgress: String(
+					Math.min(
+						1,
+						(pagesToProcess.indexOf(pageNum) + 1) /
+							Math.max(1, pagesToProcess.length),
+					),
+				),
 			},
+		});
+		detectionEventBus.emit(runId, {
+			type: "page.scanned",
+			pageNumber: pageNum,
+			totalPages: pagesToProcess.length,
+			mentionsDelta: mentionsCreated - mentionsCreatedBeforePage,
 		});
 
 		const currentPageIndex = pagesToProcess.indexOf(pageNum);
@@ -411,4 +429,8 @@ export const processDetection = async ({
 			finishedAt: new Date(),
 		},
 	});
+	detectionEventBus.emit(runId, { type: "phase.end", name: "scan" });
+	detectionEventBus.emit(runId, { type: "phase.start", name: "finalize" });
+	detectionEventBus.emit(runId, { type: "phase.end", name: "finalize" });
+	detectionEventBus.emit(runId, { type: "run.done", status: "completed" });
 };

@@ -41,6 +41,10 @@ export const detectionRuns = pgTable(
 		finishedAt: timestamp("finished_at", { withTimezone: true }),
 		progressPage: integer("progress_page"),
 		totalPages: integer("total_pages"),
+		/** Current pipeline phase label for SSE reconnect + UI. */
+		phase: text("phase"),
+		/** Current phase progress in [0,1] for SSE reconnect + UI. */
+		phaseProgress: numeric("phase_progress", { precision: 6, scale: 4 }),
 		pageRangeStart: integer("page_range_start"),
 		pageRangeEnd: integer("page_range_end"),
 		model: text("model"), // LLM only

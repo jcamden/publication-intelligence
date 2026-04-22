@@ -11,6 +11,7 @@ import { buildAliasIndex, scanTextWithAliasIndex } from "../alias/alias-engine";
 import type { ResolvedAliasMatch } from "../alias/alias-engine.types";
 import * as detectionRepo from "../detection.repo";
 import type { MatcherMentionCandidate } from "../detection.types";
+import { detectionEventBus } from "../events";
 import { mapPositionsToBBoxes } from "../layout/charAt-mapping.utils";
 import { resolvePageIdToDocumentPageNumber } from "../layout/page-id.utils";
 import {
@@ -60,6 +61,8 @@ export const processMatcher = async ({
 			startedAt: new Date(),
 		},
 	});
+	detectionEventBus.emit(runId, { type: "run.status", status: "running" });
+	detectionEventBus.emit(runId, { type: "phase.start", name: "scan" });
 
 	const sourceDocuments = await listSourceDocumentsByProject({
 		projectId: run.projectId,
@@ -288,7 +291,20 @@ export const processMatcher = async ({
 					runId,
 					progressPage: pageNum,
 					mentionsCreated: allCandidates.length,
+					phase: "scan",
+					phaseProgress: String(
+						Math.min(
+							1,
+							(pagesToProcess.indexOf(pageNum) + 1) /
+								Math.max(1, pagesToProcess.length),
+						),
+					),
 				},
+			});
+			detectionEventBus.emit(runId, {
+				type: "page.scanned",
+				pageNumber: pageNum,
+				totalPages: pagesToProcess.length,
 			});
 			continue;
 		}
@@ -338,6 +354,7 @@ export const processMatcher = async ({
 		const indexableAtomsWithCorrectedPositions =
 			recalculateCharPositionsForIndexable({ atoms });
 
+		const candidatesBeforePage = allCandidates.length;
 		const matches: ResolvedAliasMatch[] = scanTextWithAliasIndex(
 			searchableText,
 			pageAliasIndex,
@@ -439,7 +456,21 @@ export const processMatcher = async ({
 				runId,
 				progressPage: pageNum,
 				mentionsCreated: allCandidates.length,
+				phase: "scan",
+				phaseProgress: String(
+					Math.min(
+						1,
+						(pagesToProcess.indexOf(pageNum) + 1) /
+							Math.max(1, pagesToProcess.length),
+					),
+				),
 			},
+		});
+		detectionEventBus.emit(runId, {
+			type: "page.scanned",
+			pageNumber: pageNum,
+			totalPages: pagesToProcess.length,
+			mentionsDelta: allCandidates.length - candidatesBeforePage,
 		});
 	}
 
@@ -449,6 +480,9 @@ export const processMatcher = async ({
 		allCandidates,
 		projectIndexTypeId,
 	);
+
+	detectionEventBus.emit(runId, { type: "phase.end", name: "scan" });
+	detectionEventBus.emit(runId, { type: "phase.start", name: "resolve" });
 
 	logEvent({
 		event: "detection.matcher_run_loop_done",
@@ -522,4 +556,6 @@ export const processMatcher = async ({
 			mentionsCreated,
 		},
 	});
+	detectionEventBus.emit(runId, { type: "phase.end", name: "resolve" });
+	detectionEventBus.emit(runId, { type: "run.done", status: "completed" });
 };

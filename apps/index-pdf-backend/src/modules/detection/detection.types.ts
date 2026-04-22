@@ -258,6 +258,8 @@ export type DetectionRun = {
 	finishedAt: Date | null;
 	progressPage: number | null;
 	totalPages: number | null;
+	phase: string | null;
+	phaseProgress: string | null;
 	pageRangeStart: number | null;
 	pageRangeEnd: number | null;
 	model: string | null;
@@ -285,6 +287,8 @@ export type DetectionRunListItem = {
 	finishedAt: Date | null;
 	progressPage: number | null;
 	totalPages: number | null;
+	phase: string | null;
+	phaseProgress: string | null;
 	pageRangeStart: number | null;
 	pageRangeEnd: number | null;
 	model: string | null;
@@ -356,6 +360,9 @@ export type UpdateDetectionRunProgressInput = {
 	progressPage: number;
 	entriesCreated?: number;
 	mentionsCreated?: number;
+	phase?: string | null;
+	/** Stored as text/numeric string by Drizzle numeric mapping. */
+	phaseProgress?: string | null;
 };
 
 // ============================================================================

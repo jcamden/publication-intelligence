@@ -2,10 +2,11 @@
 
 import { Book, Lightbulb, Loader2, Settings, User, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { logError } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_trpc/client";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
+import { useDetectionRunStream } from "../../../../_hooks/use-detection-run-stream";
 
 type IndexType = "subject" | "author" | "scripture";
 
@@ -24,14 +25,6 @@ export const DetectionPanel = () => {
 		{ projectId: projectId || "" },
 		{
 			enabled: !!projectId,
-			// Only poll when there's an active detection run
-			refetchInterval: (query) => {
-				const runs = Array.isArray(query.state.data) ? query.state.data : [];
-				const hasActiveRun = runs.some(
-					(run) => run.status === "running" || run.status === "queued",
-				);
-				return hasActiveRun ? 2000 : false;
-			},
 		},
 	);
 
@@ -105,35 +98,43 @@ export const DetectionPanel = () => {
 		(run) => run.status === "running" || run.status === "queued",
 	);
 
-	// Invalidate mentions when an LLM detection run completes (so highlights update without refresh)
-	const prevRunStatusesRef = useRef<Map<string, string>>(new Map());
+	const activeLlmRunId = useMemo(() => {
+		const active = detectionRuns.find(
+			(r) =>
+				r.runType === "llm" &&
+				(r.status === "running" || r.status === "queued"),
+		);
+		return active?.id ?? null;
+	}, [detectionRuns]);
+
+	const stream = useDetectionRunStream({ runId: activeLlmRunId });
+
+	// SSE-driven targeted invalidation on run completion.
 	useEffect(() => {
 		if (!projectId) return;
-		let didComplete = false;
-		for (const run of detectionRuns) {
-			if (run.runType !== "llm") continue;
-			const prev = prevRunStatusesRef.current.get(run.id);
-			const wasActive = prev === "running" || prev === "queued";
-			const nowCompleted = run.status === "completed";
-			if (wasActive && nowCompleted) {
-				didComplete = true;
+		if (stream.status !== "completed") return;
+
+		if (projectId && documentId) {
+			const pages = stream.pagesWithNewMentions;
+			for (const pageNumber of pages) {
+				utils.indexMention.listForPage.invalidate({
+					projectId,
+					documentId,
+					pageNumber,
+				});
 			}
-			prevRunStatusesRef.current.set(run.id, run.status);
 		}
-		if (didComplete) {
-			if (documentId) {
-				utils.indexMention.list.invalidate({ projectId, documentId });
-			}
-			utils.indexEntry.listLean.invalidate({ projectId });
-			utils.indexEntry.getIndexView.invalidate();
-		}
+
+		utils.indexEntry.listLean.invalidate({ projectId });
+		utils.indexEntry.getIndexView.invalidate();
+		void refetchRuns();
 	}, [
-		detectionRuns,
+		stream.status,
+		stream.pagesWithNewMentions,
 		projectId,
 		documentId,
-		utils.indexMention.list,
-		utils.indexEntry.listLean,
-		utils.indexEntry.getIndexView,
+		utils,
+		refetchRuns,
 	]);
 
 	const hasApiKey =

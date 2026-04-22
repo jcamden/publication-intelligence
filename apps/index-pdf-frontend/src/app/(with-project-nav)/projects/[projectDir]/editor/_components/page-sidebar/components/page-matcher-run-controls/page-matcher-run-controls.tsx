@@ -2,10 +2,11 @@
 
 import { documentPageId } from "@pubint/core";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { logEvent } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_trpc/client";
 import { formatTrpcErrorMessage } from "@/app/_common/_trpc/error";
+import { useDetectionRunStream } from "../../../../_hooks/use-detection-run-stream";
 import {
 	MatcherRunControlsEmptyState,
 	MatcherRunControlsShared,
@@ -62,17 +63,6 @@ export const PageMatcherRunControls = ({
 		{ projectId: projectId || "" },
 		{
 			enabled: !!projectId,
-			refetchInterval: (query) => {
-				const runs = Array.isArray(query.state.data) ? query.state.data : [];
-				const hasActiveMatcherRun = runs.some(
-					(run) =>
-						run.runType === "matcher" &&
-						run.indexType === indexType &&
-						run.scope === "page" &&
-						(run.status === "running" || run.status === "queued"),
-				);
-				return hasActiveMatcherRun ? 2000 : false;
-			},
 		},
 	);
 	const detectionRuns = Array.isArray(detectionRunsData)
@@ -93,39 +83,31 @@ export const PageMatcherRunControls = ({
 			(run.status === "running" || run.status === "queued"),
 	);
 
-	// Invalidate mentions when a matcher run completes
-	const prevRunStatusesRef = useRef<Map<string, string>>(new Map());
+	const activeMatcherRunId = useMemo(
+		() => activeMatcherRun?.id ?? null,
+		[activeMatcherRun],
+	);
+	const stream = useDetectionRunStream({ runId: activeMatcherRunId });
+
 	useEffect(() => {
 		if (!projectId) return;
-		let didComplete = false;
-		for (const run of detectionRuns) {
-			if (
-				run.runType !== "matcher" ||
-				run.indexType !== indexType ||
-				run.scope !== "page"
-			)
-				continue;
-			const prev = prevRunStatusesRef.current.get(run.id);
-			const wasActive = prev === "running" || prev === "queued";
-			const nowCompleted = run.status === "completed";
-			if (wasActive && nowCompleted) {
-				didComplete = true;
-			}
-			prevRunStatusesRef.current.set(run.id, run.status);
+		if (stream.status !== "completed") return;
+
+		for (const pageToInvalidate of stream.pagesWithNewMentions) {
+			utils.indexMention.listForPage.invalidate({
+				projectId,
+				documentId,
+				pageNumber: pageToInvalidate,
+			});
 		}
-		if (didComplete) {
-			utils.indexMention.list.invalidate({ projectId, documentId });
-			utils.indexEntry.listLean.invalidate({ projectId });
-			utils.indexEntry.getIndexView.invalidate();
-		}
+		utils.indexEntry.listLean.invalidate({ projectId });
+		utils.indexEntry.getIndexView.invalidate();
 	}, [
-		detectionRuns,
+		stream.status,
+		stream.pagesWithNewMentions,
 		projectId,
 		documentId,
-		indexType,
-		utils.indexMention.list,
-		utils.indexEntry.listLean,
-		utils.indexEntry.getIndexView,
+		utils,
 	]);
 
 	const runMatcher = trpc.detection.runMatcher.useMutation({

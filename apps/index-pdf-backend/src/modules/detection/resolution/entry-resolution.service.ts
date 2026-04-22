@@ -5,6 +5,7 @@ import type {
 	MatcherMentionCandidate,
 	MatcherMentionParserSegment,
 } from "../detection.types";
+import { detectionEventBus } from "../events";
 import {
 	DEFAULT_OVERLAP_THRESHOLD,
 	type FuzzyExistingMention,
@@ -570,7 +571,8 @@ export const resolveAndPersistCandidates = async ({
 		resolvedCount = allWrites.length;
 		droppedCount = candidatesSeen - resolvedCount;
 	} else {
-		for (const c of candidates) {
+		for (let i = 0; i < candidates.length; i++) {
+			const c = candidates[i];
 			const outcome = await strategy.resolve(c, context);
 			switch (outcome.kind) {
 				case "resolved":
@@ -597,6 +599,24 @@ export const resolveAndPersistCandidates = async ({
 					);
 					break;
 			}
+
+			// Best-effort SSE progress for the resolve phase.
+			detectionEventBus.emit(detectionRunId, {
+				type: "candidate.resolved",
+				index: i + 1,
+				total: candidates.length,
+			});
+			if ((i + 1) % 50 === 0 || i === candidates.length - 1) {
+				await detectionRepo.updateDetectionRunProgress({
+					userId,
+					input: {
+						runId: detectionRunId,
+						progressPage: 0,
+						phase: "resolve",
+						phaseProgress: String((i + 1) / Math.max(1, candidates.length)),
+					},
+				});
+			}
 		}
 	}
 
@@ -606,6 +626,16 @@ export const resolveAndPersistCandidates = async ({
 	let writesAfterFuzzy = totalWrites;
 
 	if (allWrites.length > 0) {
+		await detectionRepo.updateDetectionRunProgress({
+			userId,
+			input: {
+				runId: detectionRunId,
+				progressPage: 0,
+				phase: "persist",
+				phaseProgress: "0",
+			},
+		});
+
 		// Load pre-existing mentions for fuzzy bbox dedupe (same doc + type).
 		// Use withUserContext so RLS returns rows when called from background detection.
 		const existingList =
@@ -711,6 +741,19 @@ export const resolveAndPersistCandidates = async ({
 				detectionRunId,
 				projectIndexTypeId,
 				candidates: allWritesFiltered,
+			});
+			detectionEventBus.emit(detectionRunId, {
+				type: "batch.persisted",
+				count: persisted,
+			});
+			await detectionRepo.updateDetectionRunProgress({
+				userId,
+				input: {
+					runId: detectionRunId,
+					progressPage: 0,
+					phase: "persist",
+					phaseProgress: "1",
+				},
 			});
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);

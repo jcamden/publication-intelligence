@@ -12,16 +12,16 @@ import {
 // Task 5.1: Subject resolution tests
 // ============================================================================
 
-const projectIndexTypeId = "pit-1";
-const documentId = "doc-1";
-const detectionRunId = "run-1";
-const userId = "user-1";
+const projectIndexTypeId = "00000000-0000-0000-0000-000000000001";
+const documentId = "00000000-0000-0000-0000-000000000002";
+const detectionRunId = "00000000-0000-0000-0000-000000000003";
+const userId = "00000000-0000-0000-0000-000000000004";
 
 const baseContext = {
 	userId,
 	documentId,
 	detectionRunId,
-	projectId: "proj-1",
+	projectId: "00000000-0000-0000-0000-000000000005",
 	projectIndexTypeId,
 	indexType: "subject",
 };
@@ -359,7 +359,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 		});
 		expect(detectionRepo.getEntryByProjectTypeAndSlug).toHaveBeenCalledWith({
 			userId,
-			projectId: "proj-1",
+			projectId: baseContext.projectId,
 			projectIndexTypeId,
 			slug: "genesis--1-1",
 		});
@@ -415,7 +415,7 @@ describe("resolveAndPersistScriptureCandidates (Task 5.2)", () => {
 		expect(result.mentionsPersisted).toBe(1);
 		expect(detectionRepo.createChildEntry).toHaveBeenCalledWith({
 			userId,
-			projectId: "proj-1",
+			projectId: baseContext.projectId,
 			projectIndexTypeId,
 			parentId: "e-gen",
 			slug: "genesis--2-4-5",

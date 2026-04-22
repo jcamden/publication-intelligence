@@ -2,9 +2,10 @@
 
 import { Book, Lightbulb, Loader2, Settings, User, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { logError, logEvent } from "@/app/_common/_lib/logger";
 import { trpc } from "@/app/_common/_trpc/client";
+import { useDetectionRunStream } from "../../../../_hooks/use-detection-run-stream";
 
 type IndexType = "subject" | "author" | "scripture";
 
@@ -29,13 +30,6 @@ export const PageDetectionPanel = ({
 		{ projectId: projectId || "" },
 		{
 			enabled: !!projectId,
-			refetchInterval: (query) => {
-				const runs = Array.isArray(query.state.data) ? query.state.data : [];
-				const hasActiveRun = runs.some(
-					(run) => run.status === "running" || run.status === "queued",
-				);
-				return hasActiveRun ? 2000 : false;
-			},
 		},
 	);
 
@@ -102,34 +96,39 @@ export const PageDetectionPanel = ({
 		(run) => run.status === "running" || run.status === "queued",
 	);
 
-	const prevRunStatusesRef = useRef<Map<string, string>>(new Map());
+	const activeLlmRunId = useMemo(() => {
+		const active = detectionRuns.find(
+			(r) =>
+				r.runType === "llm" &&
+				(r.status === "running" || r.status === "queued"),
+		);
+		return active?.id ?? null;
+	}, [detectionRuns]);
+
+	const stream = useDetectionRunStream({ runId: activeLlmRunId });
+
 	useEffect(() => {
 		if (!projectId) return;
-		let didComplete = false;
-		for (const run of detectionRuns) {
-			if (run.runType !== "llm") continue;
-			const prev = prevRunStatusesRef.current.get(run.id);
-			const wasActive = prev === "running" || prev === "queued";
-			const nowCompleted = run.status === "completed";
-			if (wasActive && nowCompleted) {
-				didComplete = true;
-			}
-			prevRunStatusesRef.current.set(run.id, run.status);
+		if (stream.status !== "completed") return;
+
+		for (const pageToInvalidate of stream.pagesWithNewMentions) {
+			utils.indexMention.listForPage.invalidate({
+				projectId,
+				documentId,
+				pageNumber: pageToInvalidate,
+			});
 		}
-		if (didComplete) {
-			if (documentId) {
-				utils.indexMention.list.invalidate({ projectId, documentId });
-			}
-			utils.indexEntry.listLean.invalidate({ projectId });
-			utils.indexEntry.getIndexView.invalidate();
-		}
+
+		utils.indexEntry.listLean.invalidate({ projectId });
+		utils.indexEntry.getIndexView.invalidate();
+		void refetchRuns();
 	}, [
-		detectionRuns,
+		stream.status,
+		stream.pagesWithNewMentions,
 		projectId,
 		documentId,
-		utils.indexMention.list,
-		utils.indexEntry.listLean,
-		utils.indexEntry.getIndexView,
+		utils,
+		refetchRuns,
 	]);
 
 	const hasApiKey =

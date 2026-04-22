@@ -7,6 +7,7 @@ import { parseBearerToken } from "./lib/bearer-token";
 import { logger } from "./logger";
 import { registerRequestId } from "./middleware/request-id";
 import { verifyToken } from "./modules/auth/auth.service";
+import { registerDetectionStreamRoutes } from "./modules/detection/detection.stream";
 import { registerDownloadRoutes } from "./modules/source-document/download.routes";
 import { registerUploadRoutes } from "./modules/source-document/upload.routes";
 import { appRouter } from "./routers/index";
@@ -79,6 +80,7 @@ export const registerPlugins = async (server: FastifyInstance) => {
 
 	await registerUploadRoutes(server);
 	await registerDownloadRoutes(server);
+	await registerDetectionStreamRoutes(server);
 
 	server.get("/health", async () => ({
 		status: "ok",
