@@ -13,8 +13,8 @@ import { IndexEntryToolbar } from "@/app/projects/[projectDir]/editor/_component
 import { IndexPanelScrollArea } from "@/app/projects/[projectDir]/editor/_components/index-panel-scroll-area";
 import { IndexSettingsModal } from "@/app/projects/[projectDir]/editor/_components/index-settings-modal";
 import { MatcherDetectionModal } from "@/app/projects/[projectDir]/editor/_components/matcher-detection-modal";
+import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_components/project-sidebar/_hooks/use-persist-color-change";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
 

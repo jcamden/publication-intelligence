@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
-import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
+import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/_hooks/use-region-derived-page-numbers";
 import type { IndexEntry } from "@/app/projects/[projectDir]/editor/_types/index-entry";
 import { formatCrossReferencesAsSegments } from "@/app/projects/[projectDir]/editor/_utils/cross-reference-utils";
 import { documentPageRangeToCanonicalRangeString } from "../_utils/canonical-page-range";

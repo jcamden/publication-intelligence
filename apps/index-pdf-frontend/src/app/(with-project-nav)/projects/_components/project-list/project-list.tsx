@@ -2,7 +2,7 @@
 
 import { Button } from "@pubint/yabasic/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { ProjectCard } from "./_components/project-card";
+import { ProjectCard } from "./components/project-card";
 
 export type ProjectListProps = {
 	projects?: Array<{

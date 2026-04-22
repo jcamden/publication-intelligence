@@ -11,15 +11,15 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Edit, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
+import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/_hooks/use-region-derived-page-numbers";
 import { regionTypeColorConfigAtom } from "@/app/projects/[projectDir]/editor/_atoms/highlight-atoms";
 import {
 	currentPageAtom,
 	pdfUrlAtom,
 	totalPagesAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/pdf-document-atoms";
+import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_components/project-sidebar/_hooks/use-persist-color-change";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_hooks/use-persist-color-change";
-import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 
 type ProjectRegionsContentProps = {
 	onEditRegion?: (regionId: string) => void;

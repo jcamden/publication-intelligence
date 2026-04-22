@@ -11,6 +11,7 @@ import { useAtomValue } from "jotai";
 import { Edit, EyeOff, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
+import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/_hooks/use-region-derived-page-numbers";
 import {
 	currentPageAtom,
 	pdfUrlAtom,
@@ -18,7 +19,6 @@ import {
 } from "@/app/projects/[projectDir]/editor/_atoms/pdf-document-atoms";
 import { CanonicalPageRuleModal } from "@/app/projects/[projectDir]/editor/_components/canonical-page-rule-modal";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 
 export const PagePagesContent = () => {
 	const { projectId } = useProjectContext();

@@ -27,7 +27,10 @@ When a “parent” module gains submodules (child components, hooks only used t
 
 - **Directory per parent:** `feature-name/feature-name.tsx` (implementation). When there is **one** clear public surface (typically the component plus types that belong to it), add `feature-name/index.ts` that re-exports only that surface. Import the feature via `.../feature-name` (the folder), not deep paths into the implementation file when avoidable.
 - **Subs live under the parent dir:** e.g. hooks only used by `entry-item` → `entry-item/_hooks/use-approve-entry.ts`; small child components → `entry-item/components/...` or sibling files under `entry-item/` as appropriate.
+- **Inside `_components/` (and other `_`-prefixed segments):** Do not add a second `_components/` folder just to mark child UI as “private”—the ancestor (`_components/`, `_hooks/`, `_atoms/`, `_utils/`) already opts that subtree out of the URL. Use **`components/`** for composed child widgets under a feature folder (e.g. `project-list/components/project-card/`). Next.js “private folders” are the leading-underscore **segment names**; nested folders inherit that context without repeating `_`.
 - **Barrels (`index.ts`):** Use them only for that single export story—e.g. one component and its props/types—not as a folder-wide re-export of many unrelated modules. Prefer direct imports of specific files for multi-export folders. Keep implementation details reachable only via relative paths inside the folder unless intentionally shared upward.
+
+**Terminology:** Do not equate “no `page.tsx` under this folder” with “must use `_`”—many colocated folders sit next to `page.tsx` without being Next.js private folders. Prefer **`_`** for explicit **named private segments** (`_components`, `_hooks`, …) and normal names (`components/`) for composition inside them.
 
 Prefer **one** `_hooks/` folder at the leafiest shared ancestor (per‑component `_hooks/` when only that component uses the hook). Use `_common/_hooks/` only when there is no single feature subtree that covers all importers—not as the default location.
 

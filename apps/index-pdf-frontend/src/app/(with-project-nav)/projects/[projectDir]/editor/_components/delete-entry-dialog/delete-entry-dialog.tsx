@@ -16,7 +16,7 @@ import type { IndexEntry } from "../../_types/index-entry";
 import {
 	EntryRelationshipInfoModal,
 	shouldShowEntryRelationshipInfo,
-} from "../entry-relationship-info-modal/entry-relationship-info-modal";
+} from "../entry-relationship-info-modal";
 
 type DeleteEntryDialogProps = {
 	entry: IndexEntry;

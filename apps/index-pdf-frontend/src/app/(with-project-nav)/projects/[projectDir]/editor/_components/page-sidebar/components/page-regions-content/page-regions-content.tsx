@@ -5,12 +5,12 @@ import { Button } from "@pubint/yabasic/components/ui/button";
 import { useAtomValue } from "jotai";
 import { AlertTriangle, Eye, EyeOff, X } from "lucide-react";
 import { trpc } from "@/app/_common/_trpc/client";
+import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/_hooks/use-region-derived-page-numbers";
 import {
 	pdfUrlAtom,
 	totalPagesAtom,
 } from "@/app/projects/[projectDir]/editor/_atoms/pdf-document-atoms";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
-import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/editor/_hooks/use-region-derived-page-numbers";
 
 type PageRegionsContentProps = {
 	currentPage: number;
