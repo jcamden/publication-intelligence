@@ -7,6 +7,7 @@ import { INDEX_PANEL_SCROLL_AREA_CLASS } from "./index-panel-styles";
 type IndexPanelScrollAreaProps = {
 	children: React.ReactNode;
 	className?: string;
+	viewportRef?: React.Ref<HTMLDivElement>;
 };
 
 /**
@@ -15,9 +16,13 @@ type IndexPanelScrollAreaProps = {
 export const IndexPanelScrollArea = ({
 	children,
 	className,
+	viewportRef,
 }: IndexPanelScrollAreaProps) => {
 	return (
-		<ScrollArea className={cn(INDEX_PANEL_SCROLL_AREA_CLASS, className)}>
+		<ScrollArea
+			className={cn(INDEX_PANEL_SCROLL_AREA_CLASS, className)}
+			viewportRef={viewportRef}
+		>
 			{children}
 		</ScrollArea>
 	);

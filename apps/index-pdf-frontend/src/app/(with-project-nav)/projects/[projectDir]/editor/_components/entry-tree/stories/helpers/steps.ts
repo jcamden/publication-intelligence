@@ -16,7 +16,7 @@ export const expandCollapseNodes = async ({
 	});
 
 	await step("Find expand button and collapse", async () => {
-		const chevronButton = entryTreeSelectors.expandChevronButton(canvas);
+		const chevronButton = entryTreeSelectors.toggleChevronButton(canvas);
 		await userEvent.click(chevronButton);
 	});
 

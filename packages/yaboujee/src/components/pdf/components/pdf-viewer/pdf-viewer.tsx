@@ -3,7 +3,7 @@
 import { ScrollArea } from "@pubint/yabasic/components/ui/scroll-area";
 import * as pdfjsLib from "pdfjs-dist";
 import { TextLayer } from "pdfjs-dist";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
 	BoundingBox,
 	PdfHighlight,
@@ -37,7 +37,9 @@ export type PdfViewerProps = {
 	className?: string;
 	showTextLayer?: boolean;
 	highlights?: PdfHighlight[];
-	onHighlightClick?: (highlight: PdfHighlight) => void;
+	onHighlightClick?: (highlight: PdfHighlight, anchorEl: HTMLElement) => void;
+	/** Optional id → DOM node registry callback (see PdfHighlightBox). */
+	onHighlightAnchorRef?: (id: string, el: HTMLElement | null) => void;
 	/**
 	 * When true, enables text selection (text layer becomes interactive).
 	 * Transient activation - typically set true for one selection, then reset to false.
@@ -265,6 +267,7 @@ export const PdfViewer = ({
 	showTextLayer = true,
 	highlights,
 	onHighlightClick,
+	onHighlightAnchorRef,
 	textLayerInteractive = false,
 	regionDrawingActive = false,
 	onCreateDraftHighlight,
@@ -485,7 +488,40 @@ export const PdfViewer = ({
 
 			// Get selection rects and convert to PDF coordinates
 			const range = selection.getRangeAt(0);
-			const domRects = Array.from(range.getClientRects());
+			const rangeRects = Array.from(range.getClientRects());
+
+			// Some browsers (and jsdom-like environments) will return a single merged rect
+			// even when the selection spans many spans/lines. For accurate multi-line
+			// highlighting, fall back to collecting rects from intersecting spans.
+			const domRects = (() => {
+				if (rangeRects.length >= 2) return rangeRects;
+
+				const spanRects = Array.from(textLayerDiv.querySelectorAll("span"))
+					.filter((span) => {
+						// intersectsNode can throw if node is invalid / detached; guard cheaply.
+						try {
+							return range.intersectsNode(span);
+						} catch {
+							return false;
+						}
+					})
+					.flatMap((span) => Array.from(span.getClientRects()));
+
+				// De-dupe (multiple spans can share identical rects depending on layout).
+				const seen = new Set<string>();
+				const uniqueSpanRects = spanRects.filter((r) => {
+					const key = `${Math.round(r.left)}:${Math.round(r.top)}:${Math.round(
+						r.width,
+					)}:${Math.round(r.height)}`;
+					if (seen.has(key)) return false;
+					seen.add(key);
+					return true;
+				});
+
+				return uniqueSpanRects.length > rangeRects.length
+					? uniqueSpanRects
+					: rangeRects;
+			})();
 
 			if (domRects.length === 0) return;
 
@@ -765,6 +801,25 @@ export const PdfViewer = ({
 	const containerClasses =
 		`flex h-full w-full flex-col bg-[hsl(var(--color-neutral-100))] dark:bg-[hsl(var(--color-neutral-900))] ${className}`.trim();
 
+	// Combine draft and persisted highlights. Stable reference via useMemo so
+	// downstream memoization (PdfHighlightLayer / PdfHighlightBox) sticks.
+	// Hooks must be called before any early returns below.
+	const allHighlights = useMemo(
+		() => [...(highlights || []), ...(draftHighlight ? [draftHighlight] : [])],
+		[highlights, draftHighlight],
+	);
+
+	// Convert highlights to viewport coordinates once per (highlights, page, viewport) tuple
+	// instead of on every render.
+	const viewportHighlights = useMemo(() => {
+		if (!viewport || allHighlights.length === 0) return [] as PdfHighlight[];
+		return convertHighlightsForPage({
+			highlights: allHighlights,
+			pageNumber: currentPage,
+			viewport,
+		});
+	}, [allHighlights, currentPage, viewport]);
+
 	if (loadingState === "loading") {
 		return (
 			<div className={containerClasses}>
@@ -796,12 +851,6 @@ export const PdfViewer = ({
 			</div>
 		);
 	}
-
-	// Combine draft and persisted highlights
-	const allHighlights = [
-		...(highlights || []),
-		...(draftHighlight ? [draftHighlight] : []),
-	];
 
 	// Calculate live region preview during drag
 	const regionPreview =
@@ -844,18 +893,15 @@ export const PdfViewer = ({
 						)}
 
 						{/* Highlight Layer - clickable when NOT in text/region mode */}
-						{allHighlights.length > 0 && viewport && (
+						{viewportHighlights.length > 0 && viewport && (
 							<PdfHighlightLayer
 								pageNumber={currentPage}
-								highlights={convertHighlightsForPage({
-									highlights: allHighlights,
-									pageNumber: currentPage,
-									viewport: viewport,
-								})}
+								highlights={viewportHighlights}
 								pageWidth={viewport.width}
 								pageHeight={viewport.height}
 								scale={1}
 								onHighlightClick={onHighlightClick}
+								onAnchorRef={onHighlightAnchorRef}
 								style={{
 									pointerEvents:
 										textLayerInteractive || regionDrawingActive

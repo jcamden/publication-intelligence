@@ -14,6 +14,7 @@ import { IndexPanelScrollArea } from "@/app/projects/[projectDir]/editor/_compon
 import { IndexSettingsModal } from "@/app/projects/[projectDir]/editor/_components/index-settings-modal";
 import { MatcherDetectionModal } from "@/app/projects/[projectDir]/editor/_components/matcher-detection-modal";
 import { usePersistColorChange } from "@/app/projects/[projectDir]/editor/_components/project-sidebar/_hooks/use-persist-color-change";
+import { useScrollViewportRef } from "@/app/projects/[projectDir]/editor/_components/project-sidebar/_hooks/use-scroll-viewport-ref";
 import { useProjectContext } from "@/app/projects/[projectDir]/editor/_context/project-context";
 import { EntryCreationModal } from "../../../entry-creation-modal";
 import { EntryTree } from "../../../entry-tree";
@@ -30,6 +31,7 @@ export const ProjectAuthorContent = () => {
 	const [groupModalState, setGroupModalState] = useState<
 		"create" | string | null
 	>(null);
+	const { scrollViewportRef, setScrollViewportRef } = useScrollViewportRef();
 
 	const { data: projectIndexTypes, isLoading: isLoadingIndexTypes } =
 		trpc.projectHighlightConfig.list.useQuery(
@@ -240,7 +242,7 @@ export const ProjectAuthorContent = () => {
 					/>
 				</div>
 			)}
-			<IndexPanelScrollArea>
+			<IndexPanelScrollArea viewportRef={setScrollViewportRef}>
 				<EntryTree
 					entries={entries}
 					mentions={allMentions}
@@ -259,6 +261,7 @@ export const ProjectAuthorContent = () => {
 					onAddEntryToGroup={handleAddEntryToGroup}
 					onReorderGroups={handleReorderGroups}
 					onReorderEntriesInGroup={handleReorderEntriesInGroup}
+					scrollViewportRef={scrollViewportRef}
 					isLoading={isLoading}
 					error={entriesError ? (entriesError as unknown as Error) : null}
 				/>

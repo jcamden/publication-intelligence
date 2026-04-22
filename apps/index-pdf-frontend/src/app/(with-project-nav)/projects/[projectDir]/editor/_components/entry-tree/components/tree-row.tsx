@@ -29,7 +29,7 @@ type TreeRowBase = {
 	showDragHandle: boolean;
 	/** When false, row is not draggable (e.g. Unknown entry). Defaults to true. */
 	draggable?: boolean;
-	onClick?: (e: React.KeyboardEvent) => void;
+	onClick?: () => void;
 };
 
 export type TreeRowEntryProps = TreeRowBase & {
@@ -96,10 +96,15 @@ export const TreeRow = (props: TreeRowProps) => {
 			onDragOver={onDragOver}
 			onDragLeave={onDragLeave}
 			onDrop={onDrop}
+			onClick={(e) => {
+				// If any child button didn't call stopPropagation, guard here.
+				e.stopPropagation();
+				onClick?.();
+			}}
 			onKeyDown={(e) => {
 				if (e.key === "Enter" || e.key === " ") {
 					e.preventDefault();
-					onClick?.(e);
+					onClick?.();
 				}
 			}}
 			className={`group min-h-10 flex flex-col gap-1 px-2 py-1.5 rounded transition-colors ${
@@ -129,6 +134,12 @@ export const TreeRow = (props: TreeRowProps) => {
 				{variant === "group" ? (
 					<button
 						type="button"
+						draggable={false}
+						onMouseDown={(e) => {
+							// Prevent the parent draggable container from starting a drag
+							// which can swallow this click.
+							e.preventDefault();
+						}}
 						onClick={(e) => {
 							e.stopPropagation();
 							props.onToggleExpand();
@@ -144,6 +155,10 @@ export const TreeRow = (props: TreeRowProps) => {
 				) : hasChildren ? (
 					<button
 						type="button"
+						draggable={false}
+						onMouseDown={(e) => {
+							e.preventDefault();
+						}}
 						onClick={(e) => {
 							e.stopPropagation();
 							props.onToggleExpand();

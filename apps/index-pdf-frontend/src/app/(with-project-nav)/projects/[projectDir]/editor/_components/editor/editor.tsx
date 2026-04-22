@@ -7,7 +7,10 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
 import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
-import { getEntryDisplayLabel } from "@/app/projects/[projectDir]/_utils/entry-path-formatting";
+import {
+	buildEntryMaps,
+	getEntryDisplayLabelFromMap,
+} from "@/app/projects/[projectDir]/_utils/entry-maps";
 import {
 	colorConfigAtom,
 	highlightColorConfigAtom,
@@ -55,6 +58,7 @@ import { RegionCreationModal } from "../region-creation-modal";
 import { ResizableSidebar } from "../resizable-sidebar";
 import { WindowManager } from "../window-manager";
 import { useCreateMention } from "./_hooks/use-create-mention";
+import { useHighlightAnchorRegistry } from "./_hooks/use-highlight-anchor-registry";
 
 /**
  * PDF Editor - Three-section layout for PDF indexing
@@ -194,11 +198,17 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	);
 
 	// Convert backend entries to frontend format (add indexType, metadata, crossReferences)
+	// and derive a stable id → entry map used by hot-path label formatting so we
+	// don't do O(N) `.find` scans per row on every render.
+	const projectIndexTypeById = useMemo(() => {
+		const map = new Map<string, { id: string; indexType: string }>();
+		for (const pit of projectIndexTypesQuery.data ?? []) map.set(pit.id, pit);
+		return map;
+	}, [projectIndexTypesQuery.data]);
+
 	const allEntries = useMemo(() => {
 		return backendAllEntries.map((e) => {
-			const projectIndexType = projectIndexTypesQuery.data?.find(
-				(pit) => pit.id === e.projectIndexTypeId,
-			);
+			const projectIndexType = projectIndexTypeById.get(e.projectIndexTypeId);
 			return {
 				...e,
 				indexType: (projectIndexType?.indexType ||
@@ -209,7 +219,12 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				crossReferences: allCrossReferences.get(e.id) ?? [],
 			};
 		});
-	}, [backendAllEntries, projectIndexTypesQuery.data, allCrossReferences]);
+	}, [backendAllEntries, projectIndexTypeById, allCrossReferences]);
+
+	const entriesById = useMemo(
+		() => buildEntryMaps(allEntries).byId,
+		[allEntries],
+	);
 
 	// Fetch mentions from backend (used for page sidebar and highlights)
 	const { data: backendMentions = [] } = trpc.indexMention.list.useQuery(
@@ -220,28 +235,37 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		{ enabled: !!projectId && !!documentId },
 	);
 
-	// Convert backend mentions to editor format
-	const mentions: Mention[] = backendMentions.map((m) => {
-		// Find the full entry to compute breadcrumbs
-		const entry = allEntries.find((e) => e.id === m.entryId);
-		const entryLabel = entry
-			? getEntryDisplayLabel({ entry, entries: allEntries })
-			: m.entry.label;
+	// Convert backend mentions to editor format. Memoized so identity is stable
+	// across editor re-renders — downstream memoization (highlight layer,
+	// sidebars, handlers) depends on it being referentially stable.
+	const mentions = useMemo<Mention[]>(() => {
+		return backendMentions.map((m) => {
+			const entry = entriesById.get(m.entryId);
+			const entryLabel = entry
+				? getEntryDisplayLabelFromMap({ entry, byId: entriesById })
+				: m.entry.label;
 
-		return {
-			id: m.id,
-			pageNumber: m.pageNumber ?? 1,
-			text: m.textSpan,
-			bboxes: m.bboxes ?? [],
-			entryId: m.entryId,
-			entryLabel,
-			indexType: m.indexTypes[0]?.indexType ?? "",
-			type: m.mentionType,
-			pageSublocation: m.pageSublocation ?? null,
-			detectionRunId: m.detectionRunId,
-			createdAt: new Date(m.createdAt),
-		};
-	});
+			return {
+				id: m.id,
+				pageNumber: m.pageNumber ?? 1,
+				text: m.textSpan,
+				bboxes: m.bboxes ?? [],
+				entryId: m.entryId,
+				entryLabel,
+				indexType: m.indexTypes[0]?.indexType ?? "",
+				type: m.mentionType,
+				pageSublocation: m.pageSublocation ?? null,
+				detectionRunId: m.detectionRunId,
+				createdAt: new Date(m.createdAt),
+			};
+		});
+	}, [backendMentions, entriesById]);
+
+	const mentionsById = useMemo(() => {
+		const map = new Map<string, Mention>();
+		for (const m of mentions) map.set(m.id, m);
+		return map;
+	}, [mentions]);
 
 	// Fetch regions for current page
 	const { data: regionsForPage = [] } = trpc.region.getForPage.useQuery(
@@ -306,9 +330,16 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const [projectWidth, setProjectWidth] = useAtom(projectSidebarWidthAtom);
 	const [pageWidth, setPageWidth] = useAtom(pageSidebarWidthAtom);
 
-	// Get enabled index types for this project (needed early for callbacks)
-	const enabledIndexTypes =
-		projectIndexTypesQuery.data?.map((pit) => pit.indexType) ?? [];
+	// Registry mapping highlight id → DOM anchor. Replaces repeated
+	// `document.querySelector('[data-testid="highlight-..."]')` scans.
+	const highlightAnchors = useHighlightAnchorRegistry();
+
+	// Get enabled index types for this project (needed early for callbacks). Stable
+	// array identity so dependent memoized children don't invalidate every render.
+	const enabledIndexTypes = useMemo(
+		() => projectIndexTypesQuery.data?.map((pit) => pit.indexType) ?? [],
+		[projectIndexTypesQuery.data],
+	);
 
 	const handlePageChange = useCallback(
 		({ page }: { page: number }) => {
@@ -470,7 +501,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	}, []);
 
 	const handleHighlightClick = useCallback(
-		(highlight: PdfHighlight) => {
+		(highlight: PdfHighlight, anchorEl: HTMLElement) => {
 			// Check if this is a region click
 			if (highlight.metadata?.isRegion) {
 				const regionId = highlight.id.replace("region-", "");
@@ -482,73 +513,46 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				}
 			}
 
-			// Regular mention click
-			const mention = mentions.find((m) => m.id === highlight.id);
+			const mention = mentionsById.get(highlight.id);
 			if (mention) {
-				// Find the highlight element to use as anchor
-				const highlightEl = document.querySelector(
-					`[data-testid="highlight-${highlight.id}"]`,
-				);
-				if (highlightEl instanceof HTMLElement) {
-					setPopoverInitialMode("view");
-					setDetailsAnchor(highlightEl);
-					setSelectedMention(mention);
-				}
+				setPopoverInitialMode("view");
+				setDetailsAnchor(anchorEl);
+				setSelectedMention(mention);
 			}
 		},
-		[mentions, regionsForPage],
+		[mentionsById, regionsForPage],
+	);
+
+	const openMentionPopoverFromSidebar = useCallback(
+		({ mentionId, mode }: { mentionId: string; mode: "view" | "edit" }) => {
+			const mention = mentionsById.get(mentionId);
+			if (!mention) return;
+			const highlightEl = highlightAnchors.getAnchor(mentionId);
+			if (!highlightEl) return;
+			highlightEl.scrollIntoView({
+				behavior: "smooth",
+				block: "center",
+				inline: "nearest",
+			});
+			setPopoverInitialMode(mode);
+			setDetailsAnchor(highlightEl);
+			setSelectedMention(mention);
+		},
+		[mentionsById, highlightAnchors],
 	);
 
 	const handleMentionClickFromSidebar = useCallback(
 		({ mentionId }: { mentionId: string }) => {
-			const mention = mentions.find((m) => m.id === mentionId);
-			if (mention) {
-				// Find the highlight element to use as anchor
-				const highlightEl = document.querySelector(
-					`[data-testid="highlight-${mentionId}"]`,
-				);
-				if (highlightEl instanceof HTMLElement) {
-					// Scroll into view if off-screen
-					highlightEl.scrollIntoView({
-						behavior: "smooth",
-						block: "center",
-						inline: "nearest",
-					});
-
-					// Show popover in view mode
-					setPopoverInitialMode("view");
-					setDetailsAnchor(highlightEl);
-					setSelectedMention(mention);
-				}
-			}
+			openMentionPopoverFromSidebar({ mentionId, mode: "view" });
 		},
-		[mentions],
+		[openMentionPopoverFromSidebar],
 	);
 
 	const handleMentionEditFromSidebar = useCallback(
 		({ mentionId }: { mentionId: string }) => {
-			const mention = mentions.find((m) => m.id === mentionId);
-			if (mention) {
-				// Find the highlight element to use as anchor
-				const highlightEl = document.querySelector(
-					`[data-testid="highlight-${mentionId}"]`,
-				);
-				if (highlightEl instanceof HTMLElement) {
-					// Scroll into view if off-screen
-					highlightEl.scrollIntoView({
-						behavior: "smooth",
-						block: "center",
-						inline: "nearest",
-					});
-
-					// Show popover in edit mode
-					setPopoverInitialMode("edit");
-					setDetailsAnchor(highlightEl);
-					setSelectedMention(mention);
-				}
-			}
+			openMentionPopoverFromSidebar({ mentionId, mode: "edit" });
 		},
-		[mentions],
+		[openMentionPopoverFromSidebar],
 	);
 
 	const handleMentionDetailsClose = useCallback(
@@ -561,7 +565,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 		}) => {
 			if (!projectId || !documentId) return;
 
-			const mention = mentions.find((m) => m.id === params.mentionId);
+			const mention = mentionsById.get(params.mentionId);
 			if (!mention) return;
 
 			const hasChanges =
@@ -584,7 +588,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 				}),
 			});
 		},
-		[projectId, documentId, mentions, updateMentionMutation],
+		[projectId, documentId, mentionsById, updateMentionMutation],
 	);
 
 	const handleDeleteMention = useCallback(
@@ -601,7 +605,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const handleConfirmDelete = useCallback(async () => {
 		if (!mentionToDelete || !projectId || !documentId) return;
 
-		const mention = mentions.find((m) => m.id === mentionToDelete);
+		const mention = mentionsById.get(mentionToDelete);
 		if (!mention) return;
 
 		await deleteMentionMutation.mutateAsync({
@@ -613,7 +617,13 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 
 		setMentionToDelete(null);
 		setShowDeleteConfirm(false);
-	}, [mentionToDelete, projectId, documentId, mentions, deleteMentionMutation]);
+	}, [
+		mentionToDelete,
+		projectId,
+		documentId,
+		mentionsById,
+		deleteMentionMutation,
+	]);
 
 	const handleCloseDetailsPopover = useCallback(() => {
 		setSelectedMention(null);
@@ -684,65 +694,86 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 	const onlyProjectVisible = !projectCollapsed && !pdfVisible && pageCollapsed;
 	const onlyPageVisible = projectCollapsed && !pdfVisible && !pageCollapsed;
 
-	// Get visible index type names from projectIndexTypes
-	const visibleIndexTypeNames = new Set<string>(
-		projectIndexTypesQuery.data
-			?.filter((pit) => pit.visible !== false)
-			.map((pit) => pit.indexType) ?? [],
+	const visibleIndexTypeNames = useMemo(
+		() =>
+			new Set<string>(
+				projectIndexTypesQuery.data
+					?.filter((pit) => pit.visible !== false)
+					.map((pit) => pit.indexType) ?? [],
+			),
+		[projectIndexTypesQuery.data],
 	);
 
-	// Filter mentions to only include those with index type visible
-	const visibleMentions = mentions.filter((mention) =>
-		visibleIndexTypeNames.has(mention.indexType),
+	const visibleMentions = useMemo(
+		() => mentions.filter((m) => visibleIndexTypeNames.has(m.indexType)),
+		[mentions, visibleIndexTypeNames],
 	);
 
-	// Convert visible mentions to PdfHighlight format for rendering
-	const mentionHighlights: PdfHighlight[] = visibleMentions.map((mention) => {
-		const typeColor = colorConfig[mention.indexType as IndexTypeName];
-		const hue = typeColor ? typeColor.hue : 60;
+	// Bucket visible mentions by page so the PDF viewer only receives the
+	// current page's slice. On large documents this avoids re-walking thousands
+	// of mentions per render just to filter a handful for the visible page.
+	const mentionsByPage = useMemo(() => {
+		const map = new Map<number, Mention[]>();
+		for (const m of visibleMentions) {
+			const page = m.pageNumber;
+			const list = map.get(page);
+			if (list) list.push(m);
+			else map.set(page, [m]);
+		}
+		return map;
+	}, [visibleMentions]);
 
-		return {
-			id: mention.id,
-			pageNumber: mention.pageNumber,
-			label: mention.entryLabel,
-			text: mention.text,
-			bboxes: mention.bboxes,
-			metadata: {
-				indexTypes: [mention.indexType],
-				hues: [hue],
-			},
-		};
-	});
-
-	// Convert regions to highlight format for rendering
-	// TODO: Create dedicated region rendering in yaboujee for better styling (dashed borders)
-	const regionHighlights: PdfHighlight[] = regionsForPage
-		.filter((reg) => reg.visible)
-		.map((reg) => {
-			// Get color from region type config
-			const hue = regionTypeColorConfig[reg.regionType].hue;
-			const color = formatOklchColor({
-				hue,
-				lightness: 0.8,
-				chroma: 0.2,
-			});
-
+	const currentPageMentionHighlights = useMemo<PdfHighlight[]>(() => {
+		const list = mentionsByPage.get(currentPage) ?? [];
+		return list.map((mention) => {
+			const typeColor = colorConfig[mention.indexType as IndexTypeName];
+			const hue = typeColor ? typeColor.hue : 60;
 			return {
-				id: `region-${reg.id}`,
-				pageNumber: currentPage,
-				label: reg.regionType === "exclude" ? "Exclude" : "Page Number",
-				text: "",
-				bboxes: [reg.bbox],
+				id: mention.id,
+				pageNumber: mention.pageNumber,
+				label: mention.entryLabel,
+				text: mention.text,
+				bboxes: mention.bboxes,
 				metadata: {
-					isRegion: true,
-					regionType: reg.regionType,
-					regionColor: color,
+					indexTypes: [mention.indexType],
+					hues: [hue],
 				},
 			};
 		});
+	}, [mentionsByPage, currentPage, colorConfig]);
 
-	// Combine mentions and regions for rendering
-	const allHighlights = [...mentionHighlights, ...regionHighlights];
+	// TODO: Create dedicated region rendering in yaboujee for better styling (dashed borders)
+	const regionHighlights = useMemo<PdfHighlight[]>(
+		() =>
+			regionsForPage
+				.filter((reg) => reg.visible)
+				.map((reg) => {
+					const hue = regionTypeColorConfig[reg.regionType].hue;
+					const color = formatOklchColor({
+						hue,
+						lightness: 0.8,
+						chroma: 0.2,
+					});
+					return {
+						id: `region-${reg.id}`,
+						pageNumber: currentPage,
+						label: reg.regionType === "exclude" ? "Exclude" : "Page Number",
+						text: "",
+						bboxes: [reg.bbox],
+						metadata: {
+							isRegion: true,
+							regionType: reg.regionType,
+							regionColor: color,
+						},
+					};
+				}),
+		[regionsForPage, regionTypeColorConfig, currentPage],
+	);
+
+	const allHighlights = useMemo(
+		() => [...currentPageMentionHighlights, ...regionHighlights],
+		[currentPageMentionHighlights, regionHighlights],
+	);
 
 	// Wait for hydration to complete before rendering to prevent flash of default state
 	if (!hydrated) {
@@ -810,6 +841,7 @@ export const Editor = ({ fileUrl, projectId, documentId }: EditorProps) => {
 									onLoadSuccess={handleLoadSuccess}
 									highlights={allHighlights}
 									onHighlightClick={handleHighlightClick}
+									onHighlightAnchorRef={highlightAnchors.register}
 									textLayerInteractive={activeAction.type === "select-text"}
 									regionDrawingActive={activeAction.type === "draw-region"}
 									onDraftConfirmed={handleDraftConfirmed}

@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import { formatCrossReferencesAsSegments } from "@/app/projects/[projectDir]/_utils/cross-reference-utils";
-import type { Mention } from "../../../editor/editor";
 import { TreeRow } from "../tree-row";
 import { useApproveEntry } from "./_hooks/use-approve-entry";
 
 export type EntryItemProps = {
 	entry: IndexEntry;
-	mentions: Mention[];
+	mentionCount: number;
 	allEntries: IndexEntry[]; // For formatting cross references with full labels
 	depth: number;
 	hasChildren: boolean;
@@ -26,7 +25,7 @@ export type EntryItemProps = {
 
 export const EntryItem = ({
 	entry,
-	mentions,
+	mentionCount,
 	allEntries,
 	depth,
 	hasChildren,
@@ -47,11 +46,6 @@ export const EntryItem = ({
 		projectId: projectId || "",
 		projectIndexTypeId,
 	});
-
-	const mentionCount = useMemo(
-		() => mentions.filter((m) => m.entryId === entry.id).length,
-		[mentions, entry.id],
-	);
 
 	const crossReferenceSegments = useMemo(
 		() =>

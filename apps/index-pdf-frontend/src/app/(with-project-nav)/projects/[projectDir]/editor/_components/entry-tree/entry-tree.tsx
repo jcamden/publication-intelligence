@@ -1,9 +1,12 @@
 "use client";
 
 import { ErrorState } from "@pubint/yaboujee";
-import { useEffect, useMemo, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import type { RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
+import { buildEntryMaps } from "@/app/projects/[projectDir]/_utils/entry-maps";
 import {
 	sortBookEntriesForGroup,
 	sortUngroupedBooks,
@@ -47,95 +50,13 @@ export type EntryTreeProps = {
 	onAddEntryToGroup?: (groupId: string, entryId: string) => void; // Add root entry to group (e.g. on drag-drop)
 	onReorderGroups?: (groupIds: string[]) => void; // Reorder groups (drag to reorder)
 	onReorderEntriesInGroup?: (groupId: string, entryIds: string[]) => void; // Reorder entries within group (custom sort only)
+	/** Scroll viewport from IndexPanelScrollArea for virtualization. */
+	scrollViewportRef?: RefObject<HTMLDivElement | null>;
 	isLoading?: boolean; // Loading state
 	error?: Error | null; // Error state
 };
 
-type EntryTreeNodeProps = {
-	entry: IndexEntry;
-	entries: IndexEntry[]; // All entries (for finding children and cross references)
-	mentions: Mention[]; // For counts
-	depth: number;
-	projectId?: string;
-	projectIndexTypeId?: string;
-	onEntryClick?: (entry: IndexEntry) => void;
-	onDragStart: (entryId: string) => void;
-	onDrop: (targetEntryId: string | null) => void;
-	draggedEntryId: string | null;
-	onEdit?: (entry: IndexEntry) => void;
-	onDelete?: (entry: IndexEntry) => void;
-	onMerge?: (entry: IndexEntry) => void;
-};
-
-const EntryTreeNode = ({
-	entry,
-	entries,
-	mentions,
-	depth,
-	projectId,
-	projectIndexTypeId,
-	onEntryClick,
-	onDragStart,
-	onDrop,
-	draggedEntryId,
-	onEdit,
-	onDelete,
-	onMerge,
-}: EntryTreeNodeProps) => {
-	const children = useMemo(
-		() => getChildEntries({ entries, parentId: entry.id }),
-		[entries, entry.id],
-	);
-
-	const [expanded, setExpanded] = useState(true);
-
-	const hasChildren = children.length > 0;
-
-	return (
-		<div className="flex flex-col gap-1">
-			<EntryItem
-				entry={entry}
-				mentions={mentions}
-				allEntries={entries}
-				depth={depth}
-				hasChildren={hasChildren}
-				expanded={expanded}
-				onToggleExpand={() => setExpanded(!expanded)}
-				onClick={onEntryClick}
-				onDragStart={onDragStart}
-				onDrop={onDrop}
-				isDragging={draggedEntryId === entry.id}
-				projectId={projectId}
-				projectIndexTypeId={projectIndexTypeId}
-				onEdit={entry.slug === "unknown" ? undefined : onEdit}
-				onDelete={entry.slug === "unknown" ? undefined : onDelete}
-				onMerge={entry.slug === "unknown" ? undefined : onMerge}
-			/>
-			{hasChildren && expanded && (
-				<div className="flex flex-col gap-1">
-					{children.map((child) => (
-						<EntryTreeNode
-							key={child.id}
-							entry={child}
-							entries={entries}
-							mentions={mentions}
-							depth={depth + 1}
-							projectId={projectId}
-							projectIndexTypeId={projectIndexTypeId}
-							onEntryClick={onEntryClick}
-							onDragStart={onDragStart}
-							onDrop={onDrop}
-							draggedEntryId={draggedEntryId}
-							onEdit={onEdit}
-							onDelete={onDelete}
-							onMerge={onMerge}
-						/>
-					))}
-				</div>
-			)}
-		</div>
-	);
-};
+const LARGE_TREE_VIRTUALIZE_AFTER = 600;
 
 export const EntryTree = ({
 	entries,
@@ -148,9 +69,18 @@ export const EntryTree = ({
 	onAddEntryToGroup,
 	onReorderGroups,
 	onReorderEntriesInGroup,
+	scrollViewportRef,
 	isLoading = false,
 	error = null,
 }: EntryTreeProps) => {
+	const mentionCountByEntryId = useMemo(() => {
+		const map = new Map<string, number>();
+		for (const m of mentions) {
+			map.set(m.entryId, (map.get(m.entryId) ?? 0) + 1);
+		}
+		return map;
+	}, [mentions]);
+
 	const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
 	const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);
 	const [isRootDropTarget, setIsRootDropTarget] = useState(false);
@@ -194,6 +124,25 @@ export const EntryTree = ({
 		() => getChildEntries({ entries, parentId: null }),
 		[entries],
 	);
+
+	const { childrenByParent } = useMemo(
+		() => buildEntryMaps(entries),
+		[entries],
+	);
+
+	// Expanded entry ids (collapsed by default).
+	const [expandedEntryIds, setExpandedEntryIds] = useState<Set<string>>(
+		() => new Set(),
+	);
+
+	const toggleExpanded = (entryId: string) => {
+		setExpandedEntryIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(entryId)) next.delete(entryId);
+			else next.add(entryId);
+			return next;
+		});
+	};
 
 	// Partition top-level entries by group (for group-as-section layout)
 	// Sort by groupPosition when group has custom sort
@@ -403,6 +352,100 @@ export const EntryTree = ({
 		handleEntryDropForReorder(groupId, insertIndex, listEntries);
 	};
 
+	const renderEntryList = (listEntries: IndexEntry[]) =>
+		listEntries.map((entry) => renderSubtree(entry, 0));
+
+	// Virtualized flattened tree for large indices. We intentionally disable
+	// drag/drop features in this mode (they require stable DOM ordering).
+	const localScrollRef = useRef<HTMLDivElement | null>(null);
+	const scrollRef = scrollViewportRef ?? localScrollRef;
+	const shouldVirtualize =
+		draggedEntryId == null &&
+		draggedGroupId == null &&
+		onReorderGroups == null &&
+		onReorderEntriesInGroup == null &&
+		entries.length >= LARGE_TREE_VIRTUALIZE_AFTER;
+
+	const flatRows = useMemo(() => {
+		if (!shouldVirtualize)
+			return [] as Array<{ entry: IndexEntry; depth: number }>;
+
+		// Roots ordering
+		const roots = hasGroups ? [...topLevelEntries] : [...flatSortedRootEntries];
+		const out: Array<{ entry: IndexEntry; depth: number }> = [];
+
+		const pushSubtree = (root: IndexEntry, depth: number) => {
+			out.push({ entry: root, depth });
+			if (!expandedEntryIds.has(root.id)) return;
+			const children = [...(childrenByParent.get(root.id) ?? [])].sort((a, b) =>
+				(a.label ?? "").localeCompare(b.label ?? "", undefined, {
+					sensitivity: "base",
+					numeric: true,
+				}),
+			);
+			for (const child of children) pushSubtree(child, depth + 1);
+		};
+
+		// When groups exist, we still render a single list (groups are visual only).
+		for (const r of roots) pushSubtree(r, 0);
+		return out;
+	}, [
+		shouldVirtualize,
+		hasGroups,
+		topLevelEntries,
+		flatSortedRootEntries,
+		childrenByParent,
+		expandedEntryIds,
+	]);
+
+	const rowVirtualizer = useVirtualizer({
+		count: shouldVirtualize ? flatRows.length : 0,
+		getScrollElement: () => scrollRef.current,
+		estimateSize: () => 48,
+		overscan: 12,
+	});
+
+	const renderSubtree = (entry: IndexEntry, depth: number): React.ReactNode => {
+		const hasChildren = (childrenByParent.get(entry.id) ?? []).length > 0;
+		const expanded = expandedEntryIds.has(entry.id);
+		const isUnknown = entry.slug === "unknown";
+		return (
+			<div key={entry.id} className="flex flex-col gap-1">
+				<EntryItem
+					entry={entry}
+					mentionCount={mentionCountByEntryId.get(entry.id) ?? 0}
+					allEntries={entries}
+					depth={depth}
+					hasChildren={hasChildren}
+					expanded={expanded}
+					onToggleExpand={() => toggleExpanded(entry.id)}
+					onClick={onEntryClick}
+					onDragStart={handleDragStart}
+					onDrop={handleDrop}
+					isDragging={draggedEntryId === entry.id}
+					projectId={projectId}
+					projectIndexTypeId={projectIndexTypeId}
+					onEdit={isUnknown ? undefined : setEditingEntry}
+					onDelete={isUnknown ? undefined : setDeletingEntry}
+					onMerge={isUnknown ? undefined : setMergingEntry}
+				/>
+				{hasChildren && expanded && (
+					<div className="flex flex-col gap-1">
+						{(childrenByParent.get(entry.id) ?? [])
+							.slice()
+							.sort((a, b) =>
+								(a.label ?? "").localeCompare(b.label ?? "", undefined, {
+									sensitivity: "base",
+									numeric: true,
+								}),
+							)
+							.map((child) => renderSubtree(child, depth + 1))}
+					</div>
+				)}
+			</div>
+		);
+	};
+
 	if (error) {
 		return (
 			<div className="p-4">
@@ -432,26 +475,6 @@ export const EntryTree = ({
 			</div>
 		);
 	}
-
-	const renderEntryList = (listEntries: IndexEntry[]) =>
-		listEntries.map((entry) => (
-			<EntryTreeNode
-				key={entry.id}
-				entry={entry}
-				entries={entries}
-				mentions={mentions}
-				depth={0}
-				projectId={projectId}
-				projectIndexTypeId={projectIndexTypeId}
-				onEntryClick={onEntryClick}
-				onDragStart={handleDragStart}
-				onDrop={handleDrop}
-				draggedEntryId={draggedEntryId}
-				onEdit={setEditingEntry}
-				onDelete={setDeletingEntry}
-				onMerge={setMergingEntry}
-			/>
-		));
 
 	return (
 		<>
@@ -483,7 +506,55 @@ export const EntryTree = ({
 					</>
 				)}
 
-				{hasGroups ? (
+				{shouldVirtualize ? (
+					<div
+						// This div itself isn't the scroller; ScrollArea viewport is.
+						// We just need a positioning context for absolute rows.
+						style={{
+							height: rowVirtualizer.getTotalSize(),
+							position: "relative",
+						}}
+					>
+						{rowVirtualizer.getVirtualItems().map((v) => {
+							const row = flatRows[v.index];
+							const entry = row.entry;
+							const hasChildren =
+								(childrenByParent.get(entry.id) ?? []).length > 0;
+							const isUnknown = entry.slug === "unknown";
+							return (
+								<div
+									key={entry.id}
+									style={{
+										position: "absolute",
+										top: 0,
+										left: 0,
+										width: "100%",
+										transform: `translateY(${v.start}px)`,
+									}}
+								>
+									<EntryItem
+										entry={entry}
+										mentionCount={mentionCountByEntryId.get(entry.id) ?? 0}
+										allEntries={entries}
+										depth={row.depth}
+										hasChildren={hasChildren}
+										expanded={expandedEntryIds.has(entry.id)}
+										onToggleExpand={() => toggleExpanded(entry.id)}
+										onClick={onEntryClick}
+										onDragStart={handleDragStart}
+										onDrop={handleDrop}
+										isDragging={false}
+										projectId={projectId}
+										projectIndexTypeId={projectIndexTypeId}
+										onEdit={isUnknown ? undefined : setEditingEntry}
+										onDelete={isUnknown ? undefined : setDeletingEntry}
+										onMerge={isUnknown ? undefined : setMergingEntry}
+									/>
+								</div>
+							);
+						})}
+					</div>
+				) : hasGroups ? (
 					<>
 						{/* Ungrouped entries (outside any group box) */}
 						{ungroupedEntries.length > 0 && (
@@ -562,22 +633,7 @@ export const EntryTree = ({
 																	)
 																}
 															/>,
-															<EntryTreeNode
-																key={entry.id}
-																entry={entry}
-																entries={entries}
-																mentions={mentions}
-																depth={0}
-																projectId={projectId}
-																projectIndexTypeId={projectIndexTypeId}
-																onEntryClick={onEntryClick}
-																onDragStart={handleDragStart}
-																onDrop={handleDrop}
-																draggedEntryId={draggedEntryId}
-																onEdit={setEditingEntry}
-																onDelete={setDeletingEntry}
-																onMerge={setMergingEntry}
-															/>,
+															renderSubtree(entry, 0),
 														])}
 														<EntryDropZone
 															key={`entry-drop-${group.id}-end`}

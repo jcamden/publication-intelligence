@@ -1,6 +1,7 @@
 "use client";
 
-import type { PdfHighlight } from "../../../../types";
+import { memo, useCallback, useMemo, useRef } from "react";
+import type { PdfHighlight } from "../../../../types/pdf-highlight";
 import { formatOklchColor } from "../../../../utils/index-type-colors";
 
 /**
@@ -21,29 +22,25 @@ const getHighlightStyle = ({
 		return {};
 	}
 
-	// If regionColor is provided (for region highlights), use it directly
 	if (regionColor) {
 		return { backgroundColor: regionColor };
 	}
 
-	// Convert hues to OKLCH colors with PDF-specific parameters
 	const colors =
 		hues && hues.length > 0
 			? hues.map((hue) =>
 					formatOklchColor({
 						hue,
-						lightness: 0.8, // Lighter for better contrast on PDF
-						chroma: 0.2, // More saturated for visibility
+						lightness: 0.8,
+						chroma: 0.2,
 					}),
 				)
-			: [formatOklchColor({ hue: 60, lightness: 0.8, chroma: 0.2 })]; // Fallback to yellow
+			: [formatOklchColor({ hue: 60, lightness: 0.8, chroma: 0.2 })];
 
 	if (colors.length === 1) {
-		// Single color: solid background
 		return { backgroundColor: colors[0] };
 	}
 
-	// Multiple colors: diagonal stripes
 	const stripeWidth = 100 / colors.length;
 
 	const gradientStops = colors
@@ -65,49 +62,106 @@ const getHighlightStyle = ({
 export type PdfHighlightBoxProps = {
 	highlight: PdfHighlight;
 	scale: number;
-	onClick?: (highlight: PdfHighlight) => void;
+	onClick?: (highlight: PdfHighlight, anchorEl: HTMLElement) => void;
+	/**
+	 * Optional ref-callback invoked with the first bbox's DOM node (the anchor
+	 * used for popovers). Lets parents build an O(1) id → element registry for
+	 * click handlers from sidebars without touching the DOM.
+	 */
+	onAnchorRef?: (id: string, el: HTMLElement | null) => void;
 };
 
-export const PdfHighlightBox = ({
-	highlight,
-	scale,
-	onClick,
-}: PdfHighlightBoxProps) => {
-	const { bboxes, label, text, metadata } = highlight;
-	const isDraft = metadata?.isDraft === true;
-	const hues = metadata?.hues as number[] | undefined;
-	const regionColor = metadata?.regionColor as string | undefined;
+/**
+ * Renders the visual rectangles for a single highlight.
+ *
+ * PERFORMANCE: previously every bbox rendered as its own `<button>`. For a
+ * multi-line mention that's N focusable interactive nodes, and documents with
+ * thousands of mentions turned the highlight layer into a tax on every
+ * interaction. This revision renders a single focusable `<button>` as the
+ * anchor/hit target for the first bbox and plain `<div>`s for the remaining
+ * bboxes that share the same click handler. Visual fidelity is preserved, DOM
+ * and focus-ring work drops by up to 1 node per extra bbox.
+ */
+export const PdfHighlightBox = memo(
+	({ highlight, scale, onClick, onAnchorRef }: PdfHighlightBoxProps) => {
+		const { bboxes, label, text, metadata, id } = highlight;
+		const isDraft = metadata?.isDraft === true;
+		const hues = metadata?.hues as number[] | undefined;
+		const regionColor = metadata?.regionColor as string | undefined;
 
-	const highlightStyle = getHighlightStyle({ hues, regionColor, isDraft });
+		const highlightStyle = useMemo(
+			() => getHighlightStyle({ hues, regionColor, isDraft }),
+			[hues, regionColor, isDraft],
+		);
 
-	return (
-		<>
-			{bboxes.map((bbox, index) => (
+		const anchorRef = useRef<HTMLButtonElement | null>(null);
+
+		const setAnchor = useCallback(
+			(el: HTMLButtonElement | null) => {
+				anchorRef.current = el;
+				onAnchorRef?.(id, el);
+			},
+			[id, onAnchorRef],
+		);
+
+		const handleClick = useCallback(() => {
+			if (!anchorRef.current || !onClick) return;
+			onClick(highlight, anchorRef.current);
+		}, [highlight, onClick]);
+
+		if (bboxes.length === 0) return null;
+
+		const commonClass = `pointer-events-auto absolute cursor-pointer rounded-sm transition-opacity ${
+			isDraft
+				? "border-2 border-dashed border-gray-500 bg-gray-400/30 hover:bg-gray-400/50 dark:border-gray-400 dark:bg-gray-500/40 dark:hover:bg-gray-500/60"
+				: "border-0 opacity-30 hover:opacity-50"
+		}`;
+
+		const styleFor = (bbox: (typeof bboxes)[number]): React.CSSProperties => ({
+			left: bbox.x * scale,
+			top: bbox.y * scale,
+			width: bbox.width * scale,
+			height: bbox.height * scale,
+			transform: bbox.rotation ? `rotate(${bbox.rotation}deg)` : undefined,
+			transformOrigin: "top left",
+			...(isDraft ? {} : highlightStyle),
+		});
+
+		const [first, ...rest] = bboxes;
+
+		return (
+			<>
 				<button
-					key={`${highlight.id}-${index}`}
+					key={`${id}-0`}
+					ref={setAnchor}
 					type="button"
-					className={`pointer-events-auto absolute cursor-pointer rounded-sm p-0 transition-opacity ${
-						isDraft
-							? "border-2 border-dashed border-gray-500 bg-gray-400/30 hover:bg-gray-400/50 dark:border-gray-400 dark:bg-gray-500/40 dark:hover:bg-gray-500/60"
-							: "border-0 opacity-30 hover:opacity-50"
-					}`}
-					style={{
-						left: bbox.x * scale,
-						top: bbox.y * scale,
-						width: bbox.width * scale,
-						height: bbox.height * scale,
-						transform: bbox.rotation
-							? `rotate(${bbox.rotation}deg)`
-							: undefined,
-						transformOrigin: "top left",
-						...(isDraft ? {} : highlightStyle),
-					}}
-					onClick={() => onClick?.(highlight)}
+					className={`${commonClass} p-0`}
+					style={styleFor(first)}
+					onClick={handleClick}
 					title={text ? `${label}: ${text}` : label}
-					aria-label={index === 0 ? `Highlight: ${label}` : undefined}
-					data-testid={`highlight-${highlight.id}`}
+					aria-label={`Highlight: ${label}`}
+					data-testid={`highlight-${id}`}
+					data-highlight-id={id}
 				/>
-			))}
-		</>
-	);
-};
+				{rest.map((bbox, i) => (
+					<div
+						key={`${id}-${i + 1}`}
+						className={commonClass}
+						style={styleFor(bbox)}
+						onClick={handleClick}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") handleClick();
+						}}
+						title={text ? `${label}: ${text}` : label}
+						role="presentation"
+						aria-hidden="true"
+						data-testid={`highlight-${id}`}
+						data-highlight-id={id}
+					/>
+				))}
+			</>
+		);
+	},
+);
+
+PdfHighlightBox.displayName = "PdfHighlightBox";

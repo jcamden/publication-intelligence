@@ -35,6 +35,7 @@ Grab-bag of things to do, grouped loosely by area. Expected to churn.
 
 ### Index Editor
 
+- split up EntryTree
 - Move the create-entry and create-group buttons out of `EntryTree`.
 - Make `EntryTree` scrollable and filterable/searchable.
 - Fix entry tree scroll area.
@@ -51,6 +52,9 @@ Grab-bag of things to do, grouped loosely by area. Expected to churn.
 - Transfer mentions for "See" cross-reference type — ask "Do you want to transfer mentions?" and "Do you want to transfer matchers?".
 - Still allow creating a new entry from `mention-creation-popover` even if a match is found (e.g. "Israel" finds "Israelite").
 - `testid` surfaces for parent of child entry when creating a child entry.
+- bug: can't update page region (i.e. every other starting on 1 to starting on 2)
+   - add delete button to edit region modal
+- make exclude regions PER index type (i.e. exclude scripture only)
 
 ### Page Sidebar
 

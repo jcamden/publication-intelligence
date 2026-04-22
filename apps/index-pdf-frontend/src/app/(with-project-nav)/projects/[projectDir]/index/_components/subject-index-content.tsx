@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useMemo, useRef } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
 import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/_hooks/use-region-derived-page-numbers";
 import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import { formatCrossReferencesAsSegments } from "@/app/projects/[projectDir]/_utils/cross-reference-utils";
 import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
+import { buildEntryMaps } from "@/app/projects/[projectDir]/_utils/entry-maps";
 import { documentPageRangeToCanonicalRangeString } from "../_utils/canonical-page-range";
 import { IndexColumnLayout } from "./index-column-layout";
 
@@ -74,6 +76,8 @@ const IndexViewRow = ({
 		</div>
 	);
 };
+
+const VIRTUALIZE_AFTER_ROWS = 600;
 
 type IndexViewTreeProps = {
 	entries: IndexEntry[];
@@ -179,6 +183,11 @@ export const SubjectIndexContent = ({
 		}));
 	}, [data]);
 
+	const { childrenByParent } = useMemo(
+		() => buildEntryMaps(allEntries),
+		[allEntries],
+	);
+
 	const canonicalPageRangesByEntryId = useMemo(() => {
 		if (!data?.pageRangesByEntryId) return {};
 		const out: Record<string, string> = {};
@@ -237,6 +246,35 @@ export const SubjectIndexContent = ({
 			};
 		}, [allEntries, groups]);
 
+	// For large ungrouped trees, switch to a virtualized single-column list for perf.
+	// Must be computed unconditionally (hooks order).
+	const flatUngroupedRows = useMemo(() => {
+		if (hasGroups) return [] as Array<{ entry: IndexEntry; depth: number }>;
+		const out: Array<{ entry: IndexEntry; depth: number }> = [];
+		const walk = (parentId: string | null, depth: number) => {
+			const children = [...(childrenByParent.get(parentId) ?? [])].sort(
+				sortByLabel,
+			);
+			for (const entry of children) {
+				out.push({ entry, depth });
+				walk(entry.id, depth + 1);
+			}
+		};
+		walk(null, 0);
+		return out;
+	}, [childrenByParent, hasGroups]);
+
+	const shouldVirtualizeUngrouped =
+		!hasGroups && flatUngroupedRows.length >= VIRTUALIZE_AFTER_ROWS;
+
+	const ungroupedScrollRef = useRef<HTMLDivElement | null>(null);
+	const ungroupedRowVirtualizer = useVirtualizer({
+		count: shouldVirtualizeUngrouped ? flatUngroupedRows.length : 0,
+		getScrollElement: () => ungroupedScrollRef.current,
+		estimateSize: () => 44,
+		overscan: 16,
+	});
+
 	if (isLoading) {
 		return (
 			<div className="font-merriweather py-4 text-center text-muted-foreground">
@@ -263,6 +301,45 @@ export const SubjectIndexContent = ({
 
 	// When no groups exist, render flat tree. Otherwise render group-as-section.
 	if (!hasGroups) {
+		if (shouldVirtualizeUngrouped) {
+			return (
+				<div
+					ref={ungroupedScrollRef}
+					className="h-full overflow-y-auto overflow-x-hidden font-merriweather"
+				>
+					<div
+						style={{
+							height: ungroupedRowVirtualizer.getTotalSize(),
+							position: "relative",
+						}}
+					>
+						{ungroupedRowVirtualizer.getVirtualItems().map((v) => {
+							const row = flatUngroupedRows[v.index];
+							return (
+								<div
+									key={row.entry.id}
+									style={{
+										position: "absolute",
+										top: 0,
+										left: 0,
+										width: "100%",
+										transform: `translateY(${v.start}px)`,
+									}}
+								>
+									<IndexViewRow
+										entry={row.entry}
+										allEntries={allEntries}
+										pageRange={canonicalPageRangesByEntryId[row.entry.id] ?? ""}
+										depth={row.depth}
+									/>
+								</div>
+							);
+						})}
+					</div>
+				</div>
+			);
+		}
+
 		return (
 			<IndexColumnLayout>
 				<IndexViewTree

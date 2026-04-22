@@ -25,6 +25,10 @@ export default defineConfig({
 	test: {
 		...jsdomConfig,
 		watch: false,
+		// Storybook interaction tests can be flaky when many stories run in parallel
+		// against a single Storybook/Vite dev server (chunk fetches may race / 404).
+		fileParallelism: false,
+		maxConcurrency: 1,
 		reporters: [
 			"default",
 			["json", { outputFile: "test-results/interaction-tests.json" }],

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useMemo, useRef } from "react";
 import { trpc } from "@/app/_common/_trpc/client";
 import { useRegionDerivedPageNumbers } from "@/app/projects/[projectDir]/_hooks/use-region-derived-page-numbers";
 import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
@@ -23,6 +24,8 @@ const sortRefEntries = (a: IndexEntry, b: IndexEntry) =>
 // Enough dots to fill any realistic column width. The overflow-hidden BFC
 // trick clips them precisely at the right edge of the floated page numbers.
 const LEADER_DOTS = ". ".repeat(80);
+
+const VIRTUALIZE_AFTER_BOOK_ROWS = 250;
 
 // ---------------------------------------------------------------------------
 // ScriptureRefRow — a single ch:v reference entry (child of a book)
@@ -273,6 +276,39 @@ export const ScriptureIndexContent = ({
 			showBooksWithNoMentions,
 		]);
 
+	// Flatten all visible books (including group headers) for optional virtualization.
+	// Hooks must run unconditionally.
+	const flatBookRows = useMemo(() => {
+		if (!data || data.entries.length === 0)
+			return [] as Array<
+				| { kind: "group"; id: string; name: string }
+				| { kind: "book"; entry: IndexEntry }
+			>;
+		const rows: Array<
+			| { kind: "group"; id: string; name: string }
+			| { kind: "book"; entry: IndexEntry }
+		> = [];
+		if (hasUngrouped) {
+			for (const b of ungroupedBooks) rows.push({ kind: "book", entry: b });
+		}
+		for (const group of groups) {
+			const books = groupIdToBooks.get(group.id) ?? [];
+			if (books.length === 0) continue;
+			rows.push({ kind: "group", id: group.id, name: group.name });
+			for (const b of books) rows.push({ kind: "book", entry: b });
+		}
+		return rows;
+	}, [data, hasUngrouped, ungroupedBooks, groups, groupIdToBooks]);
+
+	const shouldVirtualize = flatBookRows.length >= VIRTUALIZE_AFTER_BOOK_ROWS;
+	const scrollRef = useRef<HTMLDivElement | null>(null);
+	const bookVirtualizer = useVirtualizer({
+		count: shouldVirtualize ? flatBookRows.length : 0,
+		getScrollElement: () => scrollRef.current,
+		estimateSize: () => 56,
+		overscan: 12,
+	});
+
 	if (isLoading) {
 		return (
 			<div className="font-merriweather py-4 text-center text-muted-foreground">
@@ -293,6 +329,53 @@ export const ScriptureIndexContent = ({
 		return (
 			<div className="font-merriweather py-8 text-center text-muted-foreground italic">
 				{EMPTY_MESSAGE}
+			</div>
+		);
+	}
+
+	// On very large indices, multi-column layout becomes expensive (DOM size +
+	// layout). Switch to a virtualized single-column scroll list.
+	if (shouldVirtualize) {
+		return (
+			<div
+				ref={scrollRef}
+				className="h-full overflow-y-auto overflow-x-hidden font-merriweather"
+			>
+				<div
+					style={{
+						height: bookVirtualizer.getTotalSize(),
+						position: "relative",
+					}}
+				>
+					{bookVirtualizer.getVirtualItems().map((v) => {
+						const row = flatBookRows[v.index];
+						return (
+							<div
+								key={row.kind === "group" ? `g-${row.id}` : row.entry.id}
+								style={{
+									position: "absolute",
+									top: 0,
+									left: 0,
+									width: "100%",
+									transform: `translateY(${v.start}px)`,
+									paddingTop: row.kind === "group" ? "1rem" : undefined,
+								}}
+							>
+								{row.kind === "group" ? (
+									<h2 className="text-base font-bold italic text-neutral-800 dark:text-neutral-200 mb-1 break-after-avoid">
+										{row.name}
+									</h2>
+								) : (
+									<ScriptureBookSection
+										book={row.entry}
+										allEntries={allEntries}
+										pageRangesByEntryId={canonicalPageRangesByEntryId}
+									/>
+								)}
+							</div>
+						);
+					})}
+				</div>
 			</div>
 		);
 	}
