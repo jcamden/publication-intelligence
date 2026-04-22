@@ -7,6 +7,7 @@ import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry"
 import { formatCrossReferencesAsSegments } from "@/app/projects/[projectDir]/_utils/cross-reference-utils";
 import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
 import { documentPageRangeToCanonicalRangeString } from "../_utils/canonical-page-range";
+import { IndexColumnLayout } from "./index-column-layout";
 
 const EMPTY_MESSAGE =
 	"Create entries and attach mentions in order to see your index.";
@@ -41,20 +42,24 @@ const IndexViewRow = ({
 
 	return (
 		<div className="py-0.5">
-			<div
-				className="flex gap-4 items-baseline text-sm text-neutral-900 dark:text-neutral-100"
-				style={{ paddingLeft: `${depth * 1.25}rem` }}
+			<p
+				className="text-sm text-neutral-900 dark:text-neutral-100"
+				style={{
+					paddingLeft: `calc(${depth * 1.25}rem + 7ch)`,
+					textIndent: "-7ch",
+				}}
 			>
 				<span className="font-medium">{entry.label}</span>
 				{hasPageNumbers && (
-					<span className="flex-shrink-0 text-neutral-600 dark:text-neutral-400 tabular-nums">
+					<span className="text-neutral-600 dark:text-neutral-400 tabular-nums">
+						{", "}
 						{pageRange}
 					</span>
 				)}
-			</div>
+			</p>
 			{hasCrossRefs && (
-				<div
-					className="font-merriweather text-xs text-neutral-600 dark:text-neutral-400 flex gap-1 flex-wrap"
+				<p
+					className="font-merriweather text-xs text-neutral-600 dark:text-neutral-400"
 					style={{ paddingLeft: `${(depth + 1) * 1.25}rem` }}
 				>
 					{crossRefSegments.map((seg, i) =>
@@ -64,7 +69,7 @@ const IndexViewRow = ({
 							<span key={`${i}-${seg.text}`}>{seg.text}</span>
 						),
 					)}
-				</div>
+				</p>
 			)}
 		</div>
 	);
@@ -259,7 +264,7 @@ export const SubjectIndexContent = ({
 	// When no groups exist, render flat tree. Otherwise render group-as-section.
 	if (!hasGroups) {
 		return (
-			<div className="font-merriweather py-4 space-y-0">
+			<IndexColumnLayout>
 				<IndexViewTree
 					entries={allEntries}
 					allEntries={allEntries}
@@ -267,24 +272,22 @@ export const SubjectIndexContent = ({
 					parentId={null}
 					depth={0}
 				/>
-			</div>
+			</IndexColumnLayout>
 		);
 	}
 
 	return (
-		<div className="font-merriweather py-4 space-y-0">
+		<IndexColumnLayout>
 			{/* Ungrouped entries first */}
 			{hasUngrouped && (
-				<div className="space-y-0">
-					<IndexViewTree
-						entries={allEntries}
-						allEntries={allEntries}
-						pageRangesByEntryId={canonicalPageRangesByEntryId}
-						parentId={null}
-						depth={0}
-						rootEntryIds={ungroupedRootIds}
-					/>
-				</div>
+				<IndexViewTree
+					entries={allEntries}
+					allEntries={allEntries}
+					pageRangesByEntryId={canonicalPageRangesByEntryId}
+					parentId={null}
+					depth={0}
+					rootEntryIds={ungroupedRootIds}
+				/>
 			)}
 			{/* Group sections */}
 			{groups.map((group) => {
@@ -293,12 +296,12 @@ export const SubjectIndexContent = ({
 				return (
 					<div
 						key={group.id}
-						className="mt-6 first:mt-0 space-y-0"
+						className="mt-6 first:mt-0"
 						data-group-id={group.id}
 					>
-						<div className="mb-2 text-base font-semibold text-neutral-700 dark:text-neutral-300">
+						<h2 className="mb-2 text-base font-semibold text-neutral-700 dark:text-neutral-300 break-after-avoid">
 							{group.name}
-						</div>
+						</h2>
 						<IndexViewTree
 							entries={allEntries}
 							allEntries={allEntries}
@@ -310,6 +313,6 @@ export const SubjectIndexContent = ({
 					</div>
 				);
 			})}
-		</div>
+		</IndexColumnLayout>
 	);
 };

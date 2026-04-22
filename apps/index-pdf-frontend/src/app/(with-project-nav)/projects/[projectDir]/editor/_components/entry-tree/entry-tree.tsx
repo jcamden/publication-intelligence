@@ -1,10 +1,14 @@
 "use client";
 
-import { getCanonBookKeys, isValidCanonId } from "@pubint/core";
 import { ErrorState } from "@pubint/yaboujee";
 import { useEffect, useMemo, useState } from "react";
 import type { IndexEntry } from "@/app/projects/[projectDir]/_types/index-entry";
 import { getChildEntries } from "@/app/projects/[projectDir]/_utils/entry-filters";
+import {
+	sortBookEntriesForGroup,
+	sortUngroupedBooks,
+	unknownFirstCompare,
+} from "@/app/projects/[projectDir]/_utils/scripture-sort";
 import { DeleteEntryDialog } from "../delete-entry-dialog/delete-entry-dialog";
 import { DeleteGroupDialog } from "../delete-group-dialog/delete-group-dialog";
 import type { Mention } from "../editor/editor";
@@ -201,74 +205,13 @@ export const EntryTree = ({
 			list.push(entry);
 			byGroup.set(gid, list);
 		}
-		// Sort entries within each group: custom by position, canon by book order
-		const canonIdFromSortMode = (
-			mode: EntryTreeGroup["sortMode"],
-		):
-			| "protestant"
-			| "roman_catholic"
-			| "tanakh"
-			| "eastern_orthodox"
-			| null => {
-			if (mode === "canon_book_order") return "protestant"; // legacy
-			if (mode && isValidCanonId(mode)) return mode;
-			return null;
-		};
-
-		const unknownFirstCompare = (a: IndexEntry, b: IndexEntry) => {
-			const aUnknown = a.slug === "unknown";
-			const bUnknown = b.slug === "unknown";
-			if (aUnknown && !bUnknown) return -1;
-			if (!aUnknown && bUnknown) return 1;
-			if (aUnknown && bUnknown) return 0;
-			return 0; // fall through to secondary sort
-		};
 
 		// Sort ungrouped entries (Unknown first, then A-Z)
-		const ungroupedList = byGroup.get(null) ?? [];
-		if (ungroupedList.length > 1) {
-			ungroupedList.sort((a, b) => {
-				const cmp = unknownFirstCompare(a, b);
-				if (cmp !== 0) return cmp;
-				return (a.label ?? "").localeCompare(b.label ?? "", undefined, {
-					sensitivity: "base",
-				});
-			});
-		}
+		sortUngroupedBooks(byGroup.get(null) ?? []);
 
 		for (const group of groups) {
 			const list = byGroup.get(group.id) ?? [];
-			if (list.length <= 1) continue;
-			if (group.sortMode === "custom") {
-				list.sort((a, b) => {
-					const cmp = unknownFirstCompare(a, b);
-					if (cmp !== 0) return cmp;
-					const posA = a.groupPosition ?? 999999;
-					const posB = b.groupPosition ?? 999999;
-					return posA - posB;
-				});
-			} else {
-				const canonId = canonIdFromSortMode(group.sortMode);
-				if (canonId) {
-					const canonBookOrder = getCanonBookKeys(canonId);
-					const getBookKey = (e: IndexEntry) =>
-						(e.slug ?? "").split("--")[0]?.trim() ?? "";
-					list.sort((a, b) => {
-						const cmp = unknownFirstCompare(a, b);
-						if (cmp !== 0) return cmp;
-						const keyA = getBookKey(a);
-						const keyB = getBookKey(b);
-						const idxA = canonBookOrder.indexOf(keyA);
-						const idxB = canonBookOrder.indexOf(keyB);
-						if (idxA >= 0 && idxB >= 0) return idxA - idxB;
-						if (idxA >= 0) return -1;
-						if (idxB >= 0) return 1;
-						return (a.label ?? "").localeCompare(b.label ?? "", undefined, {
-							sensitivity: "base",
-						});
-					});
-				}
-			}
+			sortBookEntriesForGroup(list, group.sortMode);
 		}
 		return byGroup;
 	}, [topLevelEntries, groups]);
@@ -279,11 +222,8 @@ export const EntryTree = ({
 	// When no groups: flat list with Unknown first, then A-Z
 	const flatSortedRootEntries = useMemo(() => {
 		return [...topLevelEntries].sort((a, b) => {
-			const aUnknown = a.slug === "unknown";
-			const bUnknown = b.slug === "unknown";
-			if (aUnknown && !bUnknown) return -1;
-			if (!aUnknown && bUnknown) return 1;
-			if (aUnknown && bUnknown) return 0;
+			const cmp = unknownFirstCompare(a, b);
+			if (cmp !== 0) return cmp;
 			return (a.label ?? "").localeCompare(b.label ?? "", undefined, {
 				sensitivity: "base",
 			});

@@ -123,12 +123,14 @@ export const DetectionPanel = () => {
 		if (didComplete) {
 			utils.indexMention.list.invalidate({ projectId });
 			utils.indexEntry.list.invalidate({ projectId });
+			utils.indexEntry.getIndexView.invalidate();
 		}
 	}, [
 		detectionRuns,
 		projectId,
 		utils.indexMention.list,
 		utils.indexEntry.list,
+		utils.indexEntry.getIndexView,
 	]);
 
 	const hasApiKey =
